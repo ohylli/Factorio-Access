@@ -1935,7 +1935,7 @@ function get_ent_area_from_name(ent_name,pindex)
    end
 end
 
-function confirm_is_in_area(ent_name, area_left_top, area_right_bottom, pindex)
+function confirm_ent_is_in_area(ent_name, area_left_top, area_right_bottom, pindex)
    local ents = game.get_player(pindex).surface.find_entities_filtered{name = ent_name, area = {area_left_top,area_right_bottom}, limit = 1}
    return #ents > 0
 end
@@ -1961,15 +1961,47 @@ function read_scan_summary(scan_left_top, scan_right_bottom, pindex)
       result = result .. "Explored " .. math.floor((count/total) * 100) .. "% "
    end
    
-   if #players[pindex].nearby.ents > 0 then 
-      local percentages = {}
-      local percent_total = 0
+   local percentages = {}
+   local percent_total = 0
+   local surf = game.get_player(pindex).surface
+   --Scan for Resources, because they behave weirdly in scan_area due to aggregation
+   local percent = 0
+   local res_count = surf.count_tiles_filtered{ name = "water", area = {scan_left_top,scan_right_bottom} }
+   percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
+   table.insert(percentages, {name = "water", percent = percent})
+   percent_total = percent_total + percent--water counts as filling a space
+   
+   res_count = surf.count_entities_filtered{ name = "coal", area = {scan_left_top,scan_right_bottom} }
+   percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
+   table.insert(percentages, {name = "coal", percent = percent})
+   
+   res_count = surf.count_entities_filtered{ name = "stone", area = {scan_left_top,scan_right_bottom} }
+   percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
+   table.insert(percentages, {name = "stone", percent = percent})
+   
+   res_count = surf.count_entities_filtered{ name = "iron-ore", area = {scan_left_top,scan_right_bottom} }
+   percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
+   table.insert(percentages, {name = "iron-ore", percent = percent})
+   
+   res_count = surf.count_entities_filtered{ name = "copper-ore", area = {scan_left_top,scan_right_bottom} }
+   percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
+   table.insert(percentages, {name = "copper-ore", percent = percent})
+   
+   res_count = surf.count_entities_filtered{ name = "uranium-ore", area = {scan_left_top,scan_right_bottom} }
+   percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
+   table.insert(percentages, {name = "uranium-ore", percent = percent})
+   
+   res_count = surf.count_entities_filtered{ type = "tree", area = {scan_left_top,scan_right_bottom} }
+   percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
+   table.insert(percentages, {name = "trees", percent = percent})
+   
+   if #players[pindex].nearby.ents > 0 then --NOTE: because of resource entities being aggregated inside scan_area, they do not read individually here.
       for i, ent in ipairs(players[pindex].nearby.ents) do
          local area = 0
-         if confirm_is_in_area( get_substring_before_comma(ent.name) , scan_left_top , scan_right_bottom, pindex) then --**beta** this check is a temporary solution to the scan_area invert bug
+         if confirm_ent_is_in_area( get_substring_before_comma(ent.name) , scan_left_top , scan_right_bottom, pindex) then --**beta** this check is a temporary solution to the scan_area invert bug
             area = get_ent_area_from_name(get_substring_before_comma(ent.name),pindex)--this area finding method is necessary because all we have is the ent name
             --game.get_player(pindex).print(get_substring_before_comma(ent.name) .. " " .. area)--
-         end
+         end 
          local percentage = math.floor((area * players[pindex].nearby.ents[i].count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
          table.insert(percentages, {name = ent.name, percent = percentage})
          percent_total = percent_total + percentage
@@ -2600,16 +2632,17 @@ function scan_index(pindex)
             local pos = players[pindex].cursor_pos
             return squared_distance(pos, k1.position) < squared_distance(pos, k2.position)
          end)
-      if players[pindex].nearby.selection > #ents[players[pindex].nearby.index].ents then
-         players[pindex].selection = 1
-      end
+         if players[pindex].nearby.selection > #ents[players[pindex].nearby.index].ents then
+            players[pindex].selection = 1
+         end
 
-         ent = ents[players[pindex].nearby.index].ents[players[pindex].nearby.selection]
+         ent = ents[players[pindex].nearby.index].ents[players[pindex].nearby.selection]--****mark an item
+         rendering.draw_circle{color = {1, 1, 1},radius = 1,width = 2,target = ent.position, surface = game.get_player(pindex).surface, time_to_live = 130}
 --      end
       else
-      if players[pindex].nearby.selection > #ents[players[pindex].nearby.index].ents then
-         players[pindex].selection = 1
-      end
+         if players[pindex].nearby.selection > #ents[players[pindex].nearby.index].ents then
+            players[pindex].selection = 1
+         end
          local name = ents[players[pindex].nearby.index].name
          local entry = ents[players[pindex].nearby.index].ents[players[pindex].nearby.selection]
          if table_size(entry) == 0 then
@@ -2618,8 +2651,9 @@ function scan_index(pindex)
             scan_index(pindex)
             return
          end
-         ent = {name = name, position = table.deepcopy(entry.position), group = entry.group}
-         end
+         ent = {name = name, position = table.deepcopy(entry.position), group = entry.group}--****mark a resource
+         rendering.draw_circle{color = {1, 1, 1},radius = 1,width = 2,target = ent.position, surface = game.get_player(pindex).surface, time_to_live = 130}
+      end
       
       if players[pindex].nearby.count == false then
          if players[pindex].cursor then
@@ -2632,7 +2666,7 @@ function scan_index(pindex)
          printout (ent.name .. " x " .. ents[players[pindex].nearby.index].count , pindex)
       end
    end
-  end 
+end 
 
 function scan_down(pindex)
    if (players[pindex].nearby.category == 1 and players[pindex].nearby.index < #players[pindex].nearby.ents) or (players[pindex].nearby.category == 2 and players[pindex].nearby.index < #players[pindex].nearby.resources) or (players[pindex].nearby.category == 3 and players[pindex].nearby.index < #players[pindex].nearby.containers) or (players[pindex].nearby.category == 4 and players[pindex].nearby.index < #players[pindex].nearby.buildings)  or (players[pindex].nearby.category == 5 and players[pindex].nearby.index < #players[pindex].nearby.other) then
@@ -2774,7 +2808,7 @@ end
 function scan_area (x,y,w,h, pindex)
    local first_player = game.get_player(pindex)
    local surf = first_player.surface
-   local ents = surf.find_entities_filtered{area = {{x, y},{x+w, y+h}}, type = {"resource", "tree"}, invert = true}--****bug here about invert, because it inverts everything
+   local ents = surf.find_entities_filtered{area = {{x, y},{x+w, y+h}}, type = {"resource", "tree"}, invert = true}--**bug here about invert, because it inverts everything
    local result = {}
          local pos = players[pindex].cursor_pos
    for name, resource in pairs(players[pindex].resources) do
@@ -4350,7 +4384,7 @@ function schedule(ticks_in_the_future,func_to_call, data_to_pass)
 end
 
 function on_player_join(pindex)
-   schedule(3, fix_zoom, pindex)
+   schedule(3, "fix_zoom", pindex)
    local playerList={}
    for _ , p in pairs(game.connected_players) do
       playerList["_" .. p.index]=p.name
