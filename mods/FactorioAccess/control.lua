@@ -1145,7 +1145,6 @@ function compile_building_network (ent, radius)
       end
       entry = table.remove(PQ)
    end
---   print(table_size(result))
    return result
 end   
 
@@ -2509,7 +2508,7 @@ function move_cursor_map(position,pindex)
 end
 function move_cursor(x,y, pindex)
    if x >= 0 and y >=0 and x < game.players[pindex].display_resolution.width and y < game.players[pindex].display_resolution.height then
-      print ("setCursor " .. math.ceil(x) .. "," .. math.ceil(y))
+      print ("setCursor " .. pindex .. " " .. math.ceil(x) .. "," .. math.ceil(y))
    end
 end
 
@@ -2550,7 +2549,7 @@ function printout(str, pindex)
    if pindex > 0 then
       players[pindex].last = str
    end
-   localised_print{"","out ",str}
+   localised_print{"","out "..pindex.." ",str}
    if str ~= "" and pindex > 0 and (game.players[pindex].name == "SirFendi") then 
       --game.get_player(pindex).print(str)--**Print all to in game console
    end
@@ -4351,8 +4350,12 @@ function schedule(ticks_in_the_future,func_to_call, data_to_pass)
 end
 
 function on_player_join(pindex)
-   schedule(3, "fix_zoom", pindex)
-   print("joined")
+   schedule(3, fix_zoom, pindex)
+   local playerList={}
+   for _ , p in pairs(game.connected_players) do
+      playerList["_" .. p.index]=p.name
+   end
+   print("playerList " .. game.table_to_json(playerList))
    if game.players[pindex].name == "Crimso" then
       local player = game.get_player(pindex).cutscene_character or game.get_player(pindex).character
 player.force.research_all_technologies()
