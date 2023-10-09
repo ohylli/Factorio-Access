@@ -1964,12 +1964,24 @@ function read_scan_summary(scan_left_top, scan_right_bottom, pindex)
    local percentages = {}
    local percent_total = 0
    local surf = game.get_player(pindex).surface
-   --Scan for Resources, because they behave weirdly in scan_area due to aggregation
+   --Scan for Tiles and Resources, because they behave weirdly in scan_area due to aggregation, or are skipped
    local percent = 0
    local res_count = surf.count_tiles_filtered{ name = "water", area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
    table.insert(percentages, {name = "water", percent = percent})
    percent_total = percent_total + percent--water counts as filling a space
+   
+   -- res_count = surf.count_entities_filtered{ name = "stone-brick", area = {scan_left_top,scan_right_bottom}, collision_mask = "floor-layer" }--laterdo find these
+   -- percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
+   -- table.insert(percentages, {name = "stone-brick", percent = percent})
+   
+   -- res_count = surf.count_tiles_filtered{ name = {"concrete","hazard-concrete"}, area = {scan_left_top,scan_right_bottom} }
+   -- percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
+   -- table.insert(percentages, {name = "concrete", percent = percent})
+   
+   -- res_count = surf.count_tiles_filtered{ name = {"refined-concrete","refined-hazard-concrete"}, area = {scan_left_top,scan_right_bottom} }
+   -- percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
+   -- table.insert(percentages, {name = "refined-concrete", percent = percent})
    
    res_count = surf.count_entities_filtered{ name = "coal", area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
@@ -3407,7 +3419,7 @@ function read_coords(pindex, start_phrase)
       else
          local location = get_entity_part_at_cursor(pindex)
 		 if location == nil then
-		    location = "point"
+		    location = " "
 		 end
 		 --Simply give coords
 		 printout(result .. " " .. location .. ", at " .. math.floor(players[pindex].cursor_pos.x) .. ", " .. math.floor(players[pindex].cursor_pos.y), pindex)
@@ -7982,13 +7994,17 @@ function get_entity_part_at_cursor(pindex)
       rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = x+1 ,y = y-0}, surface = p.surface, time_to_live = 30}
       
 		local ent_north = p.surface.find_entities_filtered{position = {x = x,y = y-1}}
-		if #ent_north > 0 and ent_north[1].unit_number == ents[1].unit_number then north_same = true end
+		if #ent_north > 0 and ent_north[1].unit_number == ents[1].unit_number then north_same = true 
+      elseif #ent_north > 1 and ent_north[2].unit_number == ents[1].unit_number then north_same = true end
 		local ent_south = p.surface.find_entities_filtered{position = {x = x,y = y+1}}
-		if #ent_south > 0 and ent_south[1].unit_number == ents[1].unit_number then south_same = true end
+		if #ent_south > 0 and ent_south[1].unit_number == ents[1].unit_number then south_same = true 
+      elseif #ent_south > 1 and ent_south[2].unit_number == ents[1].unit_number then south_same = true end
 		local ent_east = p.surface.find_entities_filtered{position = {x = x+1,y = y}}
-		if #ent_east > 0 and ent_east[1].unit_number == ents[1].unit_number then east_same = true end
+		if #ent_east > 0 and ent_east[1].unit_number == ents[1].unit_number then east_same = true 
+      elseif #ent_east > 1 and ent_east[2].unit_number == ents[1].unit_number then east_same = true end
 		local ent_west = p.surface.find_entities_filtered{position = {x = x-1,y = y}}
-		if #ent_west > 0 and ent_west[1].unit_number == ents[1].unit_number then west_same = true end
+		if #ent_west > 0 and ent_west[1].unit_number == ents[1].unit_number then west_same = true 
+      elseif #ent_west > 1 and ent_west[2].unit_number == ents[1].unit_number then west_same = true end
 		
 		if north_same and south_same then
 		   if east_same and west_same then
@@ -8028,7 +8044,7 @@ function get_entity_part_at_cursor(pindex)
 		   elseif not east_same and west_same then
 			  location = "east tip"
 		   elseif not east_same and not west_same then
-			  location = "center"
+			  location = " "
 		   end
 		end
 	 end
