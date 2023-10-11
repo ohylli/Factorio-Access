@@ -1971,17 +1971,17 @@ function read_scan_summary(scan_left_top, scan_right_bottom, pindex)
    table.insert(percentages, {name = "water", percent = percent})
    percent_total = percent_total + percent--water counts as filling a space
    
-   -- res_count = surf.count_entities_filtered{ name = "stone-brick", area = {scan_left_top,scan_right_bottom}, collision_mask = "floor-layer" }--laterdo find these
-   -- percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
-   -- table.insert(percentages, {name = "stone-brick", percent = percent})
+   res_count = surf.count_tiles_filtered{ name = "stone-path", area = {scan_left_top,scan_right_bottom} }
+   percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
+   table.insert(percentages, {name = "stone-brick-path", percent = percent})
    
-   -- res_count = surf.count_tiles_filtered{ name = {"concrete","hazard-concrete"}, area = {scan_left_top,scan_right_bottom} }
-   -- percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
-   -- table.insert(percentages, {name = "concrete", percent = percent})
+   res_count = surf.count_tiles_filtered{ name = {"concrete","hazard-concrete-left","hazard-concrete-right"}, area = {scan_left_top,scan_right_bottom} }
+   percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
+   table.insert(percentages, {name = "concrete", percent = percent})
    
-   -- res_count = surf.count_tiles_filtered{ name = {"refined-concrete","refined-hazard-concrete"}, area = {scan_left_top,scan_right_bottom} }
-   -- percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
-   -- table.insert(percentages, {name = "refined-concrete", percent = percent})
+   res_count = surf.count_tiles_filtered{ name = {"refined-concrete","refined-hazard-concrete-left","refined-hazard-concrete-right"}, area = {scan_left_top,scan_right_bottom} }
+   percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
+   table.insert(percentages, {name = "refined-concrete", percent = percent})
    
    res_count = surf.count_entities_filtered{ name = "coal", area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
@@ -2054,7 +2054,8 @@ function scan_sort(pindex)
 
    if players[pindex].nearby.count == false then
       table.sort(players[pindex].nearby.ents, function(k1, k2) 
-         local pos = game.get_player(pindex).position
+         local pos  = game.get_player(pindex).position
+         local surf = game.get_player(pindex).surface
          local ent1 = nil
          local ent2 = nil
          if k1.name == "water" then
@@ -2063,7 +2064,14 @@ function scan_sort(pindex)
             end)
             ent1 = k1.ents[1]
          else
-            ent1 = game.get_player(pindex).surface.get_closest(pos, k1.ents)
+            if k1.aggregate then
+               table.sort( k1.ents , function(k3, k4) 
+                  return squared_distance(pos, k3.position) < squared_distance(pos, k4.position)
+               end)
+               ent1 = k1.ents[1]
+            else
+               ent1 = surf.get_closest(pos, k1.ents)
+            end
          end
          if k2.name == "water" then
             table.sort( k2.ents , function(k3, k4) 
@@ -2071,7 +2079,14 @@ function scan_sort(pindex)
             end)
             ent2 = k2.ents[1]
          else
-         ent2 = game.get_player(pindex).surface.get_closest(pos, k2.ents)
+            if k2.aggregate then
+               table.sort( k2.ents , function(k3, k4) 
+                  return squared_distance(pos, k3.position) < squared_distance(pos, k4.position)
+               end)
+               ent2 = k2.ents[1]
+            else
+               ent2 = surf.get_closest(pos, k2.ents)
+            end
          end
          return squared_distance(pos, ent1.position) < squared_distance(pos, ent2.position)
       end)
@@ -4765,7 +4780,12 @@ script.on_event("cursor-size-increment", function(event)
       elseif players[pindex].cursor_size == 50 then
          players[pindex].cursor_size = 125
       end
-      printout("Cursor size set to " .. players[pindex].cursor_size * 2 + 1, pindex)
+      
+      if players[pindex].cursor_size == 0 then
+         printout("Cursor size set to 1", pindex)
+      else
+         printout("Cursor size set to " .. players[pindex].cursor_size * 2, pindex)
+      end
    end
 end)
 
@@ -4891,6 +4911,14 @@ script.on_event("jump-to-scan", function(event)
             end
 
             ent = ents[players[pindex].nearby.index].ents[players[pindex].nearby.selection]
+            if ent == nil then
+               printout("Error: This object no longer exists. Try rescanning.", pindex)
+               return
+            end
+            if not ent.valid then
+               printout("Error: This object is no longer valid. Try rescanning.", pindex)
+               return
+            end
          else
             if players[pindex].nearby.selection > #ents[players[pindex].nearby.index].ents then
                players[pindex].selection = 1
@@ -4904,11 +4932,12 @@ script.on_event("jump-to-scan", function(event)
                return
             end
             if entry == nil then
-               printout("Error: This object no longer exists. Try rescanning.", pindex)
+               printout("Error: This scanned object no longer exists. Try rescanning.", pindex)
                return
             end
-            if not entry.valid then
-               printout("Error: This object is no longer valid. Try rescanning.", pindex)
+            if not entry.valid and not (name == "water" or name == "coal" or name == "stone" or name == "iron-ore" or name == "copper-ore" or name == "uranium-ore" or name == "crude-oil" or name == "forest") then
+               printout("Error: This scanned object is no longer valid. Try rescanning.", pindex)--laterdo possible crash when trying to teleport to an entry that was depleted...
+               --game.get_player(pindex).print("invalid: " .. name)
                return
             end
             ent = {name = name, position = table.deepcopy(entry.position)}--**beta** (fixed)
@@ -5554,6 +5583,27 @@ script.on_event("mine-access", function(event)
             schedule(25, "play_mining_sound", pindex)
          end
       end
+      
+      --Mine tiles around the cursor
+      local stack = game.get_player(pindex).cursor_stack
+      local ent = players[pindex].tile.ents[1] 
+      local surf = game.get_player(pindex).surface
+      if stack.valid_for_read and stack.valid and stack.prototype.place_as_tile_result ~= nil then
+         local c_pos = players[pindex].cursor_pos
+         local c_size = players[pindex].cursor_size
+         if c_size == 0 then
+            c_size = 1
+         end
+         local left_top = {x = math.floor(c_pos.x - c_size), y = math.floor(c_pos.y - c_size)}
+         local right_bottom = {x = math.floor(c_pos.x + 1 + c_size), y = math.floor(c_pos.y + 1 + c_size)}
+         local tiles = surf.find_tiles_filtered{area = {left_top, right_bottom}}
+         for i , tile in ipairs(tiles) do
+            local mined = game.get_player(pindex).mine_tile(tile)
+            if mined then
+               game.get_player(pindex).play_sound{path = "entity-mined/stone-furnace"}
+            end
+         end
+      end
    end
 end
 )
@@ -5892,9 +5942,11 @@ input.select(1, 0)
 	     local p = game.get_player(pindex)
 	     p.use_from_cursor{p.position.x+1,p.position.y+1}--tolaterdo adjust it to use an item 3 tiles in front of the player instead.
       --No more stack related checks after this point
-      elseif game.get_player(pindex).driving and game.get_player(pindex).vehicle.train ~= nil then
+      end
+      if game.get_player(pindex).driving and game.get_player(pindex).vehicle.train ~= nil then
          train_menu_open(pindex)
-      elseif next(players[pindex].tile.ents) ~= nil and players[pindex].tile.index > 1 and players[pindex].tile.ents[1].valid then
+      elseif next(players[pindex].tile.ents) ~= nil and players[pindex].tile.index > 1 and players[pindex].tile.ents[1].valid 
+             and (not (stack.valid_for_read and stack.valid) or (stack.valid_for_read and stack.valid and stack.prototype.place_result == nil and stack.prototype.place_as_tile_result == nil)) then
          local ent = players[pindex].tile.ents[1] 
          --Clicking on an entity in the world
          if ent.name == "train-stop" then
@@ -6157,9 +6209,12 @@ function build_item_in_hand(pindex, offset_val)
    elseif stack.valid_for_read and stack.valid and stack.prototype.place_as_tile_result ~= nil then
       --Place tiles 
 	  local p = game.get_player(pindex)
-	  local t_size = 3 --laterdo allow adjusting terrain_building_size
-	  if p.can_build_from_cursor{position = p.position, terrain_building_size = t_size} then
-	     p.build_from_cursor{position = p.position, terrain_building_size = t_size}
+	  local t_size = 3
+     if players[pindex].cursor_size > 1 then
+        t_size = players[pindex].cursor_size * 2 + 1
+     end
+	  if p.can_build_from_cursor{position = players[pindex].cursor_pos, terrain_building_size = t_size} then
+	     p.build_from_cursor{position = players[pindex].cursor_pos, terrain_building_size = t_size}
 	  else
 	     p.play_sound{path = "utility/cannot_build"}
 	  end 
