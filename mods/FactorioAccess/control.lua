@@ -2513,7 +2513,7 @@ function read_hand(pindex)
       local build_entity = cursor_stack.prototype.place_result
       if build_entity and build_entity.supports_direction then
          table.insert(out,1)
-         table.insert(out,{"access.facing-direction",players[pindex].building_direction*2})
+         table.insert(out,{"access.facing-direction",players[pindex].building_direction * dirs.east})
       else
          table.insert(out,0)
          table.insert(out,"")
@@ -2987,7 +2987,7 @@ function build_preview_checks_info(stack, pindex)
    local surf = game.get_player(pindex).surface
    local pos = table.deepcopy(players[pindex].cursor_pos)
    local result = ""
-   local build_dir = players[pindex].building_direction * 2--laterdo get building directions to match the official defines
+   local build_dir = players[pindex].building_direction * dirs.east--laterdo get player building directions to match the official defines
    local ent_p = stack.prototype.place_result --it is an entity prototype!
    if ent_p == nil or not ent_p.valid then
       return "invalid entity"
@@ -6126,7 +6126,7 @@ function build_item_in_hand(pindex, offset_val)
    
    if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then
       local ent = stack.prototype.place_result
-      local dimensions = get_tile_dimensions(stack.prototype, players[pindex].building_direction*2)
+      local dimensions = get_tile_dimensions(stack.prototype, players[pindex].building_direction * dirs.east)
       local position = {x,y}
 
       if not(players[pindex].cursor) then
@@ -6189,9 +6189,12 @@ function build_item_in_hand(pindex, offset_val)
          end 
 	  end
 	  --Build it
+     if players[pindex].cursor then--In cursor mode, build where the cursor is points.
+        position = players[pindex].cursor_pos
+     end
       local building = {
          position = position,
-         direction = players[pindex].building_direction * 2,
+         direction = players[pindex].building_direction * dirs.east,
          alt = false
       }
       building.position = game.get_player(pindex).surface.find_non_colliding_position(ent.name, position, .5, .05)
