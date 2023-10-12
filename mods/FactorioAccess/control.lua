@@ -3433,12 +3433,17 @@ function read_coords(pindex, start_phrase)
          printout(result .. math.floor(vehicle.position.x) .. ", " .. math.floor(vehicle.position.y), pindex)
       else
          local location = get_entity_part_at_cursor(pindex)
-		 if location == nil then
-		    location = " "
-		 end
-		 --Simply give coords
-		 printout(result .. " " .. location .. ", at " .. math.floor(players[pindex].cursor_pos.x) .. ", " .. math.floor(players[pindex].cursor_pos.y), pindex)
-		 --p.print(result .. " " .. location .. ", at " .. (players[pindex].cursor_pos.x) .. ", " .. (players[pindex].cursor_pos.y))
+         if location == nil then
+            location = " "
+         end
+         --Simply give coords
+         result = result .. " " .. location .. ", at " .. math.floor(players[pindex].cursor_pos.x) .. ", " .. math.floor(players[pindex].cursor_pos.y)
+         --p.print(result .. " " .. location .. ", at " .. (players[pindex].cursor_pos.x) .. ", " .. (players[pindex].cursor_pos.y))
+         local stack = game.get_player(pindex).cursor_stack
+         if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and (stack.prototype.place_result.tile_height > 1 or stack.prototype.place_result.tile_width > 1) then
+            result = result .. ", preview size " .. stack.prototype.place_result.tile_width .. " by " .. stack.prototype.place_result.tile_height .. " tiles."
+         end
+         printout(result,pindex)
       end
    elseif players[pindex].menu == "inventory" or (players[pindex].menu == "building" and players[pindex].building.sector > offset + #players[pindex].building.sectors) then
       local x = players[pindex].inventory.index %10
