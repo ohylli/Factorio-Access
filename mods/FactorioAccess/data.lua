@@ -162,6 +162,12 @@ data:extend({
 },
 {
     type = "custom-input",
+    name = "control-j",
+    key_sequence = "CONTROL + J",
+    consuming = "none"
+},
+{
+    type = "custom-input",
     name = "teleport-to-cursor",
     key_sequence = "SHIFT + T",
     consuming = "none"
