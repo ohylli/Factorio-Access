@@ -3551,7 +3551,8 @@ function initialize(player)
    faplayer.walk = faplayer.walk or 0
    faplayer.move_queue = faplayer.move_queue or {}
    faplayer.building_direction = faplayer.building_direction or 0
-   faplayer.building_direction_arrow = faplayer.building_direction_arrow or rendering.draw_text({text="↑",color={r = 0.5, a = 0.5},target={0,0},surface=character.surface,players={pindex}})
+   faplayer.building_direction_arrow = faplayer.building_direction_arrow or rendering.draw_sprite{sprite = "fluid.crude-oil", tint = {r = 0.25, b = 0.25, g = 1.0, a = 0.8}, 
+      render_layer = 254, target = {0,0}, surface = character.surface, players = {pindex}, visible = false}
    faplayer.direction_lag = faplayer.direction_lag or true
    faplayer.previous_item = faplayer.previous_item or ""
    faplayer.last = faplayer.last or ""
@@ -8575,18 +8576,17 @@ function rotate_180(dir)
 end
 
 function sync_build_arrow(pindex)
-   local player=players[pindex]
-   local arrow = player.building_direction_arrow
-   print(arroe,serpent.line(player.cursor_pos))
-   rendering.set_target(arrow,player.cursor_pos)
-   local stack = player.player.cursor_stack
-   if stack and stack.valid and stack.valid_for_read and stack.prototype.place_result then
-      local proto_to_place = stack.prototype.place_result
-      local dir = player.building_direction*2
-      --todo modify direction by it's direction placement possiblies
-      rendering.set_orientation(arrow,dir/2/defines.direction.south)
-      rendering.set_visible(arrow,true)
+   local player = players[pindex]
+   local stack = game.get_player(pindex).cursor_stack
+   local dir = player.building_direction * dirs.east
+   local dir_indicator = player.building_direction_arrow
+   if stack.valid_for_read and stack.valid and stack.prototype.place_result then
+      rendering.destroy(player.building_direction_arrow)
+      player.building_direction_arrow = rendering.draw_sprite{sprite = "fluid.crude-oil", tint = {r = 0.25, b = 0.25, g = 1.0, a = 0.8}, render_layer = 254, 
+         surface = game.get_player(pindex).surface, players = {pindex}, target = player.cursor_pos, orientation = (dir/dirs.east/dirs.south)}
+      dir_indicator = player.building_direction_arrow
+      rendering.set_visible(dir_indicator,true)
    else
-      rendering.set_visible(arrow,false)
+      rendering.set_visible(dir_indicator,false)
    end
 end
