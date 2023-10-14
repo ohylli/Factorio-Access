@@ -2585,7 +2585,7 @@ function direction_lookup(dir)
    elseif dir == 99 then --Internally defined
       reading = "Here"
    else
-      reading = "direction error 2"
+      reading = "unknown direction ID " .. dir
    end      
    return reading
 end

@@ -2666,6 +2666,7 @@ function scan_index(pindex)
 
          ent = ents[players[pindex].nearby.index].ents[players[pindex].nearby.selection]--****mark an item
          rendering.draw_circle{color = {1, 1, 1},radius = 1,width = 2,target = ent.position, surface = game.get_player(pindex).surface, time_to_live = 130}
+         players[pindex].cursor_pos = center_of_tile(ent.position)
 --      end
       else
          if players[pindex].nearby.selection > #ents[players[pindex].nearby.index].ents then
@@ -2681,19 +2682,23 @@ function scan_index(pindex)
          end
          ent = {name = name, position = table.deepcopy(entry.position), group = entry.group}--****mark a resource
          rendering.draw_circle{color = {1, 1, 1},radius = 1,width = 2,target = ent.position, surface = game.get_player(pindex).surface, time_to_live = 130}
+         players[pindex].cursor_pos = center_of_tile(ent.position)
       end
       
+      local ent_dist = math.floor(util.distance(players[pindex].position, ent.position))
+      local ent_dir  = direction_lookup(get_direction_of_that_from_this(ent.position, players[pindex].position))
       if players[pindex].nearby.count == false then
          if players[pindex].cursor then
-            printout (ent.name .. " " .. ent_production(ent) .. players[pindex].nearby.selection .. " of " .. #ents[players[pindex].nearby.index].ents .. ", " .. math.floor(distance(players[pindex].cursor_pos, ent.position)) .. " " .. direction(players[pindex].cursor_pos, ent.position), pindex)
+            printout(ent.name .. " " .. ent_production(ent) ..  ", " .. ent_dist .. " " .. ent_dir .. " , " .. players[pindex].nearby.selection .. " of " .. #ents[players[pindex].nearby.index].ents , pindex)
          else
 --            printout(#ents, pindex	)
-            printout (ent.name .. " " .. ent_production(ent) .. players[pindex].nearby.selection .. " of " .. #ents[players[pindex].nearby.index].ents .. ", " .. math.floor(distance(players[pindex].position, ent.position)) .. " " .. direction(players[pindex].position, ent.position), pindex)
+            printout(ent.name .. " " .. ent_production(ent) ..  ", " .. ent_dist .. " " .. ent_dir .. " , " .. players[pindex].nearby.selection .. " of " .. #ents[players[pindex].nearby.index].ents , pindex)
          end
       else
-         printout (ent.name .. " x " .. ents[players[pindex].nearby.index].count , pindex)
+         printout(ent.name .. " x " .. ents[players[pindex].nearby.index].count .. " , example at " .. ent_dist .. " " .. ent_dir , pindex)
       end
    end
+   game.get_player(pindex).game_view_settings.update_entity_selection = false
 end 
 
 function scan_down(pindex)
@@ -2906,6 +2911,7 @@ function toggle_cursor(pindex)
       printout("Cursor enabled.", pindex)
       players[pindex].cursor = true
       players[pindex].build_lock = false
+      game.get_player(pindex).game_view_settings.update_entity_selection = false
    else
       printout("Cursor disabled", pindex)
       players[pindex].cursor = false
@@ -2914,6 +2920,7 @@ function toggle_cursor(pindex)
       target(pindex)
       players[pindex].player_direction = game.get_player(pindex).character.direction
       players[pindex].build_lock = false
+      game.get_player(pindex).game_view_settings.update_entity_selection = true
    end
 end
 
@@ -4525,6 +4532,7 @@ function move_characters(event)
             end
             
             if walk then
+               game.get_player(pindex).game_view_settings.update_entity_selection = true
                break
             else
                table.remove(player.move_queue,1)
@@ -4533,6 +4541,8 @@ function move_characters(event)
          if not walk then
             player.player.walking_state = {walking = false}
          end
+      elseif player.walk == 2 and not player.cursor and not player.in_menu then
+         game.get_player(pindex).game_view_settings.update_entity_selection = true
       end
    end
 end
@@ -4593,7 +4603,7 @@ function move(direction,pindex)
             end
          end
          players[pindex].position = new_pos
-         players[pindex].cursor_pos = offset_position(players[pindex].cursor_pos, direction,1)
+         players[pindex].cursor_pos = offset_position(players[pindex].position, direction,1)
          sync_build_arrow(pindex)
          if players[pindex].tile.previous ~= nil
             and players[pindex].tile.previous.valid
@@ -4750,6 +4760,16 @@ script.on_event("shift-j", function(event)
 end
 )
 
+--CONTROL + J Key
+script.on_event("control-j", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   game.get_player(pindex).game_view_settings.update_entity_selection = true
+   printout("cursor released",pindex)
+end
+)
 
 script.on_event("teleport-to-cursor", function(event)
    pindex = event.player_index
