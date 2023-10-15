@@ -351,6 +351,7 @@ function nudge_key(direction, event)
             printout("Moved building 1 " .. adjusted[direction], pindex)
             if players[pindex].cursor then
                players[pindex].cursor_pos = offset_position(players[pindex].cursor_pos,direction,1)
+               cursor_highlight(pindex, ent, "train-visualization")
                sync_build_arrow(pindex)
             end
          else
@@ -2663,10 +2664,10 @@ function scan_index(pindex)
          if players[pindex].nearby.selection > #ents[players[pindex].nearby.index].ents then
             players[pindex].selection = 1
          end
-
-         ent = ents[players[pindex].nearby.index].ents[players[pindex].nearby.selection]--****mark an item
-         rendering.draw_circle{color = {1, 1, 1},radius = 1,width = 2,target = ent.position, surface = game.get_player(pindex).surface, time_to_live = 130}
+         --The scan target is an entity
+         ent = ents[players[pindex].nearby.index].ents[players[pindex].nearby.selection]
          players[pindex].cursor_pos = center_of_tile(ent.position)
+         cursor_highlight(pindex, ent, "train-visualization")
 --      end
       else
          if players[pindex].nearby.selection > #ents[players[pindex].nearby.index].ents then
@@ -2674,15 +2675,16 @@ function scan_index(pindex)
          end
          local name = ents[players[pindex].nearby.index].name
          local entry = ents[players[pindex].nearby.index].ents[players[pindex].nearby.selection]
-         if table_size(entry) == 0 then
+         if table_size(entry) == 0 or name == "highlight-box" then
             table.remove(ents[players[pindex].nearby.index].ents, players[pindex].nearby.selection)
             players[pindex].nearby.selection = players[pindex].nearby.selection - 1
             scan_index(pindex)
             return
          end
-         ent = {name = name, position = table.deepcopy(entry.position), group = entry.group}--****mark a resource
-         rendering.draw_circle{color = {1, 1, 1},radius = 1,width = 2,target = ent.position, surface = game.get_player(pindex).surface, time_to_live = 130}
+         --The scan target is an aggregate 
+         ent = {name = name, position = table.deepcopy(entry.position), group = entry.group}
          players[pindex].cursor_pos = center_of_tile(ent.position)
+         cursor_highlight(pindex, nil, "train-visualization")
       end
       
       local ent_dist = math.floor(util.distance(players[pindex].position, ent.position))
@@ -2908,14 +2910,15 @@ end
 
 function toggle_cursor(pindex)
    if not(players[pindex].cursor) then
-      printout("Cursor enabled.", pindex)
+      printout("Cursor mode enabled.", pindex)
       players[pindex].cursor = true
       players[pindex].build_lock = false
       game.get_player(pindex).game_view_settings.update_entity_selection = false
    else
-      printout("Cursor disabled", pindex)
+      printout("Cursor mode disabled", pindex)
       players[pindex].cursor = false
       players[pindex].cursor_pos = offset_position(players[pindex].position,players[pindex].player_direction,1)
+      cursor_highlight(pindex, nil, nil)
       sync_build_arrow(pindex)
       target(pindex)
       players[pindex].player_direction = game.get_player(pindex).character.direction
@@ -2950,16 +2953,28 @@ function read_tile(pindex)
    if next(players[pindex].tile.ents) == nil then
       players[pindex].tile.previous = nil
       result = players[pindex].tile.tile
+      cursor_highlight(pindex, nil, nil) --**
 
    else--laterdo tackle the issue here where entities such as tree stumps block preview info 
       local ent = players[pindex].tile.ents[1]
+      if ent ~= nil and ent.valid and (ent.name == "highlight-box") then --correction to skip over highlight boxes
+         local ent2 = players[pindex].tile.ents[2]
+         if ent2 ~= nil and ent2.valid then
+            ent = ent2
+         end
+      end
       result = ent_info(pindex, ent)
+      cursor_highlight(pindex, nil, nil)
+      if game.get_player(pindex).game_view_settings.update_entity_selection == false then
+         game.get_player(pindex).game_view_settings.update_entity_selection = true
+         cursor_highlight(pindex, ent, nil)--kind of fixes the lack of highlight***
+      end
       --game.get_player(pindex).print(result)--**
       players[pindex].tile.previous = players[pindex].tile.ents[#players[pindex].tile.ents]
 
       players[pindex].tile.index = 2
    end
-   if next(players[pindex].tile.ents) == nil or players[pindex].tile.ents[1].type == "resource" then
+   if next(players[pindex].tile.ents) == nil or not players[pindex].tile.ents[1].valid or players[pindex].tile.ents[1].type == "resource" then--possible bug with the h box being a new tile ent
       local stack = game.get_player(pindex).cursor_stack
 	  --Run build preview checks
 	  if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then
@@ -3551,6 +3566,8 @@ function initialize(player)
    faplayer.menu = faplayer.menu or "none"
    faplayer.cursor = faplayer.cursor or false
    faplayer.cursor_size = faplayer.cursor_size or 0 
+   faplayer.cursor_ent_highlight_box = faplayer.cursor_ent_highlight_box or nil
+   faplayer.cursor_tile_highlight_box = faplayer.cursor_tile_highlight_box or nil
    faplayer.num_elements = faplayer.num_elements or 0
    faplayer.player_direction = faplayer.player_direction or character.walking_state.direction
    faplayer.position = faplayer.position or center_of_tile(character.position)
@@ -3710,6 +3727,7 @@ script.on_event(defines.events.on_player_changed_position,function(event)
             local new_pos = offset_position(pos,players[pindex].direction,1)
             players[pindex].cursor_pos = new_pos
             players[pindex].position = pos
+            cursor_highlight(pindex, nil, nil)
             sync_build_arrow(pindex)
 --            target(pindex)
          else
@@ -4592,6 +4610,7 @@ function move(direction,pindex)
    local pos = players[pindex].position
    local new_pos = offset_position(pos,direction,1)
    if players[pindex].player_direction == direction then
+      --move character:
       can_port = first_player.surface.can_place_entity{name = "character", position = new_pos}
       if can_port then
          if players[pindex].walk == 1 then
@@ -4604,6 +4623,7 @@ function move(direction,pindex)
          end
          players[pindex].position = new_pos
          players[pindex].cursor_pos = offset_position(players[pindex].position, direction,1)
+         cursor_highlight(pindex, nil, nil)
          sync_build_arrow(pindex)
          if players[pindex].tile.previous ~= nil
             and players[pindex].tile.previous.valid
@@ -4628,6 +4648,7 @@ function move(direction,pindex)
          target(pindex)
       end
    else
+      --turn character:
       if players[pindex].walk == 0 then
          game.get_player(pindex).play_sound{path = "Face-Dir"}
       elseif players[pindex].walk == 2 then
@@ -4635,6 +4656,7 @@ function move(direction,pindex)
       end
       players[pindex].player_direction = direction
       players[pindex].cursor_pos = new_pos
+      cursor_highlight(pindex, nil, nil)
       sync_build_arrow(pindex)
       read_tile(pindex)
       target(pindex)
@@ -4977,11 +4999,13 @@ script.on_event("jump-to-scan", function(event)
          end
          if players[pindex].cursor then
             players[pindex].cursor_pos = center_of_tile(ent.position)
+            cursor_highlight(pindex, ent, nil)
             sync_build_arrow(pindex)
             printout("Cursor has jumped to " .. ent.name .. " at " .. math.floor(players[pindex].cursor_pos.x) .. " " .. math.floor(players[pindex].cursor_pos.y), pindex)
          else
             teleport_to_closest(pindex, ent.position)
             players[pindex].cursor_pos = offset_position(players[pindex].position, players[pindex].player_direction, 1)
+            cursor_highlight(pindex, nil, nil)--todo check for new cursor ent
             sync_build_arrow(pindex)
          end
       end
@@ -5864,6 +5888,7 @@ script.on_event("left-click", function(event)
             if ent ~= nil and ent.valid then
                players[pindex].cursor = true
                players[pindex].cursor_pos = center_of_tile(ent.position)
+               cursor_highlight(pindex, ent, nil)
                sync_build_arrow(pindex)
                printout("Teleported the cursor to " .. math.floor(players[pindex].cursor_pos.x) .. " " .. math.floor(players[pindex].cursor_pos.y), pindex)
 --               players[pindex].menu = ""
@@ -5891,6 +5916,7 @@ script.on_event("left-click", function(event)
             game.get_player(pindex).opened = nil
             local surf = game.get_player(pindex).surface
             players[pindex].tile.ents = surf.find_entities_filtered{area = {{players[pindex].cursor_pos.x - .5, players[pindex].cursor_pos.y - .5}, {players[pindex].cursor_pos.x+ .29 , players[pindex].cursor_pos.y + .29}}} 
+            cursor_highlight(pindex, nil, nil)--todo check for ent?
             if not(pcall(function()
                players[pindex].tile.tile =  surf.get_tile(players[pindex].cursor_pos.x, players[pindex].cursor_pos.y).name
             end)) then
@@ -5920,7 +5946,7 @@ input.select(1, 0)
 input.select(1, 0)
          end
          
-      elseif players[pindex].menu == "structure-travel" then
+      elseif players[pindex].menu == "structure-travel" then--q: is this b stride?
          local tar = nil
          local network = players[pindex].structure_travel.network
          local index = players[pindex].structure_travel.index
@@ -5946,6 +5972,7 @@ input.select(1, 0)
          game.get_player(pindex).opened = nil
          local surf = game.get_player(pindex).surface
          players[pindex].tile.ents = surf.find_entities_filtered{area = {{players[pindex].cursor_pos.x - .5, players[pindex].cursor_pos.y - .5}, {players[pindex].cursor_pos.x+ .29 , players[pindex].cursor_pos.y + .29}}} 
+         cursor_highlight(pindex, nil, nil)--todo check for ent?
          if not(pcall(function()
             players[pindex].tile.tile =  surf.get_tile(players[pindex].cursor_pos.x, players[pindex].cursor_pos.y).name
          end)) then
@@ -5986,6 +6013,11 @@ input.select(1, 0)
              and (not (stack.valid_for_read and stack.valid) or (stack.valid_for_read and stack.valid and stack.prototype.place_result == nil and stack.prototype.place_as_tile_result == nil)) then
          local ent = players[pindex].tile.ents[1] 
          --Clicking on an entity in the world
+         if util.distance(players[pindex].position, ent.position) > 11 then
+            --game.get_player(pindex).play_sound{path = "utility/entity_settings_pasted"}--identify remote sounds
+            printout("Out of player reach",pindex)
+            return
+         end
          if ent.name == "train-stop" then
             train_stop_menu_open(pindex)
          elseif ent.name == "locomotive" or ent.name == "cargo-wagon" or ent.name == "fluid-wagon" then
@@ -8609,4 +8641,45 @@ function sync_build_arrow(pindex)
    else
       rendering.set_visible(dir_indicator,false)
    end
+end
+
+--Highlights the tile or the entity under the cursor
+function cursor_highlight(pindex, ent, box_type)
+   local p = game.get_player(pindex)
+   local c_pos = players[pindex].cursor_pos
+   local h_box = players[pindex].cursor_ent_highlight_box
+   local h_tile = players[pindex].cursor_tile_highlight_box
+   if c_pos == nil then
+      return
+   end
+   if h_box ~= nil and h_box.valid then
+      h_box.destroy()
+   end
+   if h_tile ~= nil and rendering.is_valid(h_tile) then
+      rendering.destroy(h_tile)
+   end
+   
+   if ent ~= nil and ent.valid and ent.name ~= "highlight-box"  then
+      h_box = p.surface.create_entity{name = "highlight-box", force = "neutral", surface = p.surface, render_player_index = pindex, box_type = "entity", 
+         position = c_pos, source = ent }
+      if box_type ~= nil then
+         h_box.highlight_box_type = box_type
+      else
+         h_box.highlight_box_type = "entity"
+      end
+   else
+      h_tile = rendering.draw_rectangle{color = {1,1,1,0.75}, surface = p.surface, players = {pindex}, draw_on_ground = true, 
+         left_top = {math.floor(c_pos.x)+0.1,math.floor(c_pos.y)+0.1}, right_bottom = {math.ceil(c_pos.x)-0.1,math.ceil(c_pos.y)-0.1}}
+      --h_box = p.surface.create_entity{name = "highlight-box", force = "neutral", surface = p.surface, render_player_index = pindex, box_type = "entity", 
+      --   position = c_pos, bounding_box = {left_top = {math.floor(c_pos.x),math.floor(c_pos.y)}, right_bottom = {math.ceil(c_pos.x),math.ceil(c_pos.y)}} }
+      --players[pindex].cursor_highlight = h_box
+      --if box_type ~= nil then
+      --   h_box.highlight_box_type = box_type
+      --else
+      --   h_box.highlight_box_type = "train-visualization"
+      --end
+   end
+   
+   players[pindex].cursor_ent_highlight_box = h_box
+   players[pindex].cursor_tile_highlight_box = h_tile
 end
