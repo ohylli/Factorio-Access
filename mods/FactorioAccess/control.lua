@@ -344,7 +344,13 @@ function nudge_key(direction, event)
    end
    if #players[pindex].tile.ents > 0 then
       local ent = players[pindex].tile.ents[players[pindex].tile.index-1]
-      if ent.prototype.is_building and ent.operable and ent.force == game.get_player(pindex).force then
+      if ent ~= nil and ent.valid and (ent.name == "highlight-box") then --correction added to skip over highlight boxes
+         local ent2 = players[pindex].tile.ents[2]
+         if ent2 ~= nil and ent2.valid then
+            ent = ent2
+         end
+      end
+      if ent ~= nil and ent.valid and ent.prototype.is_building and ent.operable and ent.force == game.get_player(pindex).force then
          local new_pos = offset_position(ent.position,direction,1)
          local teleported = ent.teleport(new_pos)
          if teleported then
@@ -3020,7 +3026,7 @@ function build_preview_checks_info(stack, pindex)
    end
    
    --Notify before all else if surface/player cannot place this entity. **laterdo extend this check by copying over build offset stuff
-   if ent_p.tile_width <= 1 and ent_p.tile_height <= 1 and not surf.can_place_entity{name = stack.name, position = pos} then
+   if ent_p.tile_width <= 1 and ent_p.tile_height <= 1 and not surf.can_place_entity{name = stack.name, position = pos, direction = build_dir} then
       return " cannot place this here "
    end
    
@@ -6271,7 +6277,7 @@ function build_item_in_hand(pindex, offset_val)
          direction = players[pindex].building_direction * dirs.east,
          alt = false
       }
-      building.position = game.get_player(pindex).surface.find_non_colliding_position(ent.name, position, .5, .05)
+      --building.position = game.get_player(pindex).surface.find_non_colliding_position(ent.name, position, .5, .05)--DOES NOT RESPECT DIRECTION
       if building.position ~= nil and game.get_player(pindex).can_build_from_cursor(building) then 
          game.get_player(pindex).build_from_cursor(building)  
 --         read_tile(pindex)
