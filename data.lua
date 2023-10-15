@@ -506,6 +506,7 @@ data:extend({
     type = "custom-input",
     name = "left-click",
     key_sequence = "LEFTBRACKET",
+    --alternative_key_sequence = "mouse-button-1",
     consuming = "none"
 },
 
