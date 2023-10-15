@@ -3582,7 +3582,9 @@ function initialize(player)
    faplayer.cursor_pos = faplayer.cursor_pos or offset_position(faplayer.position,faplayer.player_direction,1)
    faplayer.walk = faplayer.walk or 0
    faplayer.move_queue = faplayer.move_queue or {}
-   faplayer.building_direction = faplayer.building_direction or 0
+   faplayer.building_footprint = faplayer.building_footprint or nil
+   faplayer.building_direction = faplayer.building_direction or rendering.draw_rectangle{color = {r = 0.25, b = 0.25, g = 1.0, a = 0.8}, left_top = {0,0}, right_bottom = {1,1},
+      render_layer = 253, surface = character.surface, players = {pindex}, visible = false}
    faplayer.building_direction_arrow = faplayer.building_direction_arrow or rendering.draw_sprite{sprite = "fluid.crude-oil", tint = {r = 0.25, b = 0.25, g = 1.0, a = 0.8}, 
       render_layer = 254, target = {0,0}, surface = character.surface, players = {pindex}, visible = false}
    faplayer.direction_lag = faplayer.direction_lag or true
@@ -6226,22 +6228,52 @@ function build_item_in_hand(pindex, offset_val)
          if stack.name == "locomotive" or stack.name == "cargo-wagon" or stack.name == "fluid-wagon" or stack.name == "artillery-wagon" then
             --Allow easy placement onto rails.
             adjusted_offset = 2.5
-         elseif players[pindex].player_direction == 0 or players[pindex].player_direction == 4 then
-            adjusted_offset = adjusted_offset * (dimensions.y + .5)/2
-         else
-            adjusted_offset = adjusted_offset * (dimensions.x+.5)/2
+         -- elseif players[pindex].player_direction == dirs.north or players[pindex].player_direction == dirs.south then
+            -- --Face offset
+            -- adjusted_offset = adjusted_offset * (dimensions.y + .5)/2
+         -- else
+            -- --Face offset
+            -- adjusted_offset = adjusted_offset * (dimensions.x + .5)/2
+         -- end
+         -- position = offset_position(old_pos, players[pindex].player_direction, adjusted_offset)
+         else--****
+            local width = stack.prototype.place_result.tile_width
+            local height = stack.prototype.place_result.tile_height
+            local left_top = {x = math.floor(players[pindex].cursor_pos.x),y = math.floor(players[pindex].cursor_pos.y)}
+            local right_bottom = {x = left_top.x + width, y = left_top.y + height}
+            local flip = false
+            local dir = players[pindex].building_direction * dirs.east
+            local p_dir = players[pindex].player_direction
+            
+            if dir == dirs.east or dir == dirs.west then--Note, does not cover diagonal directions for non-square objects.
+               flip = true
+            end
+
+            if p_dir == dirs.west and not flip then
+               left_top.x = (left_top.x - width + 1)
+               right_bottom.x = (right_bottom.x - width + 1)
+            elseif p_dir == dirs.west and flip then
+               left_top.x = (left_top.x - height + 1)
+               right_bottom.x = (right_bottom.x - height + 1)
+            elseif p_dir == dirs.north and not flip then
+               left_top.y = (left_top.y - height + 1)
+               right_bottom.y = (right_bottom.y - height + 1)
+            elseif p_dir == dirs.north and flip then
+               left_top.y = (left_top.y - width + 1)
+               right_bottom.y = (right_bottom.y - width + 1)
+            end
+
+            position = {left_top.x + math.floor(width/2),left_top.y + math.floor(height/2)}
+            if flip then
+               position = {left_top.x + math.floor(height/2),left_top.y + math.floor(width/2)}
+            end
          end
-         position = offset_position(old_pos, players[pindex].player_direction, adjusted_offset)
       else
+         --Cursor offset
          local old_pos = players[pindex].cursor_pos
-         local adjusted_position = offset_position(old_pos, 4, dimensions.y/2 - .5 )
-         local adjusted_position = offset_position(adjusted_position, 2, dimensions.x/2 - .5 )
+         local adjusted_position = offset_position(old_pos, dirs.south, dimensions.y/2 - .5 )
+         local adjusted_position = offset_position(adjusted_position, dirs.east, dimensions.x/2 - .5 )
          local adjusted_offset = offset
-         if players[pindex].player_direction == 0 or players[pindex].player_direction == 4 then
-            adjusted_offset = adjusted_offset * (dimensions.y+.5)/2
-         else
-            adjusted_offset = adjusted_offset * (dimensions.x+.5)/2
-         end
          position = offset_position(adjusted_position, players[pindex].player_direction, adjusted_offset)
       end
       if stack.name == "small-electric-pole" and players[pindex].build_lock == true then
@@ -6281,7 +6313,7 @@ function build_item_in_hand(pindex, offset_val)
 	  end
 	  --Build it
      if players[pindex].cursor then--In cursor mode, build where the cursor is points.
-        position = players[pindex].cursor_pos
+        position = position
      end
       local building = {
          position = position,
@@ -8654,14 +8686,56 @@ function sync_build_arrow(pindex)
    local stack = game.get_player(pindex).cursor_stack
    local dir = player.building_direction * dirs.east
    local dir_indicator = player.building_direction_arrow
+   local p_dir = player.player_direction
+   if dir == nil then
+      dir = 0
+      player.building_direction = 0
+      game.get_player(pindex).print("dir was nil ")--***
+   end
    if stack.valid_for_read and stack.valid and stack.prototype.place_result then
-      rendering.destroy(player.building_direction_arrow)
+      --Redraw arrow
+      if dir_indicator ~= nil then rendering.destroy(player.building_direction_arrow) end
       player.building_direction_arrow = rendering.draw_sprite{sprite = "fluid.crude-oil", tint = {r = 0.25, b = 0.25, g = 1.0, a = 0.8}, render_layer = 254, 
          surface = game.get_player(pindex).surface, players = {pindex}, target = player.cursor_pos, orientation = (dir/dirs.east/dirs.south)}
       dir_indicator = player.building_direction_arrow
       rendering.set_visible(dir_indicator,true)
+      
+      --Redraw footprint
+      if player.building_footprint ~= nil then 
+         rendering.destroy(player.building_footprint) 
+      end
+      local width = stack.prototype.place_result.tile_width
+      local height = stack.prototype.place_result.tile_height
+      local flip = false
+      local left_top = {x = math.floor(player.cursor_pos.x),y = math.floor(player.cursor_pos.y)}
+      local right_bottom = {x = (left_top.x + width), y = (left_top.y + height)}
+      if dir == dirs.east or dir == dirs.west then--Note, does not cover diagonal directions for non-square objects.
+         flip = true
+      end
+      if flip then
+         right_bottom = {x = (left_top.x + height), y = (left_top.y + width)}
+      end
+      if not player.cursor then
+         if p_dir == dirs.west and not flip then
+            left_top.x = (left_top.x - width + 1)
+            right_bottom.x = (right_bottom.x - width + 1)
+         elseif p_dir == dirs.west and flip then
+            left_top.x = (left_top.x - height + 1)
+            right_bottom.x = (right_bottom.x - height + 1)
+         elseif p_dir == dirs.north and not flip then
+            left_top.y = (left_top.y - height + 1)
+            right_bottom.y = (right_bottom.y - height + 1)
+         elseif p_dir == dirs.north and flip then
+            left_top.y = (left_top.y - width + 1)
+            right_bottom.y = (right_bottom.y - width + 1)
+         end
+      end
+      player.building_footprint = rendering.draw_rectangle{left_top = left_top, right_bottom = right_bottom , color = {r = 0.25, b = 0.25, g = 1.0, a = 0.25}, draw_on_ground = true, 
+         surface = game.get_player(pindex).surface, players = {pindex} }
+      rendering.set_visible(player.building_footprint,true)
    else
-      rendering.set_visible(dir_indicator,false)
+      if dir_indicator ~= nil then rendering.set_visible(dir_indicator,false) end
+      if player.building_footprint ~= nil then rendering.set_visible(player.building_footprint,false) end
    end
 end
 
