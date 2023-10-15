@@ -2915,15 +2915,16 @@ function toggle_cursor(pindex)
       players[pindex].build_lock = false
       game.get_player(pindex).game_view_settings.update_entity_selection = false
    else
-      printout("Cursor mode disabled", pindex)
+      --printout("Cursor mode disabled", pindex)
       players[pindex].cursor = false
+      game.get_player(pindex).game_view_settings.update_entity_selection = true
       players[pindex].cursor_pos = offset_position(players[pindex].position,players[pindex].player_direction,1)
       cursor_highlight(pindex, nil, nil)
       sync_build_arrow(pindex)
       target(pindex)
       players[pindex].player_direction = game.get_player(pindex).character.direction
       players[pindex].build_lock = false
-      game.get_player(pindex).game_view_settings.update_entity_selection = true
+      read_tile(pindex, "Cursor mode disabled, ")
    end
 end
 
@@ -2935,25 +2936,26 @@ function jump_to_player(pindex)
    local first_player = game.get_player(pindex)
    players[pindex].cursor_pos.x = math.floor(first_player.position.x)+.5
    players[pindex].cursor_pos.y = math.floor(first_player.position.y) + .5
-   read_coords(pindex, "Cursor returned to ")
+   read_coords(pindex, "Cursor returned ")
+   cursor_highlight(pindex, nil, nil)
 end
 
    
 
-function read_tile(pindex)   
+function read_tile(pindex, start_text)   
    local surf = game.get_player(pindex).surface
-   local result = ""
+   local result = start_text or ""
    players[pindex].tile.ents = surf.find_entities_filtered{area = {{players[pindex].cursor_pos.x - .5, players[pindex].cursor_pos.y - .5}, {players[pindex].cursor_pos.x+ .29 , players[pindex].cursor_pos.y + .29}}} 
    if not(pcall(function()
       players[pindex].tile.tile =  surf.get_tile(players[pindex].cursor_pos.x, players[pindex].cursor_pos.y).name
    end)) then
-      printout("Tile out of range", pindex)
+      printout(result .. "Tile out of range", pindex)
       return
    end
    if next(players[pindex].tile.ents) == nil then
       players[pindex].tile.previous = nil
-      result = players[pindex].tile.tile
-      cursor_highlight(pindex, nil, nil) --**
+      result = result .. players[pindex].tile.tile
+      cursor_highlight(pindex, nil, nil)
 
    else--laterdo tackle the issue here where entities such as tree stumps block preview info 
       local ent = players[pindex].tile.ents[1]
@@ -2963,7 +2965,7 @@ function read_tile(pindex)
             ent = ent2
          end
       end
-      result = ent_info(pindex, ent)
+      result = result .. ent_info(pindex, ent)
       cursor_highlight(pindex, nil, nil)
       if game.get_player(pindex).game_view_settings.update_entity_selection == false then
          game.get_player(pindex).game_view_settings.update_entity_selection = true
@@ -2994,7 +2996,7 @@ function read_tile(pindex)
 	  end
 	  game.get_player(pindex).play_sound{path = "Mine-Building"}
 	  if try_to_mine_with_sound(ent,pindex) then
-	     result = ent_name .. " mined."
+	     result = result .. ent_name .. " mined."
 	  end
 	  return
    end
@@ -4790,6 +4792,7 @@ script.on_event("control-j", function(event)
    end
    game.get_player(pindex).game_view_settings.update_entity_selection = true
    printout("cursor released",pindex)
+   cursor_highlight(pindex, nil, nil)
 end
 )
 
