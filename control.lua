@@ -4840,6 +4840,8 @@ script.on_event("cursor-size-increment", function(event)
    end
    if not (players[pindex].in_menu) then
       if players[pindex].cursor_size == 0 then
+         players[pindex].cursor_size = 2
+      elseif players[pindex].cursor_size == 2 then
          players[pindex].cursor_size = 5
       elseif players[pindex].cursor_size == 5 then
          players[pindex].cursor_size = 50
@@ -4848,9 +4850,10 @@ script.on_event("cursor-size-increment", function(event)
       end
       
       if players[pindex].cursor_size == 0 then
-         printout("Cursor size set to 1", pindex)
+         printout("Cursor size 1 by 1", pindex)
       else
-         printout("Cursor size set to " .. players[pindex].cursor_size * 2, pindex)
+         local say_size = players[pindex].cursor_size * 2 + 1
+         printout("Cursor size " .. say_size .. " by " .. say_size, pindex)
       end
    end
 end)
@@ -4861,14 +4864,22 @@ script.on_event("cursor-size-decrement", function(event)
       return
    end
    if not (players[pindex].in_menu) then
-      if players[pindex].cursor_size == 5 then
+      if players[pindex].cursor_size == 2 then
          players[pindex].cursor_size = 0
+      elseif players[pindex].cursor_size == 5 then
+         players[pindex].cursor_size = 2
       elseif players[pindex].cursor_size == 50 then
          players[pindex].cursor_size = 5
       elseif players[pindex].cursor_size == 125 then
          players[pindex].cursor_size = 50
       end
-      printout("Cursor size set to " .. players[pindex].cursor_size * 2 + 1, pindex)
+      
+      if players[pindex].cursor_size == 0 then
+         printout("Cursor size 1 by 1", pindex)
+      else
+         local say_size = players[pindex].cursor_size * 2 + 1
+         printout("Cursor size " .. say_size .. " by " .. say_size, pindex)
+      end
    end
 end)
 
