@@ -3720,10 +3720,10 @@ end
 script.on_event(defines.events.on_player_changed_position,function(event)
       local pindex = event.player_index
       if not check_for_player(pindex) then
-               return
+         return
       end
       if players[pindex].walk == 2 then
-      local pos = center_of_tile(game.get_player(pindex).position)
+         local pos = center_of_tile(game.get_player(pindex).position)
          if game.get_player(pindex).walking_state.direction ~= players[pindex].direction then
             players[pindex].direction = game.get_player(pindex).walking_state.direction
             local new_pos = offset_position(pos,players[pindex].direction,1)
@@ -3733,13 +3733,15 @@ script.on_event(defines.events.on_player_changed_position,function(event)
             sync_build_arrow(pindex)
 --            target(pindex)
          else
-         
             players[pindex].cursor_pos.x = players[pindex].cursor_pos.x + pos.x - players[pindex].position.x
             players[pindex].cursor_pos.y = players[pindex].cursor_pos.y + pos.y - players[pindex].position.y
             players[pindex].position = pos
+            
+            cursor_highlight(pindex, nil, nil)
+            sync_build_arrow(pindex)
          end
          -- print("checking:".. players[pindex].cursor_pos.x .. "," .. players[pindex].cursor_pos.y)
-         if not game.get_player(pindex).surface.can_place_entity{name = "character", position = players[pindex].cursor_pos} then
+         if not game.get_player(pindex).surface.can_place_entity{name = "small-lamp", position = players[pindex].cursor_pos} then
             read_tile(pindex)
             target(pindex)
          end
