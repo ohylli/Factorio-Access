@@ -3470,10 +3470,33 @@ function read_coords(pindex, start_phrase)
          end
          --Simply give coords
          result = result .. " " .. location .. ", at " .. math.floor(players[pindex].cursor_pos.x) .. ", " .. math.floor(players[pindex].cursor_pos.y)
-         --p.print(result .. " " .. location .. ", at " .. (players[pindex].cursor_pos.x) .. ", " .. (players[pindex].cursor_pos.y))
+         --If there is a build preview, give its dimensions and which way they extend
          local stack = game.get_player(pindex).cursor_stack
          if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and (stack.prototype.place_result.tile_height > 1 or stack.prototype.place_result.tile_width > 1) then
-            result = result .. ", preview size " .. stack.prototype.place_result.tile_width .. " by " .. stack.prototype.place_result.tile_height .. " tiles."
+            local dir = players[pindex].building_direction * dirs.east
+            local p_dir = players[pindex].player_direction
+            local preview_str = ", preview is " 
+            if dir == dirs.north or dir == dirs.south then 
+               preview_str = preview_str .. stack.prototype.place_result.tile_width .. " wide " 
+            elseif dir == dirs.east or dir == dirs.west then
+               preview_str = preview_str .. stack.prototype.place_result.tile_height .. " wide " 
+            end
+            if players[pindex].cursor or p_dir == dirs.east or p_dir == dirs.south or p_dir == dirs.north then
+               preview_str = preview_str .. " to the east "
+            elseif not players[pindex].cursor and p_dir == dirs.west then
+               preview_str = preview_str .. " to the west "
+            end
+            if dir == dirs.north or dir == dirs.south then 
+               preview_str = preview_str .. " and " .. stack.prototype.place_result.tile_height .. " high " 
+            elseif dir == dirs.east or dir == dirs.west then
+               preview_str = preview_str .. " and " .. stack.prototype.place_result.tile_width .. " high " 
+            end
+            if players[pindex].cursor or p_dir == dirs.east or p_dir == dirs.south or p_dir == dirs.west then
+               preview_str = preview_str .. " to the south "
+            elseif not players[pindex].cursor and p_dir == dirs.north then
+               preview_str = preview_str .. " to the north "
+            end
+            result = result .. preview_str
          end
          printout(result,pindex)
       end
@@ -6228,15 +6251,7 @@ function build_item_in_hand(pindex, offset_val)
          if stack.name == "locomotive" or stack.name == "cargo-wagon" or stack.name == "fluid-wagon" or stack.name == "artillery-wagon" then
             --Allow easy placement onto rails.
             adjusted_offset = 2.5
-         -- elseif players[pindex].player_direction == dirs.north or players[pindex].player_direction == dirs.south then
-            -- --Face offset
-            -- adjusted_offset = adjusted_offset * (dimensions.y + .5)/2
-         -- else
-            -- --Face offset
-            -- adjusted_offset = adjusted_offset * (dimensions.x + .5)/2
-         -- end
-         -- position = offset_position(old_pos, players[pindex].player_direction, adjusted_offset)
-         else--****
+         else
             local width = stack.prototype.place_result.tile_width
             local height = stack.prototype.place_result.tile_height
             local left_top = {x = math.floor(players[pindex].cursor_pos.x),y = math.floor(players[pindex].cursor_pos.y)}
