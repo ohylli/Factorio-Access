@@ -3497,6 +3497,13 @@ function read_coords(pindex, start_phrase)
                preview_str = preview_str .. " to the north "
             end
             result = result .. preview_str
+         elseif stack.valid_for_read and stack.valid and stack.prototype.place_as_tile_result ~= nil then
+            local preview_str = ", paving preview " 
+            local player = players[pindex]
+            preview_str = ", paving preview is " .. (player.cursor_size * 2 + 1) .. " by " .. (player.cursor_size * 2 + 1) .. " tiles, centered on this tile. "
+            if player.cursor then
+               --preview_str = ", paving preview extends " .. (player.cursor_size * 2 + 1) .. " east and " .. (player.cursor_size * 2 + 1) .. " south, starting from this tile. "
+            end
          end
          printout(result,pindex)
       end
@@ -4857,7 +4864,7 @@ script.on_event("toggle-cursor", function(event)
    end
 end
 )
-
+--We have cursor sizes 1,3,5,11,21,101,251
 script.on_event("cursor-size-increment", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -4865,46 +4872,47 @@ script.on_event("cursor-size-increment", function(event)
    end
    if not (players[pindex].in_menu) then
       if players[pindex].cursor_size == 0 then
+         players[pindex].cursor_size = 1
+      elseif players[pindex].cursor_size == 1 then
          players[pindex].cursor_size = 2
       elseif players[pindex].cursor_size == 2 then
          players[pindex].cursor_size = 5
       elseif players[pindex].cursor_size == 5 then
+         players[pindex].cursor_size = 10
+      elseif players[pindex].cursor_size == 10 then
          players[pindex].cursor_size = 50
       elseif players[pindex].cursor_size == 50 then
          players[pindex].cursor_size = 125
       end
       
-      if players[pindex].cursor_size == 0 then
-         printout("Cursor size 1 by 1", pindex)
-      else
-         local say_size = players[pindex].cursor_size * 2 + 1
-         printout("Cursor size " .. say_size .. " by " .. say_size, pindex)
-      end
+      local say_size = players[pindex].cursor_size * 2 + 1
+      printout("Cursor size " .. say_size .. " by " .. say_size, pindex)
    end
 end)
 
+--We have cursor sizes 1,3,5,11,21,101,251
 script.on_event("cursor-size-decrement", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
    end
    if not (players[pindex].in_menu) then
-      if players[pindex].cursor_size == 2 then
+      if players[pindex].cursor_size == 1 then
          players[pindex].cursor_size = 0
+      elseif players[pindex].cursor_size == 2 then
+         players[pindex].cursor_size = 1
       elseif players[pindex].cursor_size == 5 then
          players[pindex].cursor_size = 2
-      elseif players[pindex].cursor_size == 50 then
+      elseif players[pindex].cursor_size == 10 then
          players[pindex].cursor_size = 5
+      elseif players[pindex].cursor_size == 50 then
+         players[pindex].cursor_size = 10
       elseif players[pindex].cursor_size == 125 then
          players[pindex].cursor_size = 50
       end
       
-      if players[pindex].cursor_size == 0 then
-         printout("Cursor size 1 by 1", pindex)
-      else
-         local say_size = players[pindex].cursor_size * 2 + 1
-         printout("Cursor size " .. say_size .. " by " .. say_size, pindex)
-      end
+      local say_size = players[pindex].cursor_size * 2 + 1
+      printout("Cursor size " .. say_size .. " by " .. say_size, pindex)
    end
 end)
 
@@ -5696,9 +5704,6 @@ script.on_event("mine-access", function(event)
       if stack.valid_for_read and stack.valid and stack.prototype.place_as_tile_result ~= nil then
          local c_pos = players[pindex].cursor_pos
          local c_size = players[pindex].cursor_size
-         if c_size == 0 then
-            c_size = 1
-         end
          local left_top = {x = math.floor(c_pos.x - c_size), y = math.floor(c_pos.y - c_size)}
          local right_bottom = {x = math.floor(c_pos.x + 1 + c_size), y = math.floor(c_pos.y + 1 + c_size)}
          local tiles = surf.find_tiles_filtered{area = {left_top, right_bottom}}
@@ -6348,14 +6353,16 @@ function build_item_in_hand(pindex, offset_val)
          end
       end
    elseif stack.valid_for_read and stack.valid and stack.prototype.place_as_tile_result ~= nil then
-      --Place tiles 
+      --Place paving tiles 
 	  local p = game.get_player(pindex)
-	  local t_size = 3
-     if players[pindex].cursor_size > 1 then
-        t_size = players[pindex].cursor_size * 2 + 1
-     end
-	  if p.can_build_from_cursor{position = players[pindex].cursor_pos, terrain_building_size = t_size} then
-	     p.build_from_cursor{position = players[pindex].cursor_pos, terrain_building_size = t_size}
+	  local t_size = players[pindex].cursor_size * 2 + 1
+     local pos = players[pindex].cursor_pos--Center on the cursor in default
+     -- if players[pindex].cursor then --Hold from top left in cursor mode? But the cursor itself at larger sizes is not free... **todo add unrestricted large cursor movement
+        -- pos.x = pos.x - players[pindex].cursor_size
+        -- pos.y = pos.y - players[pindex].cursor_size
+     -- end
+	  if p.can_build_from_cursor{position = pos, terrain_building_size = t_size} then
+	     p.build_from_cursor{position = pos, terrain_building_size = t_size}
 	  else
 	     p.play_sound{path = "utility/cannot_build"}
 	  end 
