@@ -851,6 +851,16 @@ function ent_info(pindex, ent, description)
    end
    --Give drop position (like for inserters)
    if ent.drop_position ~= nil then
+      --Also for inserters, announce if they are holding something
+      if ent.type == "inserter" and ent.held_stack ~= nil and ent.held_stack.valid_for_read and ent.held_stack.valid then
+         result = result .. ", holding " .. ent.held_stack.name
+         if ent.held_stack.count > 1 then
+            result = result .. " times " .. ent.held_stack.count
+         end
+      elseif ent.type == "inserter" and (ent.held_stack == nil) then 
+         result = result .. ", holding nothing "
+      end
+      --Then explain drop position
       local position = table.deepcopy(ent.drop_position)
       local direction = ent.direction /2
       local increment = 1
