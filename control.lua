@@ -550,10 +550,10 @@ function ent_info(pindex, ent, description)
       table.sort(fluids, function(k1, k2)
          return k1.count > k2.count
       end)
-      if #fluids > 0 then
-         result = result .. " containing " .. fluids[1].name .. " "
-		 if #fluids > 1 then
-            result = result .. " and " .. fluids[2].name .. ", "
+      if #fluids > 0 and fluids[1].count ~= nil then
+         result = result .. " containing " .. fluids[1].name .. " times " .. math.ceil(fluids[1].count) .. ", "
+		 if #fluids > 1 and fluids[2].count ~= nil then
+            result = result .. " and " .. fluids[2].name .. " times " .. math.ceil(fluids[2].count) .. ", "
 		 end
 		 if #fluids > 2 then
             result = result .. ", and other fluids "
@@ -2618,7 +2618,7 @@ function printout(str, pindex)
    end
    localised_print{"","out "..pindex.." ",str}
    if str ~= "" and pindex > 0 and (game.players[pindex].name == "SirFendi") then 
-      --game.get_player(pindex).print(str)--**Print all to in game console
+      --game.get_player(pindex).print(str)--**Print all to in game console, later to add silent printing
    end
 end
 
@@ -2974,10 +2974,10 @@ function read_tile(pindex, start_text)
       result = result .. ent_info(pindex, ent)
       cursor_highlight(pindex, nil, nil)
       if game.get_player(pindex).game_view_settings.update_entity_selection == false then
-         game.get_player(pindex).game_view_settings.update_entity_selection = true
-         cursor_highlight(pindex, ent, nil)--kind of fixes the lack of highlight***
+         game.get_player(pindex).game_view_settings.update_entity_selection = true--imperfect fix here for the cursor highlight not updating
+         cursor_highlight(pindex, ent, nil)
       end
-      --game.get_player(pindex).print(result)--**
+      --game.get_player(pindex).print(result)--
       players[pindex].tile.previous = players[pindex].tile.ents[#players[pindex].tile.ents]
 
       players[pindex].tile.index = 2
@@ -2987,7 +2987,7 @@ function read_tile(pindex, start_text)
 	  --Run build preview checks
 	  if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then
 	     result = result .. build_preview_checks_info(stack,pindex)
-		 --game.get_player(pindex).print(result)--**
+		 --game.get_player(pindex).print(result)--
 	  end
       
    end
@@ -3025,7 +3025,7 @@ function build_preview_checks_info(stack, pindex)
       return "invalid entity"
    end
    
-   --Notify before all else if surface/player cannot place this entity. **laterdo extend this check by copying over build offset stuff
+   --Notify before all else if surface/player cannot place this entity. **todo extend this check by copying over build offset stuff
    if ent_p.tile_width <= 1 and ent_p.tile_height <= 1 and not surf.can_place_entity{name = stack.name, position = pos, direction = build_dir} then
       return " cannot place this here "
    end
@@ -3762,21 +3762,34 @@ script.on_event(defines.events.on_player_changed_position,function(event)
       end
       if players[pindex].walk == 2 then
          local pos = center_of_tile(game.get_player(pindex).position)
-         if game.get_player(pindex).walking_state.direction ~= players[pindex].direction then
+         if game.get_player(pindex).walking_state.direction ~= players[pindex].direction then 
+            -- turn 
             players[pindex].direction = game.get_player(pindex).walking_state.direction
+            players[pindex].player_direction = game.get_player(pindex).walking_state.direction
             local new_pos = offset_position(pos,players[pindex].direction,1)
             players[pindex].cursor_pos = new_pos
             players[pindex].position = pos
             cursor_highlight(pindex, nil, nil)
             sync_build_arrow(pindex)
 --            target(pindex)
+
+            --Rotate belts in hand for build lock Mode
+            local stack = game.get_player(pindex).cursor_stack
+            if players[pindex].build_lock and stack.valid_for_read and stack.valid and (stack.name == "transport-belt" or stack.name == "fast-transport-belt" or stack.name == "express-transport-belt") then --**todo find correct way to reference the stack entity prototype
+               players[pindex].building_direction = math.floor(game.get_player(pindex).walking_state.direction / dirs.east)
+            end
          else
+            --Walk straight
             players[pindex].cursor_pos.x = players[pindex].cursor_pos.x + pos.x - players[pindex].position.x
             players[pindex].cursor_pos.y = players[pindex].cursor_pos.y + pos.y - players[pindex].position.y
             players[pindex].position = pos
             
             cursor_highlight(pindex, nil, nil)
             sync_build_arrow(pindex)
+            
+            if players[pindex].build_lock then--***todo test and add to changelog
+               build_item_in_hand(pindex, -2)
+            end
          end
          -- print("checking:".. players[pindex].cursor_pos.x .. "," .. players[pindex].cursor_pos.y)
          if not game.get_player(pindex).surface.can_place_entity{name = "small-lamp", position = players[pindex].cursor_pos} then
@@ -4683,7 +4696,7 @@ function move(direction,pindex)
          target(pindex)
          
          if players[pindex].build_lock then
-            build_item_in_hand(pindex, -1)
+            build_item_in_hand(pindex, -2)
          end
       else
          printout("Tile Occupied", pindex)
@@ -4702,6 +4715,12 @@ function move(direction,pindex)
       sync_build_arrow(pindex)
       read_tile(pindex)
       target(pindex)
+      
+      --Rotate belts in hand for build lock Mode
+      local stack = game.get_player(pindex).cursor_stack
+      if players[pindex].build_lock and stack.valid_for_read and stack.valid and (stack.name == "transport-belt" or stack.name == "fast-transport-belt" or stack.name == "express-transport-belt") then --**todo find correct way to reference the stack entity prototype
+         players[pindex].building_direction = math.floor(players[pindex].player_direction / dirs.east)--laterdo might need to correct this if we redesign the build_direction
+      end
    end
 end
 
@@ -5060,7 +5079,7 @@ script.on_event("jump-to-scan", function(event)
          else
             teleport_to_closest(pindex, ent.position)
             players[pindex].cursor_pos = offset_position(players[pindex].position, players[pindex].player_direction, 1)
-            cursor_highlight(pindex, nil, nil)--todo check for new cursor ent
+            cursor_highlight(pindex, nil, nil)--laterdo check for new cursor ent here, to update the highlight?
             sync_build_arrow(pindex)
          end
       end
@@ -5968,7 +5987,7 @@ script.on_event("left-click", function(event)
             game.get_player(pindex).opened = nil
             local surf = game.get_player(pindex).surface
             players[pindex].tile.ents = surf.find_entities_filtered{area = {{players[pindex].cursor_pos.x - .5, players[pindex].cursor_pos.y - .5}, {players[pindex].cursor_pos.x+ .29 , players[pindex].cursor_pos.y + .29}}} 
-            cursor_highlight(pindex, nil, nil)--todo check for ent?
+            cursor_highlight(pindex, nil, nil)--laterdo check for ent here for cursor highlight?
             if not(pcall(function()
                players[pindex].tile.tile =  surf.get_tile(players[pindex].cursor_pos.x, players[pindex].cursor_pos.y).name
             end)) then
@@ -6024,7 +6043,7 @@ input.select(1, 0)
          game.get_player(pindex).opened = nil
          local surf = game.get_player(pindex).surface
          players[pindex].tile.ents = surf.find_entities_filtered{area = {{players[pindex].cursor_pos.x - .5, players[pindex].cursor_pos.y - .5}, {players[pindex].cursor_pos.x+ .29 , players[pindex].cursor_pos.y + .29}}} 
-         cursor_highlight(pindex, nil, nil)--todo check for ent?
+         cursor_highlight(pindex, nil, nil)--laterdo check for ent here for cursor highlight?
          if not(pcall(function()
             players[pindex].tile.tile =  surf.get_tile(players[pindex].cursor_pos.x, players[pindex].cursor_pos.y).name
          end)) then
@@ -6283,11 +6302,14 @@ function build_item_in_hand(pindex, offset_val)
                right_bottom.y = (right_bottom.y - width + 1)
             end
 
-            position = {left_top.x + math.floor(width/2),left_top.y + math.floor(height/2)}
+            position = {x = left_top.x + math.floor(width/2),y = left_top.y + math.floor(height/2)}
             if flip then
-               position = {left_top.x + math.floor(height/2),left_top.y + math.floor(width/2)}
+               position = {x = left_top.x + math.floor(height/2),y = left_top.y + math.floor(width/2)}
             end
          end
+         --Apply extra offsets if Any
+         position = offset_position(position, players[pindex].player_direction, adjusted_offset)
+         
       else
          --Cursor offset
          local old_pos = players[pindex].cursor_pos
@@ -6357,7 +6379,7 @@ function build_item_in_hand(pindex, offset_val)
 	  local p = game.get_player(pindex)
 	  local t_size = players[pindex].cursor_size * 2 + 1
      local pos = players[pindex].cursor_pos--Center on the cursor in default
-     -- if players[pindex].cursor then --Hold from top left in cursor mode? But the cursor itself at larger sizes is not free... **todo add unrestricted large cursor movement
+     -- if players[pindex].cursor then --Hold from top left in cursor mode? But the cursor itself at larger sizes is not free... **todo add one-tile movement for large cursor sizes when you press shift or something.
         -- pos.x = pos.x - players[pindex].cursor_size
         -- pos.y = pos.y - players[pindex].cursor_size
      -- end
@@ -7974,9 +7996,9 @@ script.on_event(defines.events.on_entity_destroyed,function(event)
       adj[pos2str({x = math.floor(ent.area.left_top.x/32),y = math.floor(ent.area.right_bottom.y/32)})] = true
       adj[pos2str({x = math.floor(ent.area.right_bottom.x/32),y = math.floor(ent.area.right_bottom.y/32)})] = true
       for pos, val in pairs(adj) do
-         --players[pindex].tree_chunks[pos].count = players[pindex].tree_chunks[pos].count - 1--**beta**
+         --players[pindex].tree_chunks[pos].count = players[pindex].tree_chunks[pos].count - 1--**beta** Forests need updating but these lines are incorrectly named
       end
-         --players[pindex].tree_positions[str] = nil--**beta**
+         --players[pindex].tree_positions[str] = nil--**beta** Forests need updating but these lines are incorrectly named
    end
    players[pindex].destroyed[event.registration_number] = nil
 end)
@@ -8712,7 +8734,7 @@ function sync_build_arrow(pindex)
    if dir == nil then
       dir = 0
       player.building_direction = 0
-      game.get_player(pindex).print("dir was nil ")--***
+      --game.get_player(pindex).print("dir was nil ")--
    end
    if stack.valid_for_read and stack.valid and stack.prototype.place_result then
       --Redraw arrow
