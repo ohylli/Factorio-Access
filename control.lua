@@ -3275,7 +3275,7 @@ function build_preview_checks_info(stack, pindex)
       --Assuming empty fluidboxes return nil, we need to check if all none-nil boxes are equal...
       if relevant_fluid_north ~= nil or relevant_fluid_east ~= nil or relevant_fluid_south ~= nil or relevant_fluid_west ~= nil then
          local count = 0
-         result = result .. " pipe connects to "
+         result = result .. ", pipe connects to "
          
          if relevant_fluid_north ~= nil then
             result = result .. relevant_fluid_north .. " at north, "
@@ -5766,10 +5766,12 @@ script.on_event("mine-group", function(event)
 		   game.get_player(pindex).mine_entity(rail,true)
 		end
 	  elseif ent ~= nil and ent.valid and ent.prototype.is_building and (ent.prototype.mineable_properties.products == nil or ent.prototype.mineable_properties.products[1].name == ent.name) then
-         --All others are treated as single objects
+         --All others are treated as single objects.
 		 game.get_player(pindex).play_sound{path = "Mine-Building"}
          schedule(25, "play_mining_sound", pindex)
       end
+   elseif not (players[pindex].in_menu) and #players[pindex].tile.ents == 0 then 
+      mine_trees_and_rocks_in_circle(players[pindex].cursor_pos, 5, pindex) --Mine trees and rocks within 5 tiles
    end
 end
 )
@@ -6069,9 +6071,6 @@ input.select(1, 0)
       local ent = players[pindex].tile.ents[1] 
       if stack.valid_for_read and stack.valid and (stack.prototype.place_result ~= nil or stack.prototype.place_as_tile_result ~= nil) and stack.name ~= "offshore-pump" then
          local offset = 0
-         if not players[pindex].cursor then
-            offset = 1
-         end
          build_item_in_hand(pindex, offset)
       elseif stack.valid and stack.valid_for_read and stack.name == "offshore-pump" then
          build_offshore_pump_in_hand(pindex)
@@ -6516,6 +6515,7 @@ script.on_event("shift-click", function(event)
 	     printout(result,pindex)
       end
    else
+      --Not in a menu
       local ent = players[pindex].tile.ents[1]
       if ent ~= nil and ent.valid then 
          if ent.name == "straight-rail" then
@@ -6545,6 +6545,7 @@ script.on_event("control-click", function(event)
          do_multi_stack_transfer(1,pindex)
       end
    else
+      --Not in a menu
       local stack = game.get_player(pindex).cursor_stack
       local ent = players[pindex].tile.ents[1]
       if stack == nil or not stack.valid_for_read or not stack.valid then
@@ -6775,7 +6776,7 @@ script.on_event("right-click", function(event)
       else--There is no status
 	      --When there is no status, for entities with fuel inventories, read that out instead. This is typical for vehicles.
 	      if ent.get_fuel_inventory() ~= nil then
-		      printout(" " .. fuel_inventory_info(ent),pindex)
+		      result = " " .. fuel_inventory_info(ent)
 		   elseif ent.type == "electric-pole" then
 		    --For electric poles with no power flow, report the nearest electric pole with a power flow.
             if get_electricity_satisfaction(ent) > 0 then
@@ -6787,8 +6788,25 @@ script.on_event("right-click", function(event)
             result = "No status."
          end
       end
+      --For working or normal entities, give some extra info about specific entities.
       if result == "" then
          result = "result error"
+      end
+      
+      --For working or normal entities, give some extra info about specific entities. todo****
+      local list = defines.entity_status
+      if ent.status ~= nil and ent.status ~= list.no_power and ent.status ~= list.no_power and ent.status ~= list.no_fuel then
+         if ent.type == "inserter" then --items per minute based on rotation speed and the STATED hand capacity
+         end
+         if ent.type == "transport-belt" then --items per minute by simple reading
+         end
+         if ent.type == "assembling-machine" then --Craft batches per minute based on recipe time and the STATED craft speed
+         end
+         
+         --drill mining speed
+         --pumpjack speed?
+         --pump speed
+         --furnace Craft batches per minute based on recipe time and the STATED craft speed
       end
       printout(result ,pindex)
       --game.get_player(pindex).print(result)--
@@ -7225,7 +7243,7 @@ script.on_event("list-warnings", function(event)
    if not check_for_player(pindex) then
       return
    end
-   if players[pindex].in_menu == false then
+   if players[pindex].in_menu == false or game.get_player(pindex).opened_gui_type == defines.gui_type.production then
       players[pindex].warnings.short = scan_for_warnings(30, 30, pindex)
       players[pindex].warnings.medium = scan_for_warnings(100, 100, pindex)
       players[pindex].warnings.long = scan_for_warnings(500, 500, pindex)
@@ -7236,7 +7254,8 @@ script.on_event("list-warnings", function(event)
       players[pindex].in_menu = true
       game.get_player(pindex).play_sound{path = "Open-Inventory-Sound"}
       printout("Short Range: " .. players[pindex].warnings.short.summary, pindex)
-
+   else
+      printout("Another menu is open. ",pindex)
    end
 end)
 
@@ -7261,7 +7280,7 @@ script.on_event("open-fast-travel", function(event)
       frame.focus()
       game.get_player(pindex).opened = frame      
    elseif players[pindex].in_menu or game.get_player(pindex).opened ~= nil then
-      printout("Another menu is open", pindex)
+      printout("Another menu is open.", pindex)
    elseif game.get_player(pindex).driving then
       printout("Cannot fast travel from inside a vehicle", pindex)
    end
@@ -7365,7 +7384,8 @@ script.on_event("open-structure-travel", function(event)
       frame.force_auto_center()
       frame.focus()
       game.get_player(pindex).opened = frame      
-
+   else
+      printout("Another menu is open. ",pindex)
    end
 
 end)
@@ -7438,7 +7458,7 @@ script.on_event("scan-selection-down", function(event)
    end
 end)
 
---Mines all trees and rocks in a selected rectangular area. Useful when placing structures. Forces mining.
+--Mines all trees and rocks in a selected rectangular area. Useful when placing structures. Forces mining. laterdo add deleting stumps maybe but they do fade away eventually 
 function mine_trees_and_rocks_in_circle(position, radius, pindex)
    local surf = game.get_player(pindex).surface
    local comment = ""
@@ -7458,9 +7478,9 @@ function mine_trees_and_rocks_in_circle(position, radius, pindex)
    local resources = surf.find_entities_filtered{position = position, radius = radius, name = {"rock-big","rock-huge","sand-rock-big"}}
    for i,resource_ent in ipairs(resources) do
       if resource_ent ~= nil and resource_ent.valid then
-         --game.get_player(pindex).mine_entity(resource_ent,true) --tolaterdo bug with rock group mining or all rock mining?
-		 rendering.draw_circle{color = {1, 0, 0},radius = 2,width = 2,target = resource_ent.position,surface = resource_ent.surface,time_to_live = 60}
-		 rocks_cleared = rocks_cleared + 1
+         rendering.draw_circle{color = {1, 0, 0},radius = 2,width = 2,target = resource_ent.position,surface = resource_ent.surface,time_to_live = 60}
+         game.get_player(pindex).mine_entity(resource_ent,true) --tolaterdo bug with rock group mining or all rock mining?***
+         rocks_cleared = rocks_cleared + 1
       end
    end
    if trees_cleared + rocks_cleared > 0 then
@@ -7717,6 +7737,8 @@ script.on_event(defines.events.on_gui_opened, function(event)
    if event.gui_type == defines.gui_type.controller and players[event.player_index].menu == "none" then
       game.get_player(event.player_index).opened = nil
       --printout("Banana",event.player_index)
+   elseif game.get_player(event.player_index).opened ~= nil then
+      players[event.player_index].in_menu = true
    end
 end)
 
