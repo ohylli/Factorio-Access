@@ -504,7 +504,8 @@ function ent_info(pindex, ent, description)
       result = result .. " " .. ent.type .. " "
    end
    if game.get_player(pindex).driving then
-      return
+      result = result .. ", cannot check details while driving. "
+      return result
    end
    if ent.type == "resource" then
       result = result .. ", x " .. ent.amount
@@ -4761,6 +4762,7 @@ script.on_event(defines.events.on_player_driving_changed_state, function(event)
    if not check_for_player(pindex) then
       return
    end
+   game.get_player(pindex).clear_cursor()
    if game.get_player(pindex).driving then
       players[pindex].last_vehicle = game.get_player(pindex).vehicle
       printout("Entered " .. game.get_player(pindex).vehicle.name ,pindex)
@@ -7243,7 +7245,7 @@ script.on_event("open-fast-travel", function(event)
    if not check_for_player(pindex) then
       return
    end
-   if players[pindex].in_menu == false and game.get_player(pindex).driving == false then
+   if players[pindex].in_menu == false and game.get_player(pindex).driving == false and game.get_player(pindex).opened == nil then
       game.get_player(pindex).game_view_settings.update_entity_selection = false
       game.get_player(pindex).selected = nil
 
@@ -7258,7 +7260,10 @@ script.on_event("open-fast-travel", function(event)
       frame.force_auto_center()
       frame.focus()
       game.get_player(pindex).opened = frame      
-
+   elseif players[pindex].in_menu or game.get_player(pindex).opened ~= nil then
+      printout("Another menu is open", pindex)
+   elseif game.get_player(pindex).driving then
+      printout("Cannot fast travel from inside a vehicle", pindex)
    end
    
    --Report disconnect error because the V key normally disconnects rolling stock if driving.
