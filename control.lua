@@ -6084,11 +6084,27 @@ input.select(1, 0)
          build_item_in_hand(pindex, offset)
       elseif stack.valid and stack.valid_for_read and stack.name == "offshore-pump" then
          build_offshore_pump_in_hand(pindex)
+      elseif stack.valid and stack.valid_for_read and stack.is_repair_tool then
+         --Repair the entity found . Laterfo improve this 
+         --game.get_player(pindex).use_from_cursor{players[pindex].cursor_pos.x,players[pindex].cursor_pos.y}--does not work
+         if ent.is_entity_with_health and ent.get_health_ratio() < 1 and ent.type ~= "resource" and ent.name ~= "character" then
+            local health_diff = ent.prototype.max_health - ent.health
+            if health_diff > 200 then
+               ent.health = ent.health + 200 
+               printout("Partially repaired " .. ent.name .. " and consumed a repair pack", pindex)
+               stack.count = stack.count - 1
+            else
+               ent.health = ent.prototype.max_health 
+               printout("Fully repaired " .. ent.name, pindex)
+            end
+            --game.get_player(pindex).print("healed " .. health_diff)--laterdo repair consumes the pack
+         end
+         return
       elseif stack.valid and stack.valid_for_read then
 	     local p = game.get_player(pindex)
 	     p.use_from_cursor{p.position.x+1,p.position.y+1}--tolaterdo adjust it to use an item 3 tiles in front of the player instead.
-      --No more stack related checks after this point
       end
+      --No more stack related checks after this point
       if game.get_player(pindex).driving and game.get_player(pindex).vehicle.train ~= nil then
          train_menu_open(pindex)
       elseif next(players[pindex].tile.ents) ~= nil and players[pindex].tile.index > 1 and players[pindex].tile.ents[1].valid 
