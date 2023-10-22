@@ -860,7 +860,7 @@ function ent_info(pindex, ent, description)
       elseif ent.type == "inserter" and (ent.held_stack == nil) then 
          result = result .. ", holding nothing "
       end
-      --Then explain drop position
+      --Next explain drop position
       local position = table.deepcopy(ent.drop_position)
       local direction = ent.direction /2
       local increment = 1
@@ -3798,7 +3798,7 @@ script.on_event(defines.events.on_player_changed_position,function(event)
             cursor_highlight(pindex, nil, nil)
             sync_build_arrow(pindex)
             
-            if players[pindex].build_lock then--***todo test and add to changelog
+            if players[pindex].build_lock then
                build_item_in_hand(pindex, -2)
             end
          end
@@ -6803,23 +6803,83 @@ script.on_event("right-click", function(event)
          result = "result error"
       end
       
-      --For working or normal entities, give some extra info about specific entities. todo****
+      --For working or normal entities, give some extra info about specific entities in terms of speeds or bonuses.
       local list = defines.entity_status
       if ent.status ~= nil and ent.status ~= list.no_power and ent.status ~= list.no_power and ent.status ~= list.no_fuel then
          if ent.type == "inserter" then --items per minute based on rotation speed and the STATED hand capacity
+            local cap = ent.force.inserter_stack_size_bonus + 1
+            if ent.name == "stack-inserter" or ent.name == "stack-filter-inserter" then
+               cap = ent.force.stack_inserter_capacity_bonus + 1
+            end
+            local rate = string.format(" %.1f ", cap * ent.prototype.inserter_rotation_speed * 57.5) 
+            result = result .. ", can move " .. rate .. " items per second, with a hand capacity of " .. cap
          end
-         if ent.type == "transport-belt" then --items per minute by simple reading
+         if ent.prototype ~= nil and ent.prototype.belt_speed ~= nil and ent.prototype.belt_speed > 0 then --items per minute by simple reading
+            result = result .. ", can move " .. math.floor(ent.prototype.belt_speed * 480) .. " items per second"
          end
-         if ent.type == "assembling-machine" then --Craft batches per minute based on recipe time and the STATED craft speed
+         if ent.type == "assembling-machine" or ent.type == "furnace" then --Crafting cycles per minute based on recipe time and the STATED craft speed
+            local progress = ent.crafting_progress
+            local speed = ent.crafting_speed
+            local recipe_time = 0
+            local cycles = 0-- crafting cycles completed per minute for this recipe
+            if ent.get_recipe() ~= nil and ent.get_recipe().valid then
+               recipe_time = ent.get_recipe().energy
+               cycles = 60 / recipe_time * speed
+            end
+            local cycles_string = string.format(" %.2f ", cycles)
+            if cycles == math.floor(cycles) then
+               cycles_string = math.floor(cycles)
+            end
+            if cycles < 10 then --more than 6 seconds to craft
+               result = result .. ", recipe progress " .. math.floor(progress * 100) .. " percent "
+            end
+            if cycles > 0 then
+               result = result .. ", can complete " .. cycles_string .. " recipe cycles per minute "
+            end
+            result = result .. ", with a crafting speed of " .. speed 
          end
-         
-         --drill mining speed
-         --pumpjack speed?
-         --pump speed
-         --furnace Craft batches per minute based on recipe time and the STATED craft speed
+         if ent.type == "mining-drill" then
+            result = result .. ", producing " .. string.format(" %.2f ",ent.prototype.mining_speed * 60) .. " items per minute" 
+         end
+         if ent.name == "lab" then
+            local speed = math.floor(100 * (1 + ent.speed_bonus) + 0.5)
+            local prod = math.floor(100 * (1 + ent.productivity_bonus) + 0.5)
+            result = result .. ", with " .. speed .. " percent speed and " .. prod .. " percent productivity "
+         end
+         --laterdo maybe pump speed?
+      end
+      
+      --Entity power usage
+      local power_rate = (1 + ent.consumption_bonus)
+      local drain = ent.electric_drain
+      if drain ~= nil then
+         drain = drain * 60
+      else
+         drain = 0
+      end
+      local uses_energy = false
+      if drain > 0 or (ent.prototype ~= nil and ent.prototype.max_energy_usage ~= nil and ent.prototype.max_energy_usage > 0) then
+         uses_energy = true
+      end
+      if ent.status ~= nil and uses_energy and ent.status == list.working then
+         result = result .. ", consuming " .. get_power_string(ent.prototype.max_energy_usage * 60 * power_rate + drain)
+      elseif ent.status ~= nil and uses_energy and ent.status == list.no_power or ent.status == list.low_power then
+         result = result .. ", consuming less than " .. get_power_string(ent.prototype.max_energy_usage * 60 * power_rate + drain)
+      elseif ent.status ~= nil and uses_energy or (ent.prototype ~= nil and ent.prototype.max_energy_usage ~= nil and ent.prototype.max_energy_usage > 0) then
+         result = result .. ", idle and consuming " .. get_power_string(drain)
+      end
+      if uses_energy and ent.prototype.burner_prototype ~= nil then
+         result = result .. " as burner fuel "
+      end
+      
+      --Entity Health 
+      if ent.is_entity_with_health and ent.get_health_ratio() == 1 then
+         result = result .. ", full health "
+      elseif ent.is_entity_with_health then
+         result = result .. ", " .. math.floor(ent.get_health_ratio() * 100) .. " percent health"
       end
       printout(result ,pindex)
-      --game.get_player(pindex).print(result)--
+      --game.get_player(pindex).print(result)--***
    end
 end
 )
