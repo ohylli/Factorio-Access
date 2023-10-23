@@ -7219,8 +7219,8 @@ script.on_event(defines.events.on_gui_closed, function(event)
    if players[pindex].in_menu == true and players[pindex].menu ~= "prompt"then
       if players[pindex].menu == "inventory" then
          game.get_player(pindex).play_sound{path="Close-Inventory-Sound"}
-      elseif players[pindex].menu == "travel" or players[pindex].menu == "structure-travel"then
-      game.get_player(pindex).game_view_settings.update_entity_selection = true
+      elseif players[pindex].menu == "travel" or players[pindex].menu == "structure-travel" and event.element ~= nil then
+         game.get_player(pindex).game_view_settings.update_entity_selection = true
          event.element.destroy()
       end
       players[pindex].in_menu = false
