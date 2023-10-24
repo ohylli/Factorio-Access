@@ -2638,7 +2638,12 @@ function repeat_last_spoken (pindex)
 end
 
 function scan_index(pindex)
-   if (players[pindex].nearby.category == 1 and next(players[pindex].nearby.ents) == nil) or (players[pindex].nearby.category == 2 and next(players[pindex].nearby.resources) == nil) or (players[pindex].nearby.category == 3 and next(players[pindex].nearby.containers) == nil) or (players[pindex].nearby.category == 4 and next(players[pindex].nearby.buildings) == nil) or (players[pindex].nearby.category == 5 and next(players[pindex].nearby.other) == nil) then
+   if (players[pindex].nearby.category == 1 and next(players[pindex].nearby.ents) == nil) 
+      or (players[pindex].nearby.category == 2 and next(players[pindex].nearby.resources) == nil) 
+      or (players[pindex].nearby.category == 3 and next(players[pindex].nearby.containers) == nil) 
+      or (players[pindex].nearby.category == 4 and next(players[pindex].nearby.buildings) == nil) 
+      or (players[pindex].nearby.category == 5 and next(players[pindex].nearby.other) == nil) 
+      then
       printout("No entities found.  Try refreshing with end key.", pindex)
    else
       local ents = {}
@@ -3444,6 +3449,9 @@ end
 --Turns off the cut paste tool if already held
 script.on_event("control-x", function(event)
    local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
    local stack = game.get_player(pindex).cursor_stack
    if stack.valid_for_read and stack.name == "cut-paste-tool" then
       --game.get_player(pindex).clear_cursor()--does not work
@@ -4568,6 +4576,8 @@ script.on_event(defines.events.on_player_joined_game,function(event)
    end
 end)
 
+script.on_event(defines.events.on_tick,on_initial_joining_tick)
+
 function on_initial_joining_tick(event)
    if not game.is_multiplayer() then
       on_player_join(game.connected_players[1].index)
@@ -4596,7 +4606,8 @@ function on_tick(event)
 	  end
    end
 end
-script.on_event(defines.events.on_tick,on_initial_joining_tick)
+
+
 
 function move_characters(event)
    for pindex, player in pairs(players) do
@@ -4993,7 +5004,7 @@ end
 
 script.on_event("scan-middle", function(event)
    pindex = event.player_index
-      if not check_for_player(pindex) then
+   if not check_for_player(pindex) then
       return
    end
    if not (players[pindex].in_menu) then
@@ -5424,7 +5435,7 @@ end)
 
 script.on_event("switch-menu", function(event)
    pindex = event.player_index
-      if not check_for_player(pindex) then
+   if not check_for_player(pindex) then
       return
    end
    if players[pindex].in_menu and players[pindex].menu ~= "prompt" then
@@ -5607,7 +5618,7 @@ end)
 
 script.on_event("reverse-switch-menu", function(event)
    pindex = event.player_index
-      if not check_for_player(pindex) then
+   if not check_for_player(pindex) then
       return
    end
    if players[pindex].in_menu and players[pindex].menu ~= "prompt" then
@@ -6910,7 +6921,7 @@ end
 
 script.on_event("rotate-building", function(event)
    pindex = event.player_index
-      if not check_for_player(pindex) then
+   if not check_for_player(pindex) then
       return
    end
    if not(players[pindex].in_menu) then
@@ -7299,7 +7310,10 @@ end)
 
 --Toggle building while walking
 script.on_event("toggle-build-lock", function(event)
-   pindex = event.player_index
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
    if not (players[pindex].in_menu == true) then
       if players[pindex].build_lock == true then
          players[pindex].build_lock = false
@@ -7312,7 +7326,10 @@ script.on_event("toggle-build-lock", function(event)
 end)
 
 script.on_event("recalibrate",function(event)
-   pindex = event.player_index
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
    fix_zoom(pindex)
 end)
 
@@ -7395,6 +7412,9 @@ end)
 --GUI action confirmed, such as by pressing ENTER
 script.on_event(defines.events.on_gui_confirmed,function(event)
    local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
    if players[pindex].menu == "travel" then
       if players[pindex].travel.creating then
          players[pindex].travel.creating = false
@@ -7426,7 +7446,7 @@ script.on_event(defines.events.on_gui_confirmed,function(event)
 end)   
 
 script.on_event("open-structure-travel", function(event)
-   pindex = event.player_index
+   local pindex = event.player_index
    if not check_for_player(pindex) then
       return
    end
@@ -7820,6 +7840,10 @@ end)
 
 --This event handler patches the unwanted opening of the inventory screen when closing a factorio access menu
 script.on_event(defines.events.on_gui_opened, function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
    if event.gui_type == defines.gui_type.controller and players[event.player_index].menu == "none" then
       game.get_player(event.player_index).opened = nil
       --printout("Banana",event.player_index)
@@ -8072,6 +8096,10 @@ end)
 
 
 script.on_event(defines.events.on_entity_destroyed,function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
    local ent = players[pindex].destroyed[event.registration_number]
    
    local str = pos2str(ent.position)
