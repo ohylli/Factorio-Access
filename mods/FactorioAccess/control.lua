@@ -2638,6 +2638,10 @@ function repeat_last_spoken (pindex)
 end
 
 function scan_index(pindex)
+   if not check_for_player(pindex) then
+      printout("Scan pindex error.", pindex)
+      return
+   end
    if (players[pindex].nearby.category == 1 and next(players[pindex].nearby.ents) == nil) 
       or (players[pindex].nearby.category == 2 and next(players[pindex].nearby.resources) == nil) 
       or (players[pindex].nearby.category == 3 and next(players[pindex].nearby.containers) == nil) 
