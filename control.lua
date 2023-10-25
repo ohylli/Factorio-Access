@@ -3576,8 +3576,9 @@ function read_coords(pindex, start_phrase)
       for i, v in pairs(recipe.products) do
          result = result .. ", " .. v.name .. " x" .. v.amount
       end
-
+      result = result .. ", time " .. recipe.energy .. " seconds by default."
       printout(result, pindex)
+      
    elseif players[pindex].menu == "technology" then
       local techs = {}
       if players[pindex].technology.category == 1 then
@@ -3619,7 +3620,7 @@ function read_coords(pindex, start_phrase)
       for i, v in pairs(recipe.products) do
          result = result .. ", " .. v.name .. " x" .. v.amount
       end
-
+      result = result .. ", time " .. recipe.energy .. " seconds by default."
       printout(result, pindex)
    end
 end
