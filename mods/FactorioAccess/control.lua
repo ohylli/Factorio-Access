@@ -1196,6 +1196,7 @@ function read_travel_slot(pindex)
    end
 end
 function teleport_to_closest(pindex, pos, muted)
+   local pos = table.deepcopy(pos)
    local muted = muted or false
    local first_player = game.get_player(pindex)
    local surf = first_player.surface
@@ -1230,7 +1231,7 @@ function teleport_to_closest(pindex, pos, muted)
          end
          if new_pos.x ~= pos.x or new_pos.y ~= pos.y then
             if not muted then
-               printout("Teleported " .. math.ceil(distance(pos,new_pos)) .. " " .. direction(pos, new_pos) .. " of target", pindex)
+               printout("Teleported " .. math.ceil(distance(pos,first_player.position)) .. " " .. direction(pos, first_player.position) .. " of target", pindex)
                game.get_player(pindex).play_sound{path = "utility/scenario_message"}
             end
          else
@@ -3006,6 +3007,7 @@ end
 
 function teleport_to_cursor(pindex)
    teleport_to_closest(pindex, players[pindex].cursor_pos)
+   players[pindex].cursor_pos = game.get_player(pindex).position--Fixes a repeated teleport bug
 end
 
 function jump_to_player(pindex)
