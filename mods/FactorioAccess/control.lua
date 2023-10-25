@@ -3546,7 +3546,7 @@ function read_coords(pindex, start_phrase)
          y = y - 1
       end
       printout(result .. x .. ", " .. y, pindex)
-   elseif players[pindex].menu == "building" and players[pindex].building.recipe_selection == false then --***
+   elseif players[pindex].menu == "building" and players[pindex].building.recipe_selection == false then
       local x = -1
       local y = -1
       if 1 == 1 then --Setting 1: Chest rows are 8 wide
@@ -4587,7 +4587,6 @@ script.on_event(defines.events.on_player_joined_game,function(event)
    end
 end)
 
-script.on_event(defines.events.on_tick,on_initial_joining_tick)
 
 function on_initial_joining_tick(event)
    if not game.is_multiplayer() then
@@ -4619,7 +4618,7 @@ function on_tick(event)
 end
 
 
-
+script.on_event(defines.events.on_tick,on_initial_joining_tick)
 function move_characters(event)
    for pindex, player in pairs(players) do
       if player.walk ~= 2 or player.cursor or player.in_menu then
@@ -6917,7 +6916,7 @@ script.on_event("right-click", function(event)
          result = result .. ", " .. math.floor(ent.get_health_ratio() * 100) .. " percent health"
       end
       printout(result ,pindex)
-      --game.get_player(pindex).print(result)--***
+      --game.get_player(pindex).print(result)--**
    end
 end
 )
@@ -7596,7 +7595,7 @@ function mine_trees_and_rocks_in_circle(position, radius, pindex)
    for i,resource_ent in ipairs(resources) do
       if resource_ent ~= nil and resource_ent.valid then
          rendering.draw_circle{color = {1, 0, 0},radius = 2,width = 2,target = resource_ent.position,surface = resource_ent.surface,time_to_live = 60}
-         game.get_player(pindex).mine_entity(resource_ent,true) --tolaterdo bug with rock group mining or all rock mining?***
+         game.get_player(pindex).mine_entity(resource_ent,true) 
          rocks_cleared = rocks_cleared + 1
       end
    end
@@ -8106,13 +8105,19 @@ if 'number' == type(players[pindex].resources[i].patches[new_group]) then new_gr
 end)
 
 
-script.on_event(defines.events.on_entity_destroyed,function(event)
-   local pindex = event.player_index
-   if not check_for_player(pindex) then
+script.on_event(defines.events.on_entity_destroyed,function(event) --DOES NOT HAVE THE KEY PLAYER_INDEX
+   local ent = nil  
+   for pindex, player in pairs(players) do --If the destroyed entity is destroyed by any player, it will be detected. Laterdo consider logged out players etc?
+      if players[pindex] ~= nil then 
+         local try_ent = players[pindex].destroyed[event.registration_number]
+         if try_ent ~= nil and try_ent.valid then
+            ent = try_ent
+         end
+      end
+   end
+   if ent == nil then
       return
    end
-   local ent = players[pindex].destroyed[event.registration_number]
-   
    local str = pos2str(ent.position)
    if ent.type == "resource" then
       if ent.name ~= "crude-oil" and players[pindex].resources[ent.name].positions[str] ~= nil then--**beta** added a check here to not run for nil "group"s...
