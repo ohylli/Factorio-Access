@@ -1213,16 +1213,27 @@ function teleport_to_closest(pindex, pos, muted)
    
    local can_port = first_player.surface.can_place_entity{name = "character", position = new_pos} 
    if can_port then
+      local old_pos = table.deepcopy(first_player.position)
+      if not muted then
+         rendering.draw_circle{color = {0.8, 0.2, 0.0},radius = 0.5,width = 15,target = old_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
+         rendering.draw_circle{color = {0.6, 0.1, 0.1},radius = 0.3,width = 20,target = old_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
+      end
       local teleported = first_player.teleport(new_pos)
       if teleported then
          players[pindex].position = table.deepcopy(new_pos)
+         if not muted then
+            rendering.draw_circle{color = {0.3, 0.3, 0.9},radius = 0.5,width = 15,target = new_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
+            rendering.draw_circle{color = {0.0, 0.0, 0.9},radius = 0.3,width = 20,target = new_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
+         end
          if new_pos.x ~= pos.x or new_pos.y ~= pos.y then
             if not muted then
                printout("Teleported " .. math.ceil(distance(pos,new_pos)) .. " " .. direction(pos, new_pos) .. " of target", pindex)
+               game.get_player(pindex).play_sound{path = "utility/scenario_message"}
             end
          else
             if not muted then
                printout("Teleported to target", pindex)
+               game.get_player(pindex).play_sound{path = "utility/scenario_message"}
             end
          end
 
@@ -5005,6 +5016,9 @@ script.on_event("rescan", function(event)
    if not (players[pindex].in_menu) then
       rescan(pindex)
       printout("Scan Complete", pindex)
+      game.get_player(pindex).play_sound{path = "utility/entity_settings_pasted"}
+      rendering.draw_circle{color = {1, 1, 1},radius = 1,width =  4,target = game.get_player(pindex).position, surface = game.get_player(pindex).surface, draw_on_ground = true, time_to_live = 60}
+      rendering.draw_circle{color = {1, 1, 1},radius = 2,width =  8,target = game.get_player(pindex).position, surface = game.get_player(pindex).surface, draw_on_ground = true, time_to_live = 60}
    end
 end
 )
