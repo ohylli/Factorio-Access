@@ -2692,6 +2692,14 @@ function scan_index(pindex)
          end
          --The scan target is an entity
          ent = ents[players[pindex].nearby.index].ents[players[pindex].nearby.selection]
+         if ent == nil then
+            printout("Error: This object no longer exists. Try rescanning.", pindex)
+            return
+         end
+         if not ent.valid then
+            printout("Error: This object is no longer valid. Try rescanning.", pindex)
+            return
+         end
          players[pindex].cursor_pos = center_of_tile(ent.position)
          cursor_highlight(pindex, ent, "train-visualization")
 --      end
