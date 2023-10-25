@@ -321,11 +321,31 @@ function ent_production(ent)
          result = result .. "Out of minable resources"
       end
    end
+
    pcall(function()
       if ent.get_recipe() ~= nil then
          result = result .. ", Producing " .. ent.get_recipe().name
       end
    end)
+
+   if ent.type == "container" or ent.type == "logistic-container" then --Chests are identified by whether they contain nothing a specific item, or simply various items
+      local itemset = ent.get_inventory(defines.inventory.chest).get_contents()
+      local itemtable = {}
+      for name, count in pairs(itemset) do
+         table.insert(itemtable, {name = name, count = count})
+      end
+      --table.sort(itemtable, function(k1, k2)
+      --   return k1.count > k2.count
+      --end)
+      if #itemtable == 0 then
+         result = result .. " empty "
+      elseif #itemtable == 1 then
+         result = result .. " of " .. itemtable[1].name
+      elseif #itemtable > 1 then
+         result = result .. " with various items "
+      end
+      
+   end
 
    return result
 end
@@ -2738,9 +2758,15 @@ function scan_index(pindex)
 end 
 
 function scan_down(pindex)
-   if (players[pindex].nearby.category == 1 and players[pindex].nearby.index < #players[pindex].nearby.ents) or (players[pindex].nearby.category == 2 and players[pindex].nearby.index < #players[pindex].nearby.resources) or (players[pindex].nearby.category == 3 and players[pindex].nearby.index < #players[pindex].nearby.containers) or (players[pindex].nearby.category == 4 and players[pindex].nearby.index < #players[pindex].nearby.buildings)  or (players[pindex].nearby.category == 5 and players[pindex].nearby.index < #players[pindex].nearby.other) then
+   if (players[pindex].nearby.category == 1 and players[pindex].nearby.index < #players[pindex].nearby.ents) or 
+      (players[pindex].nearby.category == 2 and players[pindex].nearby.index < #players[pindex].nearby.resources) or 
+      (players[pindex].nearby.category == 3 and players[pindex].nearby.index < #players[pindex].nearby.containers) or 
+      (players[pindex].nearby.category == 4 and players[pindex].nearby.index < #players[pindex].nearby.buildings)  or 
+      (players[pindex].nearby.category == 5 and players[pindex].nearby.index < #players[pindex].nearby.other) then
       players[pindex].nearby.index = players[pindex].nearby.index + 1
       players[pindex].nearby.selection = 1
+   else 
+      game.get_player(pindex).play_sound{path = "Mine-Building"}
    end
 --   if not(pcall(function()
       scan_index(pindex)
@@ -2765,6 +2791,8 @@ function scan_up(pindex)
    if players[pindex].nearby.index > 1 then
       players[pindex].nearby.index = players[pindex].nearby.index - 1
       players[pindex].nearby.selection = 1
+   elseif players[pindex].nearby.index == 1 then
+      game.get_player(pindex).play_sound{path = "Mine-Building"}
    end
 --   if not(pcall(function()
 scan_index(pindex)
