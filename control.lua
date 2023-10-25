@@ -3578,7 +3578,7 @@ function read_coords(pindex, start_phrase)
       end
       result = result .. ", time " .. recipe.energy .. " seconds by default."
       printout(result, pindex)
-      
+
    elseif players[pindex].menu == "technology" then
       local techs = {}
       if players[pindex].technology.category == 1 then
@@ -6853,7 +6853,11 @@ script.on_event("right-click", function(event)
             result = result .. ", can move " .. rate .. " items per second, with a hand capacity of " .. cap
          end
          if ent.prototype ~= nil and ent.prototype.belt_speed ~= nil and ent.prototype.belt_speed > 0 then --items per minute by simple reading
-            result = result .. ", can move " .. math.floor(ent.prototype.belt_speed * 480) .. " items per second"
+            if ent.name == "splitter" or ent.name == "fast-splitter" or ent.name == "express splitter" then
+               result = result .. ", can process " .. math.floor(ent.prototype.belt_speed * 480 * 2) .. " items per second"
+            else 
+               result = result .. ", can move " .. math.floor(ent.prototype.belt_speed * 480) .. " items per second"
+            end
          end
          if ent.type == "assembling-machine" or ent.type == "furnace" then --Crafting cycles per minute based on recipe time and the STATED craft speed
             local progress = ent.crafting_progress
@@ -6868,21 +6872,43 @@ script.on_event("right-click", function(event)
             if cycles == math.floor(cycles) then
                cycles_string = math.floor(cycles)
             end
+            local speed_string = string.format(" %.2f ", speed)
+            if speed == math.floor(speed) then
+               speed_string = math.floor(speed)
+            end
             if cycles < 10 then --more than 6 seconds to craft
                result = result .. ", recipe progress " .. math.floor(progress * 100) .. " percent "
             end
             if cycles > 0 then
                result = result .. ", can complete " .. cycles_string .. " recipe cycles per minute "
             end
-            result = result .. ", with a crafting speed of " .. speed 
-         end
-         if ent.type == "mining-drill" then
-            result = result .. ", producing " .. string.format(" %.2f ",ent.prototype.mining_speed * 60) .. " items per minute" 
-         end
-         if ent.name == "lab" then
-            local speed = math.floor(100 * (1 + ent.speed_bonus) + 0.5)
-            local prod = math.floor(100 * (1 + ent.productivity_bonus) + 0.5)
-            result = result .. ", with " .. speed .. " percent speed and " .. prod .. " percent productivity "
+            result = result .. ", with a crafting speed of " .. speed_string .. ", at " .. math.floor(100 * (1 + ent.speed_bonus) + 0.5) .. " percent "
+            if ent.productivity_bonus ~= 0 then
+               result = result .. ", with productivity bonus " .. math.floor(100 * (0 + ent.productivity_bonus) + 0.5) .. " percent "
+            end
+         elseif ent.type == "mining-drill" then
+            result = result .. ", producing " .. string.format(" %.2f ",ent.prototype.mining_speed * 60) .. " items per minute "
+            if ent.speed_bonus ~= 0 then
+               result = result .. ", with speed " .. math.floor(100 * (1 + ent.speed_bonus) + 0.5) .. " percent "
+            end
+            if ent.productivity_bonus ~= 0 then
+               result = result .. ", with productivity bonus " .. math.floor(100 * (0 + ent.productivity_bonus) + 0.5) .. " percent "
+            end 
+         elseif ent.name == "lab" then
+            if ent.speed_bonus ~= 0 then
+               result = result .. ", with speed " .. math.floor(100 * (1 + ent.force.laboratory_speed_modifier * (1 + (ent.speed_bonus - ent.force.laboratory_speed_modifier))) + 0.5) .. " percent " --laterdo fix bug**
+               game.get_player(pindex).print(result)
+            end
+            if ent.productivity_bonus ~= 0 then
+               result = result .. ", with productivity bonus " .. math.floor(100 * (0 + ent.productivity_bonus + ent.force.laboratory_productivity_bonus) + 0.5) .. " percent "
+            end
+         else --All other entities with the an applicable status
+            if ent.speed_bonus ~= 0 then
+               result = result .. ", with speed " .. math.floor(100 * (1 + ent.speed_bonus) + 0.5) .. " percent "
+            end
+            if ent.productivity_bonus ~= 0 then
+               result = result .. ", with productivity bonus " .. math.floor(100 * (0 + ent.productivity_bonus) + 0.5) .. " percent "
+            end
          end
          --laterdo maybe pump speed?
       end
