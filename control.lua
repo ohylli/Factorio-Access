@@ -3546,7 +3546,7 @@ function read_coords(pindex, start_phrase)
          y = y - 1
       end
       printout(result .. x .. ", " .. y, pindex)
-   elseif players[pindex].menu == "building" then
+   elseif players[pindex].menu == "building" and players[pindex].building.recipe_selection == false then --***
       local x = -1
       local y = -1
       if 1 == 1 then --Setting 1: Chest rows are 8 wide
@@ -3608,20 +3608,19 @@ function read_coords(pindex, start_phrase)
          
          printout(result, pindex)
       end
-   elseif players[pindex].menu == "building" then
-      if players[pindex].building.recipe_selection then
-         local recipe = players[pindex].building.recipe_list[players[pindex].building.category][players[pindex].building.index]
-         result = result .. "Ingredients: "
-         for i, v in pairs(recipe.ingredients) do
-            result = result .. ", " .. v.name .. " x" .. v.amount
-         end
-         result = result .. ", products: "
-         for i, v in pairs(recipe.products) do
-            result = result .. ", " .. v.name .. " x" .. v.amount
-         end
-
-         printout(result, pindex)
+   end
+   if players[pindex].menu == "building" and players[pindex].building.recipe_selection then
+      local recipe = players[pindex].building.recipe_list[players[pindex].building.category][players[pindex].building.index]
+      result = result .. "Ingredients: "
+      for i, v in pairs(recipe.ingredients) do
+         result = result .. ", " .. v.name .. " x" .. v.amount
       end
+      result = result .. ", products: "
+      for i, v in pairs(recipe.products) do
+         result = result .. ", " .. v.name .. " x" .. v.amount
+      end
+
+      printout(result, pindex)
    end
 end
 
