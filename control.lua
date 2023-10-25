@@ -1209,6 +1209,9 @@ function teleport_to_closest(pindex, pos, muted)
    if game.get_player(pindex).driving then
       printout("Cannot teleport while in a vehicle.", pindex)
       return
+   elseif util.distance(game.get_player(pindex).position, pos) <= 1.1 then 
+      printout("Already at target", pindex)
+      return
    end
    
    local can_port = first_player.surface.can_place_entity{name = "character", position = new_pos} 
@@ -5017,6 +5020,7 @@ script.on_event("rescan", function(event)
       rescan(pindex)
       printout("Scan Complete", pindex)
       game.get_player(pindex).play_sound{path = "utility/entity_settings_pasted"}
+      game.get_player(pindex).play_sound{path = "utility/entity_settings_copied"}
       rendering.draw_circle{color = {1, 1, 1},radius = 1,width =  4,target = game.get_player(pindex).position, surface = game.get_player(pindex).surface, draw_on_ground = true, time_to_live = 60}
       rendering.draw_circle{color = {1, 1, 1},radius = 2,width =  8,target = game.get_player(pindex).position, surface = game.get_player(pindex).surface, draw_on_ground = true, time_to_live = 60}
    end
