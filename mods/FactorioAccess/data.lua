@@ -162,6 +162,12 @@ data:extend({
 },
 {
     type = "custom-input",
+    name = "control-j",
+    key_sequence = "CONTROL + J",
+    consuming = "none"
+},
+{
+    type = "custom-input",
     name = "teleport-to-cursor",
     key_sequence = "SHIFT + T",
     consuming = "none"
@@ -500,6 +506,7 @@ data:extend({
     type = "custom-input",
     name = "left-click",
     key_sequence = "LEFTBRACKET",
+    --alternative_key_sequence = "mouse-button-1",
     consuming = "none"
 },
 
