@@ -9,10 +9,74 @@ building_types = {}
 
 local util = require('util')
 
-function squared_distance(pos1, pos2)
+local function squared_distance(pos1, pos2)
    local offset = {x = pos1.x - pos2.x, y = pos1.y - pos2.y}
    local result = offset.x * offset.x + offset.y * offset.y
    return result
+end
+
+local directions={
+   [defines.direction.north]="North",
+   [defines.direction.northeast]="Northeast",
+   [defines.direction.east]="East",
+   [defines.direction.southeast]="Southeast",
+   [defines.direction.south]="South",
+   [defines.direction.southwest]="Southwest",
+   [defines.direction.west]="West",
+   [defines.direction.northwest]="Northwest",
+   [8] = ""
+}
+
+local function dir_dist(pos1,pos2)
+   local x1 = pos1.x
+   local x2 = pos2.x
+   local dx = x2 - x1
+   local y1 = pos1.y
+   local y2 = pos2.y
+   local dy = y2 - y1
+   if dx == 0 and dy == 0 then
+      return {8,0}
+   end
+   local dir = math.atan2(dy,dx)/math.pi -- now scaled as -0.5 north, 0 east, 0.5 south
+   dir=math.floor(dir*defines.direction.south + defines.direction.east + 0.5) --now scaled correctly
+   dir=dir%(2*defines.direction.south) --now wrapped correctly
+   local dist = math.sqrt(dx*dx+dy*dy)
+   return {dir, dist}
+end
+
+local function dir(pos1,pos2)
+   return dir_dist(pos1,pos2)[1]
+end
+
+local function direction (pos1, pos2)
+   return directions[dir(pos1,pos2)]
+end
+
+local function distance ( pos1, pos2)
+   return dir_dist( pos1, pos2)[2]
+end
+
+local function dir_dist_locale_h(dir_dist)
+   return {"access.dir-dist",{"access.direction",dir_dist[1]},math.floor(dir_dist[2]+0.5)}
+end
+
+local function dir_dist_locale(pos1,pos2)
+   return dir_dist_locale_h( dir_dist(pos1,pos2) )
+end
+
+local function ent_name_locale(ent)
+   if ent.name == "water" then
+      print("todo: water isn't an entity")
+      return {"gui-map-generator.water"}
+   end
+   if ent.name == "forest" then
+      print("todo: forest isn't an entity")
+      return {"access.forest"}
+   end
+   if not game.entity_prototypes[ent.name] then
+      error(ent.name .. " is not an entity")
+   end
+   return ent.localised_name or game.entity_prototypes[ent.name].localised_name
 end
 
 function nearest_edge(edges, pos, name)
@@ -214,10 +278,10 @@ function find_islands(surf, area, pindex)
             if area_edge(area, 4, position, name) then
                entry.neighbors[4] = true
             entry.edges[pos] = true
-            end
-            if area_edge(area, 2, position, name) then
+         end
+         if area_edge(area, 2, position, name) then
                entry.neighbors[2] = true
-            entry.edges[pos] = true
+               entry.edges[pos] = true
             end
          end
          table.insert(adj, pos)
@@ -318,7 +382,7 @@ function ent_production(ent)
             result = result .. " " .. i .. " "
          end
       else
-         result = result .. "Out of minable resources"
+         result = result .. ", Out of minable resources"
       end
    end
    pcall(function()
@@ -2620,16 +2684,18 @@ function scan_index(pindex)
          end
          ent = {name = name, position = table.deepcopy(entry.position), group = entry.group}
          end
-      
       if players[pindex].nearby.count == false then
+         local result={"access.thing-producing-listpos-dirdist",ent_name_locale(ent)}
+         table.insert(result,ent_production(ent))
+         table.insert(result,{"description.of", players[pindex].nearby.selection , #ents[players[pindex].nearby.index].ents})
+         local relative_to=players[pindex].position
          if players[pindex].cursor then
-            printout (ent.name .. " " .. ent_production(ent) .. players[pindex].nearby.selection .. " of " .. #ents[players[pindex].nearby.index].ents .. ", " .. math.floor(distance(players[pindex].cursor_pos, ent.position)) .. " " .. direction(players[pindex].cursor_pos, ent.position), pindex)
-         else
---            printout(#ents, pindex	)
-            printout (ent.name .. " " .. ent_production(ent) .. players[pindex].nearby.selection .. " of " .. #ents[players[pindex].nearby.index].ents .. ", " .. math.floor(distance(players[pindex].position, ent.position)) .. " " .. direction(players[pindex].position, ent.position), pindex)
+            relative_to=players[pindex].cursor_pos
          end
+         table.insert(result,dir_dist_locale(relative_to,ent.position))
+         printout(result,pindex)
       else
-         printout (ent.name .. " x " .. ents[players[pindex].nearby.index].count , pindex)
+         printout ({"access.item-quantity",ent_name_locale(ent),ents[players[pindex].nearby.index].count} , pindex)
       end
    end
   end 
@@ -2720,44 +2786,6 @@ function rescan(pindex)
    populate_categories(pindex)
 end
 
-directions={
-   [defines.direction.north]="North",
-   [defines.direction.northeast]="Northeast",
-   [defines.direction.east]="East",
-   [defines.direction.southeast]="Southeast",
-   [defines.direction.south]="South",
-   [defines.direction.southwest]="Southwest",
-   [defines.direction.west]="West",
-   [defines.direction.northwest]="Northwest",
-   [8] = ""
-}
-
-function dir(pos1,pos2)
-   local x1 = pos1.x
-   local x2 = pos2.x
-   local dx = x2 - x1
-   local y1 = pos1.y
-   local y2 = pos2.y
-   local dy = y2 - y1
-   if dx == 0 and dy == 0 then
-      return 8
-   end
-   return math.floor(10.5 + 4*math.atan2(dy,dx)/math.pi)%8
-end
-
-function direction (pos1, pos2)
-   return directions[dir(pos1,pos2)]
-end
-
-function distance ( pos1, pos2)
-   local x1 = pos1.x
-   local x2 = pos2.x
-  local dx = math.abs(x2 - x1)
-   local y1 = pos1.y
-   local y2 = pos2.y
-  local dy = math.abs(y2 - y1)
-  return math.abs(math.sqrt (dx * dx + dy * dy ))
-end
 
 function index_of_entity(array, value)
    if next(array) == nil then
@@ -5734,7 +5762,7 @@ script.on_event("left-click", function(event)
             if ent ~= nil and ent.valid then
                players[pindex].cursor = true
                players[pindex].cursor_pos = center_of_tile(ent.position)
-               printout("Teleported the cursor to " .. math.floor(players[pindex].cursor_pos.x) .. " " .. math.floor(players[pindex].cursor_pos.y), pindex)
+               printout({"access.teleported-the-cursor-to", "".. math.floor(players[pindex].cursor_pos.x) .. " " .. math.floor(players[pindex].cursor_pos.y)}, pindex)
 --               players[pindex].menu = ""
 --               players[pindex].in_menu = false
             else
