@@ -2441,18 +2441,45 @@ function read_building_slot(pindex, start_phrase)
       --Note: We could have separated by input/output but right now the "type" is "input" for all fluids it seeems?
       local recipe = players[pindex].building.recipe
       if recipe ~= nil and name == "Any" then
-         name = "Empty slot reserved for "
+         local index = players[pindex].building.index
+         local input_fluid_count = 0
+         local input_item_count = 0
          for i, v in pairs(recipe.ingredients) do
             if v.type == "fluid" then
-               name = name .. v.name .. " or "
-            end
-         end                    
-         for i, v in pairs(recipe.products) do
-            if v.type == "fluid" then
-               name = name .. v.name .. " or "
+               input_fluid_count = input_fluid_count + 1
+            else
+               input_item_count = input_item_count + 1
             end
          end
-         name = name .. "nothing, "
+         local output_fluid_count = 0
+         local output_item_count = 0
+         for i, v in pairs(recipe.products) do
+            if v.type == "fluid" then
+               output_fluid_count = output_fluid_count + 1
+            else
+               output_item_count = output_item_count + 1
+            end
+         end
+         if index < 0 then
+            index = 0
+         end
+         name = "Empty slot reserved for "
+         if index <= input_fluid_count then
+            index = index + input_item_count
+            for i, v in pairs(recipe.ingredients) do
+               if v.type == "fluid" and i == index then
+                  name = name .. " input " .. v.name
+               end
+            end
+         else
+            index = index - input_fluid_count
+            index = index + output_item_count
+            for i, v in pairs(recipe.products) do
+               if v.type == "fluid" and i == index then
+                  name = name .. " output " .. v.name
+               end
+            end
+         end
       end
       --Read the fluid found
       printout(start_phrase .. name, pindex)
@@ -2470,20 +2497,20 @@ function read_building_slot(pindex, start_phrase)
                --For input slots read the recipe ingredients
                result = result .. " reserved for "
                for i, v in pairs(recipe.ingredients) do
-                  if v.type == "item" then
-                     result = result .. v.name .. " or "
+                  if v.type == "item" and i == players[pindex].building.index then
+                     result = result .. v.name --.. " or "
                   end
                end
-               result = result .. "nothing"
+               --result = result .. "nothing"
             elseif players[pindex].building.sectors[players[pindex].building.sector].name == "Output" then 
                --For output slots read the recipe products
                result = result .. " reserved for "
                for i, v in pairs(recipe.products) do
-                  if v.type == "item" then
-                     result = result .. v.name .. " or "
+                  if v.type == "item" and i == players[pindex].building.index then
+                     result = result .. v.name --.. " or "
                   end
                end
-               result = result .. "nothing"
+               --result = result .. "nothing"
             end
          end
          printout(start_phrase .. result, pindex)
@@ -5550,7 +5577,8 @@ script.on_event("switch-menu", function(event)
             else
                print("Somehow is nil...", pindex)
             end
-            if inventory.supports_bar() then
+            
+            if inventory.object_name ~= "LuaFluidBox" and inventory.supports_bar() then
                len = inventory.get_bar() - 1
             end
             --Read the building sector name
@@ -5569,7 +5597,8 @@ script.on_event("switch-menu", function(event)
                if inventory ~= nil then
                  len = #inventory
                end
-               if inventory.supports_bar() then
+               
+            if inventory.object_name ~= "LuaFluidBox" and inventory.supports_bar() then
                   len = inventory.get_bar() - 1
                end
                --Read the building sector name
@@ -5588,7 +5617,8 @@ script.on_event("switch-menu", function(event)
                if inventory ~= nil then
                   len = #inventory
                end
-               if inventory.supports_bar() then
+               
+            if inventory.object_name ~= "LuaFluidBox" and inventory.supports_bar() then
                   len = inventory.get_bar() - 1
                end
                --Read the building sector name
@@ -5751,7 +5781,8 @@ script.on_event("reverse-switch-menu", function(event)
             else
                print("Somehow is nil...", pindex)
             end
-            if inventory.supports_bar() then
+            
+            if inventory.object_name ~= "LuaFluidBox" and inventory.supports_bar() then
                len = inventory.get_bar() - 1
             end
             --Read the building sector name
@@ -6338,7 +6369,8 @@ input.select(1, 0)
                  len = #inventory
                end
                --Announce the building sector name including the slot count
-               if inventory.supports_bar() then
+               
+            if inventory.object_name ~= "LuaFluidBox" and inventory.supports_bar() then
                   len = inventory.get_bar() - 1
                end
                local start_phrase = len .. " " ..players[pindex].building.sectors[players[pindex].building.sector].name .. ", "
