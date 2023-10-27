@@ -5550,6 +5550,10 @@ script.on_event("switch-menu", function(event)
             else
                print("Somehow is nil...", pindex)
             end
+            if inventory.supports_bar() then
+               len = inventory.get_bar() - 1
+            end
+            --Read the building sector name
             local starting_phrase =len .. " " ..players[pindex].building.sectors[players[pindex].building.sector].name .. ", "
            read_building_slot(pindex, starting_phrase)
 --            if inventory == players[pindex].building.sectors[players[pindex].building.sector+1].inventory then
@@ -5565,7 +5569,10 @@ script.on_event("switch-menu", function(event)
                if inventory ~= nil then
                  len = #inventory
                end
-
+               if inventory.supports_bar() then
+                  len = inventory.get_bar() - 1
+               end
+               --Read the building sector name
                local starting_phrase =len .. " " ..players[pindex].building.sectors[players[pindex].building.sector].name .. ", "
                read_building_slot(pindex, starting_phrase)
             end
@@ -5581,7 +5588,10 @@ script.on_event("switch-menu", function(event)
                if inventory ~= nil then
                   len = #inventory
                end
-
+               if inventory.supports_bar() then
+                  len = inventory.get_bar() - 1
+               end
+               --Read the building sector name
                local starting_phrase =len .. " " ..players[pindex].building.sectors[players[pindex].building.sector].name .. ", "
                read_building_slot(pindex, starting_phrase)
 
@@ -5731,7 +5741,7 @@ script.on_event("reverse-switch-menu", function(event)
             else
                players[pindex].building.sector = #players[pindex].building.sectors + 2
             end
-            read_inventory_slot(pindex, "Player's Inventory")
+            read_inventory_slot(pindex, "Player Inventory, ")
             
          elseif players[pindex].building.sector <= #players[pindex].building.sectors then
             local inventory = players[pindex].building.sectors[players[pindex].building.sector].inventory
@@ -5741,6 +5751,10 @@ script.on_event("reverse-switch-menu", function(event)
             else
                print("Somehow is nil...", pindex)
             end
+            if inventory.supports_bar() then
+               len = inventory.get_bar() - 1
+            end
+            --Read the building sector name
             start_phrase = len .. " " ..players[pindex].building.sectors[players[pindex].building.sector].name .. ", "
          read_building_slot(pindex, start_phrase)
          elseif players[pindex].building.recipe_list == nil then
@@ -6322,6 +6336,10 @@ input.select(1, 0)
                local len = 0
                if inventory ~= nil then
                  len = #inventory
+               end
+               --Announce the building sector name including the slot count
+               if inventory.supports_bar() then
+                  len = inventory.get_bar() - 1
                end
                local start_phrase = len .. " " ..players[pindex].building.sectors[players[pindex].building.sector].name .. ", "
                read_building_slot(pindex, start_phrase)
