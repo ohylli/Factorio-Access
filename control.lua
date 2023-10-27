@@ -37,7 +37,9 @@ local function dir_dist(pos1,pos2)
    if dx == 0 and dy == 0 then
       return {8,0}
    end
-   local dir = math.atan2(dy,dx)/math.pi -- now scaled as -0.5 north, 0 east, 0.5 south
+   local dir = math.atan2(dy,dx) --scaled -pi to pi 0 being east
+   dir = dir + math.sin(4*dir)/4 --bias towards the diagonals
+   dir = dir/math.pi -- now scaled as -0.5 north, 0 east, 0.5 south
    dir=math.floor(dir*defines.direction.south + defines.direction.east + 0.5) --now scaled correctly
    dir=dir%(2*defines.direction.south) --now wrapped correctly
    local dist = math.sqrt(dx*dx+dy*dy)
