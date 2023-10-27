@@ -1279,6 +1279,8 @@ function teleport_to_closest(pindex, pos, muted)
       if not muted then
          rendering.draw_circle{color = {0.8, 0.2, 0.0},radius = 0.5,width = 15,target = old_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
          rendering.draw_circle{color = {0.6, 0.1, 0.1},radius = 0.3,width = 20,target = old_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
+         local test_lamp = first_player.surface.create_entity{name = "small-lamp", position = first_player.position, raise_built = false, force = first_player.force}
+         test_lamp.destroy{}
       end
       local teleported = first_player.teleport(new_pos)
       if teleported then
@@ -1286,6 +1288,8 @@ function teleport_to_closest(pindex, pos, muted)
          if not muted then
             rendering.draw_circle{color = {0.3, 0.3, 0.9},radius = 0.5,width = 15,target = new_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
             rendering.draw_circle{color = {0.0, 0.0, 0.9},radius = 0.3,width = 20,target = new_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
+            local test_lamp = first_player.surface.create_entity{name = "small-lamp", position = first_player.position, raise_built = false, force = first_player.force}
+            test_lamp.destroy{}
          end
          if new_pos.x ~= pos.x or new_pos.y ~= pos.y then
             if not muted then
@@ -3746,6 +3750,8 @@ function initialize(player)
       render_layer = 253, surface = character.surface, players = {pindex}, visible = false}
    faplayer.building_direction_arrow = faplayer.building_direction_arrow or rendering.draw_sprite{sprite = "fluid.crude-oil", tint = {r = 0.25, b = 0.25, g = 1.0, a = 0.8}, 
       render_layer = 254, target = {0,0}, surface = character.surface, players = {pindex}, visible = false}
+   faplayer.overhead_sprite = nil
+   faplayer.ocerhead_circle = nil
    faplayer.direction_lag = faplayer.direction_lag or true
    faplayer.previous_item = faplayer.previous_item or ""
    faplayer.last = faplayer.last or ""
@@ -4714,6 +4720,17 @@ function on_tick(event)
             play_train_track_alert_sounds(1)
 		 end
 	  end
+   elseif event.tick % 60 == 1 then
+      --Update all player overhead sprites
+      for pindex, player in pairs(players) do
+         if player.in_menu then
+            if player.menu == "technology" then
+               update_overhead_sprite("item.lab",2,1.5,pindex)--***
+            end
+         else
+            update_overhead_sprite(nil,1,1,pindex)
+         end
+      end
    end
 end
 
@@ -9148,3 +9165,28 @@ function cursor_highlight(pindex, ent, box_type)
    players[pindex].cursor_ent_highlight_box = h_box
    players[pindex].cursor_tile_highlight_box = h_tile
 end
+
+--Draws a sprite over the head of the player, with the selected scale. Set it to nil to clear it.
+function update_overhead_sprite(sprite, scale_in, radius_in, pindex)
+   local player = players[pindex]
+   local p = game.get_player(pindex)
+   local scale = scale_in / player.zoom
+   local radius = radius_in / player.zoom
+   
+   if player.overhead_circle ~= nil then
+      rendering.destroy(player.overhead_circle) 
+   end
+   if player.overhead_sprite ~= nil then
+      rendering.destroy(player.overhead_sprite) 
+   end
+   if sprite ~= nil then
+      player.overhead_circle = rendering.draw_circle{color = {r = 0.5, b = 0.75, g = 0.5, a = 0.8}, render_layer = 253, radius = radius,
+         surface = p.surface, target = {x = p.position.x, y = p.position.y - 3 * scale - 3 * radius}, draw_on_ground = false, filled = true}
+      rendering.set_visible(player.overhead_circle,true)
+      player.overhead_sprite = rendering.draw_sprite{sprite = sprite, render_layer = 254, x_scale = scale, y_scale = scale,
+         surface = p.surface, target = {x = p.position.x, y = p.position.y - 3 * scale - 3 * radius}, orientation = dirs.north}
+      rendering.set_visible(player.overhead_sprite,true)
+   end
+end
+
+
