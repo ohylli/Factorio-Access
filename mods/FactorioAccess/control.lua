@@ -187,7 +187,7 @@ function find_islands(surf, area, pindex)
       end
    end
    if #trents > 0 then
-      printout("trees galore", pindex)
+      --printout("trees galore", pindex) **beta**
    end
    if #ents == 0 and #waters == 0 and #trents == 0 then return {} end
 
@@ -2717,10 +2717,17 @@ function check_for_player(index)
 end
 
 function printout(str, pindex)
-   if pindex > 0 then
+   if pindex ~= nil and pindex > 0 then
       players[pindex].last = str
+   else
+      return
    end
-   localised_print{"","out "..pindex.." ",str}
+   if players[pindex].vanilla_mode == nil then
+      players[pindex].vanilla_mode = false
+   end
+   if not players[pindex].vanilla_mode then
+      localised_print{"","out "..pindex.." ",str}
+   end
    if str ~= "" and pindex > 0 and (game.players[pindex].name == "SirFendi") then 
       --game.get_player(pindex).print(str)--**Print all to in game console, later to add silent printing
    end
@@ -2827,7 +2834,7 @@ function scan_index(pindex)
             dir_dist} , pindex)
       end
    end
-   game.get_player(pindex).game_view_settings.update_entity_selection = false
+   if not players[pindex].vanilla_mode then game.get_player(pindex).game_view_settings.update_entity_selection = false end
 end 
 
 function scan_down(pindex)
@@ -3010,7 +3017,7 @@ function toggle_cursor(pindex)
       printout("Cursor mode enabled.", pindex)
       players[pindex].cursor = true
       players[pindex].build_lock = false
-      game.get_player(pindex).game_view_settings.update_entity_selection = false
+      if not players[pindex].vanilla_mode then game.get_player(pindex).game_view_settings.update_entity_selection = false end
    else
       --printout("Cursor mode disabled", pindex)
       players[pindex].cursor = false
@@ -3719,6 +3726,7 @@ function initialize(player)
    faplayer.item_cache = faplayer.item_cache or {}
    faplayer.zoom = faplayer.zoom or 1
    faplayer.build_lock = faplayer.build_lock or false
+   faplayer.vanilla_mode = faplayer.vanilla_mode or false
    faplayer.setting_inventory_wraps_around = faplayer.setting_inventory_wraps_around or true
    faplayer.resources = faplayer.resources or {}
    faplayer.mapped = faplayer.mapped or {}
@@ -3887,7 +3895,7 @@ script.on_event(defines.events.on_player_changed_position,function(event)
             end
          end
          -- print("checking:".. players[pindex].cursor_pos.x .. "," .. players[pindex].cursor_pos.y)
-         if not game.get_player(pindex).surface.can_place_entity{name = "small-lamp", position = players[pindex].cursor_pos} then
+         if not game.get_player(pindex).surface.can_place_entity{name = "small-lamp", position = players[pindex].cursor_pos} and not players[pindex].vanilla_mode then
             read_tile(pindex)
             target(pindex)
          end
@@ -5808,7 +5816,7 @@ script.on_event("mine-access", function(event)
    if not check_for_player(pindex) then
       return
    end
-   if not (players[pindex].in_menu) then   
+   if not (players[pindex].in_menu) and not players[pindex].vanilla_mode then   
       target(pindex)
       if #players[pindex].tile.ents > 0 then
          local ent = players[pindex].tile.ents[players[pindex].tile.index - 1]
@@ -7430,6 +7438,21 @@ script.on_event("toggle-build-lock", function(event)
    end
 end)
 
+script.on_event("toggle-vanilla",function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if not players[pindex].vanilla_mode then 
+      printout(" Enabled vanilla mode ")
+   end
+   players[pindex].vanilla_mode = not players[pindex].vanilla_mode
+   if not players[pindex].vanilla_mode then 
+      printout(" Disabled vanilla mode ")
+   end
+   game.get_player(pindex).play_sound{path = "utility/confirm"}
+end)
+
 script.on_event("recalibrate",function(event)
    local pindex = event.player_index
    if not check_for_player(pindex) then
@@ -7473,7 +7496,7 @@ script.on_event("open-fast-travel", function(event)
       return
    end
    if players[pindex].in_menu == false and game.get_player(pindex).driving == false and game.get_player(pindex).opened == nil then
-      game.get_player(pindex).game_view_settings.update_entity_selection = false
+      if not players[pindex].vanilla_mode then game.get_player(pindex).game_view_settings.update_entity_selection = false end
       game.get_player(pindex).selected = nil
 
       players[pindex].menu = "travel"
@@ -7556,7 +7579,7 @@ script.on_event("open-structure-travel", function(event)
       return
    end
    if players[pindex].in_menu == false then
-      game.get_player(pindex).game_view_settings.update_entity_selection = false
+      if not players[pindex].vanilla_mode then game.get_player(pindex).game_view_settings.update_entity_selection = false end
       game.get_player(pindex).selected = nil
       players[pindex].menu = "structure-travel"
       players[pindex].in_menu = true
