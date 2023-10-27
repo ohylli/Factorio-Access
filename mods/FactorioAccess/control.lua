@@ -328,10 +328,10 @@ function increment_inventory_bar(ent, amount)
    
    --Checks
    if not inventory then
-      return "Not a chest."
+      return {"access.failed-inventory-limit-ajust-notcontainter"}
    end
    if not inventory.supports_bar() then
-      return "This inventory does not support limiting."
+      return {"access.failed-inventory-limit-ajust-no-limit"}
    end
    
    local max_bar = #inventory + 1
@@ -350,14 +350,14 @@ function increment_inventory_bar(ent, amount)
    inventory.set_bar(current_bar)
    
    --Return result
-   current_bar = current_bar - 1 --Mismatch correction
-   if current_bar == 1 then
-      return "One slot unlocked."
-   elseif current_bar >= (max_bar - 1) then
-      return "All slots unlocked."
+   local value = current_bar -1 --Mismatch correction
+   if current_bar == max_bar then
+      value = {"gui.all"}
+      current_bar=1000
    else
-      return current_bar .. " slots unlocked."
+      current_bar = value 
    end
+   return {"access.inventory-limit-status",value,current_bar}
 end
 
 
@@ -416,12 +416,6 @@ end
 
 
 function nudge_key(direction, event)
-   local adjusted = {}
-   adjusted[0] = "north"
-   adjusted[2] = "east"
-   adjusted[4] = "south"
-   adjusted[6] = "west"
-   
    local pindex = event.player_index
    if not check_for_player(pindex) or players[pindex].menu == "prompt" then
       return 
@@ -438,14 +432,14 @@ function nudge_key(direction, event)
          local new_pos = offset_position(ent.position,direction,1)
          local teleported = ent.teleport(new_pos)
          if teleported then
-            printout("Moved building 1 " .. adjusted[direction], pindex)
+            printout({"access.nudged-one-dir",{"access.direction",direction}}, pindex)
             if players[pindex].cursor then
                players[pindex].cursor_pos = offset_position(players[pindex].cursor_pos,direction,1)
                cursor_highlight(pindex, ent, "train-visualization")
                sync_build_arrow(pindex)
             end
          else
-            printout("Cannot move building, something is in the way.", pindex)
+            printout({"access.failed-to-nudge"}, pindex)
          end
       end
    end
@@ -5693,11 +5687,11 @@ script.on_event("switch-menu", function(event)
 	  printout(result,pindex)
    else
       --Re-apply the previous gun index so that weapons do not switch when in a menu
-	  if p.character.selected_gun_index == 1 then
-	     p.character.selected_gun_index = guns_count
-	  else
-	     p.character.selected_gun_index = p.character.selected_gun_index - 1
-	  end
+      if p.character.selected_gun_index == 1 then
+         p.character.selected_gun_index = math.max(guns_count,1)
+      else
+         p.character.selected_gun_index = p.character.selected_gun_index - 1
+      end
    end
 end)
 
