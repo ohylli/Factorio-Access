@@ -5687,11 +5687,11 @@ script.on_event("switch-menu", function(event)
 	  printout(result,pindex)
    else
       --Re-apply the previous gun index so that weapons do not switch when in a menu
-	  if p.character.selected_gun_index == 1 then
-	     p.character.selected_gun_index = guns_count
-	  else
-	     p.character.selected_gun_index = p.character.selected_gun_index - 1
-	  end
+      if p.character.selected_gun_index == 1 then
+         p.character.selected_gun_index = math.max(guns_count,1)
+      else
+         p.character.selected_gun_index = p.character.selected_gun_index - 1
+      end
    end
 end)
 
