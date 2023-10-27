@@ -211,7 +211,7 @@ function find_islands(surf, area, pindex)
       end
    end
    if #trents > 0 then
-      printout("trees galore", pindex)
+      --printout("trees galore", pindex) **beta**
    end
    if #ents == 0 and #waters == 0 and #trents == 0 then return {} end
 
@@ -2459,18 +2459,45 @@ function read_building_slot(pindex, start_phrase)
       --Note: We could have separated by input/output but right now the "type" is "input" for all fluids it seeems?
       local recipe = players[pindex].building.recipe
       if recipe ~= nil and name == "Any" then
-         name = "Empty slot reserved for "
+         local index = players[pindex].building.index
+         local input_fluid_count = 0
+         local input_item_count = 0
          for i, v in pairs(recipe.ingredients) do
             if v.type == "fluid" then
-               name = name .. v.name .. " or "
-            end
-         end                    
-         for i, v in pairs(recipe.products) do
-            if v.type == "fluid" then
-               name = name .. v.name .. " or "
+               input_fluid_count = input_fluid_count + 1
+            else
+               input_item_count = input_item_count + 1
             end
          end
-         name = name .. "nothing, "
+         local output_fluid_count = 0
+         local output_item_count = 0
+         for i, v in pairs(recipe.products) do
+            if v.type == "fluid" then
+               output_fluid_count = output_fluid_count + 1
+            else
+               output_item_count = output_item_count + 1
+            end
+         end
+         if index < 0 then
+            index = 0
+         end
+         name = "Empty slot reserved for "
+         if index <= input_fluid_count then
+            index = index + input_item_count
+            for i, v in pairs(recipe.ingredients) do
+               if v.type == "fluid" and i == index then
+                  name = name .. " input " .. v.name
+               end
+            end
+         else
+            index = index - input_fluid_count
+            index = index + output_item_count
+            for i, v in pairs(recipe.products) do
+               if v.type == "fluid" and i == index then
+                  name = name .. " output " .. v.name
+               end
+            end
+         end
       end
       --Read the fluid found
       printout(start_phrase .. name, pindex)
@@ -2488,20 +2515,20 @@ function read_building_slot(pindex, start_phrase)
                --For input slots read the recipe ingredients
                result = result .. " reserved for "
                for i, v in pairs(recipe.ingredients) do
-                  if v.type == "item" then
-                     result = result .. v.name .. " or "
+                  if v.type == "item" and i == players[pindex].building.index then
+                     result = result .. v.name --.. " or "
                   end
                end
-               result = result .. "nothing"
+               --result = result .. "nothing"
             elseif players[pindex].building.sectors[players[pindex].building.sector].name == "Output" then 
                --For output slots read the recipe products
                result = result .. " reserved for "
                for i, v in pairs(recipe.products) do
-                  if v.type == "item" then
-                     result = result .. v.name .. " or "
+                  if v.type == "item" and i == players[pindex].building.index then
+                     result = result .. v.name --.. " or "
                   end
                end
-               result = result .. "nothing"
+               --result = result .. "nothing"
             end
          end
          printout(start_phrase .. result, pindex)
@@ -2732,10 +2759,17 @@ function check_for_player(index)
 end
 
 function printout(str, pindex)
-   if pindex > 0 then
+   if pindex ~= nil and pindex > 0 then
       players[pindex].last = str
+   else
+      return
    end
-   localised_print{"","out "..pindex.." ",str}
+   if players[pindex].vanilla_mode == nil then
+      players[pindex].vanilla_mode = false
+   end
+   if not players[pindex].vanilla_mode then
+      localised_print{"","out "..pindex.." ",str}
+   end
    if str ~= "" and pindex > 0 and (game.players[pindex].name == "SirFendi") then 
       --game.get_player(pindex).print(str)--**Print all to in game console, later to add silent printing
    end
@@ -2842,7 +2876,7 @@ function scan_index(pindex)
             dir_dist} , pindex)
       end
    end
-   game.get_player(pindex).game_view_settings.update_entity_selection = false
+   if not players[pindex].vanilla_mode then game.get_player(pindex).game_view_settings.update_entity_selection = false end
 end 
 
 function scan_down(pindex)
@@ -3025,7 +3059,7 @@ function toggle_cursor(pindex)
       printout("Cursor mode enabled.", pindex)
       players[pindex].cursor = true
       players[pindex].build_lock = false
-      game.get_player(pindex).game_view_settings.update_entity_selection = false
+      if not players[pindex].vanilla_mode then game.get_player(pindex).game_view_settings.update_entity_selection = false end
    else
       --printout("Cursor mode disabled", pindex)
       players[pindex].cursor = false
@@ -3732,6 +3766,7 @@ function initialize(player)
    faplayer.item_cache = faplayer.item_cache or {}
    faplayer.zoom = faplayer.zoom or 1
    faplayer.build_lock = faplayer.build_lock or false
+   faplayer.vanilla_mode = faplayer.vanilla_mode or false
    faplayer.setting_inventory_wraps_around = faplayer.setting_inventory_wraps_around or true
    faplayer.resources = faplayer.resources or {}
    faplayer.mapped = faplayer.mapped or {}
@@ -3900,7 +3935,7 @@ script.on_event(defines.events.on_player_changed_position,function(event)
             end
          end
          -- print("checking:".. players[pindex].cursor_pos.x .. "," .. players[pindex].cursor_pos.y)
-         if not game.get_player(pindex).surface.can_place_entity{name = "small-lamp", position = players[pindex].cursor_pos} then
+         if not game.get_player(pindex).surface.can_place_entity{name = "small-lamp", position = players[pindex].cursor_pos} and not players[pindex].vanilla_mode then
             read_tile(pindex)
             target(pindex)
          end
@@ -5555,6 +5590,11 @@ script.on_event("switch-menu", function(event)
             else
                print("Somehow is nil...", pindex)
             end
+            
+            if inventory.object_name ~= "LuaFluidBox" and inventory.supports_bar() then
+               len = inventory.get_bar() - 1
+            end
+            --Read the building sector name
             local starting_phrase =len .. " " ..players[pindex].building.sectors[players[pindex].building.sector].name .. ", "
            read_building_slot(pindex, starting_phrase)
 --            if inventory == players[pindex].building.sectors[players[pindex].building.sector+1].inventory then
@@ -5570,7 +5610,11 @@ script.on_event("switch-menu", function(event)
                if inventory ~= nil then
                  len = #inventory
                end
-
+               
+            if inventory.object_name ~= "LuaFluidBox" and inventory.supports_bar() then
+                  len = inventory.get_bar() - 1
+               end
+               --Read the building sector name
                local starting_phrase =len .. " " ..players[pindex].building.sectors[players[pindex].building.sector].name .. ", "
                read_building_slot(pindex, starting_phrase)
             end
@@ -5586,7 +5630,11 @@ script.on_event("switch-menu", function(event)
                if inventory ~= nil then
                   len = #inventory
                end
-
+               
+            if inventory.object_name ~= "LuaFluidBox" and inventory.supports_bar() then
+                  len = inventory.get_bar() - 1
+               end
+               --Read the building sector name
                local starting_phrase =len .. " " ..players[pindex].building.sectors[players[pindex].building.sector].name .. ", "
                read_building_slot(pindex, starting_phrase)
 
@@ -5736,7 +5784,7 @@ script.on_event("reverse-switch-menu", function(event)
             else
                players[pindex].building.sector = #players[pindex].building.sectors + 2
             end
-            read_inventory_slot(pindex, "Player's Inventory")
+            read_inventory_slot(pindex, "Player Inventory, ")
             
          elseif players[pindex].building.sector <= #players[pindex].building.sectors then
             local inventory = players[pindex].building.sectors[players[pindex].building.sector].inventory
@@ -5746,6 +5794,11 @@ script.on_event("reverse-switch-menu", function(event)
             else
                print("Somehow is nil...", pindex)
             end
+            
+            if inventory.object_name ~= "LuaFluidBox" and inventory.supports_bar() then
+               len = inventory.get_bar() - 1
+            end
+            --Read the building sector name
             start_phrase = len .. " " ..players[pindex].building.sectors[players[pindex].building.sector].name .. ", "
          read_building_slot(pindex, start_phrase)
          elseif players[pindex].building.recipe_list == nil then
@@ -5821,7 +5874,7 @@ script.on_event("mine-access", function(event)
    if not check_for_player(pindex) then
       return
    end
-   if not (players[pindex].in_menu) then   
+   if not (players[pindex].in_menu) and not players[pindex].vanilla_mode then   
       target(pindex)
       local ent = get_selected_ent(pindex)
       if ent and ent.prototype.is_building and (ent.prototype.mineable_properties.products == nil or ent.prototype.mineable_properties.products[1].name == ent.name) then
@@ -6314,6 +6367,11 @@ input.select(1, 0)
                local len = 0
                if inventory ~= nil then
                  len = #inventory
+               end
+               --Announce the building sector name including the slot count
+               
+            if inventory.object_name ~= "LuaFluidBox" and inventory.supports_bar() then
+                  len = inventory.get_bar() - 1
                end
                local start_phrase = len .. " " ..players[pindex].building.sectors[players[pindex].building.sector].name .. ", "
                read_building_slot(pindex, start_phrase)
@@ -7428,6 +7486,21 @@ script.on_event("toggle-build-lock", function(event)
    end
 end)
 
+script.on_event("toggle-vanilla",function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if not players[pindex].vanilla_mode then 
+      printout(" Enabled vanilla mode ")
+   end
+   players[pindex].vanilla_mode = not players[pindex].vanilla_mode
+   if not players[pindex].vanilla_mode then 
+      printout(" Disabled vanilla mode ")
+   end
+   game.get_player(pindex).play_sound{path = "utility/confirm"}
+end)
+
 script.on_event("recalibrate",function(event)
    local pindex = event.player_index
    if not check_for_player(pindex) then
@@ -7471,7 +7544,7 @@ script.on_event("open-fast-travel", function(event)
       return
    end
    if players[pindex].in_menu == false and game.get_player(pindex).driving == false and game.get_player(pindex).opened == nil then
-      game.get_player(pindex).game_view_settings.update_entity_selection = false
+      if not players[pindex].vanilla_mode then game.get_player(pindex).game_view_settings.update_entity_selection = false end
       game.get_player(pindex).selected = nil
 
       players[pindex].menu = "travel"
@@ -7554,7 +7627,7 @@ script.on_event("open-structure-travel", function(event)
       return
    end
    if players[pindex].in_menu == false then
-      game.get_player(pindex).game_view_settings.update_entity_selection = false
+      if not players[pindex].vanilla_mode then game.get_player(pindex).game_view_settings.update_entity_selection = false end
       game.get_player(pindex).selected = nil
       players[pindex].menu = "structure-travel"
       players[pindex].in_menu = true

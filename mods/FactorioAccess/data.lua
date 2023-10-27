@@ -740,6 +740,13 @@ data:extend({
     name = "shift-right",
     key_sequence = "SHIFT + RIGHT",
     consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "toggle-vanilla",
+    key_sequence = "CONTROL + ALT + V",
+    consuming = "none"
 }
 
 })
