@@ -117,7 +117,7 @@ data:extend({
     linked_game_control = "move-right",
     consuming = "none"
 },
-  {
+{
     type = "custom-input",
     name = "nudge-up",
     key_sequence = "CONTROL + SHIFT + W",
@@ -265,6 +265,20 @@ data:extend({
     type = "custom-input",
     name = "down-arrow",
     key_sequence = "DOWN",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "left-arrow",
+    key_sequence = "LEFT",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "right-arrow",
+    key_sequence = "RIGHT",
     consuming = "none"
 },
 
