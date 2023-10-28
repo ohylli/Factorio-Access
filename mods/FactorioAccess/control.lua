@@ -2797,6 +2797,10 @@ function scan_index(pindex)
       printout("Scan pindex error.", pindex)
       return
    end
+   if players[pindex].is_scanning then
+      printout("Scanning.", pindex)
+      return
+   end
    if (players[pindex].nearby.category == 1 and next(players[pindex].nearby.ents) == nil) 
       or (players[pindex].nearby.category == 2 and next(players[pindex].nearby.resources) == nil) 
       or (players[pindex].nearby.category == 3 and next(players[pindex].nearby.containers) == nil) 
@@ -2876,7 +2880,12 @@ function scan_index(pindex)
          cursor_highlight(pindex, nil, "train-visualization")
       end
       
-      local dir_dist = dir_dist_locale(players[pindex].position,ent.position)
+      if not ents[players[pindex].nearby.index].aggregate and not ent.valid then
+         printout("Error: Invalid object, ignore or try rescanning.", pindex)
+         --game.get_player(pindex).print("invalid ent " .. ent.object_name)--***
+         return
+      end
+      local dir_dist = dir_dist_locale(players[pindex].position, ent.position)
       if players[pindex].nearby.count == false then
          local result={"access.thing-producing-listpos-dirdist",ent_name_locale(ent)}
          table.insert(result,ent_production(ent))
@@ -2902,6 +2911,7 @@ function scan_down(pindex)
       players[pindex].nearby.selection = 1
    else 
       game.get_player(pindex).play_sound{path = "Mine-Building"}
+      players[pindex].nearby.selection = 1
    end
 --   if not(pcall(function()
       scan_index(pindex)
@@ -2926,7 +2936,9 @@ function scan_up(pindex)
    if players[pindex].nearby.index > 1 then
       players[pindex].nearby.index = players[pindex].nearby.index - 1
       players[pindex].nearby.selection = 1
-   elseif players[pindex].nearby.index == 1 then
+   elseif players[pindex].nearby.index <= 1 then
+      players[pindex].nearby.index = 1
+      players[pindex].nearby.selection = 1
       game.get_player(pindex).play_sound{path = "Mine-Building"}
    end
 --   if not(pcall(function()
@@ -2984,6 +2996,8 @@ function rescan(pindex)
    first_player = game.get_player(pindex)
    players[pindex].nearby.ents = scan_area(math.floor(players[pindex].cursor_pos.x)-2500, math.floor(players[pindex].cursor_pos.y)-2500, 5000, 5000, pindex)
    populate_categories(pindex)
+   players[pindex].nearby.index = 1
+   players[pindex].nearby.selection = 1
 end
 
 
@@ -3766,6 +3780,7 @@ function initialize(player)
    local faplayer = global.players[player.index]
    local character = player.cutscene_character or player.character
    faplayer.player = player
+   faplayer.is_scanning = faplayer.is_scanning or false
    faplayer.in_menu = faplayer.in_menu or false
    faplayer.in_item_selector = faplayer.in_item_selector or false
    faplayer.menu = faplayer.menu or "none"
@@ -5138,8 +5153,10 @@ script.on_event("rescan", function(event)
       return
    end
    if not (players[pindex].in_menu) then
+      players[pindex].is_scanning = true
       rescan(pindex)
       printout("Scan Complete", pindex)
+      players[pindex].is_scanning = false
       game.get_player(pindex).play_sound{path = "utility/entity_settings_pasted"}
       game.get_player(pindex).play_sound{path = "utility/entity_settings_copied"}
       rendering.draw_circle{color = {1, 1, 1},radius = 1,width =  4,target = game.get_player(pindex).position, surface = game.get_player(pindex).surface, draw_on_ground = true, time_to_live = 60}
