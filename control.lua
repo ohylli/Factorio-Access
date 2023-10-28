@@ -1320,7 +1320,10 @@ function teleport_to_closest(pindex, pos, muted)
                game.get_player(pindex).play_sound{path = "utility/scenario_message"}
             end
          end
-
+         --Update cursor after teleport
+         players[pindex].cursor_pos = table.deepcopy(new_pos)
+         move_cursor_map(center_of_tile(players[pindex].cursor_pos),pindex)
+         cursor_highlight(pindex,nil,nil)
       else
          printout("Teleport Failed", pindex)
       end
@@ -2897,7 +2900,7 @@ function scan_index(pindex)
             dir_dist} , pindex)
       end
    end
-   if not players[pindex].vanilla_mode then game.get_player(pindex).game_view_settings.update_entity_selection = false end
+   --if not players[pindex].vanilla_mode then game.get_player(pindex).game_view_settings.update_entity_selection = false end
 end 
 
 function scan_down(pindex)
@@ -2913,8 +2916,7 @@ function scan_down(pindex)
       players[pindex].nearby.selection = 1
    end
 --   if not(pcall(function()
-      scan_index(pindex)--***
-      --target(pindex)
+      scan_index(pindex)
 --   end)) then
 --      if players[pindex].nearby.category == 1 then
 --         table.remove(players[pindex].nearby.ents, players[pindex].nearby.index)
@@ -2942,10 +2944,7 @@ function scan_up(pindex)
       game.get_player(pindex).play_sound{path = "Mine-Building"}
    end
 --   if not(pcall(function()
-   --game.get_player(pindex).game_view_settings.update_entity_selection = true
-   scan_index(pindex)--***
-   --target(pindex)
-   --game.get_player(pindex).game_view_settings.update_entity_selection = false
+   scan_index(pindex)
 --end)) then
 --      if players[pindex].nearby.category == 1 then
 --         table.remove(players[pindex].nearby.ents, players[pindex].nearby.index)
@@ -9224,7 +9223,7 @@ function cursor_highlight(pindex, ent, box_type)
    
    if ent ~= nil and ent.valid and ent.name ~= "highlight-box"  then
       h_box = p.surface.create_entity{name = "highlight-box", force = "neutral", surface = p.surface, render_player_index = pindex, box_type = "entity", 
-         position = c_pos, source = ent }-- , time_to_live = 3}--*****
+         position = c_pos, source = ent}
       if box_type ~= nil then
          h_box.highlight_box_type = box_type
       else
@@ -9245,7 +9244,14 @@ function cursor_highlight(pindex, ent, box_type)
    
    players[pindex].cursor_ent_highlight_box = h_box
    players[pindex].cursor_tile_highlight_box = h_tile
-   --move_cursor_map(center_of_tile(c_pos),pindex)--*****
+   game.get_player(pindex).game_view_settings.update_entity_selection = true
+   
+   --Highlight nearby entities by default means
+   if util.distance(p.position,c_pos) < 11 then
+      move_cursor_map(center_of_tile(c_pos),pindex)
+   else
+      move_cursor_map(center_of_tile(p.position),pindex)
+   end
 end
 
 --Draws a sprite over the head of the player, with the selected scale. Set it to nil to clear it.
