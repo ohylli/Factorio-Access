@@ -2074,7 +2074,7 @@ function confirm_ent_is_in_area(ent_name, area_left_top, area_right_bottom, pind
    return #ents > 0
 end
 
-function read_scan_summary(scan_left_top, scan_right_bottom, pindex)      
+function get_scan_summary(scan_left_top, scan_right_bottom, pindex)      
    local result = ""
    local explored_left_top = {x = math.floor((players[pindex].cursor_pos.x - 1 - players[pindex].cursor_size) / 32), y = math.floor((players[pindex].cursor_pos.y - 1 - players[pindex].cursor_size)/32)}
    local explored_right_bottom = {x = math.floor((players[pindex].cursor_pos.x + 1 + players[pindex].cursor_size)/32), y = math.floor((players[pindex].cursor_pos.y + 1 + players[pindex].cursor_size)/32)}
@@ -2155,7 +2155,7 @@ function read_scan_summary(scan_left_top, scan_right_bottom, pindex)
       table.sort(percentages, function(k1, k2)
          return k1.percent > k2.percent
       end)
-      result = result .. "Area contains "
+      result = result .. " Area contains "
       local i = 1
       while i <= # percentages and (i <= 5 or percentages[i].percent > 1) do
          result = result .. percentages[i].name .. " " .. percentages[i].percent .. "%, "
@@ -2163,11 +2163,20 @@ function read_scan_summary(scan_left_top, scan_right_bottom, pindex)
       end
       result = result .. ", total space occupied " .. math.floor(percent_total) .. " percent " 
    else
-      result = result .. "Empty Area  "
+      result = result .. " Empty Area  "
    end
-   printout(result, pindex)
-   --game.get_player(pindex).print("r: " .. result)--
-   rendering.draw_rectangle{color = {0, 1, 1},surface = game.get_player(pindex).surface, time_to_live = 90, left_top = scan_left_top, right_bottom = scan_right_bottom }
+   
+   return result
+end
+
+function draw_area_as_cursor(scan_left_top,scan_right_bottom,pindex)
+   local h_tile = players[pindex].cursor_tile_highlight_box
+   if h_tile ~= nil then
+      rendering.destroy(h_tile)
+   end
+   h_tile = rendering.draw_rectangle{color = {0.75,1,1,0.75},surface = game.get_player(pindex).surface, left_top = scan_left_top, right_bottom = scan_right_bottom, draw_on_ground = true}
+   rendering.set_visible(h_tile,true)
+   players[pindex].cursor_tile_highlight_box = h_tile 
 end
    
 
@@ -3069,12 +3078,18 @@ function toggle_cursor(pindex)
       players[pindex].cursor = false
       game.get_player(pindex).game_view_settings.update_entity_selection = true
       players[pindex].cursor_pos = offset_position(players[pindex].position,players[pindex].player_direction,1)
-      cursor_highlight(pindex, nil, nil)
       sync_build_arrow(pindex)
       target(pindex)
       players[pindex].player_direction = game.get_player(pindex).character.direction
       players[pindex].build_lock = false
       read_tile(pindex, "Cursor mode disabled, ")
+   end
+   if players[pindex].cursor_size < 2 or not players[pindex].cursor then 
+      cursor_highlight(pindex, nil, nil)
+   else
+      local scan_left_top = {math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size,math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size}
+      local scan_right_bottom = {math.floor(players[pindex].cursor_pos.x)+players[pindex].cursor_size+1,math.floor(players[pindex].cursor_pos.y)+players[pindex].cursor_size+1}
+      draw_area_as_cursor(scan_left_top,scan_right_bottom,pindex)
    end
 end
 
@@ -3088,7 +3103,13 @@ function jump_to_player(pindex)
    players[pindex].cursor_pos.x = math.floor(first_player.position.x)+.5
    players[pindex].cursor_pos.y = math.floor(first_player.position.y) + .5
    read_coords(pindex, "Cursor returned ")
-   cursor_highlight(pindex, nil, nil)
+   if players[pindex].cursor_size < 2 then 
+      cursor_highlight(pindex, nil, nil)
+   else
+      local scan_left_top = {math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size,math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size}
+      local scan_right_bottom = {math.floor(players[pindex].cursor_pos.x)+players[pindex].cursor_size+1,math.floor(players[pindex].cursor_pos.y)+players[pindex].cursor_size+1}
+      draw_area_as_cursor(scan_left_top,scan_right_bottom,pindex)
+   end
 end
 
 local function refresh_player_tile(pindex)
@@ -4887,15 +4908,20 @@ function move(direction,pindex)
 end
 
 
-function move_key(direction,event)
+function move_key(direction,event, force_single_tile)
    local pindex = event.player_index
    if not check_for_player(pindex) or players[pindex].menu == "prompt" then
       return 
    end
+   local single_only = force_single_tile or false
    if players[pindex].in_menu and players[pindex].menu ~= "prompt" then
       menu_cursor_move(direction,pindex)
    elseif players[pindex].cursor then
-      players[pindex].cursor_pos = offset_position(players[pindex].cursor_pos, direction,1 + players[pindex].cursor_size*2)
+      local diff = players[pindex].cursor_size * 2 + 1
+      if single_only then
+         diff = 1
+      end
+      players[pindex].cursor_pos = offset_position(players[pindex].cursor_pos, direction, diff)
       sync_build_arrow(pindex)
       if players[pindex].cursor_size == 0 then
          read_tile(pindex)
@@ -4910,7 +4936,9 @@ function move_key(direction,event)
          players[pindex].nearby.index = 1
          players[pindex].nearby.ents = scan_area(math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size, math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size, players[pindex].cursor_size * 2 + 1, players[pindex].cursor_size * 2 + 1, pindex)
          populate_categories(pindex)
-         read_scan_summary(scan_left_top, scan_right_bottom, pindex)
+         local scan_summary = get_scan_summary(scan_left_top, scan_right_bottom, pindex)
+         draw_area_as_cursor(scan_left_top,scan_right_bottom,pindex)
+         printout(scan_summary,pindex)
       end
    else
       move(direction,pindex)
@@ -5069,6 +5097,9 @@ script.on_event("cursor-size-increment", function(event)
       
       local say_size = players[pindex].cursor_size * 2 + 1
       printout("Cursor size " .. say_size .. " by " .. say_size, pindex)
+      local scan_left_top = {math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size,math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size}
+      local scan_right_bottom = {math.floor(players[pindex].cursor_pos.x)+players[pindex].cursor_size+1,math.floor(players[pindex].cursor_pos.y)+players[pindex].cursor_size+1}
+      draw_area_as_cursor(scan_left_top,scan_right_bottom,pindex)
    end
 end)
 
@@ -5095,6 +5126,9 @@ script.on_event("cursor-size-decrement", function(event)
       
       local say_size = players[pindex].cursor_size * 2 + 1
       printout("Cursor size " .. say_size .. " by " .. say_size, pindex)
+      local scan_left_top = {math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size,math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size}
+      local scan_right_bottom = {math.floor(players[pindex].cursor_pos.x)+players[pindex].cursor_size+1,math.floor(players[pindex].cursor_pos.y)+players[pindex].cursor_size+1}
+      draw_area_as_cursor(scan_left_top,scan_right_bottom,pindex)
    end
 end)
 
@@ -7797,11 +7831,12 @@ script.on_event("up-arrow", function(event)
    end
    if players[pindex].in_menu and players[pindex].menu == "train_menu" then
       train_menu_up(pindex)
+   elseif players[pindex].cursor then
+      move_key(dirs.north,event, true)
    else
       printout("Up arrow pressed",pindex)
    end
 end)
-
 
 script.on_event("down-arrow", function(event)
    local pindex = event.player_index
@@ -7810,11 +7845,40 @@ script.on_event("down-arrow", function(event)
    end
    if players[pindex].in_menu and players[pindex].menu == "train_menu" then
       train_menu_down(pindex)
+   elseif players[pindex].cursor then
+      move_key(dirs.south,event, true)
    else
       printout("Down arrow pressed",pindex)
    end
 end)
 
+script.on_event("left-arrow", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].in_menu and players[pindex].menu == "train_menu" then
+      train_menu_up(pindex)
+   elseif players[pindex].cursor then
+      move_key(dirs.west,event, true)
+   else
+      printout("Left arrow pressed",pindex)
+   end
+end)
+
+script.on_event("right-arrow", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].in_menu and players[pindex].menu == "train_menu" then
+      train_menu_up(pindex)
+   elseif players[pindex].cursor then
+      move_key(dirs.east,event, true)
+   else
+      printout("Right arrow pressed",pindex)
+   end
+end)
 
 script.on_event("control-left", function(event)
    local pindex = event.player_index
@@ -9143,8 +9207,8 @@ function cursor_highlight(pindex, ent, box_type)
          h_box.highlight_box_type = "entity"
       end
    else
-      h_tile = rendering.draw_rectangle{color = {1,1,1,0.75}, surface = p.surface, players = {pindex}, draw_on_ground = true, 
-         left_top = {math.floor(c_pos.x)+0.1,math.floor(c_pos.y)+0.1}, right_bottom = {math.ceil(c_pos.x)-0.1,math.ceil(c_pos.y)-0.1}}
+      h_tile = rendering.draw_rectangle{color = {0.75,1,1,0.75}, surface = p.surface, draw_on_ground = true, 
+         left_top = {math.floor(c_pos.x)+0.05,math.floor(c_pos.y)+0.05}, right_bottom = {math.ceil(c_pos.x)-0.05,math.ceil(c_pos.y)-0.05}}
       --h_box = p.surface.create_entity{name = "highlight-box", force = "neutral", surface = p.surface, render_player_index = pindex, box_type = "entity", 
       --   position = c_pos, bounding_box = {left_top = {math.floor(c_pos.x),math.floor(c_pos.y)}, right_bottom = {math.ceil(c_pos.x),math.ceil(c_pos.y)}} }
       --players[pindex].cursor_highlight = h_box
