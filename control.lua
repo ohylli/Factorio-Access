@@ -2826,7 +2826,7 @@ function scan_index(pindex)
       if ents[players[pindex].nearby.index].aggregate == false then
          local i = 1
          while i <= #ents[players[pindex].nearby.index].ents do
-            if ents[players[pindex].nearby.index].ents[i].valid then
+            if ents[players[pindex].nearby.index].ents[i].valid and ents[players[pindex].nearby.index].ents[i].name ~= "highlight-box" then
                i = i + 1
             else
                table.remove(ents[players[pindex].nearby.index].ents, i)
@@ -2881,8 +2881,7 @@ function scan_index(pindex)
       end
       
       if not ents[players[pindex].nearby.index].aggregate and not ent.valid then
-         printout("Error: Invalid object, ignore or try rescanning.", pindex)
-         --game.get_player(pindex).print("invalid ent " .. ent.object_name)--***
+         printout("Error: Invalid object, maybe try rescanning.", pindex)
          return
       end
       local dir_dist = dir_dist_locale(players[pindex].position, ent.position)
@@ -2914,7 +2913,8 @@ function scan_down(pindex)
       players[pindex].nearby.selection = 1
    end
 --   if not(pcall(function()
-      scan_index(pindex)
+      scan_index(pindex)--***
+      --target(pindex)
 --   end)) then
 --      if players[pindex].nearby.category == 1 then
 --         table.remove(players[pindex].nearby.ents, players[pindex].nearby.index)
@@ -2942,7 +2942,10 @@ function scan_up(pindex)
       game.get_player(pindex).play_sound{path = "Mine-Building"}
    end
 --   if not(pcall(function()
-scan_index(pindex)
+   --game.get_player(pindex).game_view_settings.update_entity_selection = true
+   scan_index(pindex)--***
+   --target(pindex)
+   --game.get_player(pindex).game_view_settings.update_entity_selection = false
 --end)) then
 --      if players[pindex].nearby.category == 1 then
 --         table.remove(players[pindex].nearby.ents, players[pindex].nearby.index)
@@ -4769,12 +4772,16 @@ function on_tick(event)
             play_train_track_alert_sounds(1)
 		 end
 	  end
-   elseif event.tick % 60 == 1 then
+   elseif event.tick % 30 == 1 then
       --Update all player overhead sprites
       for pindex, player in pairs(players) do
          if player.in_menu then
             if player.menu == "technology" then
-               update_overhead_sprite("item.lab",2,1.5,pindex)--***
+               update_overhead_sprite("item.lab",2,1.5,pindex)
+            elseif player.menu == "travel" then
+               update_overhead_sprite("utility.downloading_white",3,1.5,pindex)
+            elseif player.menu == "warnings" then
+               update_overhead_sprite("utility.warning_white",3,1.5,pindex)
             end
          else
             update_overhead_sprite(nil,1,1,pindex)
@@ -9217,7 +9224,7 @@ function cursor_highlight(pindex, ent, box_type)
    
    if ent ~= nil and ent.valid and ent.name ~= "highlight-box"  then
       h_box = p.surface.create_entity{name = "highlight-box", force = "neutral", surface = p.surface, render_player_index = pindex, box_type = "entity", 
-         position = c_pos, source = ent }
+         position = c_pos, source = ent }-- , time_to_live = 3}--*****
       if box_type ~= nil then
          h_box.highlight_box_type = box_type
       else
@@ -9238,6 +9245,7 @@ function cursor_highlight(pindex, ent, box_type)
    
    players[pindex].cursor_ent_highlight_box = h_box
    players[pindex].cursor_tile_highlight_box = h_tile
+   --move_cursor_map(center_of_tile(c_pos),pindex)--*****
 end
 
 --Draws a sprite over the head of the player, with the selected scale. Set it to nil to clear it.
@@ -9254,10 +9262,10 @@ function update_overhead_sprite(sprite, scale_in, radius_in, pindex)
       rendering.destroy(player.overhead_sprite) 
    end
    if sprite ~= nil then
-      player.overhead_circle = rendering.draw_circle{color = {r = 0.5, b = 0.75, g = 0.5, a = 0.8}, render_layer = 253, radius = radius,
+      player.overhead_circle = rendering.draw_circle{color = {r = 0.5, b = 0.75, g = 0.5, a = 0.8}, render_layer = 251, radius = radius,
          surface = p.surface, target = {x = p.position.x, y = p.position.y - 3 * scale - 3 * radius}, draw_on_ground = false, filled = true}
       rendering.set_visible(player.overhead_circle,true)
-      player.overhead_sprite = rendering.draw_sprite{sprite = sprite, render_layer = 254, x_scale = scale, y_scale = scale,
+      player.overhead_sprite = rendering.draw_sprite{sprite = sprite, render_layer = 253, x_scale = scale, y_scale = scale,
          surface = p.surface, target = {x = p.position.x, y = p.position.y - 3 * scale - 3 * radius}, orientation = dirs.north}
       rendering.set_visible(player.overhead_sprite,true)
    end
