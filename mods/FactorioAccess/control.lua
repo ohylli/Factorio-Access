@@ -2829,7 +2829,8 @@ function scan_index(pindex)
       if ents[players[pindex].nearby.index].aggregate == false then
          local i = 1
          while i <= #ents[players[pindex].nearby.index].ents do
-            if ents[players[pindex].nearby.index].ents[i].valid and ents[players[pindex].nearby.index].ents[i].name ~= "highlight-box" then
+            if ents[players[pindex].nearby.index].ents[i].valid and ents[players[pindex].nearby.index].ents[i].name ~= "highlight-box" 
+               and ents[players[pindex].nearby.index].ents[i].prototype.type ~= "flying-text" then
                i = i + 1
             else
                table.remove(ents[players[pindex].nearby.index].ents, i)
@@ -3085,15 +3086,19 @@ end
 
 function toggle_cursor(pindex)
    if not(players[pindex].cursor) then
-      printout("Cursor mode enabled.", pindex)
       players[pindex].cursor = true
       players[pindex].build_lock = false
+      players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos)
+      move_cursor_map(players[pindex].cursor_pos,pindex)
       if not players[pindex].vanilla_mode then game.get_player(pindex).game_view_settings.update_entity_selection = false end
+      read_tile(pindex, "Cursor mode enabled, ")
    else
       --printout("Cursor mode disabled", pindex)
       players[pindex].cursor = false
       game.get_player(pindex).game_view_settings.update_entity_selection = true
       players[pindex].cursor_pos = offset_position(players[pindex].position,players[pindex].player_direction,1)
+      players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos)
+      move_cursor_map(players[pindex].cursor_pos,pindex)
       sync_build_arrow(pindex)
       target(pindex)
       players[pindex].player_direction = game.get_player(pindex).character.direction
@@ -3135,7 +3140,7 @@ local function refresh_player_tile(pindex)
    search_area[1]=add_position(search_area[1],search_center)
    search_area[2]=add_position(search_area[2],search_center)
    
-   players[pindex].tile.ents = surf.find_entities_filtered{area = search_area, name="highlight-box",invert = true}
+   players[pindex].tile.ents = surf.find_entities_filtered{area = search_area, name={"highlight-box"},invert = true}
    players[pindex].tile.index = #players[pindex].tile.ents == 0 and 0 or 1
    if not(pcall(function()
       players[pindex].tile.tile =  surf.get_tile(players[pindex].cursor_pos.x, players[pindex].cursor_pos.y).name
@@ -3179,12 +3184,21 @@ function read_tile(pindex, start_text)
    --If the build lock is on and the player is holding a cut or copy tool, every entity being read gets mined as soon as you read a new tile.
    local stack = game.get_player(pindex).cursor_stack
    if stack.valid_for_read and stack.name == "cut-paste-tool" then
-      while ent do
+      if ent and ent.valid then--not while loop, because it causes crashes
+         local name = ent.name
          game.get_player(pindex).play_sound{path = "Mine-Building"}
          if try_to_mine_with_sound(ent,pindex) then
-            result = result .. ent.name .. " mined."
+            result = result .. name .. " mined, "
          end
+         --Second round, but no more...
          ent = get_selected_ent(pindex)
+         if ent and ent.valid and players[pindex].walk ~= 2 then--not while
+            local name = ent.name
+            game.get_player(pindex).play_sound{path = "Mine-Building"}
+            if try_to_mine_with_sound(ent,pindex) then
+               result = result .. name .. " mined, "
+            end 
+         end
       end
    end
    printout(result, pindex)
@@ -5977,7 +5991,7 @@ end
 )
 
 --Mines groups of entities depending on the name or type. Includes trees and rocks, rails.
-script.on_event("mine-group", function(event)
+script.on_event("mine-group", function(event) --laterdo** proper tallying of cleared_total 
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -5986,29 +6000,53 @@ script.on_event("mine-group", function(event)
       return
    end
    local ent =  get_selected_ent(pindex)
+   local cleared_count = 0
+   local cleared_total = 0
+   local comment = ""
    if ent then 
-	  local surf = ent.surface
-	  local pos = ent.position
-	  if ent.type == "tree" or ent.name == "rock-big" or ent.name == "rock-huge" or ent.name == "sand-rock-big" then
-	     --Trees and rocks within 5 tiles
-		 game.get_player(pindex).play_sound{path = "Mine-Building"}
-		 game.get_player(pindex).play_sound{path = "Mine-Building"}
-	     mine_trees_and_rocks_in_circle(pos, 5, pindex)
-	  elseif ent.name == "straight-rail" then
-	     --Rails within 3 tiles (and their signals)
-		local rails = surf.find_entities_filtered{position = pos, radius = 3, name = "straight-rail"}
-		for i,rail in ipairs(rails) do
-		   mine_signals(rail,pindex)
-		   game.get_player(pindex).play_sound{path = "entity-mined/straight-rail"}
-		   game.get_player(pindex).mine_entity(rail,true)
-		end
-	  elseif ent.prototype.is_building and (ent.prototype.mineable_properties.products == nil or ent.prototype.mineable_properties.products[1].name == ent.name) then
-         --All others are treated as single objects.
-		 game.get_player(pindex).play_sound{path = "Mine-Building"}
-         schedule(25, "play_mining_sound", pindex)
+      local surf = ent.surface
+      local pos = ent.position
+      if ent.type == "tree" or ent.name == "rock-big" or ent.name == "rock-huge" or ent.name == "sand-rock-big" then
+         --Trees and rocks within 5 tiles
+         game.get_player(pindex).play_sound{path = "Mine-Building"}
+         cleared_count, comment = mine_trees_and_rocks_in_circle(pos, 5, pindex)
+      elseif ent.name == "straight-rail" then
+         --Rails within 3 tiles (and their signals)
+         local rails = surf.find_entities_filtered{position = pos, radius = 5, name = "straight-rail"}
+         for i,rail in ipairs(rails) do
+            mine_signals(rail,pindex)
+            game.get_player(pindex).play_sound{path = "entity-mined/straight-rail"}
+            game.get_player(pindex).mine_entity(rail,true)
+         end
+      elseif ent.name == "item-on-ground" then
+         local ground_items = surf.find_entities_filtered{position = pos, radius = 5, name = "item-on-ground"}
+         for i,ground_item in ipairs(ground_items) do
+            game.get_player(pindex).mine_entity(ground_item,false)
+         end
       end
    else
-      mine_trees_and_rocks_in_circle(players[pindex].cursor_pos, 5, pindex) --Mine trees and rocks within 5 tiles
+      --For empty tiles, mine trees and rocks within 5 tiles
+      cleared_count, comment = mine_trees_and_rocks_in_circle(players[pindex].cursor_pos, 5, pindex) 
+   end
+   cleared_total = cleared_total + cleared_count
+   
+   --Also, if cut-paste tool in hand, mine every non-resource entity in the area that you can.
+   local p = game.get_player(pindex)
+   local stack = p.cursor_stack
+   if stack.valid_for_read and stack.name == "cut-paste-tool" then
+      local all_ents = p.surface.find_entities_filtered{position = p.position, radius = 5, force = {p.force, "neutral"}}
+      for i,ent in ipairs(all_ents) do
+         if ent and ent.valid then
+            local name = ent.name
+            game.get_player(pindex).play_sound{path = "Mine-Building"}
+            if try_to_mine_with_sound(ent,pindex) then
+               cleared_total = cleared_total + 1
+            end
+         end
+      end
+   end
+   if cleared_total > 0 then
+      printout(" Cleared away " .. cleared_total .. " objects. ", pindex)
    end
 end
 )
@@ -6463,13 +6501,13 @@ end
 
 --Mines an entity with the right sound
 function try_to_mine_with_sound(ent,pindex)
-   if ent ~= nil and ent.valid and ent.destructible and ent.type ~= "resource" then
+   if ent ~= nil and ent.valid and ((ent.destructible and ent.type ~= "resource") or ent.name == "item-on-ground") then 
 	 local ent_name = ent.name
 	 if game.get_player(pindex).mine_entity(ent,false) and game.is_valid_sound_path("entity-mined/" .. ent_name) then 
 	    game.get_player(pindex).play_sound{path = "entity-mined/" .. ent_name} 
 		return true
 	 else
-	    return false
+      return false
 	 end
    end
 end
@@ -7818,7 +7856,6 @@ end)
 function mine_trees_and_rocks_in_circle(position, radius, pindex)
    local surf = game.get_player(pindex).surface
    local comment = ""
-   local outcome = true
    local trees_cleared = 0
    local rocks_cleared = 0
    
@@ -7843,7 +7880,7 @@ function mine_trees_and_rocks_in_circle(position, radius, pindex)
       comment = "cleared " .. trees_cleared .. " trees and " .. rocks_cleared .. " rocks. "
    end
    rendering.draw_circle{color = {0, 1, 0},radius = radius,width = radius,target = position,surface = surf,time_to_live = 60}
-   return outcome, comment
+   return (trees_cleared + rocks_cleared), comment
 end
 
 
@@ -9221,7 +9258,7 @@ function cursor_highlight(pindex, ent, box_type)
       rendering.destroy(h_tile)
    end
    
-   if ent ~= nil and ent.valid and ent.name ~= "highlight-box"  then
+   if ent ~= nil and ent.valid and ent.name ~= "highlight-box" and ent.prototype.type ~= "flying-text" then
       h_box = p.surface.create_entity{name = "highlight-box", force = "neutral", surface = p.surface, render_player_index = pindex, box_type = "entity", 
          position = c_pos, source = ent}
       if box_type ~= nil then
@@ -9229,17 +9266,10 @@ function cursor_highlight(pindex, ent, box_type)
       else
          h_box.highlight_box_type = "entity"
       end
-   else
+   elseif not players[pindex].vanilla_mode then
+      --Highlight the currently focused ground tile.
       h_tile = rendering.draw_rectangle{color = {0.75,1,1,0.75}, surface = p.surface, draw_on_ground = true, 
          left_top = {math.floor(c_pos.x)+0.05,math.floor(c_pos.y)+0.05}, right_bottom = {math.ceil(c_pos.x)-0.05,math.ceil(c_pos.y)-0.05}}
-      --h_box = p.surface.create_entity{name = "highlight-box", force = "neutral", surface = p.surface, render_player_index = pindex, box_type = "entity", 
-      --   position = c_pos, bounding_box = {left_top = {math.floor(c_pos.x),math.floor(c_pos.y)}, right_bottom = {math.ceil(c_pos.x),math.ceil(c_pos.y)}} }
-      --players[pindex].cursor_highlight = h_box
-      --if box_type ~= nil then
-      --   h_box.highlight_box_type = box_type
-      --else
-      --   h_box.highlight_box_type = "train-visualization"
-      --end
    end
    
    players[pindex].cursor_ent_highlight_box = h_box
@@ -9247,6 +9277,9 @@ function cursor_highlight(pindex, ent, box_type)
    game.get_player(pindex).game_view_settings.update_entity_selection = true
    
    --Highlight nearby entities by default means
+   if players[pindex].vanilla_mode then
+      return
+   end
    if util.distance(p.position,c_pos) < 11 then
       move_cursor_map(center_of_tile(c_pos),pindex)
    else
