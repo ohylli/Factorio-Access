@@ -944,6 +944,11 @@ function ent_info(pindex, ent, description)
       
    elseif ent.name == "rail-signal" or ent.name == "rail-chain-signal" then
       result = result .. ", " .. get_signal_state_info(ent)
+   elseif ent.name == "roboport" then
+      local cell = ent.logistic_cell
+      local network = ent.logistic_cell.logistic_network
+      result = result .. ", charging " .. (cell.charging_robot_count + cell.to_charge_robot_count) .. " robots, in a network with " .. 
+               (network.all_construction_robots + network.all_logistic_robots) .. " robots"
    end
    --Give drop position (like for inserters)
    if ent.drop_position ~= nil then
@@ -3541,6 +3546,40 @@ function build_preview_checks_info(stack, pindex)
 		 end
 	  end
    end
+   
+   --For roboports, like electric poles, list possible neighbors (anything within 100 distx or 100 disty will be a neighbor
+   if ent_p.name == "roboport" then
+      local reach = 100
+      local top_left = {x = math.floor(pos.x - reach), y = math.floor(pos.y - reach)}
+      local bottom_right = {x = math.ceil(pos.x + reach), y = math.ceil(pos.y + reach)}
+      local port_dict = surf.find_entities_filtered{type = "roboport", area = {top_left, bottom_right}}
+      local ports = {}
+      for i, v in pairs(port_dict) do
+         table.insert(ports, v)
+      end
+      if #ports > 0 then
+         --List the first 5 poles within range
+         result = result .. " connecting "
+         for i, port in ipairs(ports) do
+            if i <= 5 then
+               local dist = math.ceil(util.distance(port.position,pos))
+               local dir = get_direction_of_that_from_this(port.position,pos)
+               result = result .. dist .. " tiles " .. direction_lookup(dir) .. ", "
+            end
+         end
+      else
+         --Notify if no connections and state nearest roboport-***
+         result = result .. " not connected, "
+         local nearest_port, min_dist = find_nearest_roboport(ent.surface, ent.position, 1000)
+         if min_dist == nil or min_dist >= 1000 then
+            result = result .. " no other roboports poles within 1000 tiles, "
+         else
+            local dir = get_direction_of_that_from_this(nearest_port.position,pos)
+            result = result .. math.ceil(min_dist) .. " tiles " .. direction_lookup(dir) .. " to nearest roboport, "
+         end
+      end
+   end
+   
    --For all electric powered entities, note whether powered, and from which direction. Otherwise report the nearest power pole.
    if ent_p.electric_energy_source_prototype ~= nil then
          local position = pos
@@ -8710,6 +8749,22 @@ function report_nearest_supplied_electric_pole(ent)
       result = "And there are no powered electric poles within ten thousand tiles. Generators may be out of energy."
    end
    return result
+end
+
+--Finds the nearest roboport
+function find_nearest_roboport(surf,pos,radius_in)
+   local nearest = nil
+   local min_dist = radius_in
+   local ports = surf.find_entities_filtered{name = "roboport" , position = pos , radius = radius_in}
+   for i,port in ipairs(ports) do
+      local dist = math.ceil(util.distance(pos, port.position))
+      if dist < min_dist then
+         min_dist = dist
+         nearest = port
+      end
+   end
+   rendering.draw_circle{color = {1, 1, 0}, radius = 4, width = 4, target = nearest.position, surface = surf, time_to_live = 90}
+   return nearest, min_dist
 end
 
 
