@@ -2144,11 +2144,12 @@ function get_scan_summary(scan_left_top, scan_right_bottom, pindex)
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
    table.insert(percentages, {name = "trees", percent = percent})
    
-   if #players[pindex].nearby.ents > 0 then --NOTE: because of resource entities being aggregated inside scan_area, they do not read individually here.
+   if #players[pindex].nearby.ents > 0 then --Note: Resources are included here as aggregates.
       for i, ent in ipairs(players[pindex].nearby.ents) do
          local area = 0
-         if confirm_ent_is_in_area( get_substring_before_comma(ent.name) , scan_left_top , scan_right_bottom, pindex) then --**beta** this check is a temporary solution to the scan_area invert bug
-            area = get_ent_area_from_name(get_substring_before_comma(ent.name),pindex)--this area finding method is necessary because all we have is the ent name
+         --this confirmation is necessary because all we have is the ent name, and some distant resources show up on the list.
+         if confirm_ent_is_in_area( get_substring_before_comma(ent.name) , scan_left_top , scan_right_bottom, pindex) then --**bug, there is an insistance to read out aggregates that are not even in this area...
+            area = get_ent_area_from_name(get_substring_before_comma(ent.name),pindex)
             --game.get_player(pindex).print(get_substring_before_comma(ent.name) .. " " .. area)--
          end 
          local percentage = math.floor((area * players[pindex].nearby.ents[i].count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
@@ -2182,18 +2183,18 @@ function draw_area_as_cursor(scan_left_top,scan_right_bottom,pindex)
    players[pindex].cursor_tile_highlight_box = h_tile 
 end
    
-
+--Sort scan results by distance or count
 function scan_sort(pindex)
    for i, name in ipairs(players[pindex].nearby.ents   ) do
       local i1 = 1
-      while i1 <= #name.ents do
-         if name.ents[i1].valid == false then
+      while i1 <= #name.ents do --this appears to be removing invalid ents within a set.
+         if not name.ents[i1].valid and not name.aggregate then
             table.remove(name.ents, i1)
          else
             i1 = i1 + 1
          end
       end
-      if #name.ents == 0 then
+      if #name.ents == 0 then --this appears to be removing a sent that has become empty.
          table.remove(players[pindex].nearby.ents, i)
       end
    end
@@ -3972,8 +3973,8 @@ script.on_event(defines.events.on_player_changed_position,function(event)
             players[pindex].position = pos
             cursor_highlight(pindex, nil, nil)
             sync_build_arrow(pindex)
+            players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos)
             if not players[pindex].vanilla_mode then
-               players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos)
                target(pindex)
             end
 
@@ -3986,9 +3987,8 @@ script.on_event(defines.events.on_player_changed_position,function(event)
             --Walk straight
             players[pindex].cursor_pos.x = players[pindex].cursor_pos.x + pos.x - players[pindex].position.x
             players[pindex].cursor_pos.y = players[pindex].cursor_pos.y + pos.y - players[pindex].position.y
-            players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos)
+            players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos) 
             if not players[pindex].vanilla_mode then
-               players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos)
                target(pindex) 
             end
             players[pindex].position = pos
@@ -4963,6 +4963,7 @@ function move_key(direction,event, force_single_tile)
    if players[pindex].in_menu and players[pindex].menu ~= "prompt" then
       menu_cursor_move(direction,pindex)
    elseif players[pindex].cursor then
+      -- Cursor Mode
       local diff = players[pindex].cursor_size * 2 + 1
       if single_only then
          diff = 1
@@ -4974,6 +4975,7 @@ function move_key(direction,event, force_single_tile)
       end
       sync_build_arrow(pindex)
       if players[pindex].cursor_size == 0 then
+         -- Cursor size 0: read tile
          read_tile(pindex)
          target(pindex)
          players[pindex].player_direction = direction
@@ -4981,6 +4983,7 @@ function move_key(direction,event, force_single_tile)
             build_item_in_hand(pindex, -1)            
          end
       else
+         -- Larger cursor sizes: scan area
          local scan_left_top = {math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size,math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size}
          local scan_right_bottom = {math.floor(players[pindex].cursor_pos.x)+players[pindex].cursor_size+1,math.floor(players[pindex].cursor_pos.y)+players[pindex].cursor_size+1}
          players[pindex].nearby.index = 1
