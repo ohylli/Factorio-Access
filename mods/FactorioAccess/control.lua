@@ -2834,7 +2834,7 @@ function scan_index(pindex)
          local i = 1
          while i <= #ents[players[pindex].nearby.index].ents do
             if ents[players[pindex].nearby.index].ents[i].valid and ents[players[pindex].nearby.index].ents[i].name ~= "highlight-box" 
-               and ents[players[pindex].nearby.index].ents[i].prototype.type ~= "flying-text" then
+               and ents[players[pindex].nearby.index].ents[i].type ~= "flying-text" then
                i = i + 1
             else
                table.remove(ents[players[pindex].nearby.index].ents, i)
@@ -3831,6 +3831,7 @@ function initialize(player)
    faplayer.zoom = faplayer.zoom or 1
    faplayer.build_lock = faplayer.build_lock or false
    faplayer.vanilla_mode = faplayer.vanilla_mode or false
+   faplayer.allow_reading_flying_text = faplayer.allow_reading_flying_text or true
    faplayer.setting_inventory_wraps_around = faplayer.setting_inventory_wraps_around or true
    faplayer.resources = faplayer.resources or {}
    faplayer.mapped = faplayer.mapped or {}
@@ -4895,6 +4896,7 @@ function move(direction,pindex)
    elseif game.get_player(pindex).driving then
       return
    end
+   players[pindex].allow_reading_flying_text = true
    local first_player = game.get_player(pindex)
    local pos = players[pindex].position
    local new_pos = offset_position(pos,direction,1)
@@ -6016,6 +6018,7 @@ script.on_event("mine-access", function(event)
       local stack = game.get_player(pindex).cursor_stack
       local surf = game.get_player(pindex).surface
       if stack.valid_for_read and stack.valid and stack.prototype.place_as_tile_result ~= nil then
+         players[pindex].allow_reading_flying_text = false
          local c_pos = players[pindex].cursor_pos
          local c_size = players[pindex].cursor_size
          local left_top = {x = math.floor(c_pos.x - c_size), y = math.floor(c_pos.y - c_size)}
@@ -6045,6 +6048,7 @@ script.on_event("mine-group", function(event) --laterdo** proper tallying of cle
    local cleared_count = 0
    local cleared_total = 0
    local comment = ""
+   players[pindex].allow_reading_flying_text = false
    if ent then 
       local surf = ent.surface
       local pos = ent.position
@@ -6073,6 +6077,7 @@ script.on_event("mine-group", function(event) --laterdo** proper tallying of cle
    local p = game.get_player(pindex)
    local stack = p.cursor_stack
    if stack.valid_for_read and stack.name == "cut-paste-tool" then
+      players[pindex].allow_reading_flying_text = false
       local all_ents = p.surface.find_entities_filtered{position = p.position, radius = 5, force = {p.force, "neutral"}}
       for i,ent in ipairs(all_ents) do
          if ent and ent.valid then
@@ -7569,32 +7574,34 @@ script.on_event("save", function(event)
 end)
 script.on_nth_tick(10, function(event)
    for pindex, player in pairs(players) do
-      if player.past_flying_texts == nil then
-         player.past_flying_texts = {}
-      end
-      local flying_texts = {}
-      local search = {
-         type = "flying-text",
-         position = player.cursor_pos,
-         radius = 80,
-      }
-      
-      for _, ftext in pairs(game.get_player(pindex).surface.find_entities_filtered(search)) do
-         local id = ftext.text
-         if type(id) == 'table' then
-            id = serpent.line(id)
+      if player.allow_reading_flying_text == nil or player.allow_reading_flying_text == true then
+         if player.past_flying_texts == nil then
+            player.past_flying_texts = {}
          end
-         flying_texts[id] = (flying_texts[id] or 0) + 1
-      end
-      for id, count in pairs(flying_texts) do
-         if count > (player.past_flying_texts[id] or 0) then
-            local ok, local_text = serpent.load(id)
-            if ok then
-               printout(local_text,pindex)--****
+         local flying_texts = {}
+         local search = {
+            type = "flying-text",
+            position = player.cursor_pos,
+            radius = 80,
+         }
+         
+         for _, ftext in pairs(game.get_player(pindex).surface.find_entities_filtered(search)) do
+            local id = ftext.text
+            if type(id) == 'table' then 
+               id = serpent.line(id)
+            end
+            flying_texts[id] = (flying_texts[id] or 0) + 1
+         end
+         for id, count in pairs(flying_texts) do
+            if count > (player.past_flying_texts[id] or 0) then
+               local ok, local_text = serpent.load(id)
+               if ok then 
+                  printout(local_text,pindex)
+               end
             end
          end
+         player.past_flying_texts = flying_texts
       end
-      player.past_flying_texts = flying_texts
    end
 end)
 
@@ -7895,6 +7902,7 @@ function clear_obstacles_in_circle(position, radius, pindex)
    local trees_cleared = 0
    local rocks_cleared = 0
    local ground_items_cleared = 0
+   players[pindex].allow_reading_flying_text = false
    
    --Find and mine trees
    local trees = surf.find_entities_filtered{position = position, radius = radius, type = "tree"}
@@ -9304,7 +9312,7 @@ function cursor_highlight(pindex, ent, box_type)
       rendering.destroy(h_tile)
    end
    
-   if ent ~= nil and ent.valid and ent.name ~= "highlight-box" and ent.prototype.type ~= "flying-text" then
+   if ent ~= nil and ent.valid and ent.name ~= "highlight-box" and ent.type ~= "flying-text" then
       h_box = p.surface.create_entity{name = "highlight-box", force = "neutral", surface = p.surface, render_player_index = pindex, box_type = "entity", 
          position = c_pos, source = ent}
       if box_type ~= nil then
