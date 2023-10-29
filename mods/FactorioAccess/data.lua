@@ -150,6 +150,12 @@ data:extend({
 },
 {
     type = "custom-input",
+    name = "shift-k",
+    key_sequence = "SHIFT + K",
+    consuming = "none"
+},
+{
+    type = "custom-input",
     name = "jump-to-player",
     key_sequence = "J",
     consuming = "none"

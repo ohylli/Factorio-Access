@@ -704,10 +704,10 @@ function ent_info(pindex, ent, description)
       if #contents > 0 then
          result = result .. " carrying " .. contents[1].name
          if #contents > 1 then
-            for i = 2, #contents-1 do
-               result = result .. ", " .. contents[i].name
+            result = result .. ", and " .. contents[2].name
+            if #contents > 2 then
+               result = result .. ", and other item types " 
             end
-            result = result .. ", and " .. contents[#contents].name
          end
 
       else
@@ -944,6 +944,11 @@ function ent_info(pindex, ent, description)
       
    elseif ent.name == "rail-signal" or ent.name == "rail-chain-signal" then
       result = result .. ", " .. get_signal_state_info(ent)
+   elseif ent.name == "roboport" then
+      local cell = ent.logistic_cell
+      local network = ent.logistic_cell.logistic_network
+      result = result .. ", charging " .. (cell.charging_robot_count + cell.to_charge_robot_count) .. " robots, in a network with " .. 
+               (network.all_construction_robots + network.all_logistic_robots) .. " robots"
    end
    --Give drop position (like for inserters)
    if ent.drop_position ~= nil then
@@ -1297,8 +1302,8 @@ function teleport_to_closest(pindex, pos, muted)
       if not muted then
          rendering.draw_circle{color = {0.8, 0.2, 0.0},radius = 0.5,width = 15,target = old_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
          rendering.draw_circle{color = {0.6, 0.1, 0.1},radius = 0.3,width = 20,target = old_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
-         local test_lamp = first_player.surface.create_entity{name = "small-lamp", position = first_player.position, raise_built = false, force = first_player.force}
-         test_lamp.destroy{}
+         local smoke_effect = first_player.surface.create_entity{name = "iron-chest", position = first_player.position, raise_built = false, force = first_player.force}
+         smoke_effect.destroy{}
       end
       local teleported = first_player.teleport(new_pos)
       if teleported then
@@ -1306,8 +1311,11 @@ function teleport_to_closest(pindex, pos, muted)
          if not muted then
             rendering.draw_circle{color = {0.3, 0.3, 0.9},radius = 0.5,width = 15,target = new_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
             rendering.draw_circle{color = {0.0, 0.0, 0.9},radius = 0.3,width = 20,target = new_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
-            local test_lamp = first_player.surface.create_entity{name = "small-lamp", position = first_player.position, raise_built = false, force = first_player.force}
-            test_lamp.destroy{}
+            if not muted then
+               game.get_player(pindex).play_sound{path = "utility/scenario_message"}
+            end
+            local smoke_effect = first_player.surface.create_entity{name = "iron-chest", position = first_player.position, raise_built = false, force = first_player.force}
+            smoke_effect.destroy{}
          end
          if new_pos.x ~= pos.x or new_pos.y ~= pos.y then
             if not muted then
@@ -2144,11 +2152,12 @@ function get_scan_summary(scan_left_top, scan_right_bottom, pindex)
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
    table.insert(percentages, {name = "trees", percent = percent})
    
-   if #players[pindex].nearby.ents > 0 then --NOTE: because of resource entities being aggregated inside scan_area, they do not read individually here.
+   if #players[pindex].nearby.ents > 0 then --Note: Resources are included here as aggregates.
       for i, ent in ipairs(players[pindex].nearby.ents) do
          local area = 0
-         if confirm_ent_is_in_area( get_substring_before_comma(ent.name) , scan_left_top , scan_right_bottom, pindex) then --**beta** this check is a temporary solution to the scan_area invert bug
-            area = get_ent_area_from_name(get_substring_before_comma(ent.name),pindex)--this area finding method is necessary because all we have is the ent name
+         --this confirmation is necessary because all we have is the ent name, and some distant resources show up on the list.
+         if confirm_ent_is_in_area( get_substring_before_comma(ent.name) , scan_left_top , scan_right_bottom, pindex) then --**bug, there is an insistance to read out aggregates that are not even in this area...
+            area = get_ent_area_from_name(get_substring_before_comma(ent.name),pindex)
             --game.get_player(pindex).print(get_substring_before_comma(ent.name) .. " " .. area)--
          end 
          local percentage = math.floor((area * players[pindex].nearby.ents[i].count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
@@ -2182,18 +2191,18 @@ function draw_area_as_cursor(scan_left_top,scan_right_bottom,pindex)
    players[pindex].cursor_tile_highlight_box = h_tile 
 end
    
-
+--Sort scan results by distance or count
 function scan_sort(pindex)
    for i, name in ipairs(players[pindex].nearby.ents   ) do
       local i1 = 1
-      while i1 <= #name.ents do
-         if name.ents[i1].valid == false then
+      while i1 <= #name.ents do --this appears to be removing invalid ents within a set.
+         if not name.ents[i1].valid and not name.aggregate then
             table.remove(name.ents, i1)
          else
             i1 = i1 + 1
          end
       end
-      if #name.ents == 0 then
+      if #name.ents == 0 then --this appears to be removing a sent that has become empty.
          table.remove(players[pindex].nearby.ents, i)
       end
    end
@@ -2725,9 +2734,9 @@ end
 
 function target(pindex)
    local ent = get_selected_ent(pindex)
-   if ent then
+   if ent and not players[pindex].vanilla_mode then
          move_cursor_map(ent.position,pindex)
-   else
+   elseif not players[pindex].vanilla_mode then
          move_cursor_map(players[pindex].cursor_pos, pindex)
    end
 end
@@ -2830,7 +2839,7 @@ function scan_index(pindex)
          local i = 1
          while i <= #ents[players[pindex].nearby.index].ents do
             if ents[players[pindex].nearby.index].ents[i].valid and ents[players[pindex].nearby.index].ents[i].name ~= "highlight-box" 
-               and ents[players[pindex].nearby.index].ents[i].prototype.type ~= "flying-text" then
+               and ents[players[pindex].nearby.index].ents[i].type ~= "flying-text" then
                i = i + 1
             else
                table.remove(ents[players[pindex].nearby.index].ents, i)
@@ -2890,12 +2899,14 @@ function scan_index(pindex)
       end
       local dir_dist = dir_dist_locale(players[pindex].position, ent.position)
       if players[pindex].nearby.count == false then
+         --Read the entity in terms of distance and direction
          local result={"access.thing-producing-listpos-dirdist",ent_name_locale(ent)}
          table.insert(result,ent_production(ent))
          table.insert(result,{"description.of", players[pindex].nearby.selection , #ents[players[pindex].nearby.index].ents})
          table.insert(result,dir_dist)
          printout(result,pindex)
       else
+         --Read the entity in terms of count, and give the direction and distance of an example
          printout({"access.item_and_quantity-example-at-dirdist",
             {"access.item-quantity",ent_name_locale(ent),ents[players[pindex].nearby.index].count},
             dir_dist} , pindex)
@@ -3535,6 +3546,40 @@ function build_preview_checks_info(stack, pindex)
 		 end
 	  end
    end
+   
+   --For roboports, like electric poles, list possible neighbors (anything within 100 distx or 100 disty will be a neighbor
+   if ent_p.name == "roboport" then
+      local reach = 100
+      local top_left = {x = math.floor(pos.x - reach), y = math.floor(pos.y - reach)}
+      local bottom_right = {x = math.ceil(pos.x + reach), y = math.ceil(pos.y + reach)}
+      local port_dict = surf.find_entities_filtered{type = "roboport", area = {top_left, bottom_right}}
+      local ports = {}
+      for i, v in pairs(port_dict) do
+         table.insert(ports, v)
+      end
+      if #ports > 0 then
+         --List the first 5 poles within range
+         result = result .. " connecting "
+         for i, port in ipairs(ports) do
+            if i <= 5 then
+               local dist = math.ceil(util.distance(port.position,pos))
+               local dir = get_direction_of_that_from_this(port.position,pos)
+               result = result .. dist .. " tiles " .. direction_lookup(dir) .. ", "
+            end
+         end
+      else
+         --Notify if no connections and state nearest roboport-***
+         result = result .. " not connected, "
+         local nearest_port, min_dist = find_nearest_roboport(ent.surface, ent.position, 1000)
+         if min_dist == nil or min_dist >= 1000 then
+            result = result .. " no other roboports poles within 1000 tiles, "
+         else
+            local dir = get_direction_of_that_from_this(nearest_port.position,pos)
+            result = result .. math.ceil(min_dist) .. " tiles " .. direction_lookup(dir) .. " to nearest roboport, "
+         end
+      end
+   end
+   
    --For all electric powered entities, note whether powered, and from which direction. Otherwise report the nearest power pole.
    if ent_p.electric_energy_source_prototype ~= nil then
          local position = pos
@@ -3825,6 +3870,7 @@ function initialize(player)
    faplayer.zoom = faplayer.zoom or 1
    faplayer.build_lock = faplayer.build_lock or false
    faplayer.vanilla_mode = faplayer.vanilla_mode or false
+   faplayer.allow_reading_flying_text = faplayer.allow_reading_flying_text or true
    faplayer.setting_inventory_wraps_around = faplayer.setting_inventory_wraps_around or true
    faplayer.resources = faplayer.resources or {}
    faplayer.mapped = faplayer.mapped or {}
@@ -3967,12 +4013,15 @@ script.on_event(defines.events.on_player_changed_position,function(event)
             -- turn 
             players[pindex].direction = game.get_player(pindex).walking_state.direction
             players[pindex].player_direction = game.get_player(pindex).walking_state.direction
-            local new_pos = offset_position(pos,players[pindex].direction,1)
+            local new_pos = center_of_tile(offset_position(pos,players[pindex].direction,1))
             players[pindex].cursor_pos = new_pos
             players[pindex].position = pos
             cursor_highlight(pindex, nil, nil)
             sync_build_arrow(pindex)
---            target(pindex)
+            players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos)
+            if not players[pindex].vanilla_mode then
+               target(pindex)
+            end
 
             --Rotate belts in hand for build lock Mode
             local stack = game.get_player(pindex).cursor_stack
@@ -3983,6 +4032,10 @@ script.on_event(defines.events.on_player_changed_position,function(event)
             --Walk straight
             players[pindex].cursor_pos.x = players[pindex].cursor_pos.x + pos.x - players[pindex].position.x
             players[pindex].cursor_pos.y = players[pindex].cursor_pos.y + pos.y - players[pindex].position.y
+            players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos) 
+            if not players[pindex].vanilla_mode then
+               target(pindex) 
+            end
             players[pindex].position = pos
             
             cursor_highlight(pindex, nil, nil)
@@ -3992,10 +4045,13 @@ script.on_event(defines.events.on_player_changed_position,function(event)
                build_item_in_hand(pindex, -2)
             end
          end
-         -- print("checking:".. players[pindex].cursor_pos.x .. "," .. players[pindex].cursor_pos.y)
-         if not game.get_player(pindex).surface.can_place_entity{name = "small-lamp", position = players[pindex].cursor_pos} and not players[pindex].vanilla_mode then
-            read_tile(pindex)
+         
+         --Name a detected entity or a tile you cannot walk on
+         refresh_player_tile(pindex)
+         local ent = get_selected_ent(pindex)
+         if not players[pindex].vanilla_mode and ((ent ~= nil and ent.valid) or not game.get_player(pindex).surface.can_place_entity{name = "character", position = players[pindex].cursor_pos}) then
             target(pindex)
+            read_tile(pindex)
          end
       end
 end)
@@ -4879,6 +4935,7 @@ function move(direction,pindex)
    elseif game.get_player(pindex).driving then
       return
    end
+   players[pindex].allow_reading_flying_text = true
    local first_player = game.get_player(pindex)
    local pos = players[pindex].position
    local new_pos = offset_position(pos,direction,1)
@@ -4952,13 +5009,19 @@ function move_key(direction,event, force_single_tile)
    if players[pindex].in_menu and players[pindex].menu ~= "prompt" then
       menu_cursor_move(direction,pindex)
    elseif players[pindex].cursor then
+      -- Cursor Mode
       local diff = players[pindex].cursor_size * 2 + 1
       if single_only then
          diff = 1
       end
       players[pindex].cursor_pos = offset_position(players[pindex].cursor_pos, direction, diff)
+      if not players[pindex].vanilla_mode then
+         players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos)
+         target(pindex)
+      end
       sync_build_arrow(pindex)
       if players[pindex].cursor_size == 0 then
+         -- Cursor size 0: read tile
          read_tile(pindex)
          target(pindex)
          players[pindex].player_direction = direction
@@ -4966,6 +5029,7 @@ function move_key(direction,event, force_single_tile)
             build_item_in_hand(pindex, -1)            
          end
       else
+         -- Larger cursor sizes: scan area
          local scan_left_top = {math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size,math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size}
          local scan_right_bottom = {math.floor(players[pindex].cursor_pos.x)+players[pindex].cursor_size+1,math.floor(players[pindex].cursor_pos.y)+players[pindex].cursor_size+1}
          players[pindex].nearby.index = 1
@@ -5030,6 +5094,25 @@ script.on_event("read-coords", function(event)
       return
    end
    read_coords(pindex)
+end
+)
+
+--Get distance of cursor from player
+script.on_event("shift-k", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   --Read where the cursor is with respect to the player, e.g. "at 5 west"
+   local dir_dist = dir_dist_locale(players[pindex].position, players[pindex].cursor_pos)
+   local cursor_location_description = "at"
+   local cursor_production = " "
+   local cursor_description_of = " "
+   local result={"access.thing-producing-listpos-dirdist",cursor_location_description}
+   table.insert(result,cursor_production)--no production
+   table.insert(result,cursor_description_of)--listpos
+   table.insert(result,dir_dist)
+   printout(result,pindex)
 end
 )
 
@@ -5974,6 +6057,7 @@ script.on_event("mine-access", function(event)
       local stack = game.get_player(pindex).cursor_stack
       local surf = game.get_player(pindex).surface
       if stack.valid_for_read and stack.valid and stack.prototype.place_as_tile_result ~= nil then
+         players[pindex].allow_reading_flying_text = false
          local c_pos = players[pindex].cursor_pos
          local c_size = players[pindex].cursor_size
          local left_top = {x = math.floor(c_pos.x - c_size), y = math.floor(c_pos.y - c_size)}
@@ -6003,30 +6087,28 @@ script.on_event("mine-group", function(event) --laterdo** proper tallying of cle
    local cleared_count = 0
    local cleared_total = 0
    local comment = ""
+   players[pindex].allow_reading_flying_text = false
    if ent then 
       local surf = ent.surface
       local pos = ent.position
-      if ent.type == "tree" or ent.name == "rock-big" or ent.name == "rock-huge" or ent.name == "sand-rock-big" then
-         --Trees and rocks within 5 tiles
+      if ent.type == "tree" or ent.name == "rock-big" or ent.name == "rock-huge" or ent.name == "sand-rock-big" or ent.name == "item-on-ground" then
+         --Obstacles within 5 tiles: trees and rocks and ground items
          game.get_player(pindex).play_sound{path = "Mine-Building"}
-         cleared_count, comment = mine_trees_and_rocks_in_circle(pos, 5, pindex)
+         cleared_count, comment = clear_obstacles_in_circle(pos, 5, pindex)
       elseif ent.name == "straight-rail" then
-         --Rails within 3 tiles (and their signals)
+         --Rails within 5 tiles (and their signals)
          local rails = surf.find_entities_filtered{position = pos, radius = 5, name = "straight-rail"}
          for i,rail in ipairs(rails) do
             mine_signals(rail,pindex)
             game.get_player(pindex).play_sound{path = "entity-mined/straight-rail"}
             game.get_player(pindex).mine_entity(rail,true)
-         end
-      elseif ent.name == "item-on-ground" then
-         local ground_items = surf.find_entities_filtered{position = pos, radius = 5, name = "item-on-ground"}
-         for i,ground_item in ipairs(ground_items) do
-            game.get_player(pindex).mine_entity(ground_item,false)
+            cleared_count = cleared_count + 1
          end
       end
    else
-      --For empty tiles, mine trees and rocks within 5 tiles
-      cleared_count, comment = mine_trees_and_rocks_in_circle(players[pindex].cursor_pos, 5, pindex) 
+      --For empty tiles, clear obtsacles again
+      game.get_player(pindex).play_sound{path = "Mine-Building"}
+      cleared_count, comment = clear_obstacles_in_circle(players[pindex].cursor_pos, 5, pindex) 
    end
    cleared_total = cleared_total + cleared_count
    
@@ -6034,6 +6116,7 @@ script.on_event("mine-group", function(event) --laterdo** proper tallying of cle
    local p = game.get_player(pindex)
    local stack = p.cursor_stack
    if stack.valid_for_read and stack.name == "cut-paste-tool" then
+      players[pindex].allow_reading_flying_text = false
       local all_ents = p.surface.find_entities_filtered{position = p.position, radius = 5, force = {p.force, "neutral"}}
       for i,ent in ipairs(all_ents) do
          if ent and ent.valid then
@@ -6045,9 +6128,7 @@ script.on_event("mine-group", function(event) --laterdo** proper tallying of cle
          end
       end
    end
-   if cleared_total > 0 then
-      printout(" Cleared away " .. cleared_total .. " objects. ", pindex)
-   end
+   printout(" Cleared away " .. cleared_total .. " objects. ", pindex)
 end
 )
 
@@ -7532,32 +7613,34 @@ script.on_event("save", function(event)
 end)
 script.on_nth_tick(10, function(event)
    for pindex, player in pairs(players) do
-      if player.past_flying_texts == nil then
-         player.past_flying_texts = {}
-      end
-      local flying_texts = {}
-      local search = {
-         type = "flying-text",
-         position = player.cursor_pos,
-         radius = 80,
-      }
-      
-      for _, ftext in pairs(game.get_player(pindex).surface.find_entities_filtered(search)) do
-         local id = ftext.text
-         if type(id) == 'table' then
-            id = serpent.line(id)
+      if player.allow_reading_flying_text == nil or player.allow_reading_flying_text == true then
+         if player.past_flying_texts == nil then
+            player.past_flying_texts = {}
          end
-         flying_texts[id] = (flying_texts[id] or 0) + 1
-      end
-      for id, count in pairs(flying_texts) do
-         if count > (player.past_flying_texts[id] or 0) then
-            local ok, local_text = serpent.load(id)
-            if ok then
-               printout(local_text,pindex)
+         local flying_texts = {}
+         local search = {
+            type = "flying-text",
+            position = player.cursor_pos,
+            radius = 80,
+         }
+         
+         for _, ftext in pairs(game.get_player(pindex).surface.find_entities_filtered(search)) do
+            local id = ftext.text
+            if type(id) == 'table' then 
+               id = serpent.line(id)
+            end
+            flying_texts[id] = (flying_texts[id] or 0) + 1
+         end
+         for id, count in pairs(flying_texts) do
+            if count > (player.past_flying_texts[id] or 0) then
+               local ok, local_text = serpent.load(id)
+               if ok then 
+                  printout(local_text,pindex)
+               end
             end
          end
+         player.past_flying_texts = flying_texts
       end
-      player.past_flying_texts = flying_texts
    end
 end)
 
@@ -7603,14 +7686,13 @@ script.on_event("toggle-vanilla",function(event)
    if not check_for_player(pindex) then
       return
    end
-   if not players[pindex].vanilla_mode then 
-      printout(" Enabled vanilla mode ")
-   end
    players[pindex].vanilla_mode = not players[pindex].vanilla_mode
-   if not players[pindex].vanilla_mode then 
-      printout(" Disabled vanilla mode ")
-   end
    game.get_player(pindex).play_sound{path = "utility/confirm"}
+   if players[pindex].vanilla_mode then
+      game.get_player(pindex).print("Vanilla mode : ON")
+   else
+      game.get_player(pindex).print("Vanilla mode : OFF")
+   end
 end)
 
 script.on_event("recalibrate",function(event)
@@ -7852,12 +7934,14 @@ script.on_event("scan-selection-down", function(event)
    end
 end)
 
---Mines all trees and rocks in a selected rectangular area. Useful when placing structures. Forces mining. laterdo add deleting stumps maybe but they do fade away eventually 
-function mine_trees_and_rocks_in_circle(position, radius, pindex)
+--Mines all trees and rocks and ground items in a selected circular area. Useful when placing structures. Forces mining. laterdo add deleting stumps maybe but they do fade away eventually 
+function clear_obstacles_in_circle(position, radius, pindex)
    local surf = game.get_player(pindex).surface
    local comment = ""
    local trees_cleared = 0
    local rocks_cleared = 0
+   local ground_items_cleared = 0
+   players[pindex].allow_reading_flying_text = false
    
    --Find and mine trees
    local trees = surf.find_entities_filtered{position = position, radius = radius, type = "tree"}
@@ -7876,11 +7960,20 @@ function mine_trees_and_rocks_in_circle(position, radius, pindex)
          rocks_cleared = rocks_cleared + 1
       end
    end
-   if trees_cleared + rocks_cleared > 0 then
-      comment = "cleared " .. trees_cleared .. " trees and " .. rocks_cleared .. " rocks. "
+   
+   --Find and mine items on the ground
+   local ground_items = surf.find_entities_filtered{position = position, radius = 5, name = "item-on-ground"}
+   for i,ground_item in ipairs(ground_items) do
+      rendering.draw_circle{color = {1, 0, 0},radius = 0.25,width = 2,target = ground_item.position,surface = surf,time_to_live = 60}
+      game.get_player(pindex).mine_entity(ground_item,true)
+      ground_items_cleared = ground_items_cleared + 1
+   end
+         
+   if trees_cleared + rocks_cleared + ground_items_cleared > 0 then
+      comment = "cleared " .. trees_cleared .. " trees and " .. rocks_cleared .. " rocks and " .. ground_items_cleared .. " ground items "
    end
    rendering.draw_circle{color = {0, 1, 0},radius = radius,width = radius,target = position,surface = surf,time_to_live = 60}
-   return (trees_cleared + rocks_cleared), comment
+   return (trees_cleared + rocks_cleared + ground_items_cleared), comment
 end
 
 
@@ -8658,6 +8751,22 @@ function report_nearest_supplied_electric_pole(ent)
    return result
 end
 
+--Finds the nearest roboport
+function find_nearest_roboport(surf,pos,radius_in)
+   local nearest = nil
+   local min_dist = radius_in
+   local ports = surf.find_entities_filtered{name = "roboport" , position = pos , radius = radius_in}
+   for i,port in ipairs(ports) do
+      local dist = math.ceil(util.distance(pos, port.position))
+      if dist < min_dist then
+         min_dist = dist
+         nearest = port
+      end
+   end
+   rendering.draw_circle{color = {1, 1, 0}, radius = 4, width = 4, target = nearest.position, surface = surf, time_to_live = 90}
+   return nearest, min_dist
+end
+
 
 --Reports which part of the selected entity has the cursor. E.g. southwest corner, center...
 function get_entity_part_at_cursor(pindex)
@@ -9258,7 +9367,7 @@ function cursor_highlight(pindex, ent, box_type)
       rendering.destroy(h_tile)
    end
    
-   if ent ~= nil and ent.valid and ent.name ~= "highlight-box" and ent.prototype.type ~= "flying-text" then
+   if ent ~= nil and ent.valid and ent.name ~= "highlight-box" and ent.type ~= "flying-text" then
       h_box = p.surface.create_entity{name = "highlight-box", force = "neutral", surface = p.surface, render_player_index = pindex, box_type = "entity", 
          position = c_pos, source = ent}
       if box_type ~= nil then
