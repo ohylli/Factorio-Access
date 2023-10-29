@@ -1252,7 +1252,7 @@ function build_rail_turn_right_45_degrees(anchor_rail, pindex)
    -- elseif dir == dirs.west or dir == dirs.northwest then
       -- build_area = {{pos.x+9, pos.y+9},{pos.x-16,pos.y-16}}
    -- end 
-   temp1, build_comment = mine_trees_and_rocks_in_circle(pos,12, pindex)
+   temp1, build_comment = clear_obstacles_in_circle(pos,12, pindex)
    
    --4. Check if every object can be placed
    if dir == dirs.north then 
@@ -1434,7 +1434,7 @@ function build_rail_turn_right_90_degrees(anchor_rail, pindex)
    -- elseif dir == dirs.west then
       -- build_area = {{pos.x+2, pos.y+2},{pos.x-16,pos.y-16}}
    -- end 
-   temp1, build_comment = mine_trees_and_rocks_in_circle(pos,18, pindex)
+   temp1, build_comment = clear_obstacles_in_circle(pos,18, pindex)
    
    --4. Check if every object can be placed
    if dir == dirs.north then 
@@ -1551,7 +1551,7 @@ function build_rail_turn_left_45_degrees(anchor_rail, pindex)
    -- elseif dir == dirs.west or dir == dirs.northwest then
       -- build_area = {{pos.x+9, pos.y-9},{pos.x-16,pos.y+16}}
    -- end 
-   temp1, build_comment = mine_trees_and_rocks_in_circle(pos,12, pindex)
+   temp1, build_comment = clear_obstacles_in_circle(pos,12, pindex)
    
    --4. Check if every object can be placed
    if dir == dirs.north then 
@@ -1733,7 +1733,7 @@ function build_rail_turn_left_90_degrees(anchor_rail, pindex)
    -- elseif dir == dirs.west then
       -- build_area = {{pos.x+2, pos.y+2},{pos.x-16,pos.y+16}}
    -- end 
-   temp1, build_comment = mine_trees_and_rocks_in_circle(pos,18, pindex)
+   temp1, build_comment = clear_obstacles_in_circle(pos,18, pindex)
    
    --4. Check if every object can be placed
    if dir == dirs.north then 
@@ -1845,7 +1845,7 @@ function build_small_plus_intersection(anchor_rail, pindex)
    end
    
    --3. Clear trees and rocks in the build area
-   temp1, build_comment = mine_trees_and_rocks_in_circle(pos,10, pindex)
+   temp1, build_comment = clear_obstacles_in_circle(pos,10, pindex)
    
    --4. Check if every object can be placed
    if dir == dirs.north then 
@@ -2180,7 +2180,7 @@ function append_rail(pos, pindex)
       printout(end_rail_dir .. " and " .. rail_api_dir .. ", rail appending direction error.",pindex)
       return
    end
-   temp1, build_comment = mine_trees_and_rocks_in_circle(append_rail_pos,3, pindex)
+   temp1, build_comment = clear_obstacles_in_circle(append_rail_pos,3, pindex)
    if not surf.can_place_entity{name = "straight-rail", position = append_rail_pos, direction = append_rail_dir} then 
       game.get_player(pindex).play_sound{path = "utility/cannot_build"}
       printout("Cannot place here to extend the rail.",pindex)
@@ -2481,7 +2481,7 @@ function build_train_stop(anchor_rail, pindex)
    end
    
    --3. Clear trees and rocks in the build area
-   temp1, build_comment = mine_trees_and_rocks_in_circle(pos,3, pindex)
+   temp1, build_comment = clear_obstacles_in_circle(pos,3, pindex)
    
    --4. Check if every object can be placed
    if dir == dirs.north then 
