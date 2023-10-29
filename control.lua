@@ -456,6 +456,11 @@ function nudge_key(direction, event)
                cursor_highlight(pindex, ent, "train-visualization")
                sync_build_arrow(pindex)
             end
+            if ent.type == "electric-pole" then -- WIP**
+               -- if ent.clone{position = new_pos, surface = ent.surface, force = ent.force, create_build_effect_smoke = false} == true then
+                  -- ent.destroy{}
+               -- end
+            end
          else
             printout({"access.failed-to-nudge"}, pindex)
          end
@@ -2111,7 +2116,7 @@ function get_scan_summary(scan_left_top, scan_right_bottom, pindex)
    local surf = game.get_player(pindex).surface
    --Scan for Tiles and Resources, because they behave weirdly in scan_area due to aggregation, or are skipped
    local percent = 0
-   local res_count = surf.count_tiles_filtered{ name = "water", area = {scan_left_top,scan_right_bottom} }
+   local res_count = surf.count_tiles_filtered{ name = {"water", "deepwater", "water-green", "deepwater-green", "water-shallow", "water-mud", "water-wube"}, area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
    table.insert(percentages, {name = "water", percent = percent})
    percent_total = percent_total + percent--water counts as filling a space
@@ -2555,6 +2560,8 @@ function read_building_slot(pindex, start_phrase)
                end
                --result = result .. "nothing"
             end
+         elseif players[pindex].building.ent ~= nil and players[pindex].building.ent.valid and players[pindex].building.ent.name == "lab" then
+            result = result .. " reserved for science pack type " .. players[pindex].building.index
          end
          printout(start_phrase .. result, pindex)
       end
