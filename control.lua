@@ -5062,7 +5062,7 @@ script.on_event("shift-k", function(event)
    if not check_for_player(pindex) then
       return
    end
-   --Read where the cursor is with respect to the player, e.g. "at 5 west" ***
+   --Read where the cursor is with respect to the player, e.g. "at 5 west"
    local dir_dist = dir_dist_locale(players[pindex].position, players[pindex].cursor_pos)
    local cursor_location_description = "at"
    local cursor_production = " "
@@ -6048,27 +6048,24 @@ script.on_event("mine-group", function(event) --laterdo** proper tallying of cle
    if ent then 
       local surf = ent.surface
       local pos = ent.position
-      if ent.type == "tree" or ent.name == "rock-big" or ent.name == "rock-huge" or ent.name == "sand-rock-big" then
-         --Trees and rocks within 5 tiles
+      if ent.type == "tree" or ent.name == "rock-big" or ent.name == "rock-huge" or ent.name == "sand-rock-big" or ent.name == "item-on-ground" then
+         --Obstacles within 5 tiles: trees and rocks and ground items
          game.get_player(pindex).play_sound{path = "Mine-Building"}
-         cleared_count, comment = mine_trees_and_rocks_in_circle(pos, 5, pindex)
+         cleared_count, comment = clear_obstacles_in_circle(pos, 5, pindex)
       elseif ent.name == "straight-rail" then
-         --Rails within 3 tiles (and their signals)
+         --Rails within 5 tiles (and their signals)
          local rails = surf.find_entities_filtered{position = pos, radius = 5, name = "straight-rail"}
          for i,rail in ipairs(rails) do
             mine_signals(rail,pindex)
             game.get_player(pindex).play_sound{path = "entity-mined/straight-rail"}
             game.get_player(pindex).mine_entity(rail,true)
-         end
-      elseif ent.name == "item-on-ground" then
-         local ground_items = surf.find_entities_filtered{position = pos, radius = 5, name = "item-on-ground"}
-         for i,ground_item in ipairs(ground_items) do
-            game.get_player(pindex).mine_entity(ground_item,false)
+            cleared_count = cleared_count + 1
          end
       end
    else
-      --For empty tiles, mine trees and rocks within 5 tiles
-      cleared_count, comment = mine_trees_and_rocks_in_circle(players[pindex].cursor_pos, 5, pindex) 
+      --For empty tiles, clear obtsacles again
+      game.get_player(pindex).play_sound{path = "Mine-Building"}
+      cleared_count, comment = clear_obstacles_in_circle(players[pindex].cursor_pos, 5, pindex) 
    end
    cleared_total = cleared_total + cleared_count
    
@@ -6087,9 +6084,7 @@ script.on_event("mine-group", function(event) --laterdo** proper tallying of cle
          end
       end
    end
-   if cleared_total > 0 then
-      printout(" Cleared away " .. cleared_total .. " objects. ", pindex)
-   end
+   printout(" Cleared away " .. cleared_total .. " objects. ", pindex)
 end
 )
 
@@ -7595,7 +7590,7 @@ script.on_nth_tick(10, function(event)
          if count > (player.past_flying_texts[id] or 0) then
             local ok, local_text = serpent.load(id)
             if ok then
-               printout(local_text,pindex)
+               printout(local_text,pindex)--****
             end
          end
       end
@@ -7893,12 +7888,13 @@ script.on_event("scan-selection-down", function(event)
    end
 end)
 
---Mines all trees and rocks in a selected rectangular area. Useful when placing structures. Forces mining. laterdo add deleting stumps maybe but they do fade away eventually 
-function mine_trees_and_rocks_in_circle(position, radius, pindex)
+--Mines all trees and rocks and ground items in a selected circular area. Useful when placing structures. Forces mining. laterdo add deleting stumps maybe but they do fade away eventually 
+function clear_obstacles_in_circle(position, radius, pindex)
    local surf = game.get_player(pindex).surface
    local comment = ""
    local trees_cleared = 0
    local rocks_cleared = 0
+   local ground_items_cleared = 0
    
    --Find and mine trees
    local trees = surf.find_entities_filtered{position = position, radius = radius, type = "tree"}
@@ -7917,11 +7913,20 @@ function mine_trees_and_rocks_in_circle(position, radius, pindex)
          rocks_cleared = rocks_cleared + 1
       end
    end
-   if trees_cleared + rocks_cleared > 0 then
-      comment = "cleared " .. trees_cleared .. " trees and " .. rocks_cleared .. " rocks. "
+   
+   --Find and mine items on the ground
+   local ground_items = surf.find_entities_filtered{position = position, radius = 5, name = "item-on-ground"}
+   for i,ground_item in ipairs(ground_items) do
+      rendering.draw_circle{color = {1, 0, 0},radius = 0.25,width = 2,target = ground_item.position,surface = surf,time_to_live = 60}
+      game.get_player(pindex).mine_entity(ground_item,true)
+      ground_items_cleared = ground_items_cleared + 1
+   end
+         
+   if trees_cleared + rocks_cleared + ground_items_cleared > 0 then
+      comment = "cleared " .. trees_cleared .. " trees and " .. rocks_cleared .. " rocks and " .. ground_items_cleared .. " ground items "
    end
    rendering.draw_circle{color = {0, 1, 0},radius = radius,width = radius,target = position,surface = surf,time_to_live = 60}
-   return (trees_cleared + rocks_cleared), comment
+   return (trees_cleared + rocks_cleared + ground_items_cleared), comment
 end
 
 
