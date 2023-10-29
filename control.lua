@@ -704,10 +704,10 @@ function ent_info(pindex, ent, description)
       if #contents > 0 then
          result = result .. " carrying " .. contents[1].name
          if #contents > 1 then
-            for i = 2, #contents-1 do
-               result = result .. ", " .. contents[i].name
+            result = result .. ", and " .. contents[2].name
+            if #contents > 2 then
+               result = result .. ", and other item types " 
             end
-            result = result .. ", and " .. contents[#contents].name
          end
 
       else
@@ -1297,8 +1297,8 @@ function teleport_to_closest(pindex, pos, muted)
       if not muted then
          rendering.draw_circle{color = {0.8, 0.2, 0.0},radius = 0.5,width = 15,target = old_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
          rendering.draw_circle{color = {0.6, 0.1, 0.1},radius = 0.3,width = 20,target = old_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
-         local test_lamp = first_player.surface.create_entity{name = "small-lamp", position = first_player.position, raise_built = false, force = first_player.force}
-         test_lamp.destroy{}
+         local smoke_effect = first_player.surface.create_entity{name = "iron-chest", position = first_player.position, raise_built = false, force = first_player.force}
+         smoke_effect.destroy{}
       end
       local teleported = first_player.teleport(new_pos)
       if teleported then
@@ -1306,8 +1306,8 @@ function teleport_to_closest(pindex, pos, muted)
          if not muted then
             rendering.draw_circle{color = {0.3, 0.3, 0.9},radius = 0.5,width = 15,target = new_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
             rendering.draw_circle{color = {0.0, 0.0, 0.9},radius = 0.3,width = 20,target = new_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
-            local test_lamp = first_player.surface.create_entity{name = "small-lamp", position = first_player.position, raise_built = false, force = first_player.force}
-            test_lamp.destroy{}
+            local smoke_effect = first_player.surface.create_entity{name = "iron-chest", position = first_player.position, raise_built = false, force = first_player.force}
+            smoke_effect.destroy{}
          end
          if new_pos.x ~= pos.x or new_pos.y ~= pos.y then
             if not muted then
@@ -2725,9 +2725,9 @@ end
 
 function target(pindex)
    local ent = get_selected_ent(pindex)
-   if ent then
+   if ent and not players[pindex].vanilla_mode then
          move_cursor_map(ent.position,pindex)
-   else
+   elseif not players[pindex].vanilla_mode then
          move_cursor_map(players[pindex].cursor_pos, pindex)
    end
 end
@@ -3967,12 +3967,15 @@ script.on_event(defines.events.on_player_changed_position,function(event)
             -- turn 
             players[pindex].direction = game.get_player(pindex).walking_state.direction
             players[pindex].player_direction = game.get_player(pindex).walking_state.direction
-            local new_pos = offset_position(pos,players[pindex].direction,1)
+            local new_pos = center_of_tile(offset_position(pos,players[pindex].direction,1))
             players[pindex].cursor_pos = new_pos
             players[pindex].position = pos
             cursor_highlight(pindex, nil, nil)
             sync_build_arrow(pindex)
---            target(pindex)
+            if not players[pindex].vanilla_mode then
+               players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos)
+               target(pindex)
+            end
 
             --Rotate belts in hand for build lock Mode
             local stack = game.get_player(pindex).cursor_stack
@@ -3983,6 +3986,11 @@ script.on_event(defines.events.on_player_changed_position,function(event)
             --Walk straight
             players[pindex].cursor_pos.x = players[pindex].cursor_pos.x + pos.x - players[pindex].position.x
             players[pindex].cursor_pos.y = players[pindex].cursor_pos.y + pos.y - players[pindex].position.y
+            players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos)
+            if not players[pindex].vanilla_mode then
+               players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos)
+               target(pindex) 
+            end
             players[pindex].position = pos
             
             cursor_highlight(pindex, nil, nil)
@@ -3992,10 +4000,13 @@ script.on_event(defines.events.on_player_changed_position,function(event)
                build_item_in_hand(pindex, -2)
             end
          end
-         -- print("checking:".. players[pindex].cursor_pos.x .. "," .. players[pindex].cursor_pos.y)
-         if not game.get_player(pindex).surface.can_place_entity{name = "small-lamp", position = players[pindex].cursor_pos} and not players[pindex].vanilla_mode then
-            read_tile(pindex)
+         
+         --Name a detected entity or a tile you cannot walk on
+         refresh_player_tile(pindex)
+         local ent = get_selected_ent(pindex)
+         if not players[pindex].vanilla_mode and ((ent ~= nil and ent.valid) or not game.get_player(pindex).surface.can_place_entity{name = "character", position = players[pindex].cursor_pos}) then
             target(pindex)
+            read_tile(pindex)
          end
       end
 end)
@@ -4957,6 +4968,10 @@ function move_key(direction,event, force_single_tile)
          diff = 1
       end
       players[pindex].cursor_pos = offset_position(players[pindex].cursor_pos, direction, diff)
+      if not players[pindex].vanilla_mode then
+         players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos)
+         target(pindex)
+      end
       sync_build_arrow(pindex)
       if players[pindex].cursor_size == 0 then
          read_tile(pindex)
@@ -7603,14 +7618,13 @@ script.on_event("toggle-vanilla",function(event)
    if not check_for_player(pindex) then
       return
    end
-   if not players[pindex].vanilla_mode then 
-      printout(" Enabled vanilla mode ")
-   end
    players[pindex].vanilla_mode = not players[pindex].vanilla_mode
-   if not players[pindex].vanilla_mode then 
-      printout(" Disabled vanilla mode ")
-   end
    game.get_player(pindex).play_sound{path = "utility/confirm"}
+   if players[pindex].vanilla_mode then
+      game.get_player(pindex).print("Vanilla mode : ON")
+   else
+      game.get_player(pindex).print("Vanilla mode : OFF")
+   end
 end)
 
 script.on_event("recalibrate",function(event)
