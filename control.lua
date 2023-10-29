@@ -1306,6 +1306,9 @@ function teleport_to_closest(pindex, pos, muted)
          if not muted then
             rendering.draw_circle{color = {0.3, 0.3, 0.9},radius = 0.5,width = 15,target = new_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
             rendering.draw_circle{color = {0.0, 0.0, 0.9},radius = 0.3,width = 20,target = new_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
+            if not muted then
+               game.get_player(pindex).play_sound{path = "utility/scenario_message"}
+            end
             local smoke_effect = first_player.surface.create_entity{name = "iron-chest", position = first_player.position, raise_built = false, force = first_player.force}
             smoke_effect.destroy{}
          end
@@ -2891,12 +2894,14 @@ function scan_index(pindex)
       end
       local dir_dist = dir_dist_locale(players[pindex].position, ent.position)
       if players[pindex].nearby.count == false then
+         --Read the entity in terms of distance and direction
          local result={"access.thing-producing-listpos-dirdist",ent_name_locale(ent)}
          table.insert(result,ent_production(ent))
          table.insert(result,{"description.of", players[pindex].nearby.selection , #ents[players[pindex].nearby.index].ents})
          table.insert(result,dir_dist)
          printout(result,pindex)
       else
+         --Read the entity in terms of count, and give the direction and distance of an example
          printout({"access.item_and_quantity-example-at-dirdist",
             {"access.item-quantity",ent_name_locale(ent),ents[players[pindex].nearby.index].count},
             dir_dist} , pindex)
@@ -5048,6 +5053,25 @@ script.on_event("read-coords", function(event)
       return
    end
    read_coords(pindex)
+end
+)
+
+--Get distance of cursor from player
+script.on_event("shift-k", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   --Read where the cursor is with respect to the player, e.g. "at 5 west" ***
+   local dir_dist = dir_dist_locale(players[pindex].position, players[pindex].cursor_pos)
+   local cursor_location_description = "at"
+   local cursor_production = " "
+   local cursor_description_of = " "
+   local result={"access.thing-producing-listpos-dirdist",cursor_location_description}
+   table.insert(result,cursor_production)--no production
+   table.insert(result,cursor_description_of)--listpos
+   table.insert(result,dir_dist)
+   printout(result,pindex)
 end
 )
 
