@@ -8,11 +8,13 @@ import os
 import getpass
 import zipfile
 import webbrowser
-import fa_paths
 import time
 
+from fa_paths import BIN, TEMP_PATH,PLAYER_DATA_PATH
 from shutil import rmtree
 from sys import platform
+
+debug=True
 
 download_package_map = {
     "win32":"win64-manual",
@@ -32,8 +34,7 @@ package_map = {
 
 FACTORIO_INSTALL_PATH = "./"
 
-PLAYER_DATA_PATH = os.path.join(fa_paths.WRITE_DIR, "player-data.json")
-TEMP_PATH = os.path.join(fa_paths.WRITE_DIR,  'temp')
+
 
 
 
@@ -79,11 +80,11 @@ def prompt_login():
 
 def service_token_promt():
     username=""
-    while len(username) == 0 :
+    while not re.fullmatch(r'[\w.-]+',username) :
         username=input("Factorio Username:")
     token=''
     while True:
-        print("To get your service token, which is required for updates, and most multiplayer functions, please follow the instructions below:")
+        print("To get your service token, which is required for updates, and many multiplayer functions, please follow the instructions below:")
         print("1. Go to https://factorio.com/profile in your browser. An option to launch is at the end of the instructions.")
         print('2. Once logged in and on your profile page, Click the link with the text "reveal".')
         print("3. Once clicked, your token string will be just before the link that will have disapeared. The token consists of a string of 30 numbers and letters between a and f. The text after the token starts with an i.")
@@ -176,7 +177,7 @@ def get_latest_stable():
 
 def download(url,filename):
     with open(filename,'wb') as fp, opener.open(url) as dl:
-        print(f"saving {url} to {filename}")
+        #print(f"saving {url} to {filename}")
         length = dl.getheader('content-length')
         buffsize = 4096
 
@@ -242,15 +243,18 @@ def set_player_data(player):
         json.dump(player,player_file)
 
 def get_player_data():
-    with open(PLAYER_DATA_PATH) as player_file:
+    with open(PLAYER_DATA_PATH,encoding='utf8') as player_file:
         return json.load(player_file)
+    
 
-def get_credentials(quiet=False):
+def get_credentials(quiet=False,reset=False):
     if not os.path.exists(PLAYER_DATA_PATH):
         if not quiet:
             print("Player data does not exist yet. Please start the game in single player first.")
         return None
     player = get_player_data()
+    if reset:
+        player["service-username"]=''
     if not player["service-username"] or not player["service-token"]:
         log_res = service_token_promt()#api_log_in()
         if not log_res:
@@ -266,7 +270,7 @@ def get_credentials(quiet=False):
     
     
 def get_current_version():
-    version_str = subprocess.check_output(fa_paths.BIN + " --version").decode('utf-8')
+    version_str = subprocess.check_output([BIN,"--version"]).decode('utf-8')
     version_re = r"Version:\s*([\d\.]+)\s*\(\s*([^,]+),\s*([^,]+),\s*([^)]+)\)"
     maybe_match = re.match(version_re , version_str)
     if not maybe_match:
@@ -281,7 +285,7 @@ def get_current_version():
 
 
 def check_for_updates(credentials,connection,current_version):
-    print("cheing for factotio updates...")
+    print("checking for Factorio updates...")
     params=credentials.copy()
     params["apiVersion"]=2
     connection.request("GET",'/get-available-versions?'+urllib.parse.urlencode(credentials))
@@ -334,15 +338,20 @@ def prep_update(credentials, current_version, update_canidates):
     return
     
 def execute_update(current_version, update_canidates):
+    applying=re.compile(r'Applying update .*-(\d+\.\d+\.\d+)-update')
     print(current_version,update_canidates)
-    params=[fa_paths.BIN]
+    params=[BIN]
     for update in update_canidates:
         file = os.path.abspath(update_filename(current_version,update))
         params.append('--apply-update')
         params.append(file)
     print(params)
-    print(subprocess.check_output(params).decode('utf-8'))
-    #todo subprocess spawns another process and exits, casueing the cleanup to proceed before the update completes.
+    child=subprocess.Popen(params,stdout=subprocess.PIPE)
+    for line in child.stdout:
+        if m:=applying.search(line.decode()):
+            print(f'Applying Update:{m[1]}')
+        elif debug:
+            print('--',line.decode(),end='')
 
 def cleanup_update(current_version, update_canidates):
     for update in update_canidates:
@@ -356,6 +365,7 @@ def do_update(confirm=True):
     current_version = get_current_version()
     if not current_version:
         return False
+    print(f"Version: {current_version['from']}")
     connection = http.client.HTTPSConnection("updater.factorio.com")
     update_canidates = check_for_updates(credentials,connection,current_version)
     connection.close()

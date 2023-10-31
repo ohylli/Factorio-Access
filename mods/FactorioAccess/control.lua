@@ -3853,10 +3853,27 @@ function read_coords(pindex, start_phrase)
 end
 
 function initialize(player)
+   local force=player.force.index
+   global.forces[force] = global.forces[force] or {}
+   local fa_force=global.forces[force]
+
    global.players[player.index] = global.players[player.index] or {}
    local faplayer = global.players[player.index]
-   local character = player.cutscene_character or player.character
    faplayer.player = player
+   
+   if not fa_force.resources then
+      for pi, p in pairs(global.players) do
+         if p.player.valid and p.player.force.index == force and p.resources and p.mapped then
+            fa_force.resources = p.resources
+            fa_force.mapped = p.mapped
+            break
+         end
+      end
+      fa_force.resources = fa_force.resources or {}
+      fa_force.mapped = fa_force.mapped or {}
+   end
+      
+   local character = player.cutscene_character or player.character
    faplayer.is_scanning = faplayer.is_scanning or false
    faplayer.in_menu = faplayer.in_menu or false
    faplayer.in_item_selector = faplayer.in_item_selector or false
@@ -3888,8 +3905,8 @@ function initialize(player)
    faplayer.vanilla_mode = faplayer.vanilla_mode or false
    faplayer.allow_reading_flying_text = faplayer.allow_reading_flying_text or true
    faplayer.setting_inventory_wraps_around = faplayer.setting_inventory_wraps_around or true
-   faplayer.resources = faplayer.resources or {}
-   faplayer.mapped = faplayer.mapped or {}
+   faplayer.resources = faplayer.resources or fa_force.resources
+   faplayer.mapped = faplayer.mapped or fa_force.mapped
    faplayer.destroyed = faplayer.destroyed or {}
 
    faplayer.nearby = faplayer.nearby or {
@@ -7509,6 +7526,7 @@ end)
 
 
 function ensure_global_structures_are_up_to_date()
+   global.forces = global.forces or {}
    global.players = global.players or {}
    players = global.players
    for pindex, player in pairs(game.players) do
@@ -8279,13 +8297,8 @@ script.on_event(defines.events.on_gui_opened, function(event)
    end
 end)
 
-script.on_event(defines.events.on_chunk_charted,function(event)--****bug here about updating only the player instead of the force.
-   local pindex = 0
---   if table_size(event.force.players) > 0 then
-      pindex = event.force.players[1].index
---   else
---      return
---   end
+script.on_event(defines.events.on_chunk_charted,function(event)
+   pindex = event.force.players[1].index
    if not check_for_player(pindex) then
    end
    if players[pindex].mapped[pos2str(event.position)] ~= nil then
@@ -8572,7 +8585,6 @@ script.on_event(defines.events.on_entity_destroyed,function(event) --DOES NOT HA
       for pos, val in pairs(adj) do
          --players[pindex].tree_chunks[pos].count = players[pindex].tree_chunks[pos].count - 1--**beta** Forests need updating but these lines are incorrectly named
       end
-         --players[pindex].tree_positions[str] = nil--**beta** Forests need updating but these lines are incorrectly named
    end
    players[pindex].destroyed[event.registration_number] = nil
 end)

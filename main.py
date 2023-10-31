@@ -9,15 +9,18 @@ import threading
 import queue
 import json
 import shutil
+import re
 
 import fa_paths
 import update_factorio
+import multiplayer
 
 import accessible_output2.outputs.auto
 ao_output = accessible_output2.outputs.auto.Auto()
 
 gui.FAILSAFE = False
 
+debug=False
 
 if len(sys.argv) > 1 and os.path.exists(sys.argv[1]):
     os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
@@ -80,6 +83,14 @@ def select_option(options,prompt='Select an option:',one_indexed=True):
             print(i + one_indexed, ": ", val)    
         i=input()
         if not i.isdigit():
+            if i=='debug':
+                global debug
+                debug=True
+                print("debug output")
+                for name,path in fa_paths.__dict__.items():
+                    if type(path)==str:
+                        print(f'{name:20}:{path}')
+
             print("Invalid input, please enter a number.")
             continue
         i=int(i)-one_indexed
@@ -117,19 +128,28 @@ def do_menu(branch, name, zero_item=("Back",0)):
         expanded_branch={}
         for option, result in branch.items():
             if callable(option):
-                for opt, res in option().items():
-                    expanded_branch[opt]=lambda res=res:result(res)
+                generated_menu=option()
+                if not generated_menu:
+                    continue
+                if type(generated_menu)==str:
+                    expanded_branch[generated_menu]=result
+                else:
+                    for opt, res in option().items():
+                        expanded_branch[opt]=lambda res=res:result(res)
             else:
                 expanded_branch[option]=result
         keys=list(expanded_branch)
         opt = select_option(keys, prompt=f"{name}:", one_indexed= not zero_item)
-        if zero_item and zero_item[1] == opt:
-            return opt
+        if zero_item and opt==0:
+            return zero_item[1]
         key = keys[opt]
         ret = do_menu(expanded_branch[key],key)
-        if ret > 0 and zero_item and zero_item[1]==0:
-            return ret-1
-
+        try:
+            if ret > 0 and zero_item and zero_item[1]==0:
+                return ret-1
+        except:
+            print(expanded_branch[key],key,"returned",ret)
+            raise ValueError()
 
 
 
@@ -388,15 +408,18 @@ def get_updated_presets():
             print(preset_name,len(preset))
     pass
 
-def process_game_stdout(stdout,player_name,announce_press_e):
+def process_game_stdout(stdout,announce_press_e):
+    player_index=""
+    restarting=False
     for line in iter(stdout.readline, b''):
-        print(line)
+        if debug:
+            print(line)
         line = line.decode('utf-8').rstrip('\r\n')
         parts = line.split(' ',1)
         if len(parts)==2:
             if parts[0] in player_specific_commands:
                 more_parts = parts[1].split(" ",1)
-                if not player_name or (more_parts[0] in player_list and player_name == player_list[more_parts[0]]):
+                if not player_index or more_parts[0] == player_index:
                     player_specific_commands[parts[0]](more_parts[1])
                     continue
             elif parts[0] in global_commands:
@@ -409,46 +432,54 @@ def process_game_stdout(stdout,player_name,announce_press_e):
             debug_time = time.time
         elif line[:9] == "time start":
             print(time.time - debug_time)
+        elif line[-19:] == "Restarting Factorio":
+            restarting=True
         elif line[-7:] == "Goodbye":
-            break
+            if not restarting:
+                pass#return
+            restarting=False
+        elif m:=re.search(r'PlayerJoinGame .*?playerIndex\((\d+)\)',line):
+            if not player_index:
+                player_index=str(int(m[1])+1)
+                print(f'Player index now {player_index}')
+        elif re.search(r'Quitting multiplayer connection.',line):
+            player_index=""
+            print(f'Player index cleared')
         elif announce_press_e and len(line) > 20 and line[-20:] == "Factorio initialised":
             announce_press_e = False
             ao_output.output("Press e to continue", True)
 
-def save_game_rename():
+def save_game_rename(if_after=None):
     l = get_sorted_saves()
-
-    if len(l) == 0:
-        print("Make sure to save your game next time!")
-    else:
-        print("Would you like to name your last save?  You saved " +
-              get_elapsed_time(save_time(l[0])) + " ago")
-        if getAffirmation():
+    if len(l) > 0:
+        save=l[0]
+        save_t=save_time(save)
+        if if_after and save_t > if_after:
+            print("Would you like to name your last save?  You saved " +
+                get_elapsed_time(save_t) + " ago")
+            if not getAffirmation():
+                return
             print("Enter a name for your save file:")
-            newName = input()
             check = False
             while check == False:
+                newName = input()
                 try:
-                    testFile = open(newName + ".test", "w")
+                    dst = os.path.join(fa_paths.SAVES, newName + ".zip")
+                    testFile = open(dst, "w")
                     testFile.close()
-                    os.remove(newName + ".test")
+                    os.remove(dst)
                     check = True
                 except:
                     print("Invalid file name, please try again.")
-                    newName = input()
-
-            dst = "saves/" + newName + ".zip"
-            src = "saves/" + l[0]
-            try:
-                os.rename(src, dst)
-            except:
-                os.remove(dst)
-                os.rename(src, dst)
+            src = os.path.join(fa_paths.SAVES,save)
+            os.replace(src, dst)
+            print("Renamed.")
+            return
+    print("Looks like you didn't save!")
 
 
 
 def host_saved_game_menu(game):
-    credentials = update_factorio.get_credentials()
     player = update_factorio.get_player_data()
     player["last-played"] = {
         "type": "hosted-multiplayer",
@@ -463,36 +494,34 @@ def host_saved_game_menu(game):
             "game_time_elapsed": 0,
             "has_password": False
           },
-          "server-username": "",
+          "server-username": player["service-username"],
           "autosave-interval": 5,
           "afk-autokick-interval": 0
         },
         "save-name": game[:-4]
       }
     update_factorio.set_player_data(player)
-    return launch_with_params([],credentials["username"],announce_press_e=True)
+    launch_with_params([],announce_press_e=True)
+    return 5
+def just_launch():
+    launch_with_params([],announce_press_e=True)
+    return 5
 
 def connect_to_address_menu():
-    credentials = update_factorio.get_credentials()
     address = input("Enter the address to connect to:\n")
-    connect_to_address(address,credentials["username"])
+    connect_to_address(address)
     return 5
-def connect_to_address(address,player_name):
-    launch_with_params(["--mp-connect",address],player_name)
-    return 5
+def connect_to_address(address):
+    return launch_with_params(["--mp-connect",address])
 
 def create_new_save(map_setting,map_gen_setting):
-    # try:
-        # os.remove('saves/_autosave-manual.zip')
-    # except:
-        # pass
-    launch_with_params(["--map-gen-settings", map_gen_setting, "--map-settings",map_setting,'--create','saves/_autosave-manual.zip'])
+    launch_with_params(["--map-gen-settings", map_gen_setting, "--map-settings",map_setting,'--create','saves/_autosave-manual.zip'],save_rename=False)
 
 def launch(path):
     launch_with_params(["--load-game", path])
-    save_game_rename()
     return 5
-def launch_with_params(params,player_name=False,announce_press_e=False):
+def launch_with_params(params,announce_press_e=False,save_rename=True):
+    start_time=time.time()
     params = [
         fa_paths.BIN, 
         "--config", fa_paths.CONFIG,
@@ -501,11 +530,14 @@ def launch_with_params(params,player_name=False,announce_press_e=False):
     try:
         print("Launching")
         proc = subprocess.Popen(params , stdout=subprocess.PIPE)
-        threading.Thread(target=process_game_stdout, args=(proc.stdout,player_name,announce_press_e), daemon=True).start()
+        threading.Thread(target=process_game_stdout, args=(proc.stdout,announce_press_e), daemon=True).start()
         proc.wait()
     except Exception as e:
         print("error running game")
         raise e
+    if save_rename:
+        save_game_rename(start_time)
+    return 5
     
 
 
@@ -534,8 +566,8 @@ def time_to_exit():
     ao_output.output("Goodbye Factorio", False)
     sys.exit(0)
     
-    
 menu = {
+    "Launch last played":just_launch,
     "Single Player":{
         "New Game" : chooseDifficulty,
         "Load Game" : {
@@ -543,9 +575,24 @@ menu = {
             },
         },
     "Multiplayer":{
+        multiplayer.get_username_menu:multiplayer.username_menu,
+        "Host Settings":{
+            multiplayer.get_host_settings_menu:multiplayer.run_func
+        },
         "Host Saved Game": {
-            get_menu_saved_games:host_saved_game_menu,
+            get_menu_saved_games: multiplayer.multiplayer_launch,
             },
+        "Browse Public":{
+            "Freind List":{
+                "Add":multiplayer.add_friend_menu,
+                "Remove/View":{
+                    multiplayer.get_friends_menu: multiplayer.remove_friend
+                },
+            },
+            "List Games With Friends":{
+                multiplayer.games_with_friends_menu: connect_to_address
+            }
+        },
         "Connect to Address": connect_to_address_menu,
         },
     "Quit": time_to_exit,
