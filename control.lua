@@ -619,6 +619,15 @@ function ent_info(pindex, ent, description)
 
    result = result .. (description or "")
    
+   --Give character names
+   if ent.name == "character" then
+      local p = ent.player
+      if p ~= nil and p.valid and p.name ~= nil then
+         result = result .. " " .. p.name 
+      elseif p.index == pindex then
+         result = result .. " you "
+      end
+   end
    --Explain the contents of a container
    if ent.type == "container" or ent.type == "logistic-container" then --Chests etc: Report the most common item and say "and other items" if there are other types.
       local itemset = ent.get_inventory(defines.inventory.chest).get_contents()
@@ -7664,8 +7673,10 @@ script.on_event("toggle-walk",function(event)
    end
    if players[pindex].walk == 0 then --Mode 1 (walk-by-step) is temporarily disabled until it comes back as an in game setting.
       players[pindex].walk = 2
+      players[pindex].character_running_speed_modifier = 0  -- default 100%
    else
       players[pindex].walk = 0
+      players[pindex].character_running_speed_modifier = -0.99 -- 100% - 100% = 0%--***experimental
    end
    --players[pindex].walk = (players[pindex].walk + 1) % 3
    printout(walk_type_speech[players[pindex].walk +1], pindex)
@@ -8085,7 +8096,7 @@ script.on_event("g-key", function(event)
    if not check_for_player(pindex) then
       return
    end
-   
+   local ent = get_selected_ent(pindex)
    if game.get_player(pindex).vehicle ~= nil and game.get_player(pindex).vehicle.train ~= nil then
       vehicle = game.get_player(pindex).vehicle
    elseif ent ~= nil and ent.valid and ent.train ~= nil then
@@ -8134,7 +8145,7 @@ script.on_event("shift-g-key", function(event)
    if not check_for_player(pindex) then
       return
    end
-   
+   local ent = get_selected_ent(pindex)
    if game.get_player(pindex).vehicle ~= nil and game.get_player(pindex).vehicle.train ~= nil then
       vehicle = game.get_player(pindex).vehicle
    elseif ent ~= nil and ent.train ~= nil then
@@ -8204,7 +8215,11 @@ script.on_event("control-g-key", function(event)
 	  --sub_automatic_travel_to_other_stop(ent.train)
 	  --instant_schedule(ent.train)
    end
-   
+   local f = game.get_player(pindex).gui.screen.add{type="frame"}
+   local s1 = f.add{type="sprite",caption = "s1"}
+   s1.sprite = "item.lab"
+   f.force_auto_center()
+   f.bring_to_front()
    
 end)
 
@@ -9382,7 +9397,8 @@ function cursor_highlight(pindex, ent, box_type)
       else
          h_box.highlight_box_type = "entity"
       end
-   elseif not players[pindex].vanilla_mode then
+   end
+   if not players[pindex].vanilla_mode then
       --Highlight the currently focused ground tile.
       h_tile = rendering.draw_rectangle{color = {0.75,1,1,0.75}, surface = p.surface, draw_on_ground = true, 
          left_top = {math.floor(c_pos.x)+0.05,math.floor(c_pos.y)+0.05}, right_bottom = {math.ceil(c_pos.x)-0.05,math.ceil(c_pos.y)-0.05}}
