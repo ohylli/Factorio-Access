@@ -2908,10 +2908,13 @@ function train_menu(menu_index, pindex, clicked, other_input)
 		    end
 		    result = " Train schedule has stations " .. namelist
 		 end
-         printout(result .. " press LEFT BRACKET to set an instant schedule where the train waits at each reachable station for 5 minutes. ", pindex)
+         printout(result .. " press LEFT BRACKET to set an instant schedule where the train waits for a certain time at each reachable station. ", pindex)
       else
-	     local comment = instant_schedule(train)
-		 printout(comment,pindex)
+         if players[pindex].train_menu.wait_time == nil then
+            players[pindex].train_menu.wait_time = 300
+         end
+         local comment = instant_schedule(train,players[pindex].train_menu.wait_time)
+         printout(comment,pindex)
       end
    elseif index == 6 then 
 	  --Review schedule
@@ -2931,7 +2934,7 @@ function train_menu(menu_index, pindex, clicked, other_input)
 			      namelist = namelist .. record.station .. ", " 
 			   end
 		    end
-		    result = " Train schedule has stations " .. namelist
+		    result = " Schedule reset button, "
 		 end
          printout(result .. " press LEFT BRACKET to clear the schedule and drive manually. ", pindex)
       else
@@ -2946,6 +2949,11 @@ function train_menu(menu_index, pindex, clicked, other_input)
 	     local comment = sub_automatic_travel_to_other_stop(train)
 		 printout(comment,pindex)
       end	  
+   elseif index == 8 then 
+      if players[pindex].train_menu.wait_time == nil then
+         players[pindex].train_menu.wait_time = 300
+      end
+      printout(players[pindex].train_menu.wait_time .. " seconds waited at each station, modify this with PAGE UP or PAGE DOWN, and then apply it by setting a new schedule. ", pindex)
    end
    --[[ Train menu options summary
    0. name, id, menu instructions
@@ -2956,9 +2964,9 @@ function train_menu(menu_index, pindex, clicked, other_input)
    5. Review and set automatic schedule
    6. Review and clear automatic schedule.
    7. Subautomatic travel.
+   8. Read wait time
    ]]
 end
-
 
 function train_menu_open(pindex)
    --Set the player menu tracker to this menu
@@ -3013,8 +3021,8 @@ end
 
 function train_menu_down(pindex)
    players[pindex].train_menu.index = players[pindex].train_menu.index + 1
-   if players[pindex].train_menu.index > 7 then
-      players[pindex].train_menu.index = 7
+   if players[pindex].train_menu.index > 8 then
+      players[pindex].train_menu.index = 8
       game.get_player(pindex).play_sound{path = "Mine-Building"}
    else
       --Play sound
@@ -3247,14 +3255,15 @@ end
 
 
 --For the selected train, adds every reachable train stop to its schedule with the waiting condition of 5 minutes.
-function instant_schedule(train)
+function instant_schedule(train,seconds_in)
+   local seconds = seconds_in or 300
    local surf = train.front_stock.surface
    local train_stops = surf.get_train_stops()
    local valid_stops = 0
    train.schedule = nil
    for i,stop in ipairs(train_stops) do
       --Add the stop to the schedule's first row
-	  local wait_condition_1 = {type = "time" , ticks = 18000 , compare_type = "and"}
+	  local wait_condition_1 = {type = "time" , ticks = seconds * 60 , compare_type = "and"}
 	  local new_record = {wait_conditions = {wait_condition_1}, station = stop.backer_name, temporary = false}
 	  
 	  local schedule = train.schedule
@@ -3297,24 +3306,47 @@ function instant_schedule(train)
    end
    if valid_stops == 0 then
       --Announce error to all passengers
-	  str = " No reachable trainstops detected. Check whether you have locomotives facing both directions as required."
+	  str = " Error: No reachable trainstops detected. Check whether you have locomotives facing both directions as required."
 	  for i,player in ipairs(train.passengers) do
-		 players[player.index].last = str
-	     localised_print{"","out ",str}
+         players[player.index].last = str
+         localised_print{"","out ",str}
 	  end
    elseif valid_stops == 1 then
       --Announce error to all passengers
-	  str = " Only one reachable trainstop detected. Check whether you have locomotives facing both directions as required."
+	  str = " Error: Only one reachable trainstop detected. Check whether you have locomotives facing both directions as required."
 	  for i,player in ipairs(train.passengers) do
-		 players[player.index].last = str
-	     localised_print{"","out ",str}
+         players[player.index].last = str
+         localised_print{"","out ",str}
 	  end
+     train.schedule = nil
    else
-      str = "Train schedule created with " .. valid_stops .. " stops. "
+      if seconds_in == nil then
+         str = "Train schedule created with " .. valid_stops .. " stops, waiting " .. seconds .. " seconds at each. "
+      else
+         str = seconds .. " seconds waited at each of " .. valid_stops .. " stops. "
+      end
+      for i,player in ipairs(train.passengers) do
+         players[player.index].last = str
+         localised_print{"","out ",str}
+      end
    end
    return str
 end
 
+function change_instant_schedule_wait_time(increment,pindex)
+   local seconds = players[pindex].train_menu.wait_time
+   if seconds == nil then 
+      seconds = 300 
+   end
+   seconds = seconds + increment
+   if seconds < 5 then
+      seconds = 5
+   elseif seconds > 10000 then
+      seconds = 10000
+   end
+   players[pindex].train_menu.wait_time = seconds
+   printout(players[pindex].train_menu.wait_time .. " seconds waited at each station. Use arrow keys to navigate the train menu and apply the new wait time by re-creating the schedule.",pindex)
+end
 
 
 --Subautomatic one-time travel to a reachable train stop that is at least 3 rails away. Does not delete the train schedule.

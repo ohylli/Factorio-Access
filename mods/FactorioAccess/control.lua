@@ -4046,7 +4046,8 @@ function initialize(player)
    faplayer.train_menu = faplayer.train_menu or {
       index = 0,
       renaming = false,
-      locomotive = nil
+      locomotive = nil,
+      wait_time = 300
    }
    
    faplayer.train_stop_menu = faplayer.train_stop_menu or {
@@ -5341,6 +5342,8 @@ script.on_event("scan-up", function(event)
 	  local ent = get_selected_ent(pindex)
 	  local result = increment_inventory_bar(ent, 1)
 	  printout(result, pindex)
+   elseif players[pindex].menu == "train_menu" then 
+      change_instant_schedule_wait_time(5,pindex)
    end
 end
 )
@@ -5357,6 +5360,8 @@ script.on_event("scan-down", function(event)
 	  local ent =  get_selected_ent(pindex)
 	  local result = increment_inventory_bar(ent, -1)
 	  printout(result, pindex)
+   elseif players[pindex].menu == "train_menu" then 
+      change_instant_schedule_wait_time(-5,pindex)
    end
 end
 )
@@ -5500,6 +5505,8 @@ script.on_event("scan-category-up", function(event)
 	  local ent =  get_selected_ent(pindex)
 	  local result = increment_inventory_bar(ent, 100)
 	  printout(result, pindex)
+   elseif players[pindex].menu == "train_menu" then 
+      change_instant_schedule_wait_time(60,pindex)
    end
 end
 )
@@ -5535,6 +5542,8 @@ script.on_event("scan-category-down", function(event)
 	  local ent =  get_selected_ent(pindex)
 	  local result = increment_inventory_bar(ent, -100)
 	  printout(result, pindex)
+   elseif players[pindex].menu == "train_menu" then 
+      change_instant_schedule_wait_time(-60,pindex)
    end
 end
 )
