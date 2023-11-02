@@ -1,16 +1,16 @@
 --data:
 data.raw.character.character.has_belt_immunity = true
-local resource_map_node = table.deepcopy(data.raw["container"]) 
+local resource_map_node = table.deepcopy(data.raw.container) 
 resource_map_node.name = "map-node"
 resource_map_node.type = "simple-entity-with-force"
 --resource_map_node.inventory_size = 0
 
-resource_map_node["collision_box"] = {{-0, -0}, {0, 0}}
-resource_map_node["collision_mask"] = {}
-resource_map_node["selection_box"] = nil
-resource_map_node["order"] = "z"
-resource_map_node["max_health"] = 2147483648
-resource_map_node["picture"] = {
+resource_map_node.collision_box = {{-0, -0}, {0, 0}}
+resource_map_node.collision_mask = {}
+resource_map_node.selection_box = nil
+resource_map_node.order = "z"
+resource_map_node.max_health = 2147483648
+resource_map_node.picture = {
 	filename = "__FactorioAccess__/Graphics/invisible.png",
 	width = 1,
 	height = 1,
@@ -18,7 +18,7 @@ resource_map_node["picture"] = {
 }
 
 --Changes to Vanilla Objects (Mostly removal of collisions with the player)
-local pipe = data.raw.pipe["pipe"]
+local pipe = data.raw.pipe.pipe
 pipe.collision_mask = {"object-layer", "floor-layer", "water-tile"}
 
 local pipe_to_ground = data.raw["pipe-to-ground"]["pipe-to-ground"]
@@ -31,6 +31,41 @@ small_electric_pole.collision_mask = {"object-layer", "floor-layer", "water-tile
 local medium_electric_pole = data.raw["electric-pole"]["medium-electric-pole"]
 medium_electric_pole.collision_mask = {"object-layer", "floor-layer", "water-tile"}
 
+resource_def={richness = 4}
+
+data.raw["map-gen-presets"].default["compass-valley"] = {
+    order="_A",
+    basic_settings={
+        autoplace_controls = {
+            coal = resource_def,
+            ["copper-ore"] = resource_def,
+            ["crude-oil"] = resource_def,
+            ["iron-ore"] = resource_def,
+            stone = resource_def,
+            ["uranium-ore"] = resource_def
+        },
+        seed = 3814061204,
+        starting_area = 4,
+        peaceful_mode = true,
+        cliff_settings = {
+            name = "cliff",
+            cliff_elevation_0 = 10,
+            cliff_elevation_interval = 240,
+            richness = 0.1666666716337204
+        }
+    },
+    advanced_settings ={
+        enemy_evolution = {
+            enabled = true,
+            time_factor = 0,
+            destroy_factor = 0.006,
+            pollution_factor = 1e-07
+         },
+         enemy_expansion ={
+            enabled = false
+         }
+    }
+}
 
 data:extend({
  resource_map_node,
