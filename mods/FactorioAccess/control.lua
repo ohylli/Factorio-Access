@@ -6693,7 +6693,9 @@ function build_item_in_hand(pindex, offset_val)
          local small_poles = surf.find_entities_filtered{position = position, radius = 7.5, name = "small-electric-pole"}
          local all_beyond_6_5 = true
          local any_connects = false
+         local any_found = false
          for i,pole in ipairs(small_poles) do
+            any_found = true
             if util.distance(position, pole.position) < 6.5 then
                all_beyond_6_5 = false
             elseif util.distance(position, pole.position) >= 6.5 then
@@ -6702,6 +6704,9 @@ function build_item_in_hand(pindex, offset_val)
          end
          if not (all_beyond_6_5 and any_connects) then
             game.get_player(pindex).play_sound{path = "Inventory-Move"}
+            if not any_found then
+               game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+            end
             return
          end
 	  elseif stack.name == "medium-electric-pole" and players[pindex].build_lock == true then
@@ -6710,7 +6715,9 @@ function build_item_in_hand(pindex, offset_val)
          local med_poles = surf.find_entities_filtered{position = position, radius = 7.5, name = "medium-electric-pole"}
          local all_beyond_6_5 = true
          local any_connects = false
+         local any_found = false
          for i,pole in ipairs(med_poles) do
+            any_found = true
             if util.distance(position, pole.position) < 6.5 then
                all_beyond_6_5 = false
             elseif util.distance(position, pole.position) >= 6.5 then
@@ -6719,6 +6726,55 @@ function build_item_in_hand(pindex, offset_val)
          end
          if not (all_beyond_6_5 and any_connects) then
             game.get_player(pindex).play_sound{path = "Inventory-Move"}
+            if not any_found then
+               game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+            end
+            return
+         end 
+      elseif stack.name == "big-electric-pole" and players[pindex].build_lock == true then
+         --Place a big electric pole in this position only if it is within 29 to 30 tiles of another medium electric pole
+         position = offset_position(position, players[pindex].player_direction, -1)
+         local surf = game.get_player(pindex).surface
+         local big_poles = surf.find_entities_filtered{position = position, radius = 30, name = "big-electric-pole"}
+         local all_beyond_min = true
+         local any_connects = false
+         local any_found = false
+         for i,pole in ipairs(big_poles) do
+            any_found = true
+            if util.distance(position, pole.position) < 28.5 then
+               all_beyond_min = false
+            elseif util.distance(position, pole.position) >= 28.5 then
+               any_connects = true
+            end
+         end
+         if not (all_beyond_min and any_connects) then
+            game.get_player(pindex).play_sound{path = "Inventory-Move"}
+            if not any_found then
+               game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+            end
+            return
+         end 
+       elseif stack.name == "substation" and players[pindex].build_lock == true then
+         --Place a substation in this position only if it is within 16 to 18 tiles of another medium electric pole
+         position = offset_position(position, players[pindex].player_direction, -1)
+         local surf = game.get_player(pindex).surface
+         local sub_poles = surf.find_entities_filtered{position = position, radius = 18.01, name = "substation"}
+         local all_beyond_min = true
+         local any_connects = false
+         local any_found = false
+         for i,pole in ipairs(sub_poles) do
+            any_found = true
+            if util.distance(position, pole.position) < 17.01 then
+               all_beyond_min = false
+            elseif util.distance(position, pole.position) >= 17.01 then
+               any_connects = true
+            end
+         end
+         if not (all_beyond_min and any_connects) then
+            game.get_player(pindex).play_sound{path = "Inventory-Move"}
+            if not any_found then
+               game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+            end
             return
          end 
 	  end
