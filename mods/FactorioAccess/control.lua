@@ -2480,12 +2480,22 @@ end
 function read_building_slot(pindex, prefix_inventory_size_and_name)
    building_sector=players[pindex].building.sectors[players[pindex].building.sector]
    if building_sector.name == "Filters" then 
-      printout(building_sector.inventory[players[pindex].building.index], pindex)
+      local inventory = building_sector.inventory
+      local start_phrase = #inventory .. " " .. building_sector.name .. ", "
+      if not prefix_inventory_size_and_name then
+         start_phrase = ""
+      end
+      printout(start_phrase .. players[pindex].building.index .. ", " .. building_sector.inventory[players[pindex].building.index], pindex)
    elseif building_sector.name == "Fluid" then 
       local box = building_sector.inventory
       local capacity = box.get_capacity(players[pindex].building.index)
       local type = box.get_prototype(players[pindex].building.index).production_type
       local fluid = box[players[pindex].building.index]
+      local len = #box
+      local start_phrase = len .. " " .. building_sector.name .. ", "
+      if not prefix_inventory_size_and_name then
+         start_phrase = ""
+      end
       --fluid = {name = "water", amount = 1}
       local name  = "Any"
       local amount = 0
@@ -2493,11 +2503,10 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
          amount = fluid.amount
          name = fluid.name
       end --laterdo use fluidbox.get_locked_fluid(i) if needed.
-
       --Read the fluid ingredients & products
       --Note: We could have separated by input/output but right now the "type" is "input" for all fluids it seeems?
       local recipe = players[pindex].building.recipe
-      if recipe ~= nil and name == "Any" then
+      if recipe ~= nil then
          local index = players[pindex].building.index
          local input_fluid_count = 0
          local input_item_count = 0
@@ -2520,12 +2529,16 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
          if index < 0 then
             index = 0
          end
+         local prev_name = name
          name = "Empty slot reserved for "
          if index <= input_fluid_count then
             index = index + input_item_count
             for i, v in pairs(recipe.ingredients) do
                if v.type == "fluid" and i == index then
                   name = name .. " input " .. v.name
+                  if prev_name ~= "Any" then
+                     name = "input " .. prev_name .. " x " .. math.floor(0.5 + fluid.amount)
+                  end
                end
             end
          else
@@ -2534,23 +2547,34 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
             for i, v in pairs(recipe.products) do
                if v.type == "fluid" and i == index then
                   name = name .. " output " .. v.name
+                  if prev_name ~= "Any" then
+                     name = "output " .. prev_name .. " x " .. math.floor(0.5 + fluid.amount)
+                  end
                end
             end
          end
+      else
+         name = name .. " x " .. math.floor(0.5 + fluid.amount)
       end
-      --Read the fluid found
-      printout(name, pindex)
-
+      --Read the fluid found, including amount if any
+      printout(start_phrase .. " " .. name, pindex)
+   
    elseif #building_sector.inventory > 0 then
       local inventory=building_sector.inventory
       local len = inventory.supports_bar() and inventory.get_bar() - 1 or #inventory
-      local start_phrase = len .. ' ' .. building_sector.name .. ' '
+      local start_phrase = len .. " " .. building_sector.name .. ", "
+      if not prefix_inventory_size_and_name then
+         start_phrase = ""
+      end
       stack = building_sector.inventory[players[pindex].building.index]
       if stack.valid_for_read and stack.valid then
          printout(start_phrase .. stack.name .. " x " .. stack.count, pindex)
       else
          --Read the "empty slot"
          local result = "Empty slot" 
+         if building_sector.name == "Modules" then
+            result = "Empty module slot" 
+         end
          local recipe = players[pindex].building.recipe
          if recipe ~= nil then 
             if building_sector.name == "Input" then 
@@ -2577,8 +2601,8 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
          end
          printout(start_phrase .. result, pindex)
       end
-   else
-      printout(start_phrase, pindex)
+   elseif prefix_inventory_size_and_name then
+         printout("0 " .. building_sector.name,pindex)
    end
 end
 
@@ -4174,7 +4198,7 @@ function menu_cursor_up(pindex)
             game.get_player(pindex).play_sound{path = "Inventory-Move"}
             players[pindex].building.index = 1
          end
-         read_building_slot(pindex)
+         read_building_slot(pindex,false)
       elseif players[pindex].building.recipe_list == nil then
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
          players[pindex].inventory.index = players[pindex].inventory.index -10
@@ -4365,7 +4389,7 @@ function menu_cursor_down(pindex)
          else
             players[pindex].building.index = #players[pindex].building.sectors[players[pindex].building.sector].inventory
          end
-         read_building_slot(pindex)
+         read_building_slot(pindex,false)
       elseif players[pindex].building.recipe_list == nil then
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
          players[pindex].inventory.index = players[pindex].inventory.index +10
@@ -4560,7 +4584,7 @@ function menu_cursor_left(pindex)
                players[pindex].building.index = #players[pindex].building.sectors[players[pindex].building.sector].inventory
             end
          end
-         read_building_slot(pindex)
+         read_building_slot(pindex,false)
       elseif players[pindex].building.recipe_list == nil then
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
          players[pindex].inventory.index = players[pindex].inventory.index -1
@@ -4687,7 +4711,7 @@ function menu_cursor_right(pindex)
                players[pindex].building.index = 1
             end
          end
-         read_building_slot(pindex)
+         read_building_slot(pindex,false)
       elseif players[pindex].building.recipe_list == nil then
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
          players[pindex].inventory.index = players[pindex].inventory.index +1
@@ -6177,7 +6201,7 @@ script.on_event("left-click", function(event)
                      players[pindex].building.ent.inserter_filter_mode = "whitelist"
                   end
                   players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index] = players[pindex].building.ent.inserter_filter_mode 
-                  read_building_slot(pindex)
+                  read_building_slot(pindex,false)
                elseif players[pindex].building.item_selection then
                   if players[pindex].item_selector.group == 0 then
                      players[pindex].item_selector.group = players[pindex].item_selector.index
@@ -6219,7 +6243,7 @@ script.on_event("left-click", function(event)
 
             if game.get_player(pindex).cursor_stack.swap_stack(stack) then
                game.get_player(pindex).play_sound{path = "utility/inventory_click"}
---               read_building_slot(pindex)
+--               read_building_slot(pindex,false)
             elseif game.get_player(pindex).cursor_stack.valid_for_read then
                printout("That item doesn't belong here.", pindex)
             end
