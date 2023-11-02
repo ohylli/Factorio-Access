@@ -802,6 +802,18 @@ data:extend({
     name = "toggle-vanilla",
     key_sequence = "CONTROL + ALT + V",
     consuming = "none"
+},
+{
+    type = "custom-input",
+    name = "access-config-version1-DO-NOT-EDIT",
+    key_sequence = "A",
+    consuming = "none"
+},
+{
+    type = "custom-input",
+    name = "access-config-version2-DO-NOT-EDIT",
+    key_sequence = "A",
+    consuming = "none"
 }
 
 })
