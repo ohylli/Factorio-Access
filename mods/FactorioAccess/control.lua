@@ -2468,16 +2468,16 @@ end
    
    
 
-function read_building_slot(pindex, start_phrase)
-   start_phrase = start_phrase or ""
-   if players[pindex].building.sectors[players[pindex].building.sector].name == "Filters" then 
-      printout(players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index], pindex)
-   elseif players[pindex].building.sectors[players[pindex].building.sector].name == "Fluid" then 
-      local box = players[pindex].building.sectors[players[pindex].building.sector].inventory
+function read_building_slot(pindex, prefix_inventory_size_and_name)
+   building_sector=players[pindex].building.sectors[players[pindex].building.sector]
+   if building_sector.name == "Filters" then 
+      printout(building_sector.inventory[players[pindex].building.index], pindex)
+   elseif building_sector.name == "Fluid" then 
+      local box = building_sector.inventory
       local capacity = box.get_capacity(players[pindex].building.index)
       local type = box.get_prototype(players[pindex].building.index).production_type
       local fluid = box[players[pindex].building.index]
---      fluid = {name = "water", amount = 1}
+      --fluid = {name = "water", amount = 1}
       local name  = "Any"
       local amount = 0
       if fluid ~= nil then
@@ -2530,10 +2530,13 @@ function read_building_slot(pindex, start_phrase)
          end
       end
       --Read the fluid found
-      printout(start_phrase .. name, pindex)
+      printout(name, pindex)
 
-   elseif #players[pindex].building.sectors[players[pindex].building.sector].inventory > 0 then
-      stack = players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index]
+   elseif #building_sector.inventory > 0 then
+      local inventory=building_sector.inventory
+      local len = inventory.supports_bar() and inventory.get_bar() - 1 or #inventory
+      local start_phrase = len .. ' ' .. building_sector.name .. ' '
+      stack = building_sector.inventory[players[pindex].building.index]
       if stack.valid_for_read and stack.valid then
          printout(start_phrase .. stack.name .. " x " .. stack.count, pindex)
       else
@@ -2541,7 +2544,7 @@ function read_building_slot(pindex, start_phrase)
          local result = "Empty slot" 
          local recipe = players[pindex].building.recipe
          if recipe ~= nil then 
-            if players[pindex].building.sectors[players[pindex].building.sector].name == "Input" then 
+            if building_sector.name == "Input" then 
                --For input slots read the recipe ingredients
                result = result .. " reserved for "
                for i, v in pairs(recipe.ingredients) do
@@ -2550,7 +2553,7 @@ function read_building_slot(pindex, start_phrase)
                   end
                end
                --result = result .. "nothing"
-            elseif players[pindex].building.sectors[players[pindex].building.sector].name == "Output" then 
+            elseif building_sector.name == "Output" then 
                --For output slots read the recipe products
                result = result .. " reserved for "
                for i, v in pairs(recipe.products) do
@@ -4782,6 +4785,7 @@ function schedule(ticks_in_the_future,func_to_call, data_to_pass)
 end
 
 function on_player_join(pindex)
+   players = players or global.players
    schedule(3, "fix_zoom", pindex)
    local playerList={}
    for _ , p in pairs(game.connected_players) do
@@ -5778,20 +5782,7 @@ script.on_event("switch-menu", function(event)
          }
 
          if players[pindex].building.sector <= #players[pindex].building.sectors then
-            local inventory = players[pindex].building.sectors[players[pindex].building.sector].inventory
-            local len = 0
-            if inventory ~= nil then
-               len = #inventory
-            else
-               print("Somehow is nil...", pindex)
-            end
-            
-            if inventory.object_name ~= "LuaFluidBox" and inventory.supports_bar() then
-               len = inventory.get_bar() - 1
-            end
-            --Read the building sector name
-            local starting_phrase =len .. " " ..players[pindex].building.sectors[players[pindex].building.sector].name .. ", "
-           read_building_slot(pindex, starting_phrase)
+            read_building_slot(pindex, true)
 --            if inventory == players[pindex].building.sectors[players[pindex].building.sector+1].inventory then
 --               printout("Big Problem!", pindex)
   --          end
@@ -5800,18 +5791,7 @@ script.on_event("switch-menu", function(event)
 			   read_inventory_slot(pindex, "Player Inventory, ")
             else
                players[pindex].building.sector = 1
-               local inventory = players[pindex].building.sectors[players[pindex].building.sector].inventory
-               local len = 0
-               if inventory ~= nil then
-                 len = #inventory
-               end
-               
-            if inventory.object_name ~= "LuaFluidBox" and inventory.supports_bar() then
-                  len = inventory.get_bar() - 1
-               end
-               --Read the building sector name
-               local starting_phrase =len .. " " ..players[pindex].building.sectors[players[pindex].building.sector].name .. ", "
-               read_building_slot(pindex, starting_phrase)
+               read_building_slot(pindex, true)
             end
          else
             if players[pindex].building.sector == #players[pindex].building.sectors + 1 then
@@ -5820,19 +5800,7 @@ script.on_event("switch-menu", function(event)
                read_inventory_slot(pindex, "Player Inventory, ")
             else
                players[pindex].building.sector = 1
-               local inventory = players[pindex].building.sectors[players[pindex].building.sector].inventory
-               local len = 0
-               if inventory ~= nil then
-                  len = #inventory
-               end
-               
-            if inventory.object_name ~= "LuaFluidBox" and inventory.supports_bar() then
-                  len = inventory.get_bar() - 1
-               end
-               --Read the building sector name
-               local starting_phrase =len .. " " ..players[pindex].building.sectors[players[pindex].building.sector].name .. ", "
-               read_building_slot(pindex, starting_phrase)
-
+               read_building_slot(pindex, true)
             end
          end
       elseif players[pindex].menu == "inventory" then 
@@ -5982,20 +5950,7 @@ script.on_event("reverse-switch-menu", function(event)
             read_inventory_slot(pindex, "Player Inventory, ")
             
          elseif players[pindex].building.sector <= #players[pindex].building.sectors then
-            local inventory = players[pindex].building.sectors[players[pindex].building.sector].inventory
-            local len = 0
-            if inventory ~= nil then
-               len = #inventory
-            else
-               print("Somehow is nil...", pindex)
-            end
-            
-            if inventory.object_name ~= "LuaFluidBox" and inventory.supports_bar() then
-               len = inventory.get_bar() - 1
-            end
-            --Read the building sector name
-            start_phrase = len .. " " ..players[pindex].building.sectors[players[pindex].building.sector].name .. ", "
-         read_building_slot(pindex, start_phrase)
+            read_building_slot(pindex, true)
          elseif players[pindex].building.recipe_list == nil then
             if players[pindex].building.sector == (#players[pindex].building.sectors + 1) then
                read_inventory_slot(pindex, "Player Inventory, ")
@@ -6580,18 +6535,7 @@ input.select(1, 0)
                players[pindex].menu = "building"
                players[pindex].inventory.index = 1
                players[pindex].building.index = 1
-               local inventory = players[pindex].building.sectors[players[pindex].building.sector].inventory
-               local len = 0
-               if inventory ~= nil then
-                 len = #inventory
-               end
-               --Announce the building sector name including the slot count
-               
-            if inventory.object_name ~= "LuaFluidBox" and inventory.supports_bar() then
-                  len = inventory.get_bar() - 1
-               end
-               local start_phrase = len .. " " ..players[pindex].building.sectors[players[pindex].building.sector].name .. ", "
-               read_building_slot(pindex, start_phrase)
+               read_building_slot(pindex, true)
             else
                printout("This building has no inventory", pindex)
             end
@@ -6881,7 +6825,7 @@ script.on_event("shift-click", function(event)
                offset = offset + 1
             end
             if players[pindex].building.sector == #players[pindex].building.sectors + offset then
-		       --Transfer stack from player inventory to buidling
+		       --Transfer stack from player inventory to building
                local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
                if stack.valid and stack.valid_for_read then
                   if players[pindex].building.ent.can_insert(stack) then
