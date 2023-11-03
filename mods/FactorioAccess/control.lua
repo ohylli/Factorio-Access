@@ -8266,11 +8266,11 @@ script.on_event("control-g-key", function(event)
 	  --sub_automatic_travel_to_other_stop(ent.train)
 	  --instant_schedule(ent.train)
    end
-   local f = game.get_player(pindex).gui.screen.add{type="frame"}
-   local s1 = f.add{type="sprite",caption = "s1"}
-   s1.sprite = "item.lab"
-   f.force_auto_center()
-   f.bring_to_front()
+   --local f = game.get_player(pindex).gui.screen.add{type="frame"}
+   --local s1 = f.add{type="sprite",caption = "s1"}
+   --s1.sprite = "item.lab"
+   --f.force_auto_center()
+   --f.bring_to_front()
    
 end)
 
