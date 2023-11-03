@@ -5613,13 +5613,6 @@ script.on_event("scan-category-up", function(event)
          printout("Other", pindex)
 
       end
-   elseif players[pindex].menu == "building" then
-      --Chest bar setting: Set to max by increasing by 100
-	  local ent =  get_selected_ent(pindex)
-	  local result = increment_inventory_bar(ent, 100)
-	  printout(result, pindex)
-   elseif players[pindex].menu == "train_menu" then 
-      change_instant_schedule_wait_time(60,pindex)
    end
 end
 )
@@ -5650,17 +5643,11 @@ script.on_event("scan-category-down", function(event)
          printout("Other", pindex)
 
       end
-   elseif players[pindex].menu == "building" then
-      --Chest bar setting: Set to 0 by decreasing by 100
-	  local ent =  get_selected_ent(pindex)
-	  local result = increment_inventory_bar(ent, -100)
-	  printout(result, pindex)
-   elseif players[pindex].menu == "train_menu" then 
-      change_instant_schedule_wait_time(-60,pindex)
    end
 end
 )
 
+--Default key was N
 script.on_event("scan-mode-up", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -5674,6 +5661,7 @@ script.on_event("scan-mode-up", function(event)
    end
 end)
 
+--Default key was SHIFT + N
 script.on_event("scan-mode-down", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -5687,6 +5675,7 @@ script.on_event("scan-mode-down", function(event)
    end
 end)
 
+--**todo add to wiki
 script.on_event("repeat-last-spoken", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -5696,7 +5685,7 @@ script.on_event("repeat-last-spoken", function(event)
 end   
 )
 
-
+--Note: reads other entities on the same tile? possibly unneeded
 script.on_event("tile-cycle", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
