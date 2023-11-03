@@ -5149,7 +5149,7 @@ script.on_event("cursor-right", function(event)
 end)
 
 
-
+--Read coordinates of the cursor. Extra info as well such as entity part if an entity is selected, and heading and speed info for vehicles.
 script.on_event("read-coords", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -5159,8 +5159,8 @@ script.on_event("read-coords", function(event)
 end
 )
 
---Get distance of cursor from player
-script.on_event("shift-k", function(event)
+--Get distance and direction of cursor from player.
+script.on_event("read-cursor-distance-and-direction", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -5178,8 +5178,21 @@ script.on_event("shift-k", function(event)
 end
 )
 
---J Key
+--Returns the cursor to the player position.
 script.on_event("jump-to-player", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local ent = get_selected_ent(pindex) 
+   if not (players[pindex].in_menu) then
+      if players[pindex].cursor then jump_to_player(pindex)
+      end
+   end
+end
+)
+
+script.on_event("read-rail-structure-ahead", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -5190,16 +5203,11 @@ script.on_event("jump-to-player", function(event)
    elseif ent ~= nil and ent.valid and (ent.name == "straight-rail" or ent.name == "curved-rail") then
       --Report what is along the rail
       rail_read_next_rail_entity_ahead(pindex, ent, true)
-   elseif not (players[pindex].in_menu) then
-      if players[pindex].cursor then jump_to_player(pindex)
-      end
    end
 end
 )
 
-
---SHIFT + J Key
-script.on_event("shift-j", function(event)
+script.on_event("read-rail-structure-behind", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -5214,8 +5222,8 @@ script.on_event("shift-j", function(event)
 end
 )
 
---CONTROL + J Key
-script.on_event("control-j", function(event)
+--Default is CONTROL + J
+script.on_event("release-cursor", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -5312,6 +5320,125 @@ script.on_event("cursor-size-decrement", function(event)
    end
 end)
 
+script.on_event("increase-inventory-bar-by-1", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].in_menu and players[pindex].menu == "building" then 
+      --Chest bar setting: Increase
+	  local ent = get_selected_ent(pindex)
+	  local result = increment_inventory_bar(ent, 1)
+	  printout(result, pindex)
+   end
+end
+)
+
+script.on_event("increase-inventory-bar-by-5", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].in_menu and players[pindex].menu == "building" then 
+      --Chest bar setting: Increase
+	  local ent = get_selected_ent(pindex)
+	  local result = increment_inventory_bar(ent, 1)
+	  printout(result, pindex)
+   end
+end
+
+script.on_event("increase-inventory-bar-by-100", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].in_menu and players[pindex].menu == "building" then 
+      --Chest bar setting: Increase
+	  local ent = get_selected_ent(pindex)
+	  local result = increment_inventory_bar(ent, 100)
+	  printout(result, pindex)
+   end
+end
+
+script.on_event("decrease-inventory-bar-by-1", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].in_menu and players[pindex].menu == "building" then 
+      --Chest bar setting: Decrease
+	  local ent = get_selected_ent(pindex)
+	  local result = increment_inventory_bar(ent, -1)
+	  printout(result, pindex)
+   end
+end
+
+script.on_event("decrease-inventory-bar-by-5", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].in_menu and players[pindex].menu == "building" then 
+      --Chest bar setting: Decrease
+	  local ent = get_selected_ent(pindex)
+	  local result = increment_inventory_bar(ent, -5)
+	  printout(result, pindex)
+   end
+end
+
+script.on_event("decrease-inventory-bar-by-100", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].in_menu and players[pindex].menu == "building" then 
+      --Chest bar setting: Decrease
+	  local ent = get_selected_ent(pindex)
+	  local result = increment_inventory_bar(ent, -100)
+	  printout(result, pindex)
+   end
+end
+
+script.on_event("increase-train-wait-times-by-5", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].in_menu and players[pindex].menu == "train_menu" then 
+      change_instant_schedule_wait_time(5,pindex)
+   end
+end
+
+script.on_event("increase-train-wait-times-by-60", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].in_menu and players[pindex].menu == "train_menu" then 
+      change_instant_schedule_wait_time(60,pindex)
+   end
+end
+
+script.on_event("decrease-train-wait-times-by-5", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].in_menu and players[pindex].menu == "train_menu" then 
+      change_instant_schedule_wait_time(-5,pindex)
+   end
+end
+
+script.on_event("decrease-train-wait-times-by-60", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].in_menu and players[pindex].menu == "train_menu" then 
+      change_instant_schedule_wait_time(-60,pindex)
+   end
+end
+
 script.on_event("rescan", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -5337,13 +5464,6 @@ script.on_event("scan-up", function(event)
    end
    if not (players[pindex].in_menu) then
       scan_up(pindex)
-   elseif players[pindex].menu == "building" then 
-      --Chest bar setting: Increase by 1
-	  local ent = get_selected_ent(pindex)
-	  local result = increment_inventory_bar(ent, 1)
-	  printout(result, pindex)
-   elseif players[pindex].menu == "train_menu" then 
-      change_instant_schedule_wait_time(5,pindex)
    end
 end
 )
@@ -5355,13 +5475,6 @@ script.on_event("scan-down", function(event)
    end
    if not (players[pindex].in_menu) then
       scan_down(pindex)
-   elseif players[pindex].menu == "building" then
-      --Chest bar setting: Decrease by 1
-	  local ent =  get_selected_ent(pindex)
-	  local result = increment_inventory_bar(ent, -1)
-	  printout(result, pindex)
-   elseif players[pindex].menu == "train_menu" then 
-      change_instant_schedule_wait_time(-5,pindex)
    end
 end
 )
@@ -5377,7 +5490,7 @@ script.on_event("scan-middle", function(event)
 end
 )
 
-script.on_event("jump-to-scan", function(event)
+script.on_event("jump-to-scan", function(event)--NOTE: This might be deprecated or redundant, since the cursor already goes to the scanned object now.***
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
