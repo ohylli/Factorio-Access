@@ -6274,10 +6274,7 @@ script.on_event("cut-paste-tool-comment", function(event)
    end
 end)
 
-
-
-
-script.on_event("left-click", function(event)
+script.on_event("menu-click", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -6503,7 +6500,7 @@ script.on_event("left-click", function(event)
             local frame = game.get_player(pindex).gui.screen["travel"]
             local input = frame.add{type="textfield", name = "input"}
             input.focus()
-input.select(1, 0)
+            input.select(1, 0)
          elseif players[pindex].travel.index.x == 3 then
             printout("Deleted " .. global.players[pindex].travel[players[pindex].travel.index.y].name, pindex)
             table.remove(global.players[pindex].travel, players[pindex].travel.index.y)
@@ -6515,7 +6512,7 @@ input.select(1, 0)
             local frame = game.get_player(pindex).gui.screen["travel"]
             local input = frame.add{type="textfield", name = "input"}
             input.focus()
-input.select(1, 0)
+            input.select(1, 0)
          end
          
       elseif players[pindex].menu == "structure-travel" then--q: is this b stride?
@@ -6556,8 +6553,19 @@ input.select(1, 0)
          train_menu(players[pindex].train_menu.index, pindex, true)
       elseif players[pindex].menu == "train_stop_menu" then
          train_stop_menu(players[pindex].train_stop_menu.index, pindex, true)
-      end
-      
+      end      
+   end
+end
+)
+
+--Includes building previewed buildings, throwing capsules, etc.
+script.on_event("hand-stack-click", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].in_menu then
+      return
    else
       --Not in a menu
       local stack = game.get_player(pindex).cursor_stack
@@ -6568,7 +6576,7 @@ input.select(1, 0)
       elseif stack.valid and stack.valid_for_read and stack.name == "offshore-pump" then
          build_offshore_pump_in_hand(pindex)
       elseif stack.valid and stack.valid_for_read and stack.is_repair_tool then
-         --Repair the entity found . Laterfo improve this 
+         --Repair the entity found . Laterdo improve this 
          --game.get_player(pindex).use_from_cursor{players[pindex].cursor_pos.x,players[pindex].cursor_pos.y}--does not work
          if ent and ent.is_entity_with_health and ent.get_health_ratio() < 1 and ent.type ~= "resource" and ent.name ~= "character" then
             local health_diff = ent.prototype.max_health - ent.health
@@ -6587,7 +6595,18 @@ input.select(1, 0)
 	     local p = game.get_player(pindex)
 	     p.use_from_cursor{p.position.x+1,p.position.y+1}--tolaterdo adjust it to use an item 3 tiles in front of the player instead.
       end
-      --No more stack related checks after this point
+   end
+end
+)
+
+script.on_event("entity-click", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].in_menu then
+      return
+   else
       if game.get_player(pindex).driving and game.get_player(pindex).vehicle.train ~= nil then
          train_menu_open(pindex)
       elseif ent and not (stack.valid and stack.valid_for_read and (stack.prototype.place_result or stack.prototype.place_as_tile_result)) then
