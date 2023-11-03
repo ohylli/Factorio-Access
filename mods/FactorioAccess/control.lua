@@ -619,6 +619,15 @@ function ent_info(pindex, ent, description)
 
    result = result .. (description or "")
    
+   --Give character names
+   if ent.name == "character" then
+      local p = ent.player
+      if p ~= nil and p.valid and p.name ~= nil then
+         result = result .. " " .. p.name 
+      elseif p.index == pindex then
+         result = result .. " you "
+      end
+   end
    --Explain the contents of a container
    if ent.type == "container" or ent.type == "logistic-container" then --Chests etc: Report the most common item and say "and other items" if there are other types.
       local itemset = ent.get_inventory(defines.inventory.chest).get_contents()
@@ -2471,12 +2480,22 @@ end
 function read_building_slot(pindex, prefix_inventory_size_and_name)
    building_sector=players[pindex].building.sectors[players[pindex].building.sector]
    if building_sector.name == "Filters" then 
-      printout(building_sector.inventory[players[pindex].building.index], pindex)
+      local inventory = building_sector.inventory
+      local start_phrase = #inventory .. " " .. building_sector.name .. ", "
+      if not prefix_inventory_size_and_name then
+         start_phrase = ""
+      end
+      printout(start_phrase .. players[pindex].building.index .. ", " .. building_sector.inventory[players[pindex].building.index], pindex)
    elseif building_sector.name == "Fluid" then 
       local box = building_sector.inventory
       local capacity = box.get_capacity(players[pindex].building.index)
       local type = box.get_prototype(players[pindex].building.index).production_type
       local fluid = box[players[pindex].building.index]
+      local len = #box
+      local start_phrase = len .. " " .. building_sector.name .. ", "
+      if not prefix_inventory_size_and_name then
+         start_phrase = ""
+      end
       --fluid = {name = "water", amount = 1}
       local name  = "Any"
       local amount = 0
@@ -2484,11 +2503,10 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
          amount = fluid.amount
          name = fluid.name
       end --laterdo use fluidbox.get_locked_fluid(i) if needed.
-
       --Read the fluid ingredients & products
       --Note: We could have separated by input/output but right now the "type" is "input" for all fluids it seeems?
       local recipe = players[pindex].building.recipe
-      if recipe ~= nil and name == "Any" then
+      if recipe ~= nil then
          local index = players[pindex].building.index
          local input_fluid_count = 0
          local input_item_count = 0
@@ -2511,12 +2529,16 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
          if index < 0 then
             index = 0
          end
+         local prev_name = name
          name = "Empty slot reserved for "
          if index <= input_fluid_count then
             index = index + input_item_count
             for i, v in pairs(recipe.ingredients) do
                if v.type == "fluid" and i == index then
                   name = name .. " input " .. v.name
+                  if prev_name ~= "Any" then
+                     name = "input " .. prev_name .. " x " .. math.floor(0.5 + fluid.amount)
+                  end
                end
             end
          else
@@ -2525,23 +2547,34 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
             for i, v in pairs(recipe.products) do
                if v.type == "fluid" and i == index then
                   name = name .. " output " .. v.name
+                  if prev_name ~= "Any" then
+                     name = "output " .. prev_name .. " x " .. math.floor(0.5 + fluid.amount)
+                  end
                end
             end
          end
+      else
+         name = name .. " x " .. math.floor(0.5 + fluid.amount)
       end
-      --Read the fluid found
-      printout(name, pindex)
-
+      --Read the fluid found, including amount if any
+      printout(start_phrase .. " " .. name, pindex)
+   
    elseif #building_sector.inventory > 0 then
       local inventory=building_sector.inventory
       local len = inventory.supports_bar() and inventory.get_bar() - 1 or #inventory
-      local start_phrase = len .. ' ' .. building_sector.name .. ' '
+      local start_phrase = len .. " " .. building_sector.name .. ", "
+      if not prefix_inventory_size_and_name then
+         start_phrase = ""
+      end
       stack = building_sector.inventory[players[pindex].building.index]
       if stack.valid_for_read and stack.valid then
          printout(start_phrase .. stack.name .. " x " .. stack.count, pindex)
       else
          --Read the "empty slot"
          local result = "Empty slot" 
+         if building_sector.name == "Modules" then
+            result = "Empty module slot" 
+         end
          local recipe = players[pindex].building.recipe
          if recipe ~= nil then 
             if building_sector.name == "Input" then 
@@ -2568,8 +2601,8 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
          end
          printout(start_phrase .. result, pindex)
       end
-   else
-      printout(start_phrase, pindex)
+   elseif prefix_inventory_size_and_name then
+         printout("0 " .. building_sector.name,pindex)
    end
 end
 
@@ -4013,7 +4046,8 @@ function initialize(player)
    faplayer.train_menu = faplayer.train_menu or {
       index = 0,
       renaming = false,
-      locomotive = nil
+      locomotive = nil,
+      wait_time = 300
    }
    
    faplayer.train_stop_menu = faplayer.train_stop_menu or {
@@ -4165,7 +4199,7 @@ function menu_cursor_up(pindex)
             game.get_player(pindex).play_sound{path = "Inventory-Move"}
             players[pindex].building.index = 1
          end
-         read_building_slot(pindex)
+         read_building_slot(pindex,false)
       elseif players[pindex].building.recipe_list == nil then
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
          players[pindex].inventory.index = players[pindex].inventory.index -10
@@ -4356,7 +4390,7 @@ function menu_cursor_down(pindex)
          else
             players[pindex].building.index = #players[pindex].building.sectors[players[pindex].building.sector].inventory
          end
-         read_building_slot(pindex)
+         read_building_slot(pindex,false)
       elseif players[pindex].building.recipe_list == nil then
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
          players[pindex].inventory.index = players[pindex].inventory.index +10
@@ -4551,7 +4585,7 @@ function menu_cursor_left(pindex)
                players[pindex].building.index = #players[pindex].building.sectors[players[pindex].building.sector].inventory
             end
          end
-         read_building_slot(pindex)
+         read_building_slot(pindex,false)
       elseif players[pindex].building.recipe_list == nil then
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
          players[pindex].inventory.index = players[pindex].inventory.index -1
@@ -4678,7 +4712,7 @@ function menu_cursor_right(pindex)
                players[pindex].building.index = 1
             end
          end
-         read_building_slot(pindex)
+         read_building_slot(pindex,false)
       elseif players[pindex].building.recipe_list == nil then
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
          players[pindex].inventory.index = players[pindex].inventory.index +1
@@ -5308,6 +5342,8 @@ script.on_event("scan-up", function(event)
 	  local ent = get_selected_ent(pindex)
 	  local result = increment_inventory_bar(ent, 1)
 	  printout(result, pindex)
+   elseif players[pindex].menu == "train_menu" then 
+      change_instant_schedule_wait_time(5,pindex)
    end
 end
 )
@@ -5324,6 +5360,8 @@ script.on_event("scan-down", function(event)
 	  local ent =  get_selected_ent(pindex)
 	  local result = increment_inventory_bar(ent, -1)
 	  printout(result, pindex)
+   elseif players[pindex].menu == "train_menu" then 
+      change_instant_schedule_wait_time(-5,pindex)
    end
 end
 )
@@ -5467,6 +5505,8 @@ script.on_event("scan-category-up", function(event)
 	  local ent =  get_selected_ent(pindex)
 	  local result = increment_inventory_bar(ent, 100)
 	  printout(result, pindex)
+   elseif players[pindex].menu == "train_menu" then 
+      change_instant_schedule_wait_time(60,pindex)
    end
 end
 )
@@ -5502,6 +5542,8 @@ script.on_event("scan-category-down", function(event)
 	  local ent =  get_selected_ent(pindex)
 	  local result = increment_inventory_bar(ent, -100)
 	  printout(result, pindex)
+   elseif players[pindex].menu == "train_menu" then 
+      change_instant_schedule_wait_time(-60,pindex)
    end
 end
 )
@@ -6168,7 +6210,7 @@ script.on_event("left-click", function(event)
                      players[pindex].building.ent.inserter_filter_mode = "whitelist"
                   end
                   players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index] = players[pindex].building.ent.inserter_filter_mode 
-                  read_building_slot(pindex)
+                  read_building_slot(pindex,false)
                elseif players[pindex].building.item_selection then
                   if players[pindex].item_selector.group == 0 then
                      players[pindex].item_selector.group = players[pindex].item_selector.index
@@ -6210,7 +6252,7 @@ script.on_event("left-click", function(event)
 
             if game.get_player(pindex).cursor_stack.swap_stack(stack) then
                game.get_player(pindex).play_sound{path = "utility/inventory_click"}
---               read_building_slot(pindex)
+--               read_building_slot(pindex,false)
             elseif game.get_player(pindex).cursor_stack.valid_for_read then
                printout("That item doesn't belong here.", pindex)
             end
@@ -6660,7 +6702,9 @@ function build_item_in_hand(pindex, offset_val)
          local small_poles = surf.find_entities_filtered{position = position, radius = 7.5, name = "small-electric-pole"}
          local all_beyond_6_5 = true
          local any_connects = false
+         local any_found = false
          for i,pole in ipairs(small_poles) do
+            any_found = true
             if util.distance(position, pole.position) < 6.5 then
                all_beyond_6_5 = false
             elseif util.distance(position, pole.position) >= 6.5 then
@@ -6669,6 +6713,9 @@ function build_item_in_hand(pindex, offset_val)
          end
          if not (all_beyond_6_5 and any_connects) then
             game.get_player(pindex).play_sound{path = "Inventory-Move"}
+            if not any_found then
+               game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+            end
             return
          end
 	  elseif stack.name == "medium-electric-pole" and players[pindex].build_lock == true then
@@ -6677,7 +6724,9 @@ function build_item_in_hand(pindex, offset_val)
          local med_poles = surf.find_entities_filtered{position = position, radius = 7.5, name = "medium-electric-pole"}
          local all_beyond_6_5 = true
          local any_connects = false
+         local any_found = false
          for i,pole in ipairs(med_poles) do
+            any_found = true
             if util.distance(position, pole.position) < 6.5 then
                all_beyond_6_5 = false
             elseif util.distance(position, pole.position) >= 6.5 then
@@ -6686,6 +6735,55 @@ function build_item_in_hand(pindex, offset_val)
          end
          if not (all_beyond_6_5 and any_connects) then
             game.get_player(pindex).play_sound{path = "Inventory-Move"}
+            if not any_found then
+               game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+            end
+            return
+         end 
+      elseif stack.name == "big-electric-pole" and players[pindex].build_lock == true then
+         --Place a big electric pole in this position only if it is within 29 to 30 tiles of another medium electric pole
+         position = offset_position(position, players[pindex].player_direction, -1)
+         local surf = game.get_player(pindex).surface
+         local big_poles = surf.find_entities_filtered{position = position, radius = 30, name = "big-electric-pole"}
+         local all_beyond_min = true
+         local any_connects = false
+         local any_found = false
+         for i,pole in ipairs(big_poles) do
+            any_found = true
+            if util.distance(position, pole.position) < 28.5 then
+               all_beyond_min = false
+            elseif util.distance(position, pole.position) >= 28.5 then
+               any_connects = true
+            end
+         end
+         if not (all_beyond_min and any_connects) then
+            game.get_player(pindex).play_sound{path = "Inventory-Move"}
+            if not any_found then
+               game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+            end
+            return
+         end 
+       elseif stack.name == "substation" and players[pindex].build_lock == true then
+         --Place a substation in this position only if it is within 16 to 18 tiles of another medium electric pole
+         position = offset_position(position, players[pindex].player_direction, -1)
+         local surf = game.get_player(pindex).surface
+         local sub_poles = surf.find_entities_filtered{position = position, radius = 18.01, name = "substation"}
+         local all_beyond_min = true
+         local any_connects = false
+         local any_found = false
+         for i,pole in ipairs(sub_poles) do
+            any_found = true
+            if util.distance(position, pole.position) < 17.01 then
+               all_beyond_min = false
+            elseif util.distance(position, pole.position) >= 17.01 then
+               any_connects = true
+            end
+         end
+         if not (all_beyond_min and any_connects) then
+            game.get_player(pindex).play_sound{path = "Inventory-Move"}
+            if not any_found then
+               game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+            end
             return
          end 
 	  end
@@ -7626,8 +7724,10 @@ script.on_event("toggle-walk",function(event)
    end
    if players[pindex].walk == 0 then --Mode 1 (walk-by-step) is temporarily disabled until it comes back as an in game setting.
       players[pindex].walk = 2
+      players[pindex].character_running_speed_modifier = 0  -- default 100%
    else
       players[pindex].walk = 0
+      players[pindex].character_running_speed_modifier = -0.99 -- 100% - 100% = 0%--***experimental
    end
    --players[pindex].walk = (players[pindex].walk + 1) % 3
    printout(walk_type_speech[players[pindex].walk +1], pindex)
@@ -8047,7 +8147,7 @@ script.on_event("g-key", function(event)
    if not check_for_player(pindex) then
       return
    end
-   
+   local ent = get_selected_ent(pindex)
    if game.get_player(pindex).vehicle ~= nil and game.get_player(pindex).vehicle.train ~= nil then
       vehicle = game.get_player(pindex).vehicle
    elseif ent ~= nil and ent.valid and ent.train ~= nil then
@@ -8096,7 +8196,7 @@ script.on_event("shift-g-key", function(event)
    if not check_for_player(pindex) then
       return
    end
-   
+   local ent = get_selected_ent(pindex)
    if game.get_player(pindex).vehicle ~= nil and game.get_player(pindex).vehicle.train ~= nil then
       vehicle = game.get_player(pindex).vehicle
    elseif ent ~= nil and ent.train ~= nil then
@@ -8166,7 +8266,11 @@ script.on_event("control-g-key", function(event)
 	  --sub_automatic_travel_to_other_stop(ent.train)
 	  --instant_schedule(ent.train)
    end
-   
+   local f = game.get_player(pindex).gui.screen.add{type="frame"}
+   local s1 = f.add{type="sprite",caption = "s1"}
+   s1.sprite = "item.lab"
+   f.force_auto_center()
+   f.bring_to_front()
    
 end)
 
@@ -9338,7 +9442,8 @@ function cursor_highlight(pindex, ent, box_type)
       else
          h_box.highlight_box_type = "entity"
       end
-   elseif not players[pindex].vanilla_mode then
+   end
+   if not players[pindex].vanilla_mode then
       --Highlight the currently focused ground tile.
       h_tile = rendering.draw_rectangle{color = {0.75,1,1,0.75}, surface = p.surface, draw_on_ground = true, 
          left_top = {math.floor(c_pos.x)+0.05,math.floor(c_pos.y)+0.05}, right_bottom = {math.ceil(c_pos.x)-0.05,math.ceil(c_pos.y)-0.05}}
