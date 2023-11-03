@@ -5118,21 +5118,6 @@ script.on_event(defines.events.on_player_driving_changed_state, function(event)
    end
 end)
 
---Cut-paste-tool. NOTE: This keybind needs to be the same as that for the cut paste tool (default CONTROL + X). todo add "associated game control" or something?
-script.on_event("cut-paste-tool-comment", function(event)
-   local pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   local stack = game.get_player(pindex).cursor_stack
-   if stack == nil then
-      --(do nothing when the cut paste tool is not enabled)
-   elseif stack.valid_for_read and stack.name == "cut-paste-tool" then
-      printout("To disable this tool empty the hand, by pressing SHIFT + Q",pindex)
-   end
-end)
-
-
 script.on_event("cursor-up", function(event)
    move_key(defines.direction.north,event)
 end)
@@ -5718,6 +5703,7 @@ script.on_event("open-inventory", function(event)
       players[pindex].technology.lua_researchable = {}
       players[pindex].technology.lua_unlocked = {}
       players[pindex].technology.lua_locked = {}
+      -- Create technologies list
       for i, tech in pairs(game.get_player(pindex).force.technologies) do
          if tech.researched then
             table.insert(players[pindex].technology.lua_unlocked, tech)
@@ -5743,7 +5729,16 @@ script.on_event("open-inventory", function(event)
             end
          end
       end
-   elseif players[pindex].menu ~= "prompt" then
+   end
+end   
+)
+
+script.on_event("close-menu", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].menu ~= "prompt" then
       printout("Menu closed.", pindex)
       players[pindex].in_menu = false
       game.get_player(pindex).game_view_settings.update_entity_selection = true
@@ -5903,7 +5898,7 @@ script.on_event(set_quickbar_names,function(event)
    end
 end)
 
-script.on_event("switch-menu", function(event)
+script.on_event("switch-menu-or-gun", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -6063,7 +6058,7 @@ script.on_event("switch-menu", function(event)
    end
 end)
 
-script.on_event("reverse-switch-menu", function(event)
+script.on_event("reverse-switch-menu-or-gun", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -6162,8 +6157,8 @@ function play_mining_sound(pindex)
    end
 end
 
-
-script.on_event("mine-access", function(event)
+--Creates sound effects for vanilla mining. todo connect to game control
+script.on_event("mine-access-sounds", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -6175,7 +6170,16 @@ script.on_event("mine-access", function(event)
          game.get_player(pindex).play_sound{path = "Mine-Building"}
          schedule(25, "play_mining_sound", pindex)
       end
-      
+   end
+end
+)
+
+script.on_event("mine-tiles", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if not (players[pindex].in_menu) and not players[pindex].vanilla_mode then         
       --Mine tiles around the cursor
       local stack = game.get_player(pindex).cursor_stack
       local surf = game.get_player(pindex).surface
@@ -6196,6 +6200,7 @@ script.on_event("mine-access", function(event)
    end
 end
 )
+
 
 --Mines groups of entities depending on the name or type. Includes trees and rocks, rails.
 script.on_event("mine-group", function(event) --laterdo** proper tallying of cleared_total 
@@ -6254,6 +6259,23 @@ script.on_event("mine-group", function(event) --laterdo** proper tallying of cle
    printout(" Cleared away " .. cleared_total .. " objects. ", pindex)
 end
 )
+
+--Cut-paste-tool. NOTE: This keybind needs to be the same as that for the cut paste tool (default CONTROL + X). todo add "associated game control" or something?
+script.on_event("cut-paste-tool-comment", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local stack = game.get_player(pindex).cursor_stack
+   if stack == nil then
+      --(do nothing when the cut paste tool is not enabled)
+   elseif stack.valid_for_read and stack.name == "cut-paste-tool" then
+      printout("To disable this tool empty the hand, by pressing SHIFT + Q",pindex)
+   end
+end)
+
+
+
 
 script.on_event("left-click", function(event)
    pindex = event.player_index
