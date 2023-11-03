@@ -3712,21 +3712,6 @@ function build_preview_checks_info(stack, pindex)
 end
 
 
---Turns off the cut paste tool if already held
-script.on_event("control-x", function(event)
-   local pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   local stack = game.get_player(pindex).cursor_stack
-   if stack.valid_for_read and stack.name == "cut-paste-tool" then
-      --game.get_player(pindex).clear_cursor()--does not work
-	  --game.get_player(pindex).cursor_stack.clear()
-	  printout("To disable this tool empty the hand, by pressing SHIFT + Q",pindex)
-   end
-end)
-
-
 --Read the current co-ordinates of the cursor on the map or in a menu. Provides extra information in some menus.
 function read_coords(pindex, start_phrase)
    start_phrase = start_phrase or ""
@@ -5132,6 +5117,21 @@ script.on_event(defines.events.on_player_driving_changed_state, function(event)
       printout("Driving state changed." ,pindex)
    end
 end)
+
+--Cut-paste-tool. NOTE: This keybind needs to be the same as that for the cut paste tool (default CONTROL + X). todo add "associated game control" or something?
+script.on_event("cut-paste-tool-comment", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local stack = game.get_player(pindex).cursor_stack
+   if stack == nil then
+      --(do nothing when the cut paste tool is not enabled)
+   elseif stack.valid_for_read and stack.name == "cut-paste-tool" then
+      printout("To disable this tool empty the hand, by pressing SHIFT + Q",pindex)
+   end
+end)
+
 
 script.on_event("cursor-up", function(event)
    move_key(defines.direction.north,event)
