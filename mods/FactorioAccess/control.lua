@@ -7008,7 +7008,7 @@ function build_offshore_pump_in_hand(pindex)
 end
 
 
-script.on_event("shift-click", function(event)
+script.on_event("menu-shift-click", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -7040,7 +7040,19 @@ script.on_event("shift-click", function(event)
             read_crafting_queue(pindex)
 
          end
-      elseif players[pindex].menu == "building" then
+      end
+   end
+end
+)
+
+
+script.on_event("transfer-one-stack", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].in_menu then
+      if players[pindex].menu == "building" then
          if players[pindex].building.sector <= #players[pindex].building.sectors and #players[pindex].building.sectors[players[pindex].building.sector].inventory > 0 and players[pindex].building.sectors[players[pindex].building.sector].name ~= "Fluid" then
             --Transfer stack from building to player inventory
 			local stack = players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index]
@@ -7083,13 +7095,37 @@ script.on_event("shift-click", function(event)
                end
             end
          end
-      elseif players[pindex].menu == "inventory" then
-         --Equip item grabbed in hand
-		 local stack = game.get_player(pindex).cursor_stack
-	     local result = equip_it(stack,pindex)
-	     --game.get_player(pindex).print(result)--
-	     printout(result,pindex)
       end
+   end
+end
+)
+
+
+script.on_event("equip-item-while-in-inventory", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].in_menu then
+      if players[pindex].menu == "inventory" then
+         --Equip item grabbed in hand
+         local stack = game.get_player(pindex).cursor_stack
+         local result = equip_it(stack,pindex)
+         --game.get_player(pindex).print(result)--
+         printout(result,pindex)
+      end
+   end
+end
+)
+
+
+script.on_event("open-rail-builder", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].in_menu then
+      return
    else
       --Not in a menu
       local ent =  get_selected_ent(pindex)
@@ -7106,11 +7142,46 @@ end
 )
 
 
+
 --[[Imitates vanilla behavior: 
 * Control click an item in an inventory to try smart transfer ALL of it. 
 * Control click an empty slot to try to smart transfer ALL items from that inventory.
 ]]
-script.on_event("control-click", function(event)
+script.on_event("transfer-all-stacks", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+
+   if players[pindex].in_menu then
+      if players[pindex].menu == "building" then
+         do_multi_stack_transfer(1,pindex)
+      end
+   end
+end
+)
+
+script.on_event("free-place-straight-rail", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+
+   if players[pindex].in_menu then
+      return
+   else
+      --Not in a menu
+      local stack = game.get_player(pindex).cursor_stack
+      local ent =  get_selected_ent(pindex)
+      if stack.name == "rail" then
+         --Straight rail free placement
+         build_item_in_hand(pindex, 1.337)--Uses sentinel value
+      end
+   end
+end
+)
+
+script.on_event("set-splitter-filter", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -7131,9 +7202,6 @@ script.on_event("control-click", function(event)
             printout(result,pindex)
          end
          return
-      elseif stack.name == "rail" then
-         --Straight rail free placement
-         build_item_in_hand(pindex, 1.337)--Uses sentinel value
       elseif ent and ent.name == "splitter" then
          --Set the filter
          local result = set_splitter_priority(ent, nil, nil, stack)
@@ -7147,7 +7215,7 @@ end
 * Control click an item in an inventory to try smart transfer HALF of it. 
 * Control click an empty slot to try to smart transfer HALF of all items from that inventory.
 ]]
-script.on_event("control-right-click", function(event)
+script.on_event("transfer-half-of-all-stacks", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
