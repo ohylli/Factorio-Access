@@ -8428,10 +8428,10 @@ end
 )
 
 -- G is used to connect rolling stock
-script.on_event("g-key", function(event)
+script.on_event("connect-rail-vehicles", function(event)
    local pindex = event.player_index
    local vehicle = nil
-   if not check_for_player(pindex) then
+   if not check_for_player(pindex) or players[pindex].in_menu then
       return
    end
    local ent = get_selected_ent(pindex)
@@ -8466,8 +8466,15 @@ script.on_event("g-key", function(event)
             printout("Nothing was connected.", pindex)
          end
       end
-   end
+   end 
+end)
 
+script.on_event("inventory-read-armor-stats", function(event)
+   local pindex = event.player_index
+   local vehicle = nil
+   if not check_for_player(pindex) or not players[pindex].in_menu then
+      return
+   end
    if players[pindex].in_menu and players[pindex].menu == "inventory" then
 	  local result = read_armor_stats(pindex)
 	  --game.get_player(pindex).print(result)--
@@ -8475,12 +8482,11 @@ script.on_event("g-key", function(event)
    end   
 end)
 
-
 --SHIFT + G is used to disconnect rolling stock
-script.on_event("shift-g-key", function(event)
+script.on_event("disconnect-rail-vehicles", function(event)
    local pindex = event.player_index
    local vehicle = nil
-   if not check_for_player(pindex) then
+   if not check_for_player(pindex) or players[pindex].in_menu then
       return
    end
    local ent = get_selected_ent(pindex)
@@ -8516,9 +8522,30 @@ script.on_event("shift-g-key", function(event)
          end
       end
    end
-   
+end)
+
+script.on_event("inventory-read-equipment-list", function(event)
+   local pindex = event.player_index
+   local vehicle = nil
+   if not check_for_player(pindex) or not players[pindex].in_menu then
+      return
+   end
    if players[pindex].in_menu and players[pindex].menu == "inventory" then
 	  local result = read_equipment_list(pindex)
+	  --game.get_player(pindex).print(result)--
+	  printout(result,pindex)
+   end   
+end)
+
+script.on_event("inventory-remove-all-equipment-and-armor", function(event)
+   local pindex = event.player_index
+   local vehicle = nil
+   if not check_for_player(pindex) then
+      return
+   end
+   
+   if players[pindex].in_menu and players[pindex].menu == "inventory" then
+	  local result = remove_equipment_and_armor(pindex)
 	  --game.get_player(pindex).print(result)--
 	  printout(result,pindex)
    end 
@@ -8526,8 +8553,8 @@ script.on_event("shift-g-key", function(event)
 end)
 
 
---**Use this unassigned key binding to test stuff
-script.on_event("control-g-key", function(event)
+--**Use this key to test stuff
+script.on_event("debug-test-key", function(event)
    local pindex = event.player_index
    local p = game.get_player(pindex)
    local ent =  get_selected_ent(pindex)
@@ -8553,6 +8580,7 @@ script.on_event("control-g-key", function(event)
 	  --sub_automatic_travel_to_other_stop(ent.train)
 	  --instant_schedule(ent.train)
    end
+   --GUI TESTS WIP todo***
    --local f = game.get_player(pindex).gui.screen.add{type="frame"}
    --local s1 = f.add{type="sprite",caption = "s1"}
    --s1.sprite = "item.lab"
@@ -8560,23 +8588,6 @@ script.on_event("control-g-key", function(event)
    --f.bring_to_front()
    
 end)
-
---
-script.on_event("control-shift-g-key", function(event)
-   local pindex = event.player_index
-   local vehicle = nil
-   if not check_for_player(pindex) then
-      return
-   end
-   
-   if players[pindex].in_menu and players[pindex].menu == "inventory" then
-	  local result = remove_equipment_and_armor(pindex)
-	  --game.get_player(pindex).print(result)--
-	  printout(result,pindex)
-   end 
-   
-end)
-
 
 --Attempt to launch a rocket
 script.on_event("prompt", function(event)
