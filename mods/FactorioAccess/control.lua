@@ -5660,6 +5660,51 @@ script.on_event("scan-mode-down", function(event)
    end
 end)
 
+--Move along different inmstances of the same item type
+script.on_event("scan-selection-up", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if not (players[pindex].in_menu) then
+      if players[pindex].nearby.selection > 1 then
+         players[pindex].nearby.selection = players[pindex].nearby.selection - 1
+      end
+      scan_index(pindex)
+   end
+end)
+
+--Move along different inmstances of the same item type
+script.on_event("scan-selection-down", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if not (players[pindex].in_menu) then
+      if (players[pindex].nearby.category == 1 and next(players[pindex].nearby.ents) == nil) or (players[pindex].nearby.category == 2 and next(players[pindex].nearby.resources) == nil) or (players[pindex].nearby.category == 3 and next(players[pindex].nearby.containers) == nil) or (players[pindex].nearby.category == 4 and next(players[pindex].nearby.buildings) == nil) or (players[pindex].nearby.category == 5 and next(players[pindex].nearby.other) == nil) then
+         printout("No entities found.  Try refreshing with end key.", pindex)
+      else
+         local ents = {}
+         if players[pindex].nearby.category == 1 then
+            ents = players[pindex].nearby.ents
+         elseif players[pindex].nearby.category == 2 then
+            ents = players[pindex].nearby.resources
+         elseif players[pindex].nearby.category == 3 then
+            ents = players[pindex].nearby.containers
+         elseif players[pindex].nearby.category == 4 then
+            ents = players[pindex].nearby.buildings
+         elseif players[pindex].nearby.category == 5 then
+            ents = players[pindex].nearby.other
+         end
+   
+         if players[pindex].nearby.selection < #ents[players[pindex].nearby.index].ents then
+            players[pindex].nearby.selection = players[pindex].nearby.selection + 1
+         end
+      end
+      scan_index(pindex)
+   end
+end)
+
 --**todo add to wiki
 script.on_event("repeat-last-spoken", function(event)
    pindex = event.player_index
@@ -6286,6 +6331,49 @@ function try_to_mine_with_sound(ent,pindex)
 	 end
    end
 end
+
+--Mines all trees and rocks and ground items in a selected circular area. Useful when placing structures. Forces mining. laterdo add deleting stumps maybe but they do fade away eventually 
+function clear_obstacles_in_circle(position, radius, pindex)
+   local surf = game.get_player(pindex).surface
+   local comment = ""
+   local trees_cleared = 0
+   local rocks_cleared = 0
+   local ground_items_cleared = 0
+   players[pindex].allow_reading_flying_text = false
+   
+   --Find and mine trees
+   local trees = surf.find_entities_filtered{position = position, radius = radius, type = "tree"}
+   for i,tree_ent in ipairs(trees) do
+      rendering.draw_circle{color = {1, 0, 0},radius = 1,width = 1,target = tree_ent.position,surface = tree_ent.surface,time_to_live = 60}
+      game.get_player(pindex).mine_entity(tree_ent,true)
+	  trees_cleared = trees_cleared + 1
+   end
+   
+   --Find and mine rocks. Note that they are resource entities with specific names
+   local resources = surf.find_entities_filtered{position = position, radius = radius, name = {"rock-big","rock-huge","sand-rock-big"}}
+   for i,resource_ent in ipairs(resources) do
+      if resource_ent ~= nil and resource_ent.valid then
+         rendering.draw_circle{color = {1, 0, 0},radius = 2,width = 2,target = resource_ent.position,surface = resource_ent.surface,time_to_live = 60}
+         game.get_player(pindex).mine_entity(resource_ent,true) 
+         rocks_cleared = rocks_cleared + 1
+      end
+   end
+   
+   --Find and mine items on the ground
+   local ground_items = surf.find_entities_filtered{position = position, radius = 5, name = "item-on-ground"}
+   for i,ground_item in ipairs(ground_items) do
+      rendering.draw_circle{color = {1, 0, 0},radius = 0.25,width = 2,target = ground_item.position,surface = surf,time_to_live = 60}
+      game.get_player(pindex).mine_entity(ground_item,true)
+      ground_items_cleared = ground_items_cleared + 1
+   end
+         
+   if trees_cleared + rocks_cleared + ground_items_cleared > 0 then
+      comment = "cleared " .. trees_cleared .. " trees and " .. rocks_cleared .. " rocks and " .. ground_items_cleared .. " ground items "
+   end
+   rendering.draw_circle{color = {0, 1, 0},radius = radius,width = radius,target = position,surface = surf,time_to_live = 60}
+   return (trees_cleared + rocks_cleared + ground_items_cleared), comment
+end
+
 
 script.on_event("menu-click", function(event)
    pindex = event.player_index
@@ -7915,6 +8003,7 @@ script.on_event("save-game-manually", function(event)
    printout("Saving Game, please do not quit yet.", pindex)
 
 end)
+
 script.on_nth_tick(10, function(event)
    for pindex, player in pairs(players) do
       if player.allow_reading_flying_text == nil or player.allow_reading_flying_text == true then
@@ -7987,7 +8076,7 @@ script.on_event("toggle-build-lock", function(event)
    end
 end)
 
-script.on_event("toggle-vanilla",function(event)
+script.on_event("toggle-vanilla-mode",function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -8001,7 +8090,7 @@ script.on_event("toggle-vanilla",function(event)
    end
 end)
 
-script.on_event("recalibrate",function(event)
+script.on_event("recalibrate-zoom",function(event)
    local pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -8017,7 +8106,7 @@ script.on_event("read-hand",function(event)
    read_hand(pindex)
 end)
 
-script.on_event("list-warnings", function(event)
+script.on_event("open-warnings-menu", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -8038,7 +8127,7 @@ script.on_event("list-warnings", function(event)
    end
 end)
 
-script.on_event("open-fast-travel", function(event)
+script.on_event("open-fast-travel-menu", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -8121,7 +8210,8 @@ script.on_event(defines.events.on_gui_confirmed,function(event)
    end
 end)   
 
-script.on_event("open-structure-travel", function(event)
+--todo review functionality, test for bugs, review wiki pages
+script.on_event("open-structure-travel-menu", function(event)
    local pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -8186,101 +8276,6 @@ end)
 script.on_event("nudge-right", function(event)
    nudge_key(defines.direction.east,event)
 end)
-
-script.on_event("scan-selection-up", function(event)
-   pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   if not (players[pindex].in_menu) then
-      if players[pindex].nearby.selection > 1 then
-         players[pindex].nearby.selection = players[pindex].nearby.selection - 1
-      end
-      scan_index(pindex)
-   elseif players[pindex].menu == "building" then
-      --Chest bar setting: Increase by 5
-	  local ent =  get_selected_ent(pindex)
-	  local result = increment_inventory_bar(ent, 5)
-	  printout(result, pindex)
-   end
-end)
-
-script.on_event("scan-selection-down", function(event)
-   pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   if not (players[pindex].in_menu) then
-      if (players[pindex].nearby.category == 1 and next(players[pindex].nearby.ents) == nil) or (players[pindex].nearby.category == 2 and next(players[pindex].nearby.resources) == nil) or (players[pindex].nearby.category == 3 and next(players[pindex].nearby.containers) == nil) or (players[pindex].nearby.category == 4 and next(players[pindex].nearby.buildings) == nil) or (players[pindex].nearby.category == 5 and next(players[pindex].nearby.other) == nil) then
-         printout("No entities found.  Try refreshing with end key.", pindex)
-      else
-         local ents = {}
-         if players[pindex].nearby.category == 1 then
-            ents = players[pindex].nearby.ents
-         elseif players[pindex].nearby.category == 2 then
-            ents = players[pindex].nearby.resources
-         elseif players[pindex].nearby.category == 3 then
-            ents = players[pindex].nearby.containers
-         elseif players[pindex].nearby.category == 4 then
-            ents = players[pindex].nearby.buildings
-         elseif players[pindex].nearby.category == 5 then
-            ents = players[pindex].nearby.other
-         end
-   
-         if players[pindex].nearby.selection < #ents[players[pindex].nearby.index].ents then
-            players[pindex].nearby.selection = players[pindex].nearby.selection + 1
-         end
-      end
-      scan_index(pindex)
-   elseif players[pindex].menu == "building" then
-      --Chest bar setting: Increase by 5
-	  local ent =  get_selected_ent(pindex)
-	  local result = increment_inventory_bar(ent, -5)
-	  printout(result, pindex)
-   end
-end)
-
---Mines all trees and rocks and ground items in a selected circular area. Useful when placing structures. Forces mining. laterdo add deleting stumps maybe but they do fade away eventually 
-function clear_obstacles_in_circle(position, radius, pindex)
-   local surf = game.get_player(pindex).surface
-   local comment = ""
-   local trees_cleared = 0
-   local rocks_cleared = 0
-   local ground_items_cleared = 0
-   players[pindex].allow_reading_flying_text = false
-   
-   --Find and mine trees
-   local trees = surf.find_entities_filtered{position = position, radius = radius, type = "tree"}
-   for i,tree_ent in ipairs(trees) do
-      rendering.draw_circle{color = {1, 0, 0},radius = 1,width = 1,target = tree_ent.position,surface = tree_ent.surface,time_to_live = 60}
-      game.get_player(pindex).mine_entity(tree_ent,true)
-	  trees_cleared = trees_cleared + 1
-   end
-   
-   --Find and mine rocks. Note that they are resource entities with specific names
-   local resources = surf.find_entities_filtered{position = position, radius = radius, name = {"rock-big","rock-huge","sand-rock-big"}}
-   for i,resource_ent in ipairs(resources) do
-      if resource_ent ~= nil and resource_ent.valid then
-         rendering.draw_circle{color = {1, 0, 0},radius = 2,width = 2,target = resource_ent.position,surface = resource_ent.surface,time_to_live = 60}
-         game.get_player(pindex).mine_entity(resource_ent,true) 
-         rocks_cleared = rocks_cleared + 1
-      end
-   end
-   
-   --Find and mine items on the ground
-   local ground_items = surf.find_entities_filtered{position = position, radius = 5, name = "item-on-ground"}
-   for i,ground_item in ipairs(ground_items) do
-      rendering.draw_circle{color = {1, 0, 0},radius = 0.25,width = 2,target = ground_item.position,surface = surf,time_to_live = 60}
-      game.get_player(pindex).mine_entity(ground_item,true)
-      ground_items_cleared = ground_items_cleared + 1
-   end
-         
-   if trees_cleared + rocks_cleared + ground_items_cleared > 0 then
-      comment = "cleared " .. trees_cleared .. " trees and " .. rocks_cleared .. " rocks and " .. ground_items_cleared .. " ground items "
-   end
-   rendering.draw_circle{color = {0, 1, 0},radius = radius,width = radius,target = position,surface = surf,time_to_live = 60}
-   return (trees_cleared + rocks_cleared + ground_items_cleared), comment
-end
 
 
 script.on_event("up-arrow", function(event)
