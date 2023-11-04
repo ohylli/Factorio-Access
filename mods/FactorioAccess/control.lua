@@ -5160,8 +5160,7 @@ script.on_event("read-cursor-distance-and-direction", function(event)
    table.insert(result,cursor_description_of)--listpos
    table.insert(result,dir_dist)
    printout(result,pindex)
-end
-)
+end)
 
 --Returns the cursor to the player position.
 script.on_event("jump-to-player", function(event)
@@ -5174,8 +5173,7 @@ script.on_event("jump-to-player", function(event)
       if players[pindex].cursor then jump_to_player(pindex)
       end
    end
-end
-)
+end)
 
 script.on_event("read-rail-structure-ahead", function(event)
    pindex = event.player_index
@@ -5189,8 +5187,7 @@ script.on_event("read-rail-structure-ahead", function(event)
       --Report what is along the rail
       rail_read_next_rail_entity_ahead(pindex, ent, true)
    end
-end
-)
+end)
 
 script.on_event("read-rail-structure-behind", function(event)
    pindex = event.player_index
@@ -5204,8 +5201,7 @@ script.on_event("read-rail-structure-behind", function(event)
       --Report what is along the rail
       rail_read_next_rail_entity_ahead(pindex, ent, false)
    end
-end
-)
+end)
 
 --Default is CONTROL + J
 script.on_event("release-cursor", function(event)
@@ -5216,8 +5212,7 @@ script.on_event("release-cursor", function(event)
    game.get_player(pindex).game_view_settings.update_entity_selection = true
    printout("cursor released",pindex)
    cursor_highlight(pindex, nil, nil)
-end
-)
+end)
 
 script.on_event("teleport-to-cursor", function(event)
    pindex = event.player_index
@@ -5233,8 +5228,7 @@ script.on_event("teleport-to-cursor", function(event)
    else
       printout("Cannot teleport while in a menu.", pindex)
    end
-end
-)
+end)
 
 script.on_event("toggle-cursor", function(event)
    pindex = event.player_index
@@ -5245,8 +5239,8 @@ script.on_event("toggle-cursor", function(event)
 
       toggle_cursor(pindex)
    end
-end
-)
+end)
+
 --We have cursor sizes 1,3,5,11,21,101,251
 script.on_event("cursor-size-increment", function(event)
    pindex = event.player_index
@@ -5316,8 +5310,7 @@ script.on_event("increase-inventory-bar-by-1", function(event)
 	  local result = increment_inventory_bar(ent, 1)
 	  printout(result, pindex)
    end
-end
-)
+end)
 
 script.on_event("increase-inventory-bar-by-5", function(event)
    pindex = event.player_index
@@ -5330,7 +5323,7 @@ script.on_event("increase-inventory-bar-by-5", function(event)
 	  local result = increment_inventory_bar(ent, 1)
 	  printout(result, pindex)
    end
-end
+end)
 
 script.on_event("increase-inventory-bar-by-100", function(event)
    pindex = event.player_index
@@ -5343,7 +5336,7 @@ script.on_event("increase-inventory-bar-by-100", function(event)
 	  local result = increment_inventory_bar(ent, 100)
 	  printout(result, pindex)
    end
-end
+end)
 
 script.on_event("decrease-inventory-bar-by-1", function(event)
    pindex = event.player_index
@@ -5356,7 +5349,7 @@ script.on_event("decrease-inventory-bar-by-1", function(event)
 	  local result = increment_inventory_bar(ent, -1)
 	  printout(result, pindex)
    end
-end
+end)
 
 script.on_event("decrease-inventory-bar-by-5", function(event)
    pindex = event.player_index
@@ -5369,7 +5362,7 @@ script.on_event("decrease-inventory-bar-by-5", function(event)
 	  local result = increment_inventory_bar(ent, -5)
 	  printout(result, pindex)
    end
-end
+end)
 
 script.on_event("decrease-inventory-bar-by-100", function(event)
    pindex = event.player_index
@@ -5382,7 +5375,7 @@ script.on_event("decrease-inventory-bar-by-100", function(event)
 	  local result = increment_inventory_bar(ent, -100)
 	  printout(result, pindex)
    end
-end
+end)
 
 script.on_event("increase-train-wait-times-by-5", function(event)
    pindex = event.player_index
@@ -5392,7 +5385,7 @@ script.on_event("increase-train-wait-times-by-5", function(event)
    if players[pindex].in_menu and players[pindex].menu == "train_menu" then 
       change_instant_schedule_wait_time(5,pindex)
    end
-end
+end)
 
 script.on_event("increase-train-wait-times-by-60", function(event)
    pindex = event.player_index
@@ -5402,7 +5395,7 @@ script.on_event("increase-train-wait-times-by-60", function(event)
    if players[pindex].in_menu and players[pindex].menu == "train_menu" then 
       change_instant_schedule_wait_time(60,pindex)
    end
-end
+end)
 
 script.on_event("decrease-train-wait-times-by-5", function(event)
    pindex = event.player_index
@@ -5412,7 +5405,7 @@ script.on_event("decrease-train-wait-times-by-5", function(event)
    if players[pindex].in_menu and players[pindex].menu == "train_menu" then 
       change_instant_schedule_wait_time(-5,pindex)
    end
-end
+end)
 
 script.on_event("decrease-train-wait-times-by-60", function(event)
    pindex = event.player_index
@@ -5422,7 +5415,7 @@ script.on_event("decrease-train-wait-times-by-60", function(event)
    if players[pindex].in_menu and players[pindex].menu == "train_menu" then 
       change_instant_schedule_wait_time(-60,pindex)
    end
-end
+end)
 
 script.on_event("rescan", function(event)
    pindex = event.player_index
@@ -5439,8 +5432,7 @@ script.on_event("rescan", function(event)
       rendering.draw_circle{color = {1, 1, 1},radius = 1,width =  4,target = game.get_player(pindex).position, surface = game.get_player(pindex).surface, draw_on_ground = true, time_to_live = 60}
       rendering.draw_circle{color = {1, 1, 1},radius = 2,width =  8,target = game.get_player(pindex).position, surface = game.get_player(pindex).surface, draw_on_ground = true, time_to_live = 60}
    end
-end
-)
+end)
 
 script.on_event("scan-up", function(event)
    pindex = event.player_index
@@ -5450,8 +5442,7 @@ script.on_event("scan-up", function(event)
    if not (players[pindex].in_menu) then
       scan_up(pindex)
    end
-end
-)
+end)
 
 script.on_event("scan-down", function(event)
    pindex = event.player_index
@@ -5461,8 +5452,7 @@ script.on_event("scan-down", function(event)
    if not (players[pindex].in_menu) then
       scan_down(pindex)
    end
-end
-)
+end)
 
 script.on_event("scan-middle", function(event)
    pindex = event.player_index
@@ -5472,8 +5462,7 @@ script.on_event("scan-middle", function(event)
    if not (players[pindex].in_menu) then
       scan_middle(pindex)
    end
-end
-)
+end)
 
 script.on_event("jump-to-scan", function(event)--NOTE: This might be deprecated or redundant, since the cursor already goes to the scanned object now.***
    pindex = event.player_index
@@ -5569,8 +5558,7 @@ script.on_event("jump-to-scan", function(event)--NOTE: This might be deprecated 
          end
       end
    end
-end
-)
+end)
 
 script.on_event("scan-category-up", function(event)
    pindex = event.player_index
@@ -5599,8 +5587,8 @@ script.on_event("scan-category-up", function(event)
 
       end
    end
-end
-)
+end)
+
 script.on_event("scan-category-down", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -5629,8 +5617,7 @@ script.on_event("scan-category-down", function(event)
 
       end
    end
-end
-)
+end)
 
 --Default key was N
 script.on_event("scan-mode-up", function(event)
@@ -5712,8 +5699,7 @@ script.on_event("repeat-last-spoken", function(event)
       return
    end
    repeat_last_spoken(pindex)
-end   
-)
+end)
 
 --Note: reads other entities on the same tile? possibly unneeded
 script.on_event("tile-cycle", function(event)
@@ -5724,8 +5710,7 @@ script.on_event("tile-cycle", function(event)
    if not (players[pindex].in_menu) then
       tile_cycle(pindex)
    end
-end   
-)
+end)
 
 script.on_event("open-inventory", function(event)
    pindex = event.player_index
@@ -5775,8 +5760,7 @@ script.on_event("open-inventory", function(event)
          end
       end
    end
-end   
-)
+end)
 
 script.on_event("close-menu", function(event)
    pindex = event.player_index
@@ -5810,8 +5794,7 @@ script.on_event("close-menu", function(event)
       players[pindex].item_cache = {}
       players[pindex].item_selector = {index = 0, group = 0, subgroup = 0}
    end
-end   
-)
+end)
 
 
 
@@ -5823,8 +5806,7 @@ script.on_event("quickbar-1", function(event)
    if not (players[pindex].in_menu) then
       read_quick_bar(1,pindex)
    end
-end   
-)
+end)
 
 script.on_event("quickbar-2", function(event)
    pindex = event.player_index
@@ -5834,8 +5816,7 @@ script.on_event("quickbar-2", function(event)
    if not (players[pindex].in_menu) then
       read_quick_bar(2,pindex)
    end
-end   
-)
+end)
 
 script.on_event("quickbar-3", function(event)
    pindex = event.player_index
@@ -5845,8 +5826,7 @@ script.on_event("quickbar-3", function(event)
    if not (players[pindex].in_menu) then
       read_quick_bar(3,pindex)
    end
-end   
-)
+end)
 
 script.on_event("quickbar-4", function(event)
    pindex = event.player_index
@@ -5856,8 +5836,7 @@ script.on_event("quickbar-4", function(event)
    if not (players[pindex].in_menu) then
       read_quick_bar(4,pindex)
    end
-end   
-)
+end)
 
 script.on_event("quickbar-5", function(event)
    pindex = event.player_index
@@ -5867,8 +5846,7 @@ script.on_event("quickbar-5", function(event)
    if not (players[pindex].in_menu) then
       read_quick_bar(5,pindex)
    end
-end   
-)
+end)
 
 script.on_event("quickbar-6", function(event)
    pindex = event.player_index
@@ -5878,8 +5856,7 @@ script.on_event("quickbar-6", function(event)
    if not (players[pindex].in_menu) then
       read_quick_bar(6,pindex)
    end
-end   
-)
+end)
 
 script.on_event("quickbar-7", function(event)
    pindex = event.player_index
@@ -5889,8 +5866,7 @@ script.on_event("quickbar-7", function(event)
    if not (players[pindex].in_menu) then
       read_quick_bar(7,pindex)
    end
-end   
-)
+end)
 
 script.on_event("quickbar-8", function(event)
    pindex = event.player_index
@@ -5900,8 +5876,7 @@ script.on_event("quickbar-8", function(event)
    if not (players[pindex].in_menu) then
       read_quick_bar(8,pindex)
    end
-end   
-)
+end)
 
 script.on_event("quickbar-9", function(event)
    pindex = event.player_index
@@ -5911,8 +5886,7 @@ script.on_event("quickbar-9", function(event)
    if not (players[pindex].in_menu) then
       read_quick_bar(9,pindex)
    end
-end   
-)
+end)
 
 script.on_event("quickbar-10", function(event)
    pindex = event.player_index
@@ -5922,8 +5896,7 @@ script.on_event("quickbar-10", function(event)
    if not (players[pindex].in_menu) then
       read_quick_bar(10,pindex)
    end
-end   
-)
+end)
 
 local set_quickbar_names = {}
 for i = 1,10 do
@@ -6216,8 +6189,7 @@ script.on_event("mine-access-sounds", function(event)
          schedule(25, "play_mining_sound", pindex)
       end
    end
-end
-)
+end)
 
 script.on_event("mine-tiles", function(event)
    pindex = event.player_index
@@ -6243,9 +6215,7 @@ script.on_event("mine-tiles", function(event)
          end
       end
    end
-end
-)
-
+end)
 
 --Mines groups of entities depending on the name or type. Includes trees and rocks, rails.
 script.on_event("mine-group", function(event) --laterdo** proper tallying of cleared_total 
@@ -6302,8 +6272,7 @@ script.on_event("mine-group", function(event) --laterdo** proper tallying of cle
       end
    end
    printout(" Cleared away " .. cleared_total .. " objects. ", pindex)
-end
-)
+end)
 
 --Cut-paste-tool. NOTE: This keybind needs to be the same as that for the cut paste tool (default CONTROL + X). todo add "associated game control" or something?
 script.on_event("cut-paste-tool-comment", function(event)
@@ -6656,8 +6625,7 @@ script.on_event("menu-click", function(event)
          train_stop_menu(players[pindex].train_stop_menu.index, pindex, true)
       end      
    end
-end
-)
+end)
 
 --Includes building previewed buildings, throwing capsules, etc.
 script.on_event("hand-stack-click", function(event)
@@ -6697,8 +6665,7 @@ script.on_event("hand-stack-click", function(event)
 	     p.use_from_cursor{p.position.x+1,p.position.y+1}--tolaterdo adjust it to use an item 3 tiles in front of the player instead.
       end
    end
-end
-)
+end)
 
 script.on_event("entity-click", function(event)
    pindex = event.player_index
@@ -6831,8 +6798,7 @@ script.on_event("entity-click", function(event)
          end
       end
    end
-end
-)
+end)
 
 --[[Attempts to build the item in hand.
 * Does nothing if the hand is empty or the item is not a place-able entity.
@@ -7129,8 +7095,7 @@ script.on_event("menu-shift-click", function(event)
          end
       end
    end
-end
-)
+end)
 
 
 script.on_event("transfer-one-stack", function(event)
@@ -7184,9 +7149,7 @@ script.on_event("transfer-one-stack", function(event)
          end
       end
    end
-end
-)
-
+end)
 
 script.on_event("inventory-equip-item-in-hand", function(event)
    pindex = event.player_index
@@ -7202,9 +7165,7 @@ script.on_event("inventory-equip-item-in-hand", function(event)
          printout(result,pindex)
       end
    end
-end
-)
-
+end)
 
 script.on_event("open-rail-builder", function(event)
    pindex = event.player_index
@@ -7225,8 +7186,7 @@ script.on_event("open-rail-builder", function(event)
          end
       end
    end
-end
-)
+end)
 
 script.on_event("quick-build-rail-left-turn", function(event)
    local pindex = event.player_index
@@ -7273,8 +7233,7 @@ script.on_event("transfer-all-stacks", function(event)
          do_multi_stack_transfer(1,pindex)
       end
    end
-end
-)
+end)
 
 script.on_event("free-place-straight-rail", function(event)
    pindex = event.player_index
@@ -7293,8 +7252,7 @@ script.on_event("free-place-straight-rail", function(event)
          build_item_in_hand(pindex, 1.337)--Uses sentinel value
       end
    end
-end
-)
+end)
 
 --[[Imitates vanilla behavior: 
 * Control click an item in an inventory to try smart transfer HALF of it. 
@@ -7311,8 +7269,7 @@ script.on_event("transfer-half-of-all-stacks", function(event)
          do_multi_stack_transfer(0.5,pindex)
       end
    end
-end
-)
+end)
 
 --[[Manages inventory transfers that are bigger than one stack. 
 * Has checks and printouts!
@@ -7482,8 +7439,7 @@ script.on_event("menu-right-click", function(event)
          end
       end
    end
-end
-)
+end)
 
 --Reads the entity status but also adds on extra info depending on the entity
 script.on_event("read-entity-status", function(event)
@@ -7635,8 +7591,7 @@ script.on_event("read-entity-status", function(event)
       printout(result ,pindex)
       --game.get_player(pindex).print(result)--**
    end
-end
-)
+end)
 
 function into_lookup(array)
     local lookup = {}
@@ -7709,8 +7664,7 @@ script.on_event("rotate-building-access", function(event)
       end
    end
    sync_build_arrow(pindex)
-end
-)
+end)
 
 script.on_event("inventory-read-weapon-data", function(event)
    pindex = event.player_index
@@ -7725,8 +7679,32 @@ script.on_event("inventory-read-weapon-data", function(event)
 	  --game.get_player(pindex).print(result)--
 	  printout(result,pindex)
    end
-end
-)
+end)
+
+script.on_event("inventory-reload-weapons", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].menu == "inventory" then
+      --Reload weapons
+	  local result = reload_weapons(pindex)
+	  --game.get_player(pindex).print(result)
+	  printout(result,pindex)
+   end
+end)
+
+script.on_event("inventory-remove-all-weapons-and-ammo", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].menu == "inventory" then
+	  local result = remove_weapons_and_ammo(pindex)
+	  --game.get_player(pindex).print(result)
+	  printout(result,pindex)
+   end
+end)
 
 --Reads the custom info for a vehicle
 script.on_event("vehicle-info", function(event)
@@ -7737,7 +7715,7 @@ script.on_event("vehicle-info", function(event)
    if game.get_player(pindex).driving then
       printout(vehicle_info(pindex),pindex)
    end
-end
+end)
 
 --Reads the custom written description for an item
 script.on_event("item-info", function(event)
@@ -7841,8 +7819,7 @@ script.on_event("item-info", function(event)
       end
 
    end
-end
-)
+end)
 
 --Gives in-game time. The night darkness is from 11 to 13, and peak daylight hours are 18 to 6.
 --For realism, if we adjust by 12 hours, we get 23 to 1 as midnight and 6 to 18 as peak solar.
@@ -7989,8 +7966,7 @@ script.on_event(defines.events.on_gui_closed, function(event)
       }
       players[pindex].building.item_selection = false
    end
-end
-)
+end)
 
 script.on_event("save-game-manually", function(event)
    pindex = event.player_index
@@ -8348,8 +8324,7 @@ script.on_event("set-splitter-input-priority-left", function(event)
       local result = set_splitter_priority(ent, true, true, nil)
       printout(result,pindex)
    end
-end
-)
+end)
 
 script.on_event("set-splitter-input-priority-right", function(event)
    pindex = event.player_index
@@ -8363,8 +8338,7 @@ script.on_event("set-splitter-input-priority-right", function(event)
       local result = set_splitter_priority(ent, true, false, nil)
       printout(result,pindex)
    end
-end
-)
+end)
 
 script.on_event("set-splitter-output-priority-left", function(event)
    local pindex = event.player_index
@@ -8424,8 +8398,7 @@ script.on_event("set-splitter-filter", function(event)
          printout(result,pindex)
       end
    end
-end
-)
+end)
 
 -- G is used to connect rolling stock
 script.on_event("connect-rail-vehicles", function(event)
@@ -8552,7 +8525,6 @@ script.on_event("inventory-remove-all-equipment-and-armor", function(event)
    
 end)
 
-
 --**Use this key to test stuff
 script.on_event("debug-test-key", function(event)
    local pindex = event.player_index
@@ -8590,7 +8562,7 @@ script.on_event("debug-test-key", function(event)
 end)
 
 --Attempt to launch a rocket
-script.on_event("prompt", function(event)
+script.on_event("launch-rocket", function(event)
    local pindex = event.player_index
    local ent = get_selected_ent(pindex)
    if not check_for_player(pindex) then
@@ -8599,18 +8571,18 @@ script.on_event("prompt", function(event)
    --For rocket entities, return the silo instead
    if ent and (ent.name == "rocket-silo-rocket-shadow" or ent.name == "rocket-silo-rocket") then
       local ents = ent.surface.find_entities_filtered{position = ent.position, radius = 20, name = "rocket-silo"}
-	  for i,silo in ipairs(ents) do
+      for i,silo in ipairs(ents) do
 	     ent = silo
       end
    end
    --Try to launch from the silo
    if ent ~= nil and ent.valid and ent.name == "rocket-silo" then
       local try_launch = ent.launch_rocket()
-	  if try_launch then
+      if try_launch then
 	     printout("Launch successful!",pindex)
-	  else
+      else
 	     printout("Not ready to launch!",pindex)
-	  end
+      end
    end
 end)
 
@@ -9512,36 +9484,6 @@ function remove_equipment_and_armor(pindex)
    
    return result
 end
-
-
-
-script.on_event("shift-r", function(event)
-   pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   if players[pindex].menu == "inventory" then
-      --Reload weapons
-	  local result = reload_weapons(pindex)
-	  --game.get_player(pindex).print(result)
-	  printout(result,pindex)
-   end
-end
-)
-
-script.on_event("control-shift-r", function(event)
-   pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   if players[pindex].menu == "inventory" then
-	  local result = remove_weapons_and_ammo(pindex)
-	  --game.get_player(pindex).print(result)
-	  printout(result,pindex)
-   end
-end
-)
-
 
 --Set the input priority or the output priority or filter for a splitter
 function set_splitter_priority(splitter, is_input, is_left, filter_item_stack, clear)
