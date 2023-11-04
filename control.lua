@@ -7228,7 +7228,35 @@ script.on_event("open-rail-builder", function(event)
 end
 )
 
+script.on_event("quick-build-rail-left-turn", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local ent = get_selected_ent(pindex)
+   if not ent then
+      return
+   end
+   --Build left turns on end rails
+   if ent.name == "straight-rail" then
+      build_rail_turn_left_45_degrees(ent, pindex)
+   end
+end)
 
+script.on_event("quick-build-rail-right-turn", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local ent = get_selected_ent(pindex)
+   if not ent then
+      return
+   end
+   --Build left turns on end rails
+   if ent.name == "straight-rail" then
+      build_rail_turn_right_45_degrees(ent, pindex)
+   end
+end)
 
 --[[Imitates vanilla behavior: 
 * Control click an item in an inventory to try smart transfer ALL of it. 
@@ -7263,36 +7291,6 @@ script.on_event("free-place-straight-rail", function(event)
       if stack.name == "rail" then
          --Straight rail free placement
          build_item_in_hand(pindex, 1.337)--Uses sentinel value
-      end
-   end
-end
-)
-
-script.on_event("set-splitter-filter", function(event)
-   pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-
-   if players[pindex].in_menu then
-      if players[pindex].menu == "building" then
-         return
-      end
-   else
-      --Not in a menu
-      local stack = game.get_player(pindex).cursor_stack
-      local ent =  get_selected_ent(pindex)
-      if stack == nil or not stack.valid_for_read or not stack.valid then
-         if ent and ent.name == "splitter" then
-            --Clear the filter
-            local result = set_splitter_priority(ent, nil, nil, nil, true)
-            printout(result,pindex)
-         end
-         return
-      elseif ent and ent.name == "splitter" then
-         --Set the filter
-         local result = set_splitter_priority(ent, nil, nil, stack)
-         printout(result,pindex)
       end
    end
 end
@@ -8278,63 +8276,97 @@ script.on_event("nudge-right", function(event)
 end)
 
 
-script.on_event("up-arrow", function(event)
+script.on_event("train-menu-up", function(event)
    local pindex = event.player_index
    if not check_for_player(pindex) then
       return
    end
    if players[pindex].in_menu and players[pindex].menu == "train_menu" then
       train_menu_up(pindex)
-   elseif players[pindex].cursor then
-      move_key(dirs.north,event, true)
-   else
-      printout("Up arrow pressed",pindex)
    end
 end)
 
-script.on_event("down-arrow", function(event)
+script.on_event("train-menu-down", function(event)
    local pindex = event.player_index
    if not check_for_player(pindex) then
       return
    end
    if players[pindex].in_menu and players[pindex].menu == "train_menu" then
       train_menu_down(pindex)
-   elseif players[pindex].cursor then
+   end
+end)
+
+script.on_event("cursor-one-tile-north", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].cursor then
+      move_key(dirs.north,event, true)
+   end
+end)
+
+script.on_event("cursor-one-tile-south", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].cursor then
       move_key(dirs.south,event, true)
-   else
-      printout("Down arrow pressed",pindex)
    end
 end)
 
-script.on_event("left-arrow", function(event)
+script.on_event("cursor-one-tile-east", function(event)
    local pindex = event.player_index
    if not check_for_player(pindex) then
       return
    end
-   if players[pindex].in_menu and players[pindex].menu == "train_menu" then
-      train_menu_up(pindex)
-   elseif players[pindex].cursor then
-      move_key(dirs.west,event, true)
-   else
-      printout("Left arrow pressed",pindex)
-   end
-end)
-
-script.on_event("right-arrow", function(event)
-   local pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   if players[pindex].in_menu and players[pindex].menu == "train_menu" then
-      train_menu_up(pindex)
-   elseif players[pindex].cursor then
+   if players[pindex].cursor then
       move_key(dirs.east,event, true)
-   else
-      printout("Right arrow pressed",pindex)
    end
 end)
 
-script.on_event("control-left", function(event)
+script.on_event("cursor-one-tile-west", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].cursor then
+      move_key(dirs.west,event, true)
+   end
+end)
+
+script.on_event("set-splitter-input-priority-left", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local ent = get_selected_ent(pindex)
+   if not ent then
+      return
+   elseif ent.name == "splitter" then
+      local result = set_splitter_priority(ent, true, true, nil)
+      printout(result,pindex)
+   end
+end
+)
+
+script.on_event("set-splitter-input-priority-right", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local ent =  get_selected_ent(pindex)
+   if not ent then
+      return
+   elseif ent.name == "splitter" then
+      local result = set_splitter_priority(ent, true, false, nil)
+      printout(result,pindex)
+   end
+end
+)
+
+script.on_event("set-splitter-output-priority-left", function(event)
    local pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -8343,17 +8375,13 @@ script.on_event("control-left", function(event)
    if not ent then
       return
    end
-   --Build left turns on end rails
-   if ent.name == "straight-rail" then
-      build_rail_turn_left_45_degrees(ent, pindex)
-   elseif ent.name == "splitter" then
+   if ent.name == "splitter" then
       local result = set_splitter_priority(ent, false, true, nil)
       printout(result,pindex)
    end
 end)
 
-
-script.on_event("control-right", function(event)
+script.on_event("set-splitter-output-priority-right", function(event)
    local pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -8363,14 +8391,41 @@ script.on_event("control-right", function(event)
       return
    end
    --Build left turns on end rails
-   if ent.name == "straight-rail" then
-      build_rail_turn_right_45_degrees(ent, pindex)
-   elseif ent.name == "splitter" then
+   if ent.name == "splitter" then
       local result = set_splitter_priority(ent, false, false, nil)
       printout(result,pindex)
    end
 end)
 
+script.on_event("set-splitter-filter", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+
+   if players[pindex].in_menu then
+      if players[pindex].menu == "building" then
+         return
+      end
+   else
+      --Not in a menu
+      local stack = game.get_player(pindex).cursor_stack
+      local ent =  get_selected_ent(pindex)
+      if stack == nil or not stack.valid_for_read or not stack.valid then
+         if ent and ent.name == "splitter" then
+            --Clear the filter
+            local result = set_splitter_priority(ent, nil, nil, nil, true)
+            printout(result,pindex)
+         end
+         return
+      elseif ent and ent.name == "splitter" then
+         --Set the filter
+         local result = set_splitter_priority(ent, nil, nil, stack)
+         printout(result,pindex)
+      end
+   end
+end
+)
 
 -- G is used to connect rolling stock
 script.on_event("g-key", function(event)
@@ -9552,37 +9607,6 @@ function set_splitter_priority(splitter, is_input, is_left, filter_item_stack, c
    
    return result
 end
-
-
-script.on_event("shift-left", function(event)
-   pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   local ent = get_selected_ent(pindex)
-   if not ent then
-      return
-   elseif ent.name == "splitter" then
-      local result = set_splitter_priority(ent, true, true, nil)
-      printout(result,pindex)
-   end
-end
-)
-
-script.on_event("shift-right", function(event)
-   pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   local ent =  get_selected_ent(pindex)
-   if not ent then
-      return
-   elseif ent.name == "splitter" then
-      local result = set_splitter_priority(ent, true, false, nil)
-      printout(result,pindex)
-   end
-end
-)
 
 function rotate_90(dir)
    return (dir + dirs.east) % (2 * dirs.south)
