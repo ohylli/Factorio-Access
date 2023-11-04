@@ -6274,6 +6274,19 @@ script.on_event("cut-paste-tool-comment", function(event)
    end
 end)
 
+--Mines an entity with the right sound
+function try_to_mine_with_sound(ent,pindex)
+   if ent ~= nil and ent.valid and ((ent.destructible and ent.type ~= "resource") or ent.name == "item-on-ground") then 
+	 local ent_name = ent.name
+	 if game.get_player(pindex).mine_entity(ent,false) and game.is_valid_sound_path("entity-mined/" .. ent_name) then 
+	    game.get_player(pindex).play_sound{path = "entity-mined/" .. ent_name} 
+		return true
+	 else
+      return false
+	 end
+   end
+end
+
 script.on_event("menu-click", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -6733,20 +6746,6 @@ script.on_event("entity-click", function(event)
 end
 )
 
---Mines an entity with the right sound
-function try_to_mine_with_sound(ent,pindex)
-   if ent ~= nil and ent.valid and ((ent.destructible and ent.type ~= "resource") or ent.name == "item-on-ground") then 
-	 local ent_name = ent.name
-	 if game.get_player(pindex).mine_entity(ent,false) and game.is_valid_sound_path("entity-mined/" .. ent_name) then 
-	    game.get_player(pindex).play_sound{path = "entity-mined/" .. ent_name} 
-		return true
-	 else
-      return false
-	 end
-   end
-end
-
-
 --[[Attempts to build the item in hand.
 * Does nothing if the hand is empty or the item is not a place-able entity.
 * If the item is an offshore pump, calls a different, special function for it.
@@ -7101,7 +7100,7 @@ end
 )
 
 
-script.on_event("equip-item-while-in-inventory", function(event)
+script.on_event("inventory-equip-item-in-hand", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -7189,7 +7188,7 @@ script.on_event("set-splitter-filter", function(event)
 
    if players[pindex].in_menu then
       if players[pindex].menu == "building" then
-         do_multi_stack_transfer(1,pindex)
+         return
       end
    else
       --Not in a menu
@@ -7330,7 +7329,7 @@ function transfer_inventory(args)
    return res, full
 end
 
-script.on_event("right-click", function(event)
+script.on_event("menu-right-click", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -7395,11 +7394,21 @@ script.on_event("right-click", function(event)
                printout("Filter cleared.", pindex)
             end
          end
-
       end
-   elseif stack.valid and stack.valid_for_read and stack.name == "rail" then
-      --Append rail
-      build_item_in_hand(pindex, 0)
+   end
+end
+)
+
+--Reads the entity status but also adds on extra info depending on the entity
+script.on_event("read-entity-status", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local ent = get_selected_ent(pindex)
+   local stack = game.get_player(pindex).cursor_stack
+   if players[pindex].in_menu then
+      return
    elseif ent then
       --Print out the status of a machine, if it exists.
       local result = ""
@@ -7551,7 +7560,7 @@ function into_lookup(array)
     return lookup
 end
 
-script.on_event("rotate-building", function(event)
+script.on_event("rotate-building-access", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -7612,27 +7621,44 @@ script.on_event("rotate-building", function(event)
       else
          print("not a valid stack for rotating", pindex)
       end
+   end
+   sync_build_arrow(pindex)
+end
+)
+
+script.on_event("inventory-read-weapon-data", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if not(players[pindex].in_menu) then
+      return
    elseif players[pindex].menu == "inventory" then
       --Read Weapon data
 	  local result = read_weapons_and_ammo(pindex)
 	  --game.get_player(pindex).print(result)--
 	  printout(result,pindex)
    end
-   sync_build_arrow(pindex)
 end
 )
 
---Reads the custom written description for an item, called with L Key
-script.on_event("item-info", function(event)
+--Reads the custom info for a vehicle
+script.on_event("vehicle-info", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
    end
    if game.get_player(pindex).driving then
       printout(vehicle_info(pindex),pindex)
+   end
+end
+
+--Reads the custom written description for an item
+script.on_event("item-info", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
       return
    end
-   
    local offset = 0
    if players[pindex].menu == "building" and players[pindex].building.recipe_list ~= nil then
       offset = 1
@@ -7658,7 +7684,7 @@ script.on_event("item-info", function(event)
             printout("Blank", pindex)
          end
 
-      elseif players[pindex].menu == "technology" then
+      elseif players[pindex].menu == "technology" then --***todo bug reported in tech menu for reading research for logistics robots
          local techs = {}
          if players[pindex].technology.category == 1 then
             techs = players[pindex].technology.lua_researchable
@@ -7734,7 +7760,7 @@ end
 
 --Gives in-game time. The night darkness is from 11 to 13, and peak daylight hours are 18 to 6.
 --For realism, if we adjust by 12 hours, we get 23 to 1 as midnight and 6 to 18 as peak solar.
-script.on_event("time", function(event)
+script.on_event("read-time-and-research-progress", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -7880,7 +7906,7 @@ script.on_event(defines.events.on_gui_closed, function(event)
 end
 )
 
-script.on_event("save", function(event)
+script.on_event("save-game-manually", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
