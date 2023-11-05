@@ -5171,7 +5171,7 @@ script.on_event("read-cursor-distance-and-direction", function(event)
 end)
 
 --Returns the cursor to the player position.
-script.on_event("jump-to-player", function(event)
+script.on_event("return-cursor-to-player", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -5180,34 +5180,6 @@ script.on_event("jump-to-player", function(event)
    if not (players[pindex].in_menu) then
       if players[pindex].cursor then jump_to_player(pindex)
       end
-   end
-end)
-
-script.on_event("read-rail-structure-ahead", function(event)--*** verify bug reported here
-   pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   local ent = get_selected_ent(pindex) 
-   if game.get_player(pindex).driving and game.get_player(pindex).vehicle.train ~= nil then
-      train_read_next_rail_entity_ahead(pindex,false)
-   elseif ent ~= nil and ent.valid and (ent.name == "straight-rail" or ent.name == "curved-rail") then
-      --Report what is along the rail
-      rail_read_next_rail_entity_ahead(pindex, ent, true)
-   end
-end)
-
-script.on_event("read-rail-structure-behind", function(event)
-   pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   local ent = get_selected_ent(index)
-   if game.get_player(pindex).driving and game.get_player(pindex).vehicle.train ~= nil then
-      train_read_next_rail_entity_ahead(pindex,true)
-   elseif ent ~= nil and ent.valid and (ent.name == "straight-rail" or ent.name == "curved-rail") then
-      --Report what is along the rail
-      rail_read_next_rail_entity_ahead(pindex, ent, false)
    end
 end)
 
@@ -5422,6 +5394,34 @@ script.on_event("decrease-train-wait-times-by-60", function(event)
    end
    if players[pindex].in_menu and players[pindex].menu == "train_menu" then 
       change_instant_schedule_wait_time(-60,pindex)
+   end
+end)
+
+script.on_event("read-rail-structure-ahead", function(event)--*** verify bug reported here
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local ent = get_selected_ent(pindex) 
+   if game.get_player(pindex).driving and game.get_player(pindex).vehicle.train ~= nil then
+      train_read_next_rail_entity_ahead(pindex,false)
+   elseif ent ~= nil and ent.valid and (ent.name == "straight-rail" or ent.name == "curved-rail") then
+      --Report what is along the rail
+      rail_read_next_rail_entity_ahead(pindex, ent, true)
+   end
+end)
+
+script.on_event("read-rail-structure-behind", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local ent = get_selected_ent(index)
+   if game.get_player(pindex).driving and game.get_player(pindex).vehicle.train ~= nil then
+      train_read_next_rail_entity_ahead(pindex,true)
+   elseif ent ~= nil and ent.valid and (ent.name == "straight-rail" or ent.name == "curved-rail") then
+      --Report what is along the rail
+      rail_read_next_rail_entity_ahead(pindex, ent, false)
    end
 end)
 
@@ -5775,6 +5775,9 @@ script.on_event("close-menu", function(event)
    if not check_for_player(pindex) then
       return
    end
+   if not players[pindex].in_menu then
+      return
+   end
    if players[pindex].menu ~= "prompt" then
       printout("Menu closed.", pindex)
       players[pindex].in_menu = false
@@ -5803,8 +5806,6 @@ script.on_event("close-menu", function(event)
       players[pindex].item_selector = {index = 0, group = 0, subgroup = 0}
    end
 end)
-
-
 
 script.on_event("quickbar-1", function(event)
    pindex = event.player_index
