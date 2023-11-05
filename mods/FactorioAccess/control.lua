@@ -4983,7 +4983,6 @@ function move(direction,pindex)
    elseif game.get_player(pindex).driving then
       return
    end
-   players[pindex].allow_reading_flying_text = true
    local first_player = game.get_player(pindex)
    local pos = players[pindex].position
    local new_pos = offset_position(pos,direction,1)
@@ -5045,6 +5044,12 @@ function move(direction,pindex)
          players[pindex].building_direction = math.floor(players[pindex].player_direction / dirs.east)--laterdo might need to correct this if we redesign the build_direction
       end
    end
+   
+   --Unless the cut-paste tool is in hand, restore the reading of flying text 
+   local stack = game.get_player(pindex).cursor_stack
+   if not (stack.valid_for_read and stack.name == "cut-paste-tool") then
+      players[pindex].allow_reading_flying_text = true
+   end
 end
 
 
@@ -5102,14 +5107,14 @@ script.on_event(defines.events.on_player_driving_changed_state, function(event)
    if game.get_player(pindex).driving then
       players[pindex].last_vehicle = game.get_player(pindex).vehicle
       printout("Entered " .. game.get_player(pindex).vehicle.name ,pindex)
-	  if players[pindex].last_vehicle.train ~= nil and players[pindex].last_vehicle.train.schedule == nil then
-	     players[pindex].last_vehicle.train.manual_mode = true
-	  end
+      if players[pindex].last_vehicle.train ~= nil and players[pindex].last_vehicle.train.schedule == nil then
+         players[pindex].last_vehicle.train.manual_mode = true
+      end
    elseif players[pindex].last_vehicle ~= nil then
       printout("Exited " .. players[pindex].last_vehicle.name ,pindex)
-	  if players[pindex].last_vehicle.train ~= nil and players[pindex].last_vehicle.train.schedule == nil then
-	     players[pindex].last_vehicle.train.manual_mode = true
-	  end
+      if players[pindex].last_vehicle.train ~= nil and players[pindex].last_vehicle.train.schedule == nil then
+         players[pindex].last_vehicle.train.manual_mode = true
+      end
       teleport_to_closest(pindex, players[pindex].last_vehicle.position, true)
       if players[pindex].menu == "train_menu" then
          train_menu_close(pindex, false)
@@ -5176,7 +5181,7 @@ script.on_event("jump-to-player", function(event)
    end
 end)
 
-script.on_event("read-rail-structure-ahead", function(event)
+script.on_event("read-rail-structure-ahead", function(event)--*** verify bug reported here
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -7236,6 +7241,7 @@ script.on_event("transfer-all-stacks", function(event)
    end
 end)
 
+--Default is control clicking
 script.on_event("free-place-straight-rail", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -7979,6 +7985,7 @@ script.on_event("save-game-manually", function(event)
 
 end)
 
+--Reads flying text
 script.on_nth_tick(10, function(event)
    for pindex, player in pairs(players) do
       if player.allow_reading_flying_text == nil or player.allow_reading_flying_text == true then
