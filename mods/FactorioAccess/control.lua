@@ -1290,6 +1290,7 @@ function read_travel_slot(pindex)
       printout(entry.name .. " at " .. math.floor(entry.position.x) .. ", " .. math.floor(entry.position.y), pindex)
    end
 end
+
 function teleport_to_closest(pindex, pos, muted)
    local pos = table.deepcopy(pos)
    local muted = muted or false
@@ -1397,8 +1398,6 @@ function get_line_items(network)
       return k1.percent > k2.percent
    end)
 
-
-
    local dict = {}
    for i, line in pairs(network.downstream.right) do
       for name, count in pairs(line.get_contents()) do
@@ -1497,6 +1496,7 @@ function get_line_items(network)
    return result
 
 end
+
 function generate_production_network(pindex)
    local surf = game.get_player(pindex).surface
    local connectors = surf.find_entities_filtered{type="inserter"}
@@ -2022,6 +2022,7 @@ function get_connected_belts(B)
 
    return {hash = hash, ents = result}
 end
+
 function prune_item_groups(array)
    if #groups == 0 then
       local dict = game.item_prototypes
@@ -2294,6 +2295,7 @@ function get_power_string(power)
    end
    return result
 end
+
 function get_adjacent_source(box, pos, dir)
    local result = {position = pos, direction = ""}
    ebox = table.deepcopy(box)
@@ -2324,6 +2326,7 @@ function get_adjacent_source(box, pos, dir)
    end
    return result
 end
+
 function read_technology_slot(pindex, start_phrase)
    start_phrase = start_phrase or ""
    local techs = {}
@@ -2346,6 +2349,7 @@ function read_technology_slot(pindex, start_phrase)
       printout("No technologies in this category yet", pindex)
    end
 end
+
 function populate_categories(pindex)
    players[pindex].nearby.resources = {}
    players[pindex].nearby.containers = {}
@@ -2375,6 +2379,7 @@ function populate_categories(pindex)
       end
    end
 end
+
 function read_belt_slot(pindex, start_phrase)
    start_phrase = start_phrase or ""
    local stack = nil
@@ -2474,8 +2479,7 @@ function read_building_recipe(pindex, start_phrase)
       end
    end
 end
-   
-   
+      
 
 function read_building_slot(pindex, prefix_inventory_size_and_name)
    building_sector=players[pindex].building.sectors[players[pindex].building.sector]
@@ -2644,6 +2648,7 @@ function get_recipes(pindex, building)
    end
    return result
 end
+
 function get_tile_dimensions(item, dir)
    if item.place_result ~= nil then
       local dimensions = item.place_result.selection_box
@@ -2703,8 +2708,6 @@ function read_crafting_slot(pindex, start_phrase)
       printout("Blank",pindex)
    end
 end
-
-
 
 function read_inventory_slot(pindex, start_phrase)
    start_phrase = start_phrase or ""
@@ -2783,6 +2786,7 @@ function target(pindex)
          move_cursor_map(players[pindex].cursor_pos, pindex)
    end
 end
+
 function move_cursor_map(position,pindex)
    local player = players[pindex]
    local pixels = mult_position( sub_position(position, player.position), 32*player.zoom)
@@ -2791,6 +2795,7 @@ function move_cursor_map(position,pindex)
    pixels = add_position(pixels,mult_position(screen,0.5))
    move_cursor(pixels.x, pixels.y, pindex)
 end
+
 function move_cursor(x,y, pindex)
    if x >= 0 and y >=0 and x < game.players[pindex].display_resolution.width and y < game.players[pindex].display_resolution.height then
       print ("setCursor " .. pindex .. " " .. math.ceil(x) .. "," .. math.ceil(y))
@@ -2811,8 +2816,6 @@ function tile_cycle(pindex)
    end
 end
       
-
-
 function check_for_player(index)
    if not players then
       global.players = global.players or {}
@@ -3044,8 +3047,6 @@ function scan_middle(pindex)
       scan_middle(pindex)
    end
  end
-
-
 
 function rescan(pindex)
    players[pindex].nearby.index = 1
@@ -9695,5 +9696,4 @@ function update_overhead_sprite(sprite, scale_in, radius_in, pindex)
       rendering.set_visible(player.overhead_sprite,true)
    end
 end
-
 
