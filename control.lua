@@ -5178,7 +5178,8 @@ script.on_event("return-cursor-to-player", function(event)
    end
    local ent = get_selected_ent(pindex) 
    if not (players[pindex].in_menu) then
-      if players[pindex].cursor then jump_to_player(pindex)
+      if players[pindex].cursor then 
+         jump_to_player(pindex)
       end
    end
 end)
@@ -7623,7 +7624,7 @@ function into_lookup(array)
     return lookup
 end
 
-script.on_event("rotate-building-access", function(event)
+script.on_event("rotate-building", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -7688,7 +7689,7 @@ script.on_event("rotate-building-access", function(event)
    sync_build_arrow(pindex)
 end)
 
-script.on_event("inventory-read-weapon-data", function(event)
+script.on_event("inventory-read-weapons-data", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -7728,21 +7729,14 @@ script.on_event("inventory-remove-all-weapons-and-ammo", function(event)
    end
 end)
 
---Reads the custom info for a vehicle
-script.on_event("vehicle-info", function(event)
+--Reads the custom info for an item selected. If you are driving, it returns custom vehicle info
+script.on_event("item-info", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
    end
-   if game.get_player(pindex).driving then
+   if game.get_player(pindex).driving and players[pindex].menu ~= "train_menu" then
       printout(vehicle_info(pindex),pindex)
-   end
-end)
-
---Reads the custom written description for an item
-script.on_event("item-info", function(event)
-   pindex = event.player_index
-   if not check_for_player(pindex) then
       return
    end
    local offset = 0
@@ -7759,13 +7753,13 @@ script.on_event("item-info", function(event)
       if players[pindex].menu == "inventory" or (players[pindex].menu == "building" and players[pindex].building.sector > offset + #players[pindex].building.sectors) then
          local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
          if stack.valid_for_read and stack.valid == true then
-                     local str = ""
-                  if stack.prototype.place_result ~= nil then
-                     str = stack.prototype.place_result.localised_description
-                  else
-                     str = stack.prototype.localised_description
-                  end
-                  printout(str, pindex)
+            local str = ""
+            if stack.prototype.place_result ~= nil then
+               str = stack.prototype.place_result.localised_description
+            else
+               str = stack.prototype.localised_description
+            end
+            printout(str, pindex)
          else
             printout("Blank", pindex)
          end
