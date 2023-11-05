@@ -737,6 +737,27 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "inventory-read-weapons-data",
+    key_sequence = "R",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "inventory-reload weapons",
+    key_sequence = "SHIFT + R",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "inventory-remove-all-weapons-and-ammo",
+    key_sequence = "CONTROL + SHIFT + R",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "item-info",
     key_sequence = "L",
     consuming = "none"
