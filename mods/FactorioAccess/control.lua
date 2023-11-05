@@ -5060,9 +5060,10 @@ function move_key(direction,event, force_single_tile)
    end
    local single_only = force_single_tile or false
    if players[pindex].in_menu and players[pindex].menu ~= "prompt" then
+      -- Menus: move menu cursor
       menu_cursor_move(direction,pindex)
    elseif players[pindex].cursor then
-      -- Cursor Mode
+      -- Cursor mode: Move cursor on map
       local diff = players[pindex].cursor_size * 2 + 1
       if single_only then
          diff = 1
@@ -5093,6 +5094,7 @@ function move_key(direction,event, force_single_tile)
          printout(scan_summary,pindex)
       end
    else
+      -- General case: Move character
       move(direction,pindex)
    end
 end
@@ -8601,7 +8603,7 @@ script.on_event(defines.events.on_gui_opened, function(event)
       return
    end
    if event.gui_type == defines.gui_type.controller and players[event.player_index].menu == "none" then
-      game.get_player(event.player_index).opened = nil
+      game.get_player(event.player_index).opened = nil --**note: we may prefer to have some GUI's stay open.
       --printout("Banana",event.player_index)
    elseif game.get_player(event.player_index).opened ~= nil then
       players[event.player_index].in_menu = true
@@ -8900,7 +8902,7 @@ script.on_event(defines.events.on_entity_destroyed,function(event) --DOES NOT HA
    players[pindex].destroyed[event.registration_number] = nil
 end)
 
---Scripts regarding train state changes
+--Scripts regarding train state changes. NOTE: NO PINDEX
 script.on_event(defines.events.on_train_changed_state,function(event)
    if event.train.state == defines.train_state.no_schedule then
       --Trains with no schedule are set back to manual mode
