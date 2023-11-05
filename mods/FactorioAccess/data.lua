@@ -124,7 +124,7 @@ data:extend({
    preload = true
 },
 
-  {
+{
     type = "custom-input",
     name = "cursor-up",
     key_sequence = "W",
@@ -183,36 +183,35 @@ data:extend({
     key_sequence = "K",
     consuming = "none"
 },
+
 {
     type = "custom-input",
-    name = "shift-k",
+    name = "read-cursor-distance-and-direction",
     key_sequence = "SHIFT + K",
     consuming = "none"
 },
+
 {
     type = "custom-input",
-    name = "jump-to-player",
+    name = "return-cursor-to-player",
     key_sequence = "J",
     consuming = "none"
 },
+
 {
     type = "custom-input",
-    name = "shift-j",
-    key_sequence = "SHIFT + J",
-    consuming = "none"
-},
-{
-    type = "custom-input",
-    name = "control-j",
+    name = "release-cursor",
     key_sequence = "CONTROL + J",
     consuming = "none"
 },
+
 {
     type = "custom-input",
     name = "teleport-to-cursor",
     key_sequence = "SHIFT + T",
     consuming = "none"
 },
+
 {
     type = "custom-input",
     name = "toggle-cursor",
@@ -231,6 +230,106 @@ data:extend({
     type = "custom-input",
     name = "cursor-size-decrement",
     key_sequence = "CONTROL + SHIFT + I",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "increase-inventory-bar-by-1",
+    key_sequence = "PAGEUP",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "increase-inventory-bar-by-5",
+    key_sequence = "SHIFT + PAGEUP",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "increase-inventory-bar-by-100",
+    key_sequence = "CONTROL + PAGEUP",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "decrease-inventory-bar-by-1",
+    key_sequence = "PAGEDOWN",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "decrease-inventory-bar-by-5",
+    key_sequence = "SHIFT + PAGEDOWN",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "decrease-inventory-bar-by-100",
+    key_sequence = "CONTROL + PAGEDOWN",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "increase-train-wait-times-by-5",
+    key_sequence = "PAGEUP",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "increase-train-wait-times-by-60",
+    key_sequence = "CONTROL + PAGEUP",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "decrease-train-wait-times-by-5",
+    key_sequence = "PAGEDOWN",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "decrease-train-wait-times-by-60",
+    key_sequence = "CONTROL + PAGEDOWN",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "read-rail-structure-ahead",
+    key_sequence = "J",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "read-rail-structure-behind",
+    key_sequence = "SHIFT + J",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "recalibrate",--Note: This is about zoom
+    key_sequence = "CONTROL + END",
+    alternative_key_sequence = "CONTROL + RCTRL",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "rescan",
+    key_sequence = "END",
+    alternative_key_sequence = "RCTRL",
     consuming = "none"
 },
 
@@ -267,64 +366,6 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "repeat-last-spoken",
-    key_sequence = "CONTROL + TAB",
-    consuming = "none"
-}
-,
-{
-    type = "custom-input",
-    name = "tile-cycle",
-    key_sequence = "F",
-    consuming = "none"
-},
-
-{
-    type = "custom-input",
-    name = "rescan",
-    key_sequence = "END",
-    alternative_key_sequence = "RCTRL",
-    consuming = "none"
-},
-
-{
-    type = "custom-input",
-    name = "recalibrate",
-    key_sequence = "CONTROL + END",
-    alternative_key_sequence = "CONTROL + RCTRL",
-    consuming = "none"
-},
-
-{
-    type = "custom-input",
-    name = "up-arrow",
-    key_sequence = "UP",
-    consuming = "none"
-},
-
-{
-    type = "custom-input",
-    name = "down-arrow",
-    key_sequence = "DOWN",
-    consuming = "none"
-},
-
-{
-    type = "custom-input",
-    name = "left-arrow",
-    key_sequence = "LEFT",
-    consuming = "none"
-},
-
-{
-    type = "custom-input",
-    name = "right-arrow",
-    key_sequence = "RIGHT",
-    consuming = "none"
-},
-
-{
-    type = "custom-input",
     name = "scan-category-up",
     key_sequence = "CONTROL + PAGEUP",
     alternative_key_sequence = "CONTROL + UP",
@@ -346,7 +387,6 @@ data:extend({
     consuming = "none"
 },
 
-
 {
     type = "custom-input",
     name = "scan-mode-down",
@@ -367,6 +407,34 @@ data:extend({
     name = "scan-selection-down",
     key_sequence = "SHIFT + PAGEDOWN",
     alternative_key_sequence = "SHIFT + DOWN",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "repeat-last-spoken",
+    key_sequence = "CONTROL + TAB",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "tile-cycle",
+    key_sequence = "F",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "open-inventory",
+    key_sequence = "E",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "close-menu",
+    key_sequence = "E",
     consuming = "none"
 },
 
@@ -510,18 +578,23 @@ data:extend({
     consuming = "none"
 },
 
-
-
 {
     type = "custom-input",
-    name = "open-inventory",
-    key_sequence = "E",
+    name = "switch-menu-or-gun",
+    key_sequence = "TAB",
     consuming = "none"
 },
 
 {
     type = "custom-input",
-    name = "mine-access",
+    name = "reverse-switch-menu-or-gun",
+    key_sequence = "SHIFT + TAB",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "mine-access-sounds",
     key_sequence = "X",
     linked_game_control = "mine",
     consuming = "none"
@@ -529,68 +602,23 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "mine-group",
+    name = "mine-tiles",
+    key_sequence = "X",
+    linked_game_control = "mine",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "mine-area",
     key_sequence = "SHIFT + X",
     consuming = "none"
 },
 
 {
     type = "custom-input",
-    name = "control-x",
+    name = "cut-paste-tool-comment",
     key_sequence = "CONTROL + X",
-    consuming = "none"
-},
-
-{
-    type = "custom-input",
-    name = "switch-menu",
-    key_sequence = "TAB",
-    consuming = "none"
-},
-
-
-{
-    type = "custom-input",
-    name = "reverse-switch-menu",
-    key_sequence = "SHIFT + TAB",
-    consuming = "none"
-},
-
-
-{
-    type = "custom-input",
-    name = "left-click",
-    key_sequence = "LEFTBRACKET",
-    --alternative_key_sequence = "mouse-button-1",
-    consuming = "none"
-},
-
-
-{
-    type = "custom-input",
-    name = "right-click",
-    key_sequence = "RIGHTBRACKET",
-    consuming = "none"
-},
-
-{
-    type = "custom-input",
-    name = "shift-click",
-    key_sequence = "SHIFT + LEFTBRACKET",
-    consuming = "none"
-},
-
-{
-    type = "custom-input",
-    name = "control-click",
-    key_sequence = "CONTROL + LEFTBRACKET",
-    consuming = "none"
-},
-
-{
-    type = "custom-input",
-    name = "control-right-click",
-    key_sequence = "CONTROL + RIGHTBRACKET",
     consuming = "none"
 },
 
@@ -614,48 +642,6 @@ data:extend({
     key_sequence = "R",
     linked_game_control = "rotate",
     consuming = "game-only"
-},
-
-{
-    type = "custom-input",
-    name = "shift-r",
-    key_sequence = "SHIFT + R",
-    consuming = "none"
-},
-
-{
-    type = "custom-input",
-    name = "control-r",
-    key_sequence = "CONTROL + R",
-    consuming = "none"
-},
-
-{
-    type = "custom-input",
-    name = "control-shift-r",
-    key_sequence = "CONTROL + SHIFT + R",
-    consuming = "none"
-},
-
-{
-    type = "custom-input",
-    name = "prompt",
-    key_sequence = "SPACE",
-    consuming = "none"
-},
-
-{
-    type = "custom-input",
-    name = "time",
-    key_sequence = "T",
-    consuming = "none"
-},
-
-{
-    type = "custom-input",
-    name = "save",
-    key_sequence = "F1",
-    consuming = "none"
 },
 
 {
@@ -738,62 +724,6 @@ data:extend({
     type = "custom-input",
     name = "open-structure-travel",
     key_sequence = "CONTROL + S",
-    consuming = "none"
-},
-
-{
-    type = "custom-input",
-    name = "g-key",
-    key_sequence = "G",
-    consuming = "none"
-},
-
-{
-    type = "custom-input",
-    name = "shift-g-key",
-    key_sequence = "SHIFT + G",
-    consuming = "none"
-},
-
-{
-    type = "custom-input",
-    name = "control-g-key",
-    key_sequence = "CONTROL + G",
-    consuming = "none"
-},
-
-{
-    type = "custom-input",
-    name = "control-shift-g-key",
-    key_sequence = "CONTROL + SHIFT + G",
-    consuming = "none"
-},
-
-{
-    type = "custom-input",
-    name = "control-left",
-    key_sequence = "CONTROL + LEFT",
-    consuming = "none"
-},
-
-{
-    type = "custom-input",
-    name = "control-right",
-    key_sequence = "CONTROL + RIGHT",
-    consuming = "none"
-},
-
-{
-    type = "custom-input",
-    name = "shift-left",
-    key_sequence = "SHIFT + LEFT",
-    consuming = "none"
-},
-
-{
-    type = "custom-input",
-    name = "shift-right",
-    key_sequence = "SHIFT + RIGHT",
     consuming = "none"
 },
 
