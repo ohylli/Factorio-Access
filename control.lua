@@ -6227,7 +6227,7 @@ script.on_event("mine-tiles", function(event)
 end)
 
 --Mines groups of entities depending on the name or type. Includes trees and rocks, rails.
-script.on_event("mine-group", function(event) --laterdo** proper tallying of cleared_total 
+script.on_event("mine-area", function(event) --laterdo** proper tallying of cleared_total 
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -6637,7 +6637,7 @@ script.on_event("menu-click", function(event)
 end)
 
 --Includes building previewed buildings, throwing capsules, etc.
-script.on_event("hand-stack-click", function(event)
+script.on_event("hand-click", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -7070,7 +7070,7 @@ function build_offshore_pump_in_hand(pindex)
 end
 
 
-script.on_event("menu-shift-click", function(event)
+script.on_event("crafting-all", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -7382,7 +7382,7 @@ function transfer_inventory(args)
    return res, full
 end
 
-script.on_event("menu-right-click", function(event)
+script.on_event("crafting-5", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -7415,7 +7415,19 @@ script.on_event("menu-right-click", function(event)
             load_crafting_queue(pindex)
             read_crafting_queue(pindex)
          end
-      elseif players[pindex].menu == "building" then
+      end
+   end
+end)
+
+script.on_event("menu-clear-filter", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local ent = get_selected_ent(pindex)
+   local stack = game.get_player(pindex).cursor_stack
+   if players[pindex].in_menu then
+      if players[pindex].menu == "building" then
          local stack = game.get_player(pindex).cursor_stack
          if players[pindex].building.sector <= #players[pindex].building.sectors then
             if stack.valid_for_read and stack.valid and stack.count > 0 then
