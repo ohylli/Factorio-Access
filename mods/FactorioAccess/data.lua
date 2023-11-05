@@ -624,6 +624,119 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "menu-click",
+    key_sequence = "LEFTBRACKET",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "hand-click",
+    key_sequence = "LEFTBRACKET",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "entity-click",
+    key_sequence = "LEFTBRACKET",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "crafting-all",
+    key_sequence = "SHIFT + LEFTBRACKET",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "transfer-one-stack",
+    key_sequence = "SHIFT + LEFTBRACKET",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "inventory-equip-item-in-hand",
+    key_sequence = "SHIFT + LEFTBRACKET",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "open-rail-builder",
+    key_sequence = "SHIFT + LEFTBRACKET",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "quick-build-rail-left-turn",
+    key_sequence = "CONTROL + LEFT",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "quick-build-rail-right-turn",
+    key_sequence = "CONTROL + RIGHT",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "transfer-all-stacks",
+    key_sequence = "CONTROL + LEFTBRACKET",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "free-place-straight-rail",
+    key_sequence = "CONTROL + LEFTBRACKET",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "transfer-half-of-all-stacks",
+    key_sequence = "CONTROL + RIGHTBRACKET",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "crafting-5",
+    key_sequence = "RIGHTBRACKET",
+    consuming = "none"
+},
+
+{
+    type = "menu-clear-filter",
+    name = "crafting-5",
+    key_sequence = "RIGHTBRACKET",
+    consuming = "none"
+},
+
+{
+    type = "read-entity-status",
+    name = "crafting-5",
+    key_sequence = "RIGHTBRACKET",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "rotate-building",
+    key_sequence = "R",
+    linked_game_control = "rotate",
+    consuming = "game-only"
+},
+
+{
+    type = "custom-input",
     name = "item-info",
     key_sequence = "L",
     consuming = "none"
@@ -634,14 +747,6 @@ data:extend({
     name = "list-warnings",
     key_sequence = "P",
     consuming = "none"
-},
-
-{
-    type = "custom-input",
-    name = "rotate-building",
-    key_sequence = "R",
-    linked_game_control = "rotate",
-    consuming = "game-only"
 },
 
 {
