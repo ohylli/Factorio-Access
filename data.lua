@@ -319,14 +319,6 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "recalibrate",--Note: This is about zoom
-    key_sequence = "CONTROL + END",
-    alternative_key_sequence = "CONTROL + RCTRL",
-    consuming = "none"
-},
-
-{
-    type = "custom-input",
     name = "rescan",
     key_sequence = "END",
     alternative_key_sequence = "RCTRL",
@@ -765,15 +757,15 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "list-warnings",
-    key_sequence = "P",
+    name = "read-time-and-research-progress",
+    key_sequence = "T",
     consuming = "none"
 },
 
 {
     type = "custom-input",
-    name = "toggle-build-lock",
-    key_sequence = "CONTROL + B",
+    name = "save-game-manually",
+    key_sequence = "F1",
     consuming = "none"
 },
 
@@ -786,6 +778,28 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "toggle-build-lock",
+    key_sequence = "CONTROL + B",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "toggle-vanilla-mode",
+    key_sequence = "CONTROL + ALT + V",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "recalibrate-zoom",
+    key_sequence = "CONTROL + END",
+    alternative_key_sequence = "CONTROL + RCTRL",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "read-hand",
     key_sequence = "Q",
     consuming = "none"
@@ -793,8 +807,148 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "open-fast-travel",
+    name = "open-warnings-menu",
+    key_sequence = "Q",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "open-fast-travel-menu",
     key_sequence = "V",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "open-structure-travel-menu",
+    key_sequence = "CONTROL + S",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "train-menu-up",
+    key_sequence = "UP",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "train-menu-down",
+    key_sequence = "DOWN",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "cursor-one-tile-north",
+    key_sequence = "UP",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "cursor-one-tile-south",
+    key_sequence = "DOWN",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "cursor-one-tile-east",
+    key_sequence = "RIGHT",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "cursor-one-tile-west",
+    key_sequence = "LEFT",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "set-splitter-input-priority-left",
+    key_sequence = "SHIFT + LEFT",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "set-splitter-input-priority-right",
+    key_sequence = "SHIFT + RIGHT",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "set-splitter-output-priority-left",
+    key_sequence = "CONTROL + LEFT",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "set-splitter-output-priority-right",
+    key_sequence = "CONTROL + RIGHT",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "set-splitter-filter",
+    key_sequence = "CONTROL + LEFTBRACKET",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "connect-rail-vehicles",
+    key_sequence = "G",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "disconnect-rail-vehicles",
+    key_sequence = "SHIFT + G",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "inventory-read-armor-stats",
+    key_sequence = "G",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "inventory-read-equipment-list",
+    key_sequence = "SHIFT + G",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "inventory-remove-all-equipment-and-armor",
+    key_sequence = "CONTROL + SHIFT + G",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "debug-test-key",
+    key_sequence = "ALT + G",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "launch-rocket",
+    key_sequence = "SPACE",
     consuming = "none"
 },
 
@@ -843,20 +997,6 @@ data:extend({
     name = "fa-debug-reset-zoom",
     key_sequence = "X",
     linked_game_control = "debug-reset-zoom",
-    consuming = "none"
-},
-
-{
-    type = "custom-input",
-    name = "open-structure-travel",
-    key_sequence = "CONTROL + S",
-    consuming = "none"
-},
-
-{
-    type = "custom-input",
-    name = "toggle-vanilla",
-    key_sequence = "CONTROL + ALT + V",
     consuming = "none"
 }
 

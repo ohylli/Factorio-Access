@@ -8459,19 +8459,6 @@ script.on_event("connect-rail-vehicles", function(event)
    end 
 end)
 
-script.on_event("inventory-read-armor-stats", function(event)
-   local pindex = event.player_index
-   local vehicle = nil
-   if not check_for_player(pindex) or not players[pindex].in_menu then
-      return
-   end
-   if players[pindex].in_menu and players[pindex].menu == "inventory" then
-	  local result = read_armor_stats(pindex)
-	  --game.get_player(pindex).print(result)--
-	  printout(result,pindex)
-   end   
-end)
-
 --SHIFT + G is used to disconnect rolling stock
 script.on_event("disconnect-rail-vehicles", function(event)
    local pindex = event.player_index
@@ -8512,6 +8499,19 @@ script.on_event("disconnect-rail-vehicles", function(event)
          end
       end
    end
+end)
+
+script.on_event("inventory-read-armor-stats", function(event)
+   local pindex = event.player_index
+   local vehicle = nil
+   if not check_for_player(pindex) or not players[pindex].in_menu then
+      return
+   end
+   if players[pindex].in_menu and players[pindex].menu == "inventory" then
+	  local result = read_armor_stats(pindex)
+	  --game.get_player(pindex).print(result)--
+	  printout(result,pindex)
+   end   
 end)
 
 script.on_event("inventory-read-equipment-list", function(event)
