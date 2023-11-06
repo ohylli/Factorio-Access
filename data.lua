@@ -808,7 +808,7 @@ data:extend({
 {
     type = "custom-input",
     name = "open-warnings-menu",
-    key_sequence = "Q",
+    key_sequence = "P",
     consuming = "none"
 },
 
