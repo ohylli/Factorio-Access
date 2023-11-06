@@ -3713,7 +3713,7 @@ function build_preview_checks_info(stack, pindex)
 end
 
 
---Read the current co-ordinates of the cursor on the map or in a menu. Provides extra information in some menus.
+--Read the current co-ordinates of the cursor on the map or in a menu. For crafting recipe and technology menus, it reads the ingredients / requirements instead.
 function read_coords(pindex, start_phrase)
    start_phrase = start_phrase or ""
    local result = start_phrase
@@ -3724,6 +3724,7 @@ function read_coords(pindex, start_phrase)
    end
    if not(players[pindex].in_menu) then
       if game.get_player(pindex).driving then
+         --Give vehicle coords and orientation and speed
          local vehicle = game.get_player(pindex).vehicle
          result = result .. " in " .. vehicle.name .. " "
          if vehicle.speed > 0 then
@@ -3735,12 +3736,13 @@ function read_coords(pindex, start_phrase)
          end
          printout(result .. math.floor(vehicle.position.x) .. ", " .. math.floor(vehicle.position.y), pindex)
       else
+         --Simply give coords
          local location = get_entity_part_at_cursor(pindex)
          if location == nil then
             location = " "
          end
-         --Simply give coords
          result = result .. " " .. location .. ", at " .. math.floor(players[pindex].cursor_pos.x) .. ", " .. math.floor(players[pindex].cursor_pos.y)
+         
          --If there is a build preview, give its dimensions and which way they extend
          local stack = game.get_player(pindex).cursor_stack
          if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and (stack.prototype.place_result.tile_height > 1 or stack.prototype.place_result.tile_width > 1) then
@@ -3779,6 +3781,7 @@ function read_coords(pindex, start_phrase)
          printout(result,pindex)
       end
    elseif players[pindex].menu == "inventory" or (players[pindex].menu == "building" and players[pindex].building.sector > offset + #players[pindex].building.sectors) then
+      --Give slot coords (player inventory)
       local x = players[pindex].inventory.index %10
       local y = math.floor(players[pindex].inventory.index/10) + 1
       if x == 0 then
@@ -3787,26 +3790,20 @@ function read_coords(pindex, start_phrase)
       end
       printout(result .. x .. ", " .. y, pindex)
    elseif players[pindex].menu == "building" and players[pindex].building.recipe_selection == false then
-      local x = -1
-      local y = -1
-      if 1 == 1 then --Setting 1: Chest rows are 8 wide
-         x = players[pindex].building.index %8
-         y = math.floor(players[pindex].building.index/8) + 1
-         if x == 0 then
-            x = x + 8
-            y = y - 1
-         end
-      else --Setting 2: Chest rows are 10 wide
-         x = players[pindex].building.index %10
-         y = math.floor(players[pindex].building.index/10) + 1
-         if x == 0 then
-            x = x + 10
-            y = y - 1
-         end
+      --Give slot coords (chest/building inventory)
+      local x = -1 --Col number
+      local y = -1 --Row number
+      local row_length = 8 --*** todo make faplayer variable
+      x = players[pindex].building.index % row_length
+      y = math.floor(players[pindex].building.index / row_length) + 1
+      if x == 0 then
+         x = x + row_length
+         y = y - 1
       end
       printout(result .. x .. ", " .. y, pindex)
 
    elseif players[pindex].menu == "crafting" then
+      --Read recipe ingredients / products (crafting menu)
       local recipe = players[pindex].crafting.lua_recipes[players[pindex].crafting.category][players[pindex].crafting.index]
       result = result .. "Ingredients: "
       for i, v in pairs(recipe.ingredients) do
@@ -3820,6 +3817,7 @@ function read_coords(pindex, start_phrase)
       printout(result, pindex)
 
    elseif players[pindex].menu == "technology" then
+      --Read research requirements
       local techs = {}
       if players[pindex].technology.category == 1 then
          techs = players[pindex].technology.lua_researchable
@@ -3851,6 +3849,7 @@ function read_coords(pindex, start_phrase)
       end
    end
    if players[pindex].menu == "building" and players[pindex].building.recipe_selection then
+      --Read recipe ingredients / products (building recipe selection)
       local recipe = players[pindex].building.recipe_list[players[pindex].building.category][players[pindex].building.index]
       result = result .. "Ingredients: "
       for i, v in pairs(recipe.ingredients) do
@@ -4170,23 +4169,33 @@ function menu_cursor_up(pindex)
       players[pindex].crafting_queue.index = 1
       read_crafting_queue(pindex)
    elseif players[pindex].menu == "building" then
+      --Move one row up in a building inventory of some kind
       if players[pindex].building.sector <= #players[pindex].building.sectors then
+         --Most building sectors, eg. chest rows
          if players[pindex].building.sectors[players[pindex].building.sector].inventory == nil or #players[pindex].building.sectors[players[pindex].building.sector].inventory < 1 then
             printout("blank", pindex)
             return
          end
-         if #players[pindex].building.sectors[players[pindex].building.sector].inventory > 10 then
+         --Move one row up in building inventory
+         local row_length = 8--todo make faplayer setting***
+         if 1 == 0 then
+            row_length = 10
+         end
+         if #players[pindex].building.sectors[players[pindex].building.sector].inventory > row_length then
             game.get_player(pindex).play_sound{path = "Inventory-Move"}
-            players[pindex].building.index = players[pindex].building.index - 8
-            if players[pindex].building.index < 1 then
+            players[pindex].building.index = players[pindex].building.index - row_length
+            if players[pindex].building.index < 1 then 
+               --Wrap around to the last row
                players[pindex].building.index = players[pindex].building.index + #players[pindex].building.sectors[players[pindex].building.sector].inventory 
             end
          else
+            --Wrap over to slot 1
             game.get_player(pindex).play_sound{path = "Inventory-Move"}
             players[pindex].building.index = 1
          end
          read_building_slot(pindex,false)
       elseif players[pindex].building.recipe_list == nil then
+         --Move one row up in player inventory
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
          players[pindex].inventory.index = players[pindex].inventory.index -10
          if players[pindex].inventory.index < 1 then
@@ -4195,6 +4204,7 @@ function menu_cursor_up(pindex)
          read_inventory_slot(pindex)
       else
          if players[pindex].building.sector == #players[pindex].building.sectors + 1 then
+            --Last building sector. Case = ??? ***
             if players[pindex].building.recipe_selection then
                game.get_player(pindex).play_sound{path = "Inventory-Move"}
                players[pindex].building.category = players[pindex].building.category - 1
@@ -4205,7 +4215,8 @@ function menu_cursor_up(pindex)
             end
             read_building_recipe(pindex)
          else
-      game.get_player(pindex).play_sound{path = "Inventory-Move"}
+            --Case = ???
+            game.get_player(pindex).play_sound{path = "Inventory-Move"}
             players[pindex].inventory.index = players[pindex].inventory.index -10
             if players[pindex].inventory.index < 1 then
                players[pindex].inventory.index = players[pindex].inventory.max + players[pindex].inventory.index
@@ -4359,25 +4370,35 @@ function menu_cursor_down(pindex)
       players[pindex].crafting_queue.index = players[pindex].crafting_queue.max
       read_crafting_queue(pindex)
    elseif players[pindex].menu == "building" then
+      --Move one row down in a building inventory of some kind
       if players[pindex].building.sector <= #players[pindex].building.sectors then
+         --Most building sectors, eg. chest rows
          if players[pindex].building.sectors[players[pindex].building.sector].inventory == nil or #players[pindex].building.sectors[players[pindex].building.sector].inventory < 1 then
             printout("blank", pindex)
             return
          end
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
-         if #players[pindex].building.sectors[players[pindex].building.sector].inventory > 10 then
-            players[pindex].building.index = players[pindex].building.index + 8
+         local row_length = 8--todo make faplayer setting***
+         if 1 == 0 then
+            row_length = 10
+         end
+         if #players[pindex].building.sectors[players[pindex].building.sector].inventory > row_length then
+            --Move one row down
+            players[pindex].building.index = players[pindex].building.index + row_length
             if players[pindex].building.index > #players[pindex].building.sectors[players[pindex].building.sector].inventory then
-               players[pindex].building.index = players[pindex].building.index %8
+               --Wrap around to the first row
+               players[pindex].building.index = players[pindex].building.index % row_length
                if players[pindex].building.index < 1 then
-                  players[pindex].building.index = 8
+                  players[pindex].building.index = row_length
                end
             end
          else
+            --Keep same spot in first row
             players[pindex].building.index = #players[pindex].building.sectors[players[pindex].building.sector].inventory
          end
          read_building_slot(pindex,false)
       elseif players[pindex].building.recipe_list == nil then
+         --Move one row down in player inventory
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
          players[pindex].inventory.index = players[pindex].inventory.index +10
          if players[pindex].inventory.index > players[pindex].inventory.max then
@@ -4390,6 +4411,7 @@ function menu_cursor_down(pindex)
          read_inventory_slot(pindex)
       else
          if players[pindex].building.sector == #players[pindex].building.sectors + 1 then
+            --Last building sector. Case = ??? ***
             if players[pindex].building.recipe_selection then
                game.get_player(pindex).play_sound{path = "Inventory-Move"}
                players[pindex].building.index = 1
@@ -4400,6 +4422,7 @@ function menu_cursor_down(pindex)
             end
             read_building_recipe(pindex)
          else
+            --Case = ???
             game.get_player(pindex).play_sound{path = "Inventory-Move"}
             players[pindex].inventory.index = players[pindex].inventory.index +10
             if players[pindex].inventory.index > players[pindex].inventory.max then
@@ -4554,20 +4577,28 @@ function menu_cursor_left(pindex)
       end
       read_crafting_queue(pindex)
    elseif players[pindex].menu == "building" then
+      --Move along a row in a building inventory
       if players[pindex].building.sector <= #players[pindex].building.sectors then
+         --Most building sectors, e.g. chest rows
          if players[pindex].building.sectors[players[pindex].building.sector].inventory == nil or #players[pindex].building.sectors[players[pindex].building.sector].inventory < 1 then
             printout("blank", pindex)
             return
          end
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
-         if #players[pindex].building.sectors[players[pindex].building.sector].inventory > 10 then
+         local row_length = 8--todo make faplayer setting***
+         if 1 == 0 then
+            row_length = 10
+         end
+         if #players[pindex].building.sectors[players[pindex].building.sector].inventory > row_length then
             players[pindex].building.index = players[pindex].building.index - 1
-            if players[pindex].building.index%8 == 0 then
-               players[pindex].building.index = players[pindex].building.index + 8
+            if players[pindex].building.index % row_length < 1 then
+               --Wrap around to the end of this (only) row
+               players[pindex].building.index = players[pindex].building.index + row_length
             end
          else
             players[pindex].building.index = players[pindex].building.index - 1
             if players[pindex].building.index < 1 then
+               --Wrap around to the end of the inventory
                players[pindex].building.index = #players[pindex].building.sectors[players[pindex].building.sector].inventory
             end
          end
@@ -4581,6 +4612,7 @@ function menu_cursor_left(pindex)
          read_inventory_slot(pindex)
       else
          if players[pindex].building.sector == #players[pindex].building.sectors + 1 then
+            --Last building sector...
             if players[pindex].building.recipe_selection then
                game.get_player(pindex).play_sound{path = "Inventory-Move"}
                players[pindex].building.index = players[pindex].building.index - 1
@@ -4590,6 +4622,7 @@ function menu_cursor_left(pindex)
             end
             read_building_recipe(pindex)
          else
+            --Case ???
             game.get_player(pindex).play_sound{path = "Inventory-Move"}
             players[pindex].inventory.index = players[pindex].inventory.index -1
             if players[pindex].inventory.index%10 < 1 then
@@ -4681,20 +4714,28 @@ function menu_cursor_right(pindex)
       end
       read_crafting_queue(pindex)
    elseif players[pindex].menu == "building" then
+      --Move along a row in a building inventory
       if players[pindex].building.sector <= #players[pindex].building.sectors then
+         --Most building sectors, e.g. chest inventories
          if players[pindex].building.sectors[players[pindex].building.sector].inventory == nil or #players[pindex].building.sectors[players[pindex].building.sector].inventory < 1 then
             printout("blank", pindex)
             return
          end
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
-         if #players[pindex].building.sectors[players[pindex].building.sector].inventory > 10 then
+         local row_length = 8--todo make faplayer setting***
+         if 1 == 0 then
+            row_length = 10
+         end
+         if #players[pindex].building.sectors[players[pindex].building.sector].inventory > row_length then
             players[pindex].building.index = players[pindex].building.index + 1
-            if players[pindex].building.index%8 == 1 then
-               players[pindex].building.index = players[pindex].building.index - 8
+            if players[pindex].building.index % row_length == 1 then
+               --Wrap back around to the start of this (only?) row
+               players[pindex].building.index = players[pindex].building.index - row_length
             end
          else
             players[pindex].building.index = players[pindex].building.index + 1
             if players[pindex].building.index > #players[pindex].building.sectors[players[pindex].building.sector].inventory then
+               --Wrap around to the start of the inventory
                players[pindex].building.index = 1
             end
          end
@@ -4708,6 +4749,7 @@ function menu_cursor_right(pindex)
          read_inventory_slot(pindex)
       else
          if players[pindex].building.sector == #players[pindex].building.sectors + 1 then
+            --Last building sector...
             if players[pindex].building.recipe_selection then
                game.get_player(pindex).play_sound{path = "Inventory-Move"}
 
@@ -4718,6 +4760,7 @@ function menu_cursor_right(pindex)
             end
             read_building_recipe(pindex)
          else
+            --Case = ???
             game.get_player(pindex).play_sound{path = "Inventory-Move"}
             players[pindex].inventory.index = players[pindex].inventory.index +1
             if players[pindex].inventory.index%10 == 1 then
@@ -5143,7 +5186,7 @@ end)
 
 
 --Read coordinates of the cursor. Extra info as well such as entity part if an entity is selected, and heading and speed info for vehicles.
-script.on_event("read-coords", function(event)
+script.on_event("read-cursor-coords", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
