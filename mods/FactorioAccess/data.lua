@@ -33,7 +33,7 @@ medium_electric_pole.collision_mask = {"object-layer", "floor-layer", "water-til
 
 resource_def={richness = 4}
 
-data.raw["map-gen-presets"].default["compass-valley"] = {
+data.raw["map-gen-presets"].default["faccess-compass-valley"] = {
     order="_A",
     basic_settings={
         autoplace_controls = {
@@ -66,6 +66,23 @@ data.raw["map-gen-presets"].default["compass-valley"] = {
          }
     }
 }
+
+data.raw["map-gen-presets"].default["faccess-peaceful"] = {
+    order="_B",
+    basic_settings={
+        peaceful_mode = true,
+    }
+}
+
+data.raw["map-gen-presets"].default["faccess-enemies-off"] = {
+    order="_B",
+    basic_settings={
+        autoplace_controls = {
+            ["enemy-base"] = {frequency=0} 
+        }
+    }
+}
+
 
 data:extend({
  resource_map_node,
