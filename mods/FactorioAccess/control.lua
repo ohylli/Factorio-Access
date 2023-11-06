@@ -2846,7 +2846,7 @@ function printout(str, pindex)
    end
 end
 
-function repeat_last_spoken (pindex)
+function repeat_last_spoken(pindex)
    printout(players[pindex].last, pindex)
 end
 
@@ -5756,7 +5756,7 @@ script.on_event("scan-selection-down", function(event)
    end
 end)
 
---**todo add to wiki
+--Repeats the last thing read out. Not just the scanner. **todo add to wiki
 script.on_event("repeat-last-spoken", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -5765,7 +5765,7 @@ script.on_event("repeat-last-spoken", function(event)
    repeat_last_spoken(pindex)
 end)
 
---Note: reads other entities on the same tile? possibly unneeded
+--Reads other entities on the same tile? Note: Possibly unneeded
 script.on_event("tile-cycle", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -6256,7 +6256,7 @@ script.on_event("mine-access-sounds", function(event)
    end
 end)
 
-script.on_event("mine-tiles", function(event)
+script.on_event("mine-tiles", function(event)--***todo test after splitting
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -7905,7 +7905,7 @@ script.on_event("read-time-and-research-progress", function(event)
    local progress = math.floor(game.get_player(pindex).force.research_progress* 100)
    local tech = game.get_player(pindex).force.current_research
    if tech ~= nil then
-      printout("The local time is " .. hour .. ":" .. string.format("%02d", minute) .. ", Researching " .. game.get_player(pindex).force.current_research.name .. " " .. progress .. "%", pindex)
+      printout("The local time is " .. hour .. ":" .. string.format("%02d", minute) .. ", Researching " .. game.get_player(pindex).force.current_research.name .. ", " .. progress .. "%", pindex)
    else
       printout("The local time is " .. hour .. ":" .. string.format("%02d", minute), pindex)
    end
