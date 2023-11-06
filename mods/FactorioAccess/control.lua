@@ -5033,9 +5033,7 @@ end
 
 
 function move(direction,pindex)
-   if players[pindex].walk == 2 then
-      return
-   elseif game.get_player(pindex).driving then
+   if game.get_player(pindex).driving then
       return
    end
    local first_player = game.get_player(pindex)
@@ -5043,6 +5041,9 @@ function move(direction,pindex)
    local new_pos = offset_position(pos,direction,1)
    if players[pindex].player_direction == direction then
       --move character:
+      if players[pindex].walk == 2 then
+         return
+      end
       can_port = first_player.surface.can_place_entity{name = "character", position = new_pos}
       if can_port then
          if players[pindex].walk == 1 then
@@ -5090,8 +5091,17 @@ function move(direction,pindex)
       players[pindex].cursor_pos = new_pos
       cursor_highlight(pindex, nil, nil)
       sync_build_arrow(pindex)
-      read_tile(pindex)
       target(pindex)
+      if players[pindex].walk ~= 2 then
+         read_tile(pindex)
+      elseif players[pindex].walk == 2 then
+         refresh_player_tile(pindex)
+         local ent = get_selected_ent(pindex)
+         if not players[pindex].vanilla_mode and ((ent ~= nil and ent.valid) or not game.get_player(pindex).surface.can_place_entity{name = "character", position = players[pindex].cursor_pos}) then
+            target(pindex)
+            read_tile(pindex)
+         end
+      end
       
       --Rotate belts in hand for build lock Mode
       local stack = game.get_player(pindex).cursor_stack
