@@ -2962,6 +2962,10 @@ function scan_index(pindex)
 end 
 
 function scan_down(pindex)
+   if players[pindex].in_menu then
+      --These keys may overlap a lot so might as well
+      return
+   end
    if (players[pindex].nearby.category == 1 and players[pindex].nearby.index < #players[pindex].nearby.ents) or 
       (players[pindex].nearby.category == 2 and players[pindex].nearby.index < #players[pindex].nearby.resources) or 
       (players[pindex].nearby.category == 3 and players[pindex].nearby.index < #players[pindex].nearby.containers) or 
@@ -2993,6 +2997,10 @@ function scan_down(pindex)
 end
 
 function scan_up(pindex)
+   if players[pindex].in_menu then
+      --These keys may overlap a lot so might as well
+      return
+   end
    if players[pindex].nearby.index > 1 then
       players[pindex].nearby.index = players[pindex].nearby.index - 1
       players[pindex].nearby.selection = 1
@@ -3021,6 +3029,10 @@ function scan_up(pindex)
  end
 
 function scan_middle(pindex)
+   if players[pindex].in_menu then
+      --These keys may overlap a lot so might as well
+      return
+   end
    local ents = {}
    if players[pindex].nearby.category == 1 then
       ents = players[pindex].nearby.ents
@@ -4092,7 +4104,7 @@ script.on_event(defines.events.on_player_changed_position,function(event)
             end
          end
          
-         --Name a detected entity or a tile you cannot walk on
+         --Name a detected entity that you can or cannot walk on, or a tile you cannot walk on
          refresh_player_tile(pindex)
          local ent = get_selected_ent(pindex)
          if not players[pindex].vanilla_mode and ((ent ~= nil and ent.valid) or not game.get_player(pindex).surface.can_place_entity{name = "character", position = players[pindex].cursor_pos}) then
@@ -5441,7 +5453,7 @@ script.on_event("decrease-train-wait-times-by-60", function(event)
    end
 end)
 
-script.on_event("read-rail-structure-ahead", function(event)--*** verify bug reported here
+script.on_event("read-rail-structure-ahead", function(event)--*** verify a bug reported here?
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -5486,7 +5498,7 @@ script.on_event("rescan", function(event)
    end
 end)
 
-script.on_event("scan-up", function(event)
+script.on_event("scan-list-up", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -5496,7 +5508,7 @@ script.on_event("scan-up", function(event)
    end
 end)
 
-script.on_event("scan-down", function(event)
+script.on_event("scan-list-down", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -5506,7 +5518,7 @@ script.on_event("scan-down", function(event)
    end
 end)
 
-script.on_event("scan-middle", function(event)
+script.on_event("scan-list-middle", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
