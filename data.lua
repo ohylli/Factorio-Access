@@ -327,23 +327,23 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "scan-up",
+    name = "scan-list-up",
     key_sequence = "PAGEUP",
-    --alternative_key_sequence = "UP",
+    alternative_key_sequence = "UP",
     consuming = "none"
 },
 
 {
     type = "custom-input",
-    name = "scan-down",
+    name = "scan-list-down",
     key_sequence = "PAGEDOWN",
-    --alternative_key_sequence = "DOWN",
+    alternative_key_sequence = "DOWN",
     consuming = "none"
 },
 
 {
     type = "custom-input",
-    name = "scan-middle",
+    name = "scan-list-middle",
     key_sequence = "HOME",
     alternative_key_sequence = "RSHIFT",
     consuming = "none"
