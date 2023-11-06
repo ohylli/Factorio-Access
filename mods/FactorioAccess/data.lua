@@ -706,15 +706,15 @@ data:extend({
 },
 
 {
-    type = "menu-clear-filter",
-    name = "crafting-5",
+    type = "custom-input",
+    name = "menu-clear-filter",
     key_sequence = "RIGHTBRACKET",
     consuming = "none"
 },
 
 {
-    type = "read-entity-status",
-    name = "crafting-5",
+    type = "custom-input",
+    name = "read-entity-status",
     key_sequence = "RIGHTBRACKET",
     consuming = "none"
 },
@@ -736,7 +736,7 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "inventory-reload weapons",
+    name = "inventory-reload-weapons",
     key_sequence = "SHIFT + R",
     consuming = "none"
 },
