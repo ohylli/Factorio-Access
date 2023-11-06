@@ -179,7 +179,7 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "read-coords",
+    name = "read-cursor-coords",
     key_sequence = "K",
     consuming = "none"
 },
