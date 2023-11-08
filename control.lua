@@ -5275,7 +5275,7 @@ script.on_event("toggle-cursor", function(event)
       return
    end
    if not (players[pindex].in_menu) then
-
+      players[pindex].move_queue = {}
       toggle_cursor(pindex)
    end
 end)
@@ -8098,6 +8098,7 @@ script.on_event("toggle-walk",function(event)
    if not check_for_player(pindex) then
       return
    end
+   players[pindex].move_queue = {}
    if players[pindex].walk == 0 then --Mode 1 (walk-by-step) is temporarily disabled until it comes back as an in game setting.
       players[pindex].walk = 2
       players[pindex].character_running_speed_modifier = 0  -- default 100%
