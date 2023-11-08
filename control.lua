@@ -5456,7 +5456,7 @@ script.on_event("decrease-train-wait-times-by-60", function(event)
    end
 end)
 
-script.on_event("read-rail-structure-ahead", function(event)--*** verify a bug reported here?
+script.on_event("read-rail-structure-ahead", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -5475,7 +5475,7 @@ script.on_event("read-rail-structure-behind", function(event)
    if not check_for_player(pindex) then
       return
    end
-   local ent = get_selected_ent(index)
+   local ent = get_selected_ent(pindex) 
    if game.get_player(pindex).driving and game.get_player(pindex).vehicle.train ~= nil then
       train_read_next_rail_entity_ahead(pindex,true)
    elseif ent ~= nil and ent.valid and (ent.name == "straight-rail" or ent.name == "curved-rail") then
@@ -5531,7 +5531,7 @@ script.on_event("scan-list-middle", function(event)
    end
 end)
 
-script.on_event("jump-to-scan", function(event)--NOTE: This might be deprecated or redundant, since the cursor already goes to the scanned object now.***
+script.on_event("jump-to-scan", function(event)--NOTE: This might be deprecated or redundant, since the cursor already goes to the scanned object now. laterdo remove?
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -5783,8 +5783,9 @@ script.on_event("open-inventory", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
-   end
-   if not (players[pindex].in_menu) then
+   elseif (players[pindex].in_menu) then
+      return
+   elseif not (players[pindex].in_menu) then
       game.get_player(pindex).play_sound{path = "Open-Inventory-Sound"}
       players[pindex].in_menu = true
       players[pindex].menu="inventory"
@@ -5836,8 +5837,7 @@ script.on_event("close-menu", function(event)
    end
    if not players[pindex].in_menu then
       return
-   end
-   if players[pindex].menu ~= "prompt" then
+   elseif players[pindex].in_menu and players[pindex].menu ~= "prompt" then
       printout("Menu closed.", pindex)
       players[pindex].in_menu = false
       game.get_player(pindex).game_view_settings.update_entity_selection = true
@@ -8669,6 +8669,7 @@ script.on_event(defines.events.on_gui_opened, function(event)
    if not check_for_player(pindex) then
       return
    end
+   players[pindex].move_queue = {}
    if event.gui_type == defines.gui_type.controller and players[event.player_index].menu == "none" then
       game.get_player(event.player_index).opened = nil --**note: we may prefer to have some GUI's stay open.
       --printout("Banana",event.player_index)
