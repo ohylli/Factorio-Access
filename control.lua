@@ -3934,6 +3934,8 @@ function initialize(player)
    faplayer.resources = faplayer.resources or fa_force.resources
    faplayer.mapped = faplayer.mapped or fa_force.mapped
    faplayer.destroyed = faplayer.destroyed or {}
+   faplayer.last_menu_toggle_tick = faplayer.last_menu_toggle_tick or 1
+   faplayer.last_click_tick = faplayer.last_click_tick or 1
 
    faplayer.preferences = {
       building_inventory_row_length = building_inventory_row_length or 8,
@@ -5786,10 +5788,11 @@ script.on_event("open-inventory", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
-   elseif (players[pindex].in_menu) then
+   elseif (players[pindex].in_menu) or players[pindex].last_menu_toggle_tick == event.tick then
       return
    elseif not (players[pindex].in_menu) then
       game.get_player(pindex).play_sound{path = "Open-Inventory-Sound"}
+      players[pindex].last_menu_toggle_tick = event.tick 
       players[pindex].in_menu = true
       players[pindex].menu="inventory"
       players[pindex].inventory.lua_inventory = game.get_player(pindex).get_main_inventory()
@@ -5838,11 +5841,12 @@ script.on_event("close-menu", function(event)
    if not check_for_player(pindex) then
       return
    end
-   if not players[pindex].in_menu then
+   if not players[pindex].in_menu or players[pindex].last_menu_toggle_tick == event.tick then
       return
    elseif players[pindex].in_menu and players[pindex].menu ~= "prompt" then
       printout("Menu closed.", pindex)
       players[pindex].in_menu = false
+      players[pindex].last_menu_toggle_tick = event.tick 
       game.get_player(pindex).game_view_settings.update_entity_selection = true
 
       if players[pindex].menu == "inventory" or players[pindex].menu == "crafting" or players[pindex].menu == "technology" or players[pindex].menu == "crafting_queue" or players[pindex].menu == "warnings" then
@@ -6421,7 +6425,11 @@ script.on_event("click-menu", function(event)
    if not check_for_player(pindex) then
       return
    end
+   if players[pindex].last_click_tick == event.tick then
+      return
+   end
    if players[pindex].in_menu then
+      players[pindex].last_click_tick = event.tick
       if players[pindex].menu == "inventory" then
          game.get_player(pindex).play_sound{path = "utility/inventory_click"}
          local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
@@ -6705,6 +6713,9 @@ script.on_event("click-hand", function(event)
    if not check_for_player(pindex) then
       return
    end
+   if players[pindex].last_click_tick == event.tick then
+      return
+   end
    if players[pindex].in_menu then
       return
    else
@@ -6712,11 +6723,14 @@ script.on_event("click-hand", function(event)
       local stack = game.get_player(pindex).cursor_stack
       local ent = get_selected_ent(pindex)
       if stack.valid_for_read and stack.valid and (stack.prototype.place_result ~= nil or stack.prototype.place_as_tile_result ~= nil) and stack.name ~= "offshore-pump" then
+         players[pindex].last_click_tick = event.tick
          local offset = 0
          build_item_in_hand(pindex, offset)
       elseif stack.valid and stack.valid_for_read and stack.name == "offshore-pump" then
+         players[pindex].last_click_tick = event.tick
          build_offshore_pump_in_hand(pindex)
       elseif stack.valid and stack.valid_for_read and stack.is_repair_tool then
+         players[pindex].last_click_tick = event.tick
          --Repair the entity found . Laterdo improve this 
          --game.get_player(pindex).use_from_cursor{players[pindex].cursor_pos.x,players[pindex].cursor_pos.y}--does not work
          if ent and ent.is_entity_with_health and ent.get_health_ratio() < 1 and ent.type ~= "resource" and ent.name ~= "character" then
@@ -6733,8 +6747,9 @@ script.on_event("click-hand", function(event)
          end
          return
       elseif stack.valid and stack.valid_for_read then
-	     local p = game.get_player(pindex)
-	     p.use_from_cursor{p.position.x+1,p.position.y+1}--tolaterdo adjust it to use an item 3 tiles in front of the player instead.
+         players[pindex].last_click_tick = event.tick
+         local p = game.get_player(pindex)
+         p.use_from_cursor{p.position.x+1,p.position.y+1}--tolaterdo adjust it to use an item 3 tiles in front of the player instead.
       end
    end
 end)
@@ -6744,12 +6759,20 @@ script.on_event("click-entity", function(event)
    if not check_for_player(pindex) then
       return
    end
+   if players[pindex].last_click_tick == event.tick then
+      return
+   end
    if players[pindex].in_menu then
       return
    else
+      --Not in a menu
+      local stack = game.get_player(pindex).cursor_stack
+      local ent = get_selected_ent(pindex)
       if game.get_player(pindex).driving and game.get_player(pindex).vehicle.train ~= nil then
+         players[pindex].last_click_tick = event.tick
          train_menu_open(pindex)
       elseif ent and not (stack.valid and stack.valid_for_read and (stack.prototype.place_result or stack.prototype.place_as_tile_result)) then
+         players[pindex].last_click_tick = event.tick
          --Clicking on an entity in the world
          if util.distance(players[pindex].position, ent.position) > 11 then
             --game.get_player(pindex).play_sound{path = "utility/entity_settings_pasted"}--identify remote sounds
