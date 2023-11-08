@@ -3286,7 +3286,7 @@ function build_preview_checks_info(stack, pindex)
       return "invalid entity"
    end
    
-   --Notify before all else if surface/player cannot place this entity. **todo extend this check by copying over build offset stuff
+   --Notify before all else if surface/player cannot place this entity. laterdo extend this valid placement check by copying over build offset stuff
    if ent_p.tile_width <= 1 and ent_p.tile_height <= 1 and not surf.can_place_entity{name = stack.name, position = pos, direction = build_dir} then
       return " cannot place this here "
    end
@@ -3805,7 +3805,7 @@ function read_coords(pindex, start_phrase)
       --Give slot coords (chest/building inventory)
       local x = -1 --Col number
       local y = -1 --Row number
-      local row_length = 8 --*** todo make faplayer variable
+      local row_length = players[pindex].preferences.building_inventory_row_length
       x = players[pindex].building.index % row_length
       y = math.floor(players[pindex].building.index / row_length) + 1
       if x == 0 then
@@ -3928,11 +3928,16 @@ function initialize(player)
    faplayer.build_lock = faplayer.build_lock or false
    faplayer.vanilla_mode = faplayer.vanilla_mode or false
    faplayer.allow_reading_flying_text = faplayer.allow_reading_flying_text or true
-   faplayer.setting_inventory_wraps_around = faplayer.setting_inventory_wraps_around or true
    faplayer.resources = faplayer.resources or fa_force.resources
    faplayer.mapped = faplayer.mapped or fa_force.mapped
    faplayer.destroyed = faplayer.destroyed or {}
 
+   faplayer.preferences = {
+      building_inventory_row_length = building_inventory_row_length or 8,
+      inventory_wraps_around = inventory_wraps_around or true,
+      tiles_placed_from_northwest_corner = tiles_placed_from_northwest_corner or false
+   }
+   
    faplayer.nearby = faplayer.nearby or {
       index = 0,
       selection = 0,
@@ -4083,7 +4088,7 @@ script.on_event(defines.events.on_player_changed_position,function(event)
 
             --Rotate belts in hand for build lock Mode
             local stack = game.get_player(pindex).cursor_stack
-            if players[pindex].build_lock and stack.valid_for_read and stack.valid and (stack.name == "transport-belt" or stack.name == "fast-transport-belt" or stack.name == "express-transport-belt") then --**todo find correct way to reference the stack entity prototype
+            if players[pindex].build_lock and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and stack.prototype.place_result.type == "transport-belt" then --***todo test, maybe "place_result.name" instead
                players[pindex].building_direction = math.floor(game.get_player(pindex).walking_state.direction / dirs.east)
             end
          else
@@ -4117,7 +4122,7 @@ end)
 
 
 function menu_cursor_move(direction,pindex)
-   players[pindex].setting_inventory_wraps_around = true--laterdo make this a setting to toggle
+   players[pindex].preferences.inventory_wraps_around = true--laterdo make this a setting to toggle
    if     direction == defines.direction.north then
       menu_cursor_up(pindex)
    elseif direction == defines.direction.south then
@@ -4152,7 +4157,7 @@ function menu_cursor_up(pindex)
    elseif players[pindex].menu == "inventory" then
       players[pindex].inventory.index = players[pindex].inventory.index -10
       if players[pindex].inventory.index < 1 then
-         if players[pindex].setting_inventory_wraps_around == true then  --Wrap around setting: Move and play move sound and read slot
+         if players[pindex].preferences.inventory_wraps_around == true then  --Wrap around setting: Move and play move sound and read slot
             players[pindex].inventory.index = players[pindex].inventory.max + players[pindex].inventory.index
             game.get_player(pindex).play_sound{path = "Inventory-Move"}
             read_inventory_slot(pindex)
@@ -4189,10 +4194,7 @@ function menu_cursor_up(pindex)
             return
          end
          --Move one row up in building inventory
-         local row_length = 8--todo make faplayer setting***
-         if 1 == 0 then
-            row_length = 10
-         end
+         local row_length = players[pindex].preferences.building_inventory_row_length
          if #players[pindex].building.sectors[players[pindex].building.sector].inventory > row_length then
             game.get_player(pindex).play_sound{path = "Inventory-Move"}
             players[pindex].building.index = players[pindex].building.index - row_length
@@ -4353,7 +4355,7 @@ function menu_cursor_down(pindex)
    elseif players[pindex].menu == "inventory" then
       players[pindex].inventory.index = players[pindex].inventory.index +10
       if players[pindex].inventory.index > players[pindex].inventory.max then
-         if players[pindex].setting_inventory_wraps_around == true then  --Wrap around setting: Move and play move sound and read slot
+         if players[pindex].preferences.inventory_wraps_around == true then  --Wrap around setting: Move and play move sound and read slot
             players[pindex].inventory.index = players[pindex].inventory.index - players[pindex].inventory.max
             game.get_player(pindex).play_sound{path = "Inventory-Move"}
             read_inventory_slot(pindex)
@@ -4390,10 +4392,7 @@ function menu_cursor_down(pindex)
             return
          end
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
-         local row_length = 8--todo make faplayer setting***
-         if 1 == 0 then
-            row_length = 10
-         end
+         local row_length = players[pindex].preferences.building_inventory_row_length
          if #players[pindex].building.sectors[players[pindex].building.sector].inventory > row_length then
             --Move one row down
             players[pindex].building.index = players[pindex].building.index + row_length
@@ -4557,7 +4556,7 @@ function menu_cursor_left(pindex)
    elseif players[pindex].menu == "inventory" then
       players[pindex].inventory.index = players[pindex].inventory.index -1    
       if players[pindex].inventory.index%10 == 0 then
-         if players[pindex].setting_inventory_wraps_around == true then  --Wrap around setting: Move and play move sound and read slot
+         if players[pindex].preferences.inventory_wraps_around == true then  --Wrap around setting: Move and play move sound and read slot
             players[pindex].inventory.index = players[pindex].inventory.index + 10
             game.get_player(pindex).play_sound{path = "Inventory-Move"}
             read_inventory_slot(pindex)
@@ -4597,10 +4596,7 @@ function menu_cursor_left(pindex)
             return
          end
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
-         local row_length = 8--todo make faplayer setting***
-         if 1 == 0 then
-            row_length = 10
-         end
+         local row_length = players[pindex].preferences.building_inventory_row_length
          if #players[pindex].building.sectors[players[pindex].building.sector].inventory > row_length then
             players[pindex].building.index = players[pindex].building.index - 1
             if players[pindex].building.index % row_length < 1 then
@@ -4694,7 +4690,7 @@ function menu_cursor_right(pindex)
    elseif players[pindex].menu == "inventory" then
       players[pindex].inventory.index = players[pindex].inventory.index +1
       if players[pindex].inventory.index%10 == 1 then
-         if players[pindex].setting_inventory_wraps_around == true then  --Wrap around setting: Move and play move sound and read slot
+         if players[pindex].preferences.inventory_wraps_around == true then  --Wrap around setting: Move and play move sound and read slot
             players[pindex].inventory.index = players[pindex].inventory.index - 10
             game.get_player(pindex).play_sound{path = "Inventory-Move"}
             read_inventory_slot(pindex)
@@ -4734,10 +4730,7 @@ function menu_cursor_right(pindex)
             return
          end
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
-         local row_length = 8--todo make faplayer setting***
-         if 1 == 0 then
-            row_length = 10
-         end
+         local row_length = players[pindex].preferences.building_inventory_row_length
          if #players[pindex].building.sectors[players[pindex].building.sector].inventory > row_length then
             players[pindex].building.index = players[pindex].building.index + 1
             if players[pindex].building.index % row_length == 1 then
@@ -5105,7 +5098,7 @@ function move(direction,pindex)
       
       --Rotate belts in hand for build lock Mode
       local stack = game.get_player(pindex).cursor_stack
-      if players[pindex].build_lock and stack.valid_for_read and stack.valid and (stack.name == "transport-belt" or stack.name == "fast-transport-belt" or stack.name == "express-transport-belt") then --**todo find correct way to reference the stack entity prototype
+      if players[pindex].build_lock and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and stack.prototype.place_result.type == "transport-belt" then --**todo find correct way to reference the stack entity prototype
          players[pindex].building_direction = math.floor(players[pindex].player_direction / dirs.east)--laterdo might need to correct this if we redesign the build_direction
       end
    end
@@ -5766,7 +5759,7 @@ script.on_event("scan-selection-down", function(event)
    end
 end)
 
---Repeats the last thing read out. Not just the scanner. **todo add to wiki
+--Repeats the last thing read out. Not just the scanner.
 script.on_event("repeat-last-spoken", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -6250,7 +6243,7 @@ function play_mining_sound(pindex)
    end
 end
 
---Creates sound effects for vanilla mining. todo connect to game control
+--Creates sound effects for vanilla mining. todo maybe connect to game control's keybind?
 script.on_event("mine-access-sounds", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -6266,7 +6259,8 @@ script.on_event("mine-access-sounds", function(event)
    end
 end)
 
-script.on_event("mine-tiles", function(event)--***todo test after splitting
+--laterdo known bug: the tile preview cursor is likely always going to be 2x2. Myabe create a warning about it
+script.on_event("mine-tiles", function(event)--***todo test 
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -6349,7 +6343,7 @@ script.on_event("mine-area", function(event) --laterdo** proper tallying of clea
    printout(" Cleared away " .. cleared_total .. " objects. ", pindex)
 end)
 
---Cut-paste-tool. NOTE: This keybind needs to be the same as that for the cut paste tool (default CONTROL + X). todo add "associated game control" or something?
+--Cut-paste-tool. NOTE: This keybind needs to be the same as that for the cut paste tool (default CONTROL + X). todo maybe keybind to game control somehow
 script.on_event("cut-paste-tool-comment", function(event)
    local pindex = event.player_index
    if not check_for_player(pindex) then
@@ -7084,10 +7078,10 @@ function build_item_in_hand(pindex, offset_val)
 	  local p = game.get_player(pindex)
 	  local t_size = players[pindex].cursor_size * 2 + 1
      local pos = players[pindex].cursor_pos--Center on the cursor in default
-     -- if players[pindex].cursor then --Hold from top left in cursor mode? But the cursor itself at larger sizes is not free... **todo add one-tile movement for large cursor sizes when you press shift or something.
-        -- pos.x = pos.x - players[pindex].cursor_size
-        -- pos.y = pos.y - players[pindex].cursor_size
-     -- end
+     if players[pindex].cursor and players[pindex].preferences.tiles_placed_from_northwest_corner then
+        pos.x = pos.x - players[pindex].cursor_size
+        pos.y = pos.y - players[pindex].cursor_size
+     end
 	  if p.can_build_from_cursor{position = pos, terrain_building_size = t_size} then
 	     p.build_from_cursor{position = pos, terrain_building_size = t_size}
 	  else
@@ -8266,7 +8260,7 @@ script.on_event(defines.events.on_gui_confirmed,function(event)
    end
 end)   
 
---todo review functionality, test for bugs, review wiki pages
+--note: need to review functionality, test for bugs, review wiki pages (laterdo)
 script.on_event("open-structure-travel-menu", function(event)
    local pindex = event.player_index
    if not check_for_player(pindex) then
