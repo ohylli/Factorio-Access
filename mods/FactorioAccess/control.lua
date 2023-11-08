@@ -1319,6 +1319,9 @@ function teleport_to_closest(pindex, pos, muted)
          rendering.draw_circle{color = {0.6, 0.1, 0.1},radius = 0.3,width = 20,target = old_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
          local smoke_effect = first_player.surface.create_entity{name = "iron-chest", position = first_player.position, raise_built = false, force = first_player.force}
          smoke_effect.destroy{}
+         if not muted then
+            game.get_player(pindex).play_sound{path = "utility/scenario_message"}
+         end
       end
       local teleported = first_player.teleport(new_pos)
       if teleported then
@@ -6413,7 +6416,7 @@ function clear_obstacles_in_circle(position, radius, pindex)
 end
 
 
-script.on_event("menu-click", function(event)
+script.on_event("click-menu", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -6697,7 +6700,7 @@ script.on_event("menu-click", function(event)
 end)
 
 --Includes building previewed buildings, throwing capsules, etc.
-script.on_event("hand-click", function(event)
+script.on_event("click-hand", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -6736,7 +6739,7 @@ script.on_event("hand-click", function(event)
    end
 end)
 
-script.on_event("entity-click", function(event)
+script.on_event("click-entity", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return

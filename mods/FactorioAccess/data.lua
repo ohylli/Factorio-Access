@@ -616,21 +616,21 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "menu-click",
+    name = "click-menu",
     key_sequence = "LEFTBRACKET",
     consuming = "none"
 },
 
 {
     type = "custom-input",
-    name = "hand-click",
+    name = "click-hand",
     key_sequence = "LEFTBRACKET",
     consuming = "none"
 },
 
 {
     type = "custom-input",
-    name = "entity-click",
+    name = "click-entity",
     key_sequence = "LEFTBRACKET",
     consuming = "none"
 },
