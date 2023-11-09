@@ -3653,7 +3653,7 @@ function build_preview_checks_info(stack, pindex)
             end
          end
       else
-         --Notify if no connections and state nearest roboport-***
+         --Notify if no connections and state nearest roboport-**
          result = result .. " not connected, "
          local nearest_port, min_dist = find_nearest_roboport(ent.surface, ent.position, 1000)
          if min_dist == nil or min_dist >= 1000 then
@@ -4119,7 +4119,7 @@ script.on_event(defines.events.on_player_changed_position,function(event)
 
             --Rotate belts in hand for build lock Mode
             local stack = game.get_player(pindex).cursor_stack
-            if players[pindex].build_lock and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and stack.prototype.place_result.type == "transport-belt" then --***todo test, maybe "place_result.name" instead
+            if players[pindex].build_lock and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and stack.prototype.place_result.type == "transport-belt" then 
                players[pindex].building_direction = math.floor(game.get_player(pindex).walking_state.direction / dirs.east)
             end
          else
@@ -4249,7 +4249,7 @@ function menu_cursor_up(pindex)
          read_inventory_slot(pindex)
       else
          if players[pindex].building.sector == #players[pindex].building.sectors + 1 then
-            --Last building sector. Case = ??? ***
+            --Last building sector. Case = ??? **
             if players[pindex].building.recipe_selection then
                game.get_player(pindex).play_sound{path = "Inventory-Move"}
                players[pindex].building.category = players[pindex].building.category - 1
@@ -4453,7 +4453,7 @@ function menu_cursor_down(pindex)
          read_inventory_slot(pindex)
       else
          if players[pindex].building.sector == #players[pindex].building.sectors + 1 then
-            --Last building sector. Case = ??? ***
+            --Last building sector. Case = ??? **
             if players[pindex].building.recipe_selection then
                game.get_player(pindex).play_sound{path = "Inventory-Move"}
                players[pindex].building.index = 1
@@ -5129,7 +5129,7 @@ function move(direction,pindex)
       
       --Rotate belts in hand for build lock Mode
       local stack = game.get_player(pindex).cursor_stack
-      if players[pindex].build_lock and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and stack.prototype.place_result.type == "transport-belt" then --**todo find correct way to reference the stack entity prototype
+      if players[pindex].build_lock and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and stack.prototype.place_result.type == "transport-belt" then 
          players[pindex].building_direction = math.floor(players[pindex].player_direction / dirs.east)--laterdo might need to correct this if we redesign the build_direction
       end
    end
@@ -6293,7 +6293,7 @@ script.on_event("mine-access-sounds", function(event)
 end)
 
 --laterdo known bug: the tile preview cursor is likely always going to be 2x2. Myabe create a warning about it
-script.on_event("mine-tiles", function(event)--***todo test 
+script.on_event("mine-tiles", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -7875,7 +7875,7 @@ script.on_event("item-info", function(event)
             printout("Blank", pindex)
          end
 
-      elseif players[pindex].menu == "technology" then --***todo bug reported in tech menu for reading research for logistics robots
+      elseif players[pindex].menu == "technology" then
          local techs = {}
          if players[pindex].technology.category == 1 then
             techs = players[pindex].technology.lua_researchable
@@ -7886,11 +7886,13 @@ script.on_event("item-info", function(event)
          end
    
          if next(techs) ~= nil and players[pindex].technology.index > 0 and players[pindex].technology.index <= #techs then
-            local result = "Grants the following rewards:"
+            local result = "Unlocks the following:"
             local rewards = techs[players[pindex].technology.index].effects
             for i, reward in ipairs(rewards) do
                for i1, v in pairs(reward) do
-                  result = result .. v .. " , "
+                  if v then
+                     result = result ..  tostring(v) .. " , "
+                  end
                end
             end
             printout(string.sub(result, 1, -3), pindex)
