@@ -2131,44 +2131,64 @@ function get_scan_summary(scan_left_top, scan_right_bottom, pindex)
    local percent = 0
    local res_count = surf.count_tiles_filtered{ name = {"water", "deepwater", "water-green", "deepwater-green", "water-shallow", "water-mud", "water-wube"}, area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
-   table.insert(percentages, {name = "water", percent = percent})
+   if percent > 0 then
+      table.insert(percentages, {name = "water", percent = percent})
+   end
    percent_total = percent_total + percent--water counts as filling a space
    
    res_count = surf.count_tiles_filtered{ name = "stone-path", area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
-   table.insert(percentages, {name = "stone-brick-path", percent = percent})
+   if percent > 0 then
+      table.insert(percentages, {name = "stone-brick-path", percent = percent})
+   end
    
    res_count = surf.count_tiles_filtered{ name = {"concrete","hazard-concrete-left","hazard-concrete-right"}, area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
-   table.insert(percentages, {name = "concrete", percent = percent})
+   if percent > 0 then
+      table.insert(percentages, {name = "concrete", percent = percent})
+   end
    
    res_count = surf.count_tiles_filtered{ name = {"refined-concrete","refined-hazard-concrete-left","refined-hazard-concrete-right"}, area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
-   table.insert(percentages, {name = "refined-concrete", percent = percent})
+   if percent > 0 then
+      table.insert(percentages, {name = "refined-concrete", percent = percent})
+   end
    
    res_count = surf.count_entities_filtered{ name = "coal", area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
-   table.insert(percentages, {name = "coal", percent = percent})
+   if percent > 0 then
+      table.insert(percentages, {name = "coal", percent = percent})
+   end
    
    res_count = surf.count_entities_filtered{ name = "stone", area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
-   table.insert(percentages, {name = "stone", percent = percent})
+   if percent > 0 then
+      table.insert(percentages, {name = "stone", percent = percent})
+   end
    
    res_count = surf.count_entities_filtered{ name = "iron-ore", area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
-   table.insert(percentages, {name = "iron-ore", percent = percent})
+   if percent > 0 then
+      table.insert(percentages, {name = "iron-ore", percent = percent})
+   end
    
    res_count = surf.count_entities_filtered{ name = "copper-ore", area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
-   table.insert(percentages, {name = "copper-ore", percent = percent})
+   if percent > 0 then
+      table.insert(percentages, {name = "copper-ore", percent = percent})
+   end
    
    res_count = surf.count_entities_filtered{ name = "uranium-ore", area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
-   table.insert(percentages, {name = "uranium-ore", percent = percent})
+   if percent > 0 then
+      table.insert(percentages, {name = "uranium-ore", percent = percent})
+   end
    
    res_count = surf.count_entities_filtered{ type = "tree", area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
-   table.insert(percentages, {name = "trees", percent = percent})
+   if percent > 0 then
+      table.insert(percentages, {name = "trees", percent = percent})
+   end
    
    if #players[pindex].nearby.ents > 0 then --Note: Resources are included here as aggregates.
       for i, ent in ipairs(players[pindex].nearby.ents) do
@@ -2179,7 +2199,9 @@ function get_scan_summary(scan_left_top, scan_right_bottom, pindex)
             --game.get_player(pindex).print(get_substring_before_comma(ent.name) .. " " .. area)--
          end 
          local percentage = math.floor((area * players[pindex].nearby.ents[i].count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
-         table.insert(percentages, {name = ent.name, percent = percentage})
+         if not ent.aggregate and percentage > 0 then
+            table.insert(percentages, {name = ent.name, percent = percentage})
+         end
          percent_total = percent_total + percentage
       end
       table.sort(percentages, function(k1, k2)
@@ -2190,6 +2212,9 @@ function get_scan_summary(scan_left_top, scan_right_bottom, pindex)
       while i <= # percentages and (i <= 5 or percentages[i].percent > 1) do
          result = result .. percentages[i].name .. " " .. percentages[i].percent .. "%, "
          i = i + 1
+      end
+      if percent_total == 0 then--Note there are still some entities in here, but with zero area...
+         result = result .. " nothing "
       end
       result = result .. ", total space occupied " .. math.floor(percent_total) .. " percent " 
    else
