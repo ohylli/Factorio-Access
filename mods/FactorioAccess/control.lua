@@ -2603,7 +2603,8 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
                end
                --result = result .. "nothing"
             end
-         elseif players[pindex].building.ent ~= nil and players[pindex].building.ent.valid and players[pindex].building.ent.name == "lab" then
+         elseif players[pindex].building.ent ~= nil and players[pindex].building.ent.valid and players[pindex].building.ent.type == "lab" then
+            --laterdo switch to {"item-name.".. ent.prototype.lab_inputs[players[pindex].building.index] }
             result = result .. " reserved for science pack type " .. players[pindex].building.index
          end
          printout(start_phrase .. result, pindex)
@@ -3931,8 +3932,8 @@ function initialize(player)
    faplayer.build_lock = faplayer.build_lock or false
    faplayer.vanilla_mode = faplayer.vanilla_mode or false
    faplayer.allow_reading_flying_text = faplayer.allow_reading_flying_text or true
-   faplayer.resources = faplayer.resources or fa_force.resources
-   faplayer.mapped = faplayer.mapped or fa_force.mapped
+   faplayer.resources = fa_force.resources
+   faplayer.mapped = fa_force.mapped
    faplayer.destroyed = faplayer.destroyed or {}
    faplayer.last_menu_toggle_tick = faplayer.last_menu_toggle_tick or 1
    faplayer.last_click_tick = faplayer.last_click_tick or 1
