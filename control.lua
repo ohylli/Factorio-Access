@@ -5537,7 +5537,7 @@ script.on_event("scan-list-up", function(event)
    if not check_for_player(pindex) then
       return
    end
-   if not (players[pindex].in_menu) then
+   if not players[pindex].in_menu and not players[pindex].cursor then
       scan_up(pindex)
    end
 end)
@@ -5547,7 +5547,7 @@ script.on_event("scan-list-down", function(event)
    if not check_for_player(pindex) then
       return
    end
-   if not (players[pindex].in_menu) then
+   if not players[pindex].in_menu and not players[pindex].cursor then
       scan_down(pindex)
    end
 end)
@@ -5557,7 +5557,7 @@ script.on_event("scan-list-middle", function(event)
    if not check_for_player(pindex) then
       return
    end
-   if not (players[pindex].in_menu) then
+   if not players[pindex].in_menu then
       scan_middle(pindex)
    end
 end)
