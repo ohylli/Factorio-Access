@@ -604,7 +604,7 @@ function ent_info(pindex, ent, description)
    if game.players[pindex].name == "Crimso" then
       result = result .. " " .. ent.type .. " "
    end
-   if game.get_player(pindex).driving then
+   if game.get_player(pindex).driving then--Note: this is also checked in read_tile
       result = result .. ", cannot check details while driving. "
       return result
    end
@@ -4145,6 +4145,9 @@ script.on_event(defines.events.on_player_changed_position,function(event)
          local ent = get_selected_ent(pindex)
          if not players[pindex].vanilla_mode and ((ent ~= nil and ent.valid) or not game.get_player(pindex).surface.can_place_entity{name = "character", position = players[pindex].cursor_pos}) then
             target(pindex)
+            if game.get_player(pindex).driving then --***todo test train readfix
+               return
+            end
             read_tile(pindex)
          end
       end
@@ -7639,7 +7642,16 @@ script.on_event("read-entity-status", function(event)
                result = result .. ", can move " .. math.floor(ent.prototype.belt_speed * 480) .. " items per second"
             end
          end
-         if ent.type == "assembling-machine" or ent.type == "furnace" then --Crafting cycles per minute based on recipe time and the STATED craft speed
+         if ent.name == "straight-rail" then
+            -- Report nearest rail intersection position --todo test*** and laterdo find better keybind
+            local nearest, dist = find_nearest_intersection(ent, pindex)
+            if nearest == nil then
+               result = result .. ", no intersections within " .. dist .. " tiles " 
+            else
+               result = result .. ", nearest intersection at " .. dist .. " " .. direction_lookup(get_direction_of_that_from_this(nearest,ent))
+            end
+         end
+         if ent.type == "assembling-machine" or ent.type == "furnace" then --Crafting cycles per minute based on recipe time and the STATED craft speed ; laterdo maybe extend this to all "crafting machine" types?
             local progress = ent.crafting_progress
             local speed = ent.crafting_speed
             local recipe_time = 0
@@ -7667,9 +7679,9 @@ script.on_event("read-entity-status", function(event)
                result = result .. ", with productivity bonus " .. math.floor(100 * (0 + ent.productivity_bonus) + 0.5) .. " percent "
             end
          elseif ent.type == "mining-drill" then
-            result = result .. ", producing " .. string.format(" %.2f ",ent.prototype.mining_speed * 60) .. " items per minute "
+            result = result .. ", producing " .. string.format(" %.2f ",ent.prototype.mining_speed * 60 * (1 + ent.speed_bonus)) .. " items per minute "--***todo test
             if ent.speed_bonus ~= 0 then
-               result = result .. ", with speed " .. math.floor(100 * (1 + ent.speed_bonus) + 0.5) .. " percent "
+               result = result .. ", with speed " .. math.floor(100 * (1 + ent.speed_bonus) + 0.5) .. " percent " 
             end
             if ent.productivity_bonus ~= 0 then
                result = result .. ", with productivity bonus " .. math.floor(100 * (0 + ent.productivity_bonus) + 0.5) .. " percent "
