@@ -6873,7 +6873,7 @@ script.on_event("click-entity", function(event)
                   inventory = ent.fluidbox})
             end
 
-            if ent.filter_slot_count > 0 then
+            if ent.filter_slot_count > 0 and ent.type == "inserter" then
                table.insert(players[pindex].building.sectors, {
                   name = "Filters",
                   inventory = {}})
