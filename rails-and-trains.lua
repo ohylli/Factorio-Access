@@ -221,7 +221,7 @@ function rail_ent_info(pindex, ent, description)
    end
    
    if is_intersection_rail(ent, pindex) then
-      result = result .. ", intersection "
+      result = result .. ", intersection " --todo*** test
    end
    
    return result
@@ -2275,14 +2275,41 @@ function is_intersection_rail(rail, pindex)
    for i,other_rail in ipairs(ents) do
       --2. For each rail, does it have a different rotation and a different segment? If yes return true.
 	  local dir_2 = other_rail.direction
-	  dir = dir % 4
-	  dir_2 = dir_2 % 4
+	  dir = dir % dirs.south     --N/S or E/W does not matter
+	  dir_2 = dir_2 % dirs.south --N/S or E/W does not matter
 	  if dir ~= dir_2 and not rail.is_rail_in_same_rail_segment_as(other_rail) then
 	     rendering.draw_circle{color = {0, 0, 1},radius = 1.5,width = 1.5,target = pos,surface = rail.surface,time_to_live = 100}
          return true
 	  end
    end
    return false
+end
+
+function find_nearest_intersection(rail, pindex, radius_in)
+   --1. Scan around the rail for other rails
+   local radius = radius_in or 500
+   local pos = rail.position
+   local scan_area = {{pos.x-radius,pos.y-radius},{pos.x+radius,pos.y+radius}} 
+   local ents = game.get_player(pindex).surface.find_entities_filtered{area = scan_area, name = "straight-rail"}
+   local nearest = nil
+   local min_dist = radius
+   for i,other_rail in ipairs(ents) do
+      --2. For each rail, is it an intersection rail?
+      if other_rail.valid and is_intersection_rail(other_rail, pindex) then
+         local dist = math.ceil(util.distance(pos, other_rail.position))
+		   --Set as nearest if valid
+		   if dist < min_dist then
+		      min_dist = dist
+			   nearest = other_rail
+		   end
+      end
+   end
+   --Return the nearest found, possibly nil
+   if nearest == nil then
+     return nil, radius --Nothing within radius tiles!
+   end
+   rendering.draw_circle{color = {0, 0, 1}, radius = 2, width = 2, target = nearest.position, surface = nearest.surface, time_to_live = 60}
+   return nearest, min_dist
 end
 
 --Places a chain signal pair around a rail depending on its direction. May fail if the spots are full.
