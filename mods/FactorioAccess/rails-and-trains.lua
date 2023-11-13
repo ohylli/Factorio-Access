@@ -98,23 +98,29 @@ function rail_ent_info(pindex, ent, description)
       end
    end
    
+   --Check if intersection
+   if is_intersection_rail(ent, pindex) then
+      result = result .. ", intersection " --todo*** test
+   end
    --Check if at junction: The rail has at least 3 connections
    local connection_count = count_rail_connections(ent)
    if connection_count > 2 then
-      result = result .. ", junction, "
+      result = result .. ", junction "
    end
    
-   --Check if it has rail signals
+   --Check if it has rail signals ***todo test overlaps
    local chain_s_count = 0
    local rail_s_count = 0
    local signals = ent.surface.find_entities_filtered{position = ent.position, radius = 2, name = "rail-chain-signal"}
    for i,s in ipairs(signals) do
       chain_s_count = chain_s_count + 1
+      rendering.draw_circle{color = {1, 1, 0},radius = 2,width = 2,target = ent,surface = ent.surface,time_to_live = 90}
    end
    
    signals = ent.surface.find_entities_filtered{position = ent.position, radius = 2, name = "rail-signal"}
    for i,s in ipairs(signals) do
       rail_s_count = rail_s_count + 1
+      rendering.draw_circle{color = {1, 1, 0},radius = 2,width = 2,target = ent,surface = ent.surface,time_to_live = 90}
    end
    
    if chain_s_count + rail_s_count == 0 then
@@ -218,10 +224,6 @@ function rail_ent_info(pindex, ent, description)
       elseif dist < 45 then
          result = result .. " station space 6 middle"
       end
-   end
-   
-   if is_intersection_rail(ent, pindex) then
-      result = result .. ", intersection " --todo*** test
    end
    
    return result

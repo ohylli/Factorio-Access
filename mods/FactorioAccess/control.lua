@@ -3765,15 +3765,15 @@ function read_coords(pindex, start_phrase)
    end
    if not(players[pindex].in_menu) then
       if game.get_player(pindex).driving then
-         --Give vehicle coords and orientation and speed
+         --Give vehicle coords and orientation and speed ****todo verify speed numbers
          local vehicle = game.get_player(pindex).vehicle
          result = result .. " in " .. vehicle.name .. " "
          if vehicle.speed > 0 then
-            result = result .. " heading " .. get_heading(vehicle) .. " at " .. math.floor(vehicle.speed) .. " kilometers per hour, past the location " 
+            result = result .. " heading " .. get_heading(vehicle) .. " at " .. math.floor(vehicle.speed) .. " kilometers per hour, past the point " 
          elseif vehicle.speed < 0 then
-            result = result .. " reversing while facing" .. get_heading(vehicle) .. " at "  .. math.floor(-vehicle.speed) .. " kilometers per hour, past the location " 
+            result = result .. " reversing while facing" .. get_heading(vehicle) .. " at "  .. math.floor(-vehicle.speed) .. " kilometers per hour, past the point " 
          else
-            result = result .. " parked facing " .. get_heading(vehicle) .. " at location "
+            result = result .. " parked facing " .. get_heading(vehicle) .. " at point "
          end
          printout(result .. math.floor(vehicle.position.x) .. ", " .. math.floor(vehicle.position.y), pindex)
       else
@@ -3948,6 +3948,8 @@ function initialize(player)
       render_layer = 254, target = {0,0}, surface = character.surface, players = {pindex}, visible = false}
    faplayer.overhead_sprite = nil
    faplayer.ocerhead_circle = nil
+   faplayer.custom_GUI_frame = nil
+   faplayer.custom_GUI_sprite = nil
    faplayer.direction_lag = faplayer.direction_lag or true
    faplayer.previous_item = faplayer.previous_item or ""
    faplayer.last = faplayer.last or ""
@@ -4977,13 +4979,17 @@ function on_tick(event)
          if player.in_menu then
             if player.menu == "technology" then
                update_overhead_sprite("item.lab",2,1.5,pindex)
+               update_custom_GUI_sprite("item.lab", 3, pindex)
             elseif player.menu == "travel" then
                update_overhead_sprite("utility.downloading_white",3,1.5,pindex)
+               update_custom_GUI_sprite("utility.downloading_white", 3, pindex)
             elseif player.menu == "warnings" then
                update_overhead_sprite("utility.warning_white",3,1.5,pindex)
+               update_custom_GUI_sprite("utility.warning_white", 3, pindex)
             end
          else
             update_overhead_sprite(nil,1,1,pindex)
+            update_custom_GUI_sprite(nil,1,pindex)
          end
       end
    end
@@ -9818,11 +9824,11 @@ function cursor_highlight(pindex, ent, box_type)
 end
 
 --Draws a sprite over the head of the player, with the selected scale. Set it to nil to clear it.
-function update_overhead_sprite(sprite, scale_in, radius_in, pindex)
+function update_overhead_sprite(sprite, scale_in, radius_in, pindex)--todo test***
    local player = players[pindex]
    local p = game.get_player(pindex)
-   local scale = scale_in / player.zoom
-   local radius = radius_in / player.zoom
+   local scale = scale_in 
+   local radius = radius_in 
    
    if player.overhead_circle ~= nil then
       rendering.destroy(player.overhead_circle) 
@@ -9832,11 +9838,39 @@ function update_overhead_sprite(sprite, scale_in, radius_in, pindex)
    end
    if sprite ~= nil then
       player.overhead_circle = rendering.draw_circle{color = {r = 0.5, b = 0.75, g = 0.5, a = 0.8}, render_layer = 251, radius = radius,
-         surface = p.surface, target = {x = p.position.x, y = p.position.y - 3 * scale - 3 * radius}, draw_on_ground = false, filled = true}
+         surface = p.surface, target = {x = p.position.x, y = p.position.y - 3 * scale - radius}, draw_on_ground = false, filled = true}
       rendering.set_visible(player.overhead_circle,true)
       player.overhead_sprite = rendering.draw_sprite{sprite = sprite, render_layer = 253, x_scale = scale, y_scale = scale,
-         surface = p.surface, target = {x = p.position.x, y = p.position.y - 3 * scale - 3 * radius}, orientation = dirs.north}
+         surface = p.surface, target = {x = p.position.x, y = p.position.y - 3 * scale - radius}, orientation = dirs.north}
       rendering.set_visible(player.overhead_sprite,true)
+   end
+end
+
+--Draws a custom GUI with a sprite in the middle of the screen. Set it to nil to clear it.
+function update_custom_GUI_sprite(sprite, scale_in, pindex)
+   local player = players[pindex]
+   local p = game.get_player(pindex)
+   local scale = scale_in
+   
+   if sprite == nil then
+      player.custom_GUI_frame.visible = false
+   else
+      local f = player.custom_GUI_frame
+      local s1 = player.custom_GUI_sprite
+      if f == nil then
+         f = game.get_player(pindex).gui.screen.add{type="frame"}
+         f.force_auto_center()
+         f.bring_to_front()
+      end
+      if s1 == nil then
+         s1 = f.add{type="sprite",caption = "custom menu"}
+      end
+      if s1.sprite ~= sprite then 
+         s1.sprite = sprite
+      end
+      f.visible = true
+      player.custom_GUI_frame = f
+      player.custom_GUI_sprite = s1
    end
 end
 
