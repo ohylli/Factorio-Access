@@ -3765,9 +3765,9 @@ function read_coords(pindex, start_phrase)
    end
    if not(players[pindex].in_menu) then
       if game.get_player(pindex).driving then
-         --Give vehicle coords and orientation and speed ****todo verify speed numbers
+         --Give vehicle coords and orientation and speed --laterdo find exact speed coefficient
          local vehicle = game.get_player(pindex).vehicle
-         result = result .. " in " .. vehicle.name .. " "
+         result = result .. " in " .. vehicle.name .. " " 
          if vehicle.speed > 0 then
             result = result .. " heading " .. get_heading(vehicle) .. " at " .. math.floor(vehicle.speed * 215) .. " kilometers per hour, past the point " 
          elseif vehicle.speed < 0 then
@@ -4147,7 +4147,7 @@ script.on_event(defines.events.on_player_changed_position,function(event)
          local ent = get_selected_ent(pindex)
          if not players[pindex].vanilla_mode and ((ent ~= nil and ent.valid) or not game.get_player(pindex).surface.can_place_entity{name = "character", position = players[pindex].cursor_pos}) then
             target(pindex)
-            if game.get_player(pindex).driving then --***todo test train readfix
+            if game.get_player(pindex).driving then
                return
             end
             read_tile(pindex)
@@ -5103,7 +5103,9 @@ function move(direction,pindex)
                game.get_player(pindex).play_sound{path = "tile-walking/" .. tile.name}
             end
          end
-         read_tile(pindex)
+         if not game.get_player(pindex).driving then
+            read_tile(pindex)
+         end
          target(pindex)
          
          if players[pindex].build_lock then
@@ -5125,7 +5127,9 @@ function move(direction,pindex)
       cursor_highlight(pindex, nil, nil)
       sync_build_arrow(pindex)
       target(pindex)
-      if players[pindex].walk ~= 2 then
+      if game.get_player(pindex).driving then
+         target(pindex)
+      elseif players[pindex].walk ~= 2 then
          read_tile(pindex)
       elseif players[pindex].walk == 2 then
          refresh_player_tile(pindex)
@@ -5174,13 +5178,15 @@ function move_key(direction,event, force_single_tile)
       sync_build_arrow(pindex)
       if players[pindex].cursor_size == 0 then
          -- Cursor size 0: read tile
-         read_tile(pindex)
+         if not game.get_player(pindex).driving then
+            read_tile(pindex)
+         end
          target(pindex)
          players[pindex].player_direction = direction
          if players[pindex].build_lock then
             build_item_in_hand(pindex, -1)            
          end
-      else
+      elseif not game.get_player(pindex).driving then
          -- Larger cursor sizes: scan area
          local scan_left_top = {math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size,math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size}
          local scan_right_bottom = {math.floor(players[pindex].cursor_pos.x)+players[pindex].cursor_size+1,math.floor(players[pindex].cursor_pos.y)+players[pindex].cursor_size+1}
@@ -7676,7 +7682,7 @@ script.on_event("read-entity-status", function(event)
                result = result .. ", with productivity bonus " .. math.floor(100 * (0 + ent.productivity_bonus) + 0.5) .. " percent "
             end
          elseif ent.type == "mining-drill" then
-            result = result .. ", producing " .. string.format(" %.2f ",ent.prototype.mining_speed * 60 * (1 + ent.speed_bonus)) .. " items per minute "--***todo test
+            result = result .. ", producing " .. string.format(" %.2f ",ent.prototype.mining_speed * 60 * (1 + ent.speed_bonus)) .. " items per minute "
             if ent.speed_bonus ~= 0 then
                result = result .. ", with speed " .. math.floor(100 * (1 + ent.speed_bonus) + 0.5) .. " percent " 
             end
@@ -7733,7 +7739,7 @@ script.on_event("read-entity-status", function(event)
       end
       
       if ent.name == "straight-rail" then
-         -- Report nearest rail intersection position --todo test*** and laterdo find better keybind
+         -- Report nearest rail intersection position -- laterdo find better keybind
          local nearest, dist = find_nearest_intersection(ent, pindex)
          if nearest == nil then
             result = result .. ", no rail intersections within " .. dist .. " tiles " 
@@ -8704,12 +8710,6 @@ script.on_event("debug-test-key", function(event)
 	  --sub_automatic_travel_to_other_stop(ent.train)
 	  --instant_schedule(ent.train)
    end
-   --GUI TESTS WIP todo***
-   --local f = game.get_player(pindex).gui.screen.add{type="frame"}
-   --local s1 = f.add{type="sprite",caption = "s1"}
-   --s1.sprite = "item.lab"
-   --f.force_auto_center()
-   --f.bring_to_front()
    
 end)
 
@@ -9827,7 +9827,7 @@ function cursor_highlight(pindex, ent, box_type)
 end
 
 --Draws a sprite over the head of the player, with the selected scale. Set it to nil to clear it.
-function update_overhead_sprite(sprite, scale_in, radius_in, pindex)--todo test***
+function update_overhead_sprite(sprite, scale_in, radius_in, pindex)
    local player = players[pindex]
    local p = game.get_player(pindex)
    local scale = scale_in 
