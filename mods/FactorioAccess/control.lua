@@ -3769,9 +3769,9 @@ function read_coords(pindex, start_phrase)
          local vehicle = game.get_player(pindex).vehicle
          result = result .. " in " .. vehicle.name .. " "
          if vehicle.speed > 0 then
-            result = result .. " heading " .. get_heading(vehicle) .. " at " .. math.floor(vehicle.speed) .. " kilometers per hour, past the point " 
+            result = result .. " heading " .. get_heading(vehicle) .. " at " .. math.floor(vehicle.speed * 215) .. " kilometers per hour, past the point " 
          elseif vehicle.speed < 0 then
-            result = result .. " reversing while facing" .. get_heading(vehicle) .. " at "  .. math.floor(-vehicle.speed) .. " kilometers per hour, past the point " 
+            result = result .. " facing" .. get_heading(vehicle) .. " while reversing at "  .. math.floor(-vehicle.speed * 215) .. " kilometers per hour, past the point " 
          else
             result = result .. " parked facing " .. get_heading(vehicle) .. " at point "
          end
