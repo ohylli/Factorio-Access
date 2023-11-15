@@ -4978,13 +4978,13 @@ function on_tick(event)
       for pindex, player in pairs(players) do
          if player.in_menu then
             if player.menu == "technology" then
-               update_overhead_sprite("item.lab",2,1.5,pindex)
+               update_overhead_sprite("item.lab",2,1.25,pindex)
                update_custom_GUI_sprite("item.lab", 3, pindex)
             elseif player.menu == "travel" then
-               update_overhead_sprite("utility.downloading_white",3,1.5,pindex)
+               update_overhead_sprite("utility.downloading_white",4,1.25,pindex)
                update_custom_GUI_sprite("utility.downloading_white", 3, pindex)
             elseif player.menu == "warnings" then
-               update_overhead_sprite("utility.warning_white",3,1.5,pindex)
+               update_overhead_sprite("utility.warning_white",4,1.25,pindex)
                update_custom_GUI_sprite("utility.warning_white", 3, pindex)
             end
          else
@@ -7648,15 +7648,6 @@ script.on_event("read-entity-status", function(event)
                result = result .. ", can move " .. math.floor(ent.prototype.belt_speed * 480) .. " items per second"
             end
          end
-         if ent.name == "straight-rail" then
-            -- Report nearest rail intersection position --todo test*** and laterdo find better keybind
-            local nearest, dist = find_nearest_intersection(ent, pindex)
-            if nearest == nil then
-               result = result .. ", no intersections within " .. dist .. " tiles " 
-            else
-               result = result .. ", nearest intersection at " .. dist .. " " .. direction_lookup(get_direction_of_that_from_this(nearest,ent))
-            end
-         end
          if ent.type == "assembling-machine" or ent.type == "furnace" then --Crafting cycles per minute based on recipe time and the STATED craft speed ; laterdo maybe extend this to all "crafting machine" types?
             local progress = ent.crafting_progress
             local speed = ent.crafting_speed
@@ -7710,7 +7701,7 @@ script.on_event("read-entity-status", function(event)
          end
          --laterdo maybe pump speed?
       end
-      
+            
       --Entity power usage
       local power_rate = (1 + ent.consumption_bonus)
       local drain = ent.electric_drain
@@ -7740,8 +7731,20 @@ script.on_event("read-entity-status", function(event)
       elseif ent.is_entity_with_health then
          result = result .. ", " .. math.floor(ent.get_health_ratio() * 100) .. " percent health"
       end
+      
+      if ent.name == "straight-rail" then
+         -- Report nearest rail intersection position --todo test*** and laterdo find better keybind
+         local nearest, dist = find_nearest_intersection(ent, pindex)
+         if nearest == nil then
+            result = result .. ", no rail intersections within " .. dist .. " tiles " 
+         else
+            result = result .. ", nearest rail intersection at " .. dist .. " " .. direction_lookup(get_direction_of_that_from_this(nearest.position,ent.position))
+         end
+      end
+      
       printout(result ,pindex)
       --game.get_player(pindex).print(result)--**
+      
    end
 end)
 
@@ -9837,11 +9840,11 @@ function update_overhead_sprite(sprite, scale_in, radius_in, pindex)--todo test*
       rendering.destroy(player.overhead_sprite) 
    end
    if sprite ~= nil then
-      player.overhead_circle = rendering.draw_circle{color = {r = 0.5, b = 0.75, g = 0.5, a = 0.8}, render_layer = 251, radius = radius,
-         surface = p.surface, target = {x = p.position.x, y = p.position.y - 3 * scale - radius}, draw_on_ground = false, filled = true}
+      player.overhead_circle = rendering.draw_circle{color = {r = 0.2, b = 0.2, g = 0.2, a = 0.9}, radius = radius, draw_on_ground = true,--laterdo figure out render layer blend issue
+         surface = p.surface, target = {x = p.position.x, y = p.position.y - 3 - radius}, filled = true}
       rendering.set_visible(player.overhead_circle,true)
-      player.overhead_sprite = rendering.draw_sprite{sprite = sprite, render_layer = 253, x_scale = scale, y_scale = scale,
-         surface = p.surface, target = {x = p.position.x, y = p.position.y - 3 * scale - radius}, orientation = dirs.north}
+      player.overhead_sprite = rendering.draw_sprite{sprite = sprite, x_scale = scale, y_scale = scale,--tint = {r = 0.9, b = 0.9, g = 0.9, a = 1.0},
+         surface = p.surface, target = {x = p.position.x, y = p.position.y - 3 - radius}, orientation = dirs.north}
       rendering.set_visible(player.overhead_sprite,true)
    end
 end
@@ -9852,7 +9855,7 @@ function update_custom_GUI_sprite(sprite, scale_in, pindex)
    local p = game.get_player(pindex)
    local scale = scale_in
    
-   if sprite == nil then
+   if sprite == nil and player.custom_GUI_frame ~= nil then
       player.custom_GUI_frame.visible = false
    else
       local f = player.custom_GUI_frame
@@ -9871,6 +9874,7 @@ function update_custom_GUI_sprite(sprite, scale_in, pindex)
       f.visible = true
       player.custom_GUI_frame = f
       player.custom_GUI_sprite = s1
+      f.bring_to_front()
    end
 end
 

@@ -114,13 +114,13 @@ function rail_ent_info(pindex, ent, description)
    local signals = ent.surface.find_entities_filtered{position = ent.position, radius = 2, name = "rail-chain-signal"}
    for i,s in ipairs(signals) do
       chain_s_count = chain_s_count + 1
-      rendering.draw_circle{color = {1, 1, 0},radius = 2,width = 2,target = ent,surface = ent.surface,time_to_live = 90}
+      rendering.draw_circle{color = {0.5, 0.5, 1},radius = 2,width = 2,target = ent,surface = ent.surface,time_to_live = 90}
    end
    
    signals = ent.surface.find_entities_filtered{position = ent.position, radius = 2, name = "rail-signal"}
    for i,s in ipairs(signals) do
       rail_s_count = rail_s_count + 1
-      rendering.draw_circle{color = {1, 1, 0},radius = 2,width = 2,target = ent,surface = ent.surface,time_to_live = 90}
+      rendering.draw_circle{color = {0.5, 0.5, 1},radius = 2,width = 2,target = ent,surface = ent.surface,time_to_live = 90}
    end
    
    if chain_s_count + rail_s_count == 0 then
@@ -2289,7 +2289,7 @@ end
 
 function find_nearest_intersection(rail, pindex, radius_in)
    --1. Scan around the rail for other rails
-   local radius = radius_in or 500
+   local radius = radius_in or 1000
    local pos = rail.position
    local scan_area = {{pos.x-radius,pos.y-radius},{pos.x+radius,pos.y+radius}} 
    local ents = game.get_player(pindex).surface.find_entities_filtered{area = scan_area, name = "straight-rail"}
@@ -3435,68 +3435,68 @@ end
 function play_train_track_alert_sounds(step)
    for pindex, player in pairs(players) do
       --Check if the player is standing on a rail
-	  local p = game.get_player(pindex)
+      local p = game.get_player(pindex)
       local floor_ent = p.surface.find_entities_filtered{position = p.position, limit = 1}[1]
-	  local facing_ent = players[p.index].tile.ents[1]
-	  local found_rail = nil
-	  local skip = false
-	  if p.driving then
-	     skip = true
-	  elseif facing_ent ~= nil and facing_ent.valid and (facing_ent.name == "straight-rail" or facing_ent.name == "curved-rail") then
-	     found_rail = facing_ent
-	  elseif floor_ent ~= nil and floor_ent.valid and (floor_ent.name == "straight-rail" or floor_ent.name == "curved-rail") then
-	     found_rail = floor_ent
+      local facing_ent = players[p.index].tile.ents[1]
+      local found_rail = nil
+      local skip = false
+      if p.driving then
+         skip = true
+      elseif floor_ent ~= nil and floor_ent.valid and (floor_ent.name == "straight-rail" or floor_ent.name == "curved-rail") then
+         found_rail = floor_ent
+      elseif facing_ent ~= nil and facing_ent.valid and (facing_ent.name == "straight-rail" or facing_ent.name == "curved-rail") then
+         found_rail = facing_ent
       else
-	     --Check further around the player because the other scans do not cover the back
-		 local floor_ent_2 = p.surface.find_entities_filtered{name = {"straight-rail","curved-rail"}, position = p.position, radius = 1, limit = 1}[1]
-	     if floor_ent_2 ~= nil and floor_ent_2.valid then
-		    found_rail = floor_ent_2
-		 else
-		    skip = true
-		 end
-	  end
+         --Check further around the player because the other scans do not cover the back
+         local floor_ent_2 = p.surface.find_entities_filtered{name = {"straight-rail","curved-rail"}, position = p.position, radius = 1, limit = 1}[1]
+         if floor_ent_2 ~= nil and floor_ent_2.valid then
+            found_rail = floor_ent_2
+         else
+            skip = true
+         end
+      end
 	  
-	  --Condition for step 1: Any moving trains nearby (within 200 tiles)
-	  if not skip and step == 1 then
+      --Condition for step 1: Any moving trains nearby (within 400 tiles)
+      if not skip and step == 1 then
+         local trains = p.surface.get_trains()
+         for i,train in ipairs(trains) do
+            if train.speed ~= 0 and (util.distance(p.position,train.front_stock.position) < 400 or util.distance(p.position,train.back_stock.position) < 400) then 
+               p.play_sound{path = "utility/blueprint_selection_ended"}
+               rendering.draw_circle{color = {1, 1, 0},radius = 2,width = 2,target = found_rail.position,surface = found_rail.surface,time_to_live = 10}
+            end
+         end
+      --Condition for step 2: Any moving trains nearby (within 200 tiles), and heading towards the player
+      elseif not skip and step == 2 then
 	     local trains = p.surface.get_trains()
-		 for i,train in ipairs(trains) do
-		    if train.speed ~= 0 and (util.distance(p.position,train.front_stock.position) < 100 or util.distance(p.position,train.back_stock.position) < 200) then 
-			   p.play_sound{path = "utility/blueprint_selection_ended"}
-			   rendering.draw_circle{color = {1, 1, 0},radius = 2,width = 2,target = found_rail.position,surface = found_rail.surface,time_to_live = 10}
-			end
-		 end
-	  --Condition for step 2: Any moving trains nearby (within 100 tiles), and heading towards the player
-	  elseif not skip and step == 2 then
-	     local trains = p.surface.get_trains()
-		 for i,train in ipairs(trains) do
-		    if  train.speed ~= 0 and (util.distance(p.position,train.front_stock.position) < 100 or util.distance(p.position,train.back_stock.position) < 100)
-			and ((train.speed > 0 and util.distance(p.position,train.front_stock.position) <= util.distance(p.position,train.back_stock.position)) 
-			or   (train.speed < 0 and util.distance(p.position,train.front_stock.position) >= util.distance(p.position,train.back_stock.position))) then 
-			   p.play_sound{path = "utility/blueprint_selection_ended"}
-			   rendering.draw_circle{color = {1, 1, 0},radius = 3,width = 3,target = found_rail.position,surface = found_rail.surface,time_to_live = 10}
-			end
-		 end
-	  --Condition for step 3: Any moving trains in the same rail block, and heading towards the player OR if the block inbound signals are yellow
-	  elseif not skip and step == 3 then
-	    local trains = p.surface.get_trains()
-		 for i,train in ipairs(trains) do
-		    if   train.speed ~= 0 and (found_rail.is_rail_in_same_rail_block_as(train.front_rail) or found_rail.is_rail_in_same_rail_block_as(train.back_rail))
-			and ((train.speed > 0 and util.distance(p.position,train.front_stock.position) <= util.distance(p.position,train.back_stock.position)) 
-			or   (train.speed < 0 and util.distance(p.position,train.front_stock.position) >= util.distance(p.position,train.back_stock.position))) then 
-			   p.play_sound{path = "utility/new_objective"}
-			   p.play_sound{path = "utility/new_objective"}
-			   rendering.draw_circle{color = {1, 0, 0},radius = 4,width = 4,target = found_rail.position,surface = found_rail.surface,time_to_live = 10}
-			end
-		 end
-       local signals = found_rail.get_inbound_signals()
-       for i,signal in ipairs(signals) do
-          if signal.signal_state == defines.signal_state.reserved then
-            p.play_sound{path = "utility/new_objective"}
-			   p.play_sound{path = "utility/new_objective"}
-			   rendering.draw_circle{color = {1, 0.3, 0},radius = 4,width = 4,target = found_rail.position,surface = found_rail.surface,time_to_live = 10}
-          end
-       end
-	  end
+         for i,train in ipairs(trains) do
+            if  train.speed ~= 0 and (util.distance(p.position,train.front_stock.position) < 200 or util.distance(p.position,train.back_stock.position) < 200)
+            and ((train.speed > 0 and util.distance(p.position,train.front_stock.position) <= util.distance(p.position,train.back_stock.position)) 
+            or   (train.speed < 0 and util.distance(p.position,train.front_stock.position) >= util.distance(p.position,train.back_stock.position))) then 
+               p.play_sound{path = "utility/blueprint_selection_ended"}
+               rendering.draw_circle{color = {1, 0.5, 0},radius = 3,width = 4,target = found_rail.position,surface = found_rail.surface,time_to_live = 10}
+            end
+         end
+      --Condition for step 3: Any moving trains in the same rail block, and heading towards the player OR if the block inbound signals are yellow
+      elseif not skip and step == 3 then
+         local trains = p.surface.get_trains()
+         for i,train in ipairs(trains) do
+            if   train.speed ~= 0 and (found_rail.is_rail_in_same_rail_block_as(train.front_rail) or found_rail.is_rail_in_same_rail_block_as(train.back_rail))
+            and ((train.speed > 0 and util.distance(p.position,train.front_stock.position) <= util.distance(p.position,train.back_stock.position)) 
+            or   (train.speed < 0 and util.distance(p.position,train.front_stock.position) >= util.distance(p.position,train.back_stock.position))) then 
+               p.play_sound{path = "utility/new_objective"}
+               p.play_sound{path = "utility/new_objective"}
+               rendering.draw_circle{color = {1, 0, 0},radius = 4,width = 8,target = found_rail.position,surface = found_rail.surface,time_to_live = 10}
+            end
+         end
+         local signals = found_rail.get_inbound_signals()
+         for i,signal in ipairs(signals) do
+            if signal.signal_state == defines.signal_state.reserved then
+               p.play_sound{path = "utility/new_objective"}
+               p.play_sound{path = "utility/new_objective"}
+               rendering.draw_circle{color = {1, 0, 0},radius = 4,width = 8,target = found_rail.position,surface = found_rail.surface,time_to_live = 10}
+            end
+         end
+      end
      
    end
 end
