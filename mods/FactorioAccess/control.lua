@@ -8709,8 +8709,7 @@ script.on_event("debug-test-key", function(event)
      --set_temporary_train_stop(ent.train,pindex)
 	  --sub_automatic_travel_to_other_stop(ent.train)
 	  --instant_schedule(ent.train)
-   end
-   
+   end   
 end)
 
 --Attempt to launch a rocket
