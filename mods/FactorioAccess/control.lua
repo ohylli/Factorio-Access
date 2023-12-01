@@ -725,7 +725,41 @@ function ent_info(pindex, ent, description)
          end
 
       else
-         result = result .. " carrying nothing"
+         --No currently carried items: Now try to announce recently carried items by checking the next belt over
+         local next_belt = ent.belt_neighbours["outputs"][1]
+          --Check contents
+         local contents = {}
+         if next_belt ~= nil and next_belt.valid then
+            local left = next_belt.get_transport_line(1).get_contents()
+            local right = next_belt.get_transport_line(2).get_contents()
+
+            for name, count in pairs(right) do
+               if left[name] ~= nil then
+                  left[name] = left[name] + count
+               else
+                  left[name] = count
+               end
+            end
+            for name, count in pairs(left) do
+               table.insert(contents, {name = name, count = count})
+            end
+            table.sort(contents, function(k1, k2)
+               return k1.count > k2.count
+            end)
+         end
+         
+         if #contents > 0 then
+            result = result .. " recently carried " .. contents[1].name
+            if #contents > 1 then
+               result = result .. ", and " .. contents[2].name
+               if #contents > 2 then
+                  result = result .. ", and other item types " 
+               end
+            end
+         else
+            --No currently or recently carried items
+            result = result .. " carrying nothing"
+         end
       end
    end
    
@@ -3298,6 +3332,7 @@ function read_tile(pindex, start_text)
       end
    end
    printout(result, pindex)
+   --game.get_player(pindex).print(result)--**
 end
 
 --Cursor building preview checks. NOTE: Only 1 by 1 entities for now
@@ -7384,7 +7419,7 @@ script.on_event("free-place-straight-rail", function(event)
       --Not in a menu
       local stack = game.get_player(pindex).cursor_stack
       local ent =  get_selected_ent(pindex)
-      if stack.name == "rail" then
+      if stack.valid_for_read and stack.valid and stack.name == "rail" then
          --Straight rail free placement
          build_item_in_hand(pindex, 1.337)--Uses sentinel value
       end
