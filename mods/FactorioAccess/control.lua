@@ -728,7 +728,7 @@ function ent_info(pindex, ent, description)
          --No currently carried items: Now try to announce recently carried items by checking the next belt over
          local next_belt = ent.belt_neighbours["outputs"][1]
           --Check contents
-         local contents = {}
+         local next_contents = {}
          if next_belt ~= nil and next_belt.valid then
             local left = next_belt.get_transport_line(1).get_contents()
             local right = next_belt.get_transport_line(2).get_contents()
@@ -741,25 +741,42 @@ function ent_info(pindex, ent, description)
                end
             end
             for name, count in pairs(left) do
-               table.insert(contents, {name = name, count = count})
+               table.insert(next_contents, {name = name, count = count})
             end
-            table.sort(contents, function(k1, k2)
+            table.sort(next_contents, function(k1, k2)
                return k1.count > k2.count
             end)
          end
          
-         if #contents > 0 then
-            result = result .. " recently carried " .. contents[1].name
-            if #contents > 1 then
-               result = result .. ", and " .. contents[2].name
-               if #contents > 2 then
+         if #next_contents > 0 then
+            result = result .. " recently carried " .. next_contents[1].name
+            if #next_contents > 1 then
+               result = result .. ", and " .. next_contents[2].name
+               if #next_contents > 2 then
                   result = result .. ", and other item types " 
                end
             end
          else
             --No currently or recently carried items
-            result = result .. " carrying nothing"
+            result = result ..  " carrying nothing, "
          end
+      end
+      
+      --Check whether items on the belt are stopped or moving (based on whether you can insert at the back of the belt)
+      local left = ent.get_transport_line(1)
+      local right = ent.get_transport_line(2)
+      local insert_spots_left = 0
+      local insert_spots_right = 0
+      if not left.can_insert_at_back() and right.can_insert_at_back() then
+         result = result ..  "left lane full and stopped, "
+      elseif left.can_insert_at_back() and not right.can_insert_at_back() then
+         result = result ..  "right lane full and stopped, "
+      elseif not left.can_insert_at_back() and not right.can_insert_at_back() then
+         result = result ..  "both lanes full and stopped, "
+         --game.get_player(pindex).print(", both lanes full and stopped, ")
+      else
+         result = result .. "both lanes open, "
+         --game.get_player(pindex).print(", both lanes open, ")
       end
    end
    
