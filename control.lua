@@ -9929,3 +9929,53 @@ function update_custom_GUI_sprite(sprite, scale_in, pindex)
    end
 end
 
+script.on_event(defines.events.on_entity_damaged,function(event)
+   local ent = event.entity
+   if ent == nil or not ent.valid then
+      return
+   end
+   
+   --for pindex, player in pairs(players) do 
+   --   game.get_player(pindex).print("damage alert!")
+   --end
+   
+   local attacker_force = event.force
+   local damaged_force = ent.force
+   --Alert all players of the damaged force
+   for pindex, player in pairs(players) do
+      if players[pindex] ~= nil and game.get_player(pindex).force.name == damaged_force.name then
+         local dist = math.ceil(util.distance(players[pindex].position,ent.position))
+         local dir = direction_lookup(get_direction_of_that_from_this(ent.position,players[pindex].position))
+         local result = ent.name .. " damaged by " .. attacker_force.name .. " forces at " .. dist .. " " .. dir
+         printout(result,pindex)
+         --game.get_player(pindex).print(result)--**
+         game.get_player(pindex).play_sound{path = "utility/alert_destroyed"}
+      end
+   end
+end)
+
+script.on_event(defines.events.on_entity_died,function(event)
+   local ent = event.entity
+   if ent == nil or not ent.valid then
+      return
+   end
+   
+   -- for pindex, player in pairs(players) do 
+      -- game.get_player(pindex).print("destroyed alert!")
+   -- end
+   
+   local attacker_force = event.force
+   local damaged_force = ent.force
+   --Alert all players of the damaged force
+   for pindex, player in pairs(players) do
+      if players[pindex] ~= nil and game.get_player(pindex).force.name == damaged_force.name then
+         local dist = math.ceil(util.distance(players[pindex].position,ent.position))
+         local dir = direction_lookup(get_direction_of_that_from_this(ent.position,players[pindex].position))
+         local result = ent.name .. " destroyed by " .. attacker_force.name .. " forces at " .. dist .. " " .. dir
+         printout(result,pindex)
+         --game.get_player(pindex).print(result)--**
+         game.get_player(pindex).play_sound{path = "utility/alert_destroyed"}
+      end
+   end
+end)
+
