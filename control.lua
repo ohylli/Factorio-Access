@@ -2650,7 +2650,7 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
          start_phrase = ""
       end
       stack = building_sector.inventory[players[pindex].building.index]
-      if stack.valid_for_read and stack.valid then
+      if stack and stack.valid_for_read and stack.valid then
          printout(start_phrase .. stack.name .. " x " .. stack.count, pindex)
       else
          --Read the "empty slot"
@@ -2792,7 +2792,7 @@ end
 function read_inventory_slot(pindex, start_phrase)
    start_phrase = start_phrase or ""
    local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
-   if stack.valid_for_read and stack.valid == true then
+   if stack and stack.valid_for_read and stack.valid == true then
 	  printout(start_phrase .. stack.name .. " x " .. stack.count .. " " .. stack.prototype.subgroup.name , pindex)
    else
       printout(start_phrase .. "Empty Slot",pindex)
@@ -2803,7 +2803,7 @@ end
 function set_quick_bar(index, pindex)
    local page = game.get_player(pindex).get_active_quick_bar_page(1)-1
    local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
-   if stack.valid_for_read and stack.valid == true then
+   if stack and stack.valid_for_read and stack.valid == true then
       game.get_player(pindex).set_quick_bar_slot(index + 10*page, stack) 
       printout("Assigned " .. index, pindex)
 
@@ -2845,7 +2845,7 @@ function read_quick_bar(index,pindex)
    if item ~= nil then
       local count = game.get_player(pindex).character.get_main_inventory().get_item_count(item.name)
       local stack = game.get_player(pindex).cursor_stack
-      if stack.valid_for_read then
+      if stack and stack.valid_for_read then
          count = count + stack.count
          printout("unselected " .. item.name .. " x " .. count, pindex)
       else
@@ -3322,7 +3322,7 @@ function read_tile(pindex, start_text)
    if not ent or ent.type == "resource" then--possible bug with the h box being a new tile ent
       local stack = game.get_player(pindex).cursor_stack
       --Run build preview checks
-      if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then
+      if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then
          result = result .. build_preview_checks_info(stack,pindex)
          --game.get_player(pindex).print(result)--
       end
@@ -3330,7 +3330,7 @@ function read_tile(pindex, start_text)
      
    --If the build lock is on and the player is holding a cut or copy tool, every entity being read gets mined as soon as you read a new tile.
    local stack = game.get_player(pindex).cursor_stack
-   if stack.valid_for_read and stack.name == "cut-paste-tool" then
+   if stack and stack.valid_for_read and stack.name == "cut-paste-tool" then
       if ent and ent.valid then--not while loop, because it causes crashes
          local name = ent.name
          game.get_player(pindex).play_sound{path = "Mine-Building"}
@@ -3838,7 +3838,7 @@ function read_coords(pindex, start_phrase)
          
          --If there is a build preview, give its dimensions and which way they extend
          local stack = game.get_player(pindex).cursor_stack
-         if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and (stack.prototype.place_result.tile_height > 1 or stack.prototype.place_result.tile_width > 1) then
+         if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and (stack.prototype.place_result.tile_height > 1 or stack.prototype.place_result.tile_width > 1) then
             local dir = players[pindex].building_direction * dirs.east
             local p_dir = players[pindex].player_direction
             local preview_str = ", preview is " 
@@ -3863,7 +3863,7 @@ function read_coords(pindex, start_phrase)
                preview_str = preview_str .. " to the north "
             end
             result = result .. preview_str
-         elseif stack.valid_for_read and stack.valid and stack.prototype.place_as_tile_result ~= nil then
+         elseif stack and stack.valid_for_read and stack.valid and stack.prototype.place_as_tile_result ~= nil then
             local preview_str = ", paving preview " 
             local player = players[pindex]
             preview_str = ", paving preview is " .. (player.cursor_size * 2 + 1) .. " by " .. (player.cursor_size * 2 + 1) .. " tiles, centered on this tile. "
@@ -5019,10 +5019,13 @@ function on_tick(event)
    --Play train track warning sounds at appropriate frequencies
    if event.tick % 15 == 0 then
       play_train_track_alert_sounds(3)
+      play_enemy_alert_sound(3)
       if event.tick % 30 == 0 then
          play_train_track_alert_sounds(2)
+         play_enemy_alert_sound(2)
          if event.tick % 60 == 0 then
             play_train_track_alert_sounds(1)
+            play_enemy_alert_sound(1)
 		 end
 	  end
    elseif event.tick % 30 == 1 then
@@ -5201,7 +5204,7 @@ function move(direction,pindex)
    
    --Unless the cut-paste tool is in hand, restore the reading of flying text 
    local stack = game.get_player(pindex).cursor_stack
-   if not (stack.valid_for_read and stack.name == "cut-paste-tool") then
+   if not (stack and stack.valid_for_read and stack.name == "cut-paste-tool") then
       players[pindex].allow_reading_flying_text = true
    end
 end
@@ -6369,7 +6372,7 @@ script.on_event("mine-tiles", function(event)
       --Mine tiles around the cursor
       local stack = game.get_player(pindex).cursor_stack
       local surf = game.get_player(pindex).surface
-      if stack.valid_for_read and stack.valid and stack.prototype.place_as_tile_result ~= nil then
+      if stack and stack.valid_for_read and stack.valid and stack.prototype.place_as_tile_result ~= nil then
          players[pindex].allow_reading_flying_text = false
          local c_pos = players[pindex].cursor_pos
          local c_size = players[pindex].cursor_size
@@ -6427,7 +6430,7 @@ script.on_event("mine-area", function(event) --laterdo** proper tallying of clea
    --Also, if cut-paste tool in hand, mine every non-resource entity in the area that you can.
    local p = game.get_player(pindex)
    local stack = p.cursor_stack
-   if stack.valid_for_read and stack.name == "cut-paste-tool" then
+   if stack and stack.valid_for_read and stack.name == "cut-paste-tool" then
       players[pindex].allow_reading_flying_text = false
       local all_ents = p.surface.find_entities_filtered{position = p.position, radius = 5, force = {p.force, "neutral"}}
       for i,ent in ipairs(all_ents) do
@@ -6452,7 +6455,7 @@ script.on_event("cut-paste-tool-comment", function(event)
    local stack = game.get_player(pindex).cursor_stack
    if stack == nil then
       --(do nothing when the cut paste tool is not enabled)
-   elseif stack.valid_for_read and stack.name == "cut-paste-tool" then
+   elseif stack and stack.valid_for_read and stack.name == "cut-paste-tool" then
       printout("To disable this tool empty the hand, by pressing SHIFT + Q",pindex)
    end
 end)
@@ -6815,14 +6818,14 @@ script.on_event("click-hand", function(event)
       --Not in a menu
       local stack = game.get_player(pindex).cursor_stack
       local ent = get_selected_ent(pindex)
-      if stack.valid_for_read and stack.valid and (stack.prototype.place_result ~= nil or stack.prototype.place_as_tile_result ~= nil) and stack.name ~= "offshore-pump" then
+      if stack and stack.valid_for_read and stack.valid and (stack.prototype.place_result ~= nil or stack.prototype.place_as_tile_result ~= nil) and stack.name ~= "offshore-pump" then
          players[pindex].last_click_tick = event.tick
          local offset = 0
          build_item_in_hand(pindex, offset)
-      elseif stack.valid and stack.valid_for_read and stack.name == "offshore-pump" then
+      elseif stack and stack.valid and stack.valid_for_read and stack.name == "offshore-pump" then
          players[pindex].last_click_tick = event.tick
          build_offshore_pump_in_hand(pindex)
-      elseif stack.valid and stack.valid_for_read and stack.is_repair_tool then
+      elseif stack and stack.valid and stack.valid_for_read and stack.is_repair_tool then
          players[pindex].last_click_tick = event.tick
          --Repair the entity found . Laterdo improve this 
          --game.get_player(pindex).use_from_cursor{players[pindex].cursor_pos.x,players[pindex].cursor_pos.y}--does not work
@@ -6839,7 +6842,7 @@ script.on_event("click-hand", function(event)
             --game.get_player(pindex).print("healed " .. health_diff)--laterdo repair consumes the pack
          end
          return
-      elseif stack.valid and stack.valid_for_read then
+      elseif stack and stack.valid and stack.valid_for_read then
          players[pindex].last_click_tick = event.tick
          local p = game.get_player(pindex)
          p.use_from_cursor{p.position.x+1,p.position.y+1}--tolaterdo adjust it to use an item 3 tiles in front of the player instead.
@@ -6864,7 +6867,7 @@ script.on_event("click-entity", function(event)
       if game.get_player(pindex).driving and game.get_player(pindex).vehicle.train ~= nil then
          players[pindex].last_click_tick = event.tick
          train_menu_open(pindex)
-      elseif ent and not (stack.valid and stack.valid_for_read and (stack.prototype.place_result or stack.prototype.place_as_tile_result)) then
+      elseif ent and not (stack and stack.valid and stack.valid_for_read and (stack.prototype.place_result or stack.prototype.place_as_tile_result)) then
          players[pindex].last_click_tick = event.tick
          --Clicking on an entity in the world
          if util.distance(players[pindex].position, ent.position) > 11 then
@@ -6997,7 +7000,7 @@ function build_item_in_hand(pindex, offset_val)
    local stack = game.get_player(pindex).cursor_stack
    local offset = offset_val or 0
    
-   if not (stack.valid and stack.valid_for_read) then
+   if not (stack and stack.valid and stack.valid_for_read) then
       game.get_player(pindex).play_sound{path = "utility/cannot_build"}
       local message =  "Invalid item in hand!"
 	  if game.get_player(pindex).is_cursor_empty() then
@@ -7026,7 +7029,7 @@ function build_item_in_hand(pindex, offset_val)
       return
    end
    
-   if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then
+   if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then
       local ent = stack.prototype.place_result
       local dimensions = get_tile_dimensions(stack.prototype, players[pindex].building_direction * dirs.east)
       local position = {x,y}
@@ -7192,7 +7195,7 @@ function build_item_in_hand(pindex, offset_val)
             printout("Cannot place that there.", pindex)
          end
       end
-   elseif stack.valid_for_read and stack.valid and stack.prototype.place_as_tile_result ~= nil then
+   elseif stack and stack.valid_for_read and stack.valid and stack.prototype.place_as_tile_result ~= nil then
       --Place paving tiles 
 	  local p = game.get_player(pindex)
 	  local t_size = players[pindex].cursor_size * 2 + 1
@@ -7217,7 +7220,7 @@ end
 function build_offshore_pump_in_hand(pindex)
    local stack = game.get_player(pindex).cursor_stack
 
-   if stack.valid and stack.valid_for_read and stack.name == "offshore-pump" then
+   if stack and stack.valid and stack.valid_for_read and stack.name == "offshore-pump" then
       local ent = stack.prototype.place_result
       players[pindex].pump.positions = {}
       local initial_position = game.get_player(pindex).position
@@ -7296,7 +7299,7 @@ script.on_event("transfer-one-stack", function(event)
          if players[pindex].building.sector <= #players[pindex].building.sectors and #players[pindex].building.sectors[players[pindex].building.sector].inventory > 0 and players[pindex].building.sectors[players[pindex].building.sector].name ~= "Fluid" then
             --Transfer stack from building to player inventory
 			local stack = players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index]
-            if stack.valid and stack.valid_for_read then
+            if stack and stack.valid and stack.valid_for_read then
                if game.get_player(pindex).can_insert(stack) then
                   game.get_player(pindex).play_sound{path = "utility/inventory_move"}
                   local result = stack.name
@@ -7320,7 +7323,7 @@ script.on_event("transfer-one-stack", function(event)
             if players[pindex].building.sector == #players[pindex].building.sectors + offset then
 		       --Transfer stack from player inventory to building
                local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
-               if stack.valid and stack.valid_for_read then
+               if stack and stack.valid and stack.valid_for_read then
                   if players[pindex].building.ent.can_insert(stack) then
                      game.get_player(pindex).play_sound{path = "utility/inventory_move"}
                      local result = stack.name
@@ -7436,7 +7439,7 @@ script.on_event("free-place-straight-rail", function(event)
       --Not in a menu
       local stack = game.get_player(pindex).cursor_stack
       local ent =  get_selected_ent(pindex)
-      if stack.valid_for_read and stack.valid and stack.name == "rail" then
+      if stack and stack.valid_for_read and stack.valid and stack.name == "rail" then
          --Straight rail free placement
          build_item_in_hand(pindex, 1.337)--Uses sentinel value
       end
@@ -7609,7 +7612,7 @@ script.on_event("menu-clear-filter", function(event)
       if players[pindex].menu == "building" then
          local stack = game.get_player(pindex).cursor_stack
          if players[pindex].building.sector <= #players[pindex].building.sectors then
-            if stack.valid_for_read and stack.valid and stack.count > 0 then
+            if stack and stack.valid_for_read and stack.valid and stack.count > 0 then
                local iName = players[pindex].building.sectors[players[pindex].building.sector].name
                if iName ~= "Fluid" and iName ~= "Filters" then
                   T = {
@@ -7822,7 +7825,7 @@ script.on_event("rotate-building", function(event)
    if not(players[pindex].in_menu) then
       local ent = get_selected_ent(pindex)
       local stack = game.get_player(pindex).cursor_stack
-      if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then
+      if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then
          if stack.prototype.place_result.supports_direction then
             if not(players[pindex].building_direction_lag) then
                game.get_player(pindex).play_sound{path="Rotate-Hand-Sound"}
@@ -7942,7 +7945,7 @@ script.on_event("item-info", function(event)
    elseif players[pindex].in_menu then
       if players[pindex].menu == "inventory" or (players[pindex].menu == "building" and players[pindex].building.sector > offset + #players[pindex].building.sectors) then
          local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
-         if stack.valid_for_read and stack.valid == true then
+         if stack and stack.valid_for_read and stack.valid == true then
             local str = ""
             if stack.prototype.place_result ~= nil then
                str = stack.prototype.place_result.localised_description
@@ -8011,7 +8014,7 @@ script.on_event("item-info", function(event)
                return
             end
             local stack = inventory[players[pindex].building.index]
-            if stack.valid_for_read and stack.valid == true then
+            if stack and stack.valid_for_read and stack.valid == true then
                local str = ""
                if stack.prototype.place_result ~= nil then
                   str = stack.prototype.place_result.localised_description
@@ -8055,7 +8058,7 @@ script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
    end
    local stack = game.get_player(pindex).cursor_stack
    local new_item = ""
-   if stack.valid_for_read then 
+   if stack and stack.valid_for_read then 
       new_item = stack.name
    end
    if players[pindex].previous_item ~= new_item then
@@ -8744,7 +8747,7 @@ script.on_event("debug-test-key", function(event)
       return
    end
    local stack = game.get_player(pindex).cursor_stack
-   if stack.valid_for_read and stack.valid then
+   if stack and stack.valid_for_read and stack.valid then
       --
    end
    if ent ~= nil and ent.valid and ent.fluidbox ~= nil then
@@ -9784,7 +9787,7 @@ function sync_build_arrow(pindex)
       player.building_direction = 0
       --game.get_player(pindex).print("dir was nil ")--
    end
-   if stack.valid_for_read and stack.valid and stack.prototype.place_result then
+   if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result then
       --Redraw arrow
       if dir_indicator ~= nil then rendering.destroy(player.building_direction_arrow) end
       player.building_direction_arrow = rendering.draw_sprite{sprite = "fluid.crude-oil", tint = {r = 0.25, b = 0.25, g = 1.0, a = 0.8}, render_layer = 254, 
@@ -9931,7 +9934,7 @@ end
 
 script.on_event(defines.events.on_entity_damaged,function(event)
    local ent = event.entity
-   if ent == nil or not ent.valid then
+   if ent == nil or not ent.valid or ent.name == "character" then
       return
    end
    
@@ -9956,7 +9959,28 @@ end)
 
 script.on_event(defines.events.on_entity_died,function(event)
    local ent = event.entity
-   if ent == nil or not ent.valid then
+   local causer = event.cause
+   if ent == nil or not ent.valid or ent.name then
+      return
+   elseif ent.name == "character" then
+      local p = ent.player
+      local result = "Player "
+      if p ~= nil and p.valid and p.name ~= nil then
+         result = result .. " " .. p.name 
+      else 
+         result = result .. " "
+      end
+      if causer == nil or not causer.valid then
+         result = result .. " died at " .. ent.position.x .. "," .. ent.position.y
+      elseif causer.player ~= nil and causer.player.valid and causer.player.name ~= nil then
+         result = result .. " was killed by " .. causer.player.name .. " at " .. ent.position.x .. "," .. ent.position.y
+      else
+         result = result .. " was killed by " .. causer.name .. " at " .. ent.position.x .. "," .. ent.position.y
+      end
+      for pindex, player in pairs(players) do
+         printout(result,pindex)
+         game.get_player(pindex).print("rekt!")
+      end
       return
    end
    
@@ -9978,4 +10002,33 @@ script.on_event(defines.events.on_entity_died,function(event)
       end
    end
 end)
+
+function play_enemy_alert_sound(mode_in)
+   for pindex, player in pairs(players) do
+      local mode = mode_in or 1
+      local p = game.get_player(pindex)
+      if p ~= nil and p.valid then
+         local nearest_enemy = p.surface.find_nearest_enemy{position = p.position, max_distance = 100}
+         local dist = -1
+         if nearest_enemy ~= nil and nearest_enemy.valid then
+            dist = math.floor(util.distance(nearest_enemy.position,p.position))
+         else
+            return
+         end
+         if mode == 1 then     -- Nearest enemy is far (lowest freq)
+            if dist < 100 then
+               p.play_sound{path = "utility/item_deleted"}
+            end
+         elseif mode == 2 then -- Nearest enemy is closer (medium freq)
+            if dist < 50 then
+               p.play_sound{path = "utility/item_deleted"}
+            end
+         elseif mode == 3 then -- Nearest enemy is too close (highest freq)
+            if dist < 25 then
+               p.play_sound{path = "utility/item_deleted"}
+            end
+         end
+      end
+   end
+end
 
