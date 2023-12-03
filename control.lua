@@ -765,12 +765,29 @@ function ent_info(pindex, ent, description)
       --Check whether items on the belt are stopped or moving (based on whether you can insert at the back of the belt)
       local left = ent.get_transport_line(1)
       local right = ent.get_transport_line(2)
+      
+      local left_dir = "left"
+      local right_dir = "right"
+      if ent.direction == dirs.north then
+         left_dir = direction_lookup(dirs.west)
+         right_dir = direction_lookup(dirs.east)
+      elseif ent.direction == dirs.east then
+         left_dir = direction_lookup(dirs.north)
+         right_dir = direction_lookup(dirs.south)
+      elseif ent.direction == dirs.south then
+         left_dir = direction_lookup(dirs.east)
+         right_dir = direction_lookup(dirs.west)
+      elseif ent.direction == dirs.west then
+         left_dir = direction_lookup(dirs.south)
+         right_dir = direction_lookup(dirs.north)
+      end
+      
       local insert_spots_left = 0
       local insert_spots_right = 0
       if not left.can_insert_at_back() and right.can_insert_at_back() then
-         result = result ..  "left lane full and stopped, "
+         result = result .. " " ..  left_dir .. " lane full and stopped, "
       elseif left.can_insert_at_back() and not right.can_insert_at_back() then
-         result = result ..  "right lane full and stopped, "
+         result = result .. " " ..  right_dir .. " lane full and stopped, "
       elseif not left.can_insert_at_back() and not right.can_insert_at_back() then
          result = result ..  "both lanes full and stopped, "
          --game.get_player(pindex).print(", both lanes full and stopped, ")
@@ -4016,6 +4033,7 @@ function initialize(player)
    faplayer.destroyed = faplayer.destroyed or {}
    faplayer.last_menu_toggle_tick = faplayer.last_menu_toggle_tick or 1
    faplayer.last_click_tick = faplayer.last_click_tick or 1
+   faplayer.last_damage_alert_tick = faplayer.last_damage_alert_tick or 1
 
    faplayer.preferences = {
       building_inventory_row_length = building_inventory_row_length or 8,
@@ -9934,7 +9952,10 @@ end
 
 script.on_event(defines.events.on_entity_damaged,function(event)
    local ent = event.entity
-   if ent == nil or not ent.valid or ent.name == "character" then
+   local tick = event.tick
+   if ent == nil or not ent.valid then
+      return
+   elseif ent.name == "character" then
       return
    end
    
@@ -9946,7 +9967,9 @@ script.on_event(defines.events.on_entity_damaged,function(event)
    local damaged_force = ent.force
    --Alert all players of the damaged force
    for pindex, player in pairs(players) do
-      if players[pindex] ~= nil and game.get_player(pindex).force.name == damaged_force.name then
+      if players[pindex] ~= nil and game.get_player(pindex).force.name == damaged_force.name 
+         and (players[pindex].last_damage_alert_tick == nil or (tick - players[pindex].last_damage_alert_tick) > 300) then
+         players[pindex].last_damage_alert_tick = tick
          local dist = math.ceil(util.distance(players[pindex].position,ent.position))
          local dir = direction_lookup(get_direction_of_that_from_this(ent.position,players[pindex].position))
          local result = ent.name .. " damaged by " .. attacker_force.name .. " forces at " .. dist .. " " .. dir
