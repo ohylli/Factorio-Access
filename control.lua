@@ -622,11 +622,23 @@ function ent_info(pindex, ent, description)
    --Give character names
    if ent.name == "character" then
       local p = ent.player
-      if p ~= nil and p.valid and p.name ~= nil then
+      local p2 = ent.associated_player
+      if p ~= nil and p.valid and p.name ~= nil and p.name ~= "" then
          result = result .. " " .. p.name 
-      elseif p.index == pindex then
+      elseif p2 ~= nil and p2.valid and p2.name ~= nil and p2.name ~= "" then
+         result = result .. " " .. p2.name 
+      elseif p ~= nil and p.valid and p.index == pindex then
          result = result .. " you "
+      elseif pindex ~= nil then
+         result = result .. " " .. pindex
+      else
+         result = result .. " X "
       end
+      
+      if p ~= nil and p.valid and p.index == pindex and not players[pindex].cursor then
+         return ""
+      end
+      
    end
    --Explain the contents of a container
    if ent.type == "container" or ent.type == "logistic-container" then --Chests etc: Report the most common item and say "and other items" if there are other types.
@@ -785,14 +797,14 @@ function ent_info(pindex, ent, description)
       local insert_spots_left = 0
       local insert_spots_right = 0
       if not left.can_insert_at_back() and right.can_insert_at_back() then
-         result = result .. " " ..  left_dir .. " lane full and stopped, "
+         result = result .. ", " ..  left_dir .. " lane full and stopped, "
       elseif left.can_insert_at_back() and not right.can_insert_at_back() then
-         result = result .. " " ..  right_dir .. " lane full and stopped, "
+         result = result .. ", " ..  right_dir .. " lane full and stopped, "
       elseif not left.can_insert_at_back() and not right.can_insert_at_back() then
-         result = result ..  "both lanes full and stopped, "
+         result = result ..  ", both lanes full and stopped, "
          --game.get_player(pindex).print(", both lanes full and stopped, ")
       else
-         result = result .. "both lanes open, "
+         result = result .. ", both lanes open, "
          --game.get_player(pindex).print(", both lanes open, ")
       end
    end
