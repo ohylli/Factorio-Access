@@ -737,11 +737,11 @@ function ent_info(pindex, ent, description)
          end
 
       else
-         --No currently carried items: Now try to announce recently carried items by checking the next belt over
+         --No currently carried items: Now try to announce likely recently carried items by checking the next belt over (must have only this belt as input)
          local next_belt = ent.belt_neighbours["outputs"][1]
           --Check contents
          local next_contents = {}
-         if next_belt ~= nil and next_belt.valid then
+         if next_belt ~= nil and next_belt.valid and #next_belt.belt_neighbours["inputs"] == 1 then
             local left = next_belt.get_transport_line(1).get_contents()
             local right = next_belt.get_transport_line(2).get_contents()
 
@@ -761,7 +761,7 @@ function ent_info(pindex, ent, description)
          end
          
          if #next_contents > 0 then
-            result = result .. " recently carried " .. next_contents[1].name
+            result = result .. " assumed carrying " .. next_contents[1].name
             if #next_contents > 1 then
                result = result .. ", and " .. next_contents[2].name
                if #next_contents > 2 then
@@ -772,40 +772,6 @@ function ent_info(pindex, ent, description)
             --No currently or recently carried items
             result = result ..  " carrying nothing, "
          end
-      end
-      
-      --Check whether items on the belt are stopped or moving (based on whether you can insert at the back of the belt)
-      local left = ent.get_transport_line(1)
-      local right = ent.get_transport_line(2)
-      
-      local left_dir = "left"
-      local right_dir = "right"
-      if ent.direction == dirs.north then
-         left_dir = direction_lookup(dirs.west)
-         right_dir = direction_lookup(dirs.east)
-      elseif ent.direction == dirs.east then
-         left_dir = direction_lookup(dirs.north)
-         right_dir = direction_lookup(dirs.south)
-      elseif ent.direction == dirs.south then
-         left_dir = direction_lookup(dirs.east)
-         right_dir = direction_lookup(dirs.west)
-      elseif ent.direction == dirs.west then
-         left_dir = direction_lookup(dirs.south)
-         right_dir = direction_lookup(dirs.north)
-      end
-      
-      local insert_spots_left = 0
-      local insert_spots_right = 0
-      if not left.can_insert_at_back() and right.can_insert_at_back() then
-         result = result .. ", " ..  left_dir .. " lane full and stopped, "
-      elseif left.can_insert_at_back() and not right.can_insert_at_back() then
-         result = result .. ", " ..  right_dir .. " lane full and stopped, "
-      elseif not left.can_insert_at_back() and not right.can_insert_at_back() then
-         result = result ..  ", both lanes full and stopped, "
-         --game.get_player(pindex).print(", both lanes full and stopped, ")
-      else
-         result = result .. ", both lanes open, "
-         --game.get_player(pindex).print(", both lanes open, ")
       end
    end
    
@@ -980,7 +946,42 @@ function ent_info(pindex, ent, description)
          end
       end
    end
-   if ent.name == "cargo-wagon" then
+   
+   if ent.type == "transport-belt" then
+      --Check whether items on the belt are stopped or moving (based on whether you can insert at the back of the belt)
+      local left = ent.get_transport_line(1)
+      local right = ent.get_transport_line(2)
+      
+      local left_dir = "left"
+      local right_dir = "right"
+      if ent.direction == dirs.north then
+         left_dir = direction_lookup(dirs.west)
+         right_dir = direction_lookup(dirs.east)
+      elseif ent.direction == dirs.east then
+         left_dir = direction_lookup(dirs.north)
+         right_dir = direction_lookup(dirs.south)
+      elseif ent.direction == dirs.south then
+         left_dir = direction_lookup(dirs.east)
+         right_dir = direction_lookup(dirs.west)
+      elseif ent.direction == dirs.west then
+         left_dir = direction_lookup(dirs.south)
+         right_dir = direction_lookup(dirs.north)
+      end
+      
+      local insert_spots_left = 0
+      local insert_spots_right = 0
+      if not left.can_insert_at_back() and right.can_insert_at_back() then
+         result = result .. ", " ..  left_dir .. " lane full and stopped, "
+      elseif left.can_insert_at_back() and not right.can_insert_at_back() then
+         result = result .. ", " ..  right_dir .. " lane full and stopped, "
+      elseif not left.can_insert_at_back() and not right.can_insert_at_back() then
+         result = result ..  ", both lanes full and stopped, "
+         --game.get_player(pindex).print(", both lanes full and stopped, ")
+      else
+         result = result .. ", both lanes open, "
+         --game.get_player(pindex).print(", both lanes open, ")
+      end
+   elseif ent.name == "cargo-wagon" then
       --Explain contents
       local itemset = ent.get_inventory(defines.inventory.cargo_wagon).get_contents()
       local itemtable = {}
