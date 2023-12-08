@@ -2650,7 +2650,7 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
                if v.type == "fluid" and i == index then
                   name = name .. " input " .. v.name
                   if prev_name ~= "Any" then
-                     name = "input " .. prev_name .. " x " .. math.floor(0.5 + fluid.amount)
+                     name = "input " .. prev_name .. " x " .. math.floor(0.5 + amount)
                   end
                end
             end
@@ -2661,13 +2661,13 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
                if v.type == "fluid" and i == index then
                   name = name .. " output " .. v.name
                   if prev_name ~= "Any" then
-                     name = "output " .. prev_name .. " x " .. math.floor(0.5 + fluid.amount)
+                     name = "output " .. prev_name .. " x " .. math.floor(0.5 + amount)
                   end
                end
             end
          end
       else
-         name = name .. " x " .. math.floor(0.5 + fluid.amount)
+         name = name .. " x " .. math.floor(0.5 + amount)
       end
       --Read the fluid found, including amount if any
       printout(start_phrase .. " " .. name, pindex)
