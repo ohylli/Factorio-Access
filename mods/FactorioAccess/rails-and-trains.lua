@@ -1802,6 +1802,365 @@ function build_rail_turn_left_90_degrees(anchor_rail, pindex)
 end
 
 
+--Builds a fork at the end rail with exits 45 degrees left, and 45 degrees right, and forward.
+function build_fork_at_end_rail(anchor_rail, pindex, include_forward)
+   local build_comment = ""
+   local surf = game.get_player(pindex).surface
+   local stack = game.get_player(pindex).cursor_stack
+   local stack2 = nil
+   local pos = nil
+   local dir = -1
+   local build_area = nil
+   local can_place_all = true
+   local is_end_rail
+   local anchor_dir = anchor_rail.direction
+   
+   --1. Firstly, check if the player has enough rails to place this (5 units) 
+   if not (stack.valid and stack.valid_for_read and stack.name == "rail" and stack.count >= 5) then
+      --Check if the inventory has enough
+      if players[pindex].inventory.lua_inventory.get_item_count("rail") < 5 then
+         game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+         printout("You need at least 5 rails in your inventory to build this turn.", pindex)
+         return
+      else
+         --Take from the inventory.
+         stack2 = players[pindex].inventory.lua_inventory.find_item_stack("rail")
+         game.get_player(pindex).cursor_stack.swap_stack(stack2)
+         stack = game.get_player(pindex).cursor_stack
+         players[pindex].inventory.max = #players[pindex].inventory.lua_inventory
+      end
+   end
+   
+   --2. Secondly, verify the end rail and find its direction
+   is_end_rail, dir, build_comment = check_end_rail(anchor_rail,pindex)
+   if not is_end_rail then
+      game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+      printout(build_comment, pindex)
+      game.get_player(pindex).clear_cursor()
+      return
+   end
+   pos = anchor_rail.position
+   
+   --3. Clear trees and rocks in the build area, can be tuned later...
+   -- if dir == dirs.north or dir == dirs.northeast then
+      -- build_area = {{pos.x+9, pos.y+9},{pos.x-16,pos.y-16}}
+   -- elseif dir == dirs.east or dir == dirs.southeast then
+      -- build_area = {{pos.x-9, pos.y+9},{pos.x+16,pos.y-16}}
+   -- elseif dir == dirs.south or dir == dirs.southwest then
+      -- build_area = {{pos.x-9, pos.y-9},{pos.x+16,pos.y+16}}
+   -- elseif dir == dirs.west or dir == dirs.northwest then
+      -- build_area = {{pos.x+9, pos.y-9},{pos.x-16,pos.y+16}}
+   -- end 
+   temp1, build_comment = clear_obstacles_in_circle(pos,12, pindex)
+   
+   --4A. Check if every object can be placed (LEFT)
+   if dir == dirs.north then 
+      can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x+0, pos.y-4}, direction = dirs.north, force = game.forces.player}
+      can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-4, pos.y-8}, direction = dirs.northeast, force = game.forces.player}
+   elseif dir == dirs.east then
+      can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x+6, pos.y+0}, direction = dirs.east, force = game.forces.player} 
+      can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x+8, pos.y-4}, direction = dirs.southeast, force = game.forces.player}
+   elseif dir == dirs.south then
+      can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x+2, pos.y+6}, direction = dirs.south, force = game.forces.player}
+      can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x+4, pos.y+8}, direction = dirs.southwest, force = game.forces.player}
+   elseif dir == dirs.west then
+      can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x-4, pos.y+2}, direction = dirs.west, force = game.forces.player}
+      can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-8, pos.y+4}, direction = dirs.northwest, force = game.forces.player}
+   elseif dir == dirs.northeast then
+      if anchor_dir == dirs.southeast then--2
+         can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x+4, pos.y-2}, direction = dirs.southwest, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x+4, pos.y-8}, direction = dirs.north, force = game.forces.player}
+      elseif anchor_dir == dirs.northwest then--3
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x+0, pos.y-2}, direction = dirs.southeast, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x+4, pos.y-4}, direction = dirs.southwest, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x+4, pos.y-10}, direction = dirs.north, force = game.forces.player}
+      end
+   elseif dir == dirs.southwest then
+      if anchor_dir == dirs.northwest then--2
+         can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x-2, pos.y+4}, direction = dirs.northeast, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-4, pos.y+8}, direction = dirs.north, force = game.forces.player}
+      elseif anchor_dir == dirs.southeast then--3
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-0, pos.y+2}, direction = dirs.northwest, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x-2, pos.y+6}, direction = dirs.northeast, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-4, pos.y+10}, direction = dirs.north, force = game.forces.player}
+      end
+   elseif dir == dirs.southeast then
+      if anchor_dir == dirs.southwest then--2
+         can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x+4, pos.y+4}, direction = dirs.northwest, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x+8, pos.y+4}, direction = dirs.east, force = game.forces.player}
+      elseif anchor_dir == dirs.northeast then--3
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x+2, pos.y+0}, direction = dirs.southwest, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x+6, pos.y+4}, direction = dirs.northwest, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x+10, pos.y+4}, direction = dirs.east, force = game.forces.player}
+      end
+   elseif dir == dirs.northwest then
+      if anchor_dir == dirs.northeast then--2
+         can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x-2, pos.y-2}, direction = dirs.southeast, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-8, pos.y-4}, direction = dirs.east, force = game.forces.player}
+      elseif anchor_dir == dirs.southwest then--3
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-2, pos.y-0}, direction = dirs.northeast, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x-4, pos.y-2}, direction = dirs.southeast, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-10, pos.y-4}, direction = dirs.east, force = game.forces.player}
+      end
+   end
+   
+   --4B. Check if every object can be placed (RIGHT)
+   if dir == dirs.north then 
+      can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x+2, pos.y-4}, direction = dirs.northeast, force = game.forces.player}
+      can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x+4, pos.y-8}, direction = dirs.northwest, force = game.forces.player}
+   elseif dir == dirs.east then
+      can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x+6, pos.y+2}, direction = dirs.southeast, force = game.forces.player} 
+      can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x+8, pos.y+4}, direction = dirs.northeast, force = game.forces.player}
+   elseif dir == dirs.south then
+      can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x+0, pos.y+6}, direction = dirs.southwest, force = game.forces.player}
+      can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-4, pos.y+8}, direction = dirs.southeast, force = game.forces.player}
+   elseif dir == dirs.west then
+      can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x-4, pos.y+0}, direction = dirs.northwest, force = game.forces.player}
+      can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-8, pos.y-4}, direction = dirs.southwest, force = game.forces.player}
+   elseif dir == dirs.northeast then
+      if anchor_dir == dirs.northwest then
+         can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x+4, pos.y-2}, direction = dirs.west, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x+8, pos.y-4}, direction = dirs.east, force = game.forces.player}
+      elseif anchor_dir == dirs.southeast then
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x+2, pos.y-0}, direction = dirs.northwest, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x+6, pos.y-2}, direction = dirs.west, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x+10, pos.y-4}, direction = dirs.east, force = game.forces.player}
+      end
+   elseif dir == dirs.southwest then
+      if anchor_dir == dirs.southeast then--2
+         can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x-2, pos.y+4}, direction = dirs.east, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-8, pos.y+4}, direction = dirs.east, force = game.forces.player}
+      elseif anchor_dir == dirs.northwest then--3
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-2, pos.y+0}, direction = dirs.southeast, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x-4, pos.y+4}, direction = dirs.east, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-10, pos.y+4}, direction = dirs.east, force = game.forces.player}
+      end
+   elseif dir == dirs.southeast then
+      if anchor_dir == dirs.northeast then--2
+         can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x+4, pos.y+4}, direction = dirs.north, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x+4, pos.y+8}, direction = dirs.north, force = game.forces.player}
+      elseif anchor_dir == dirs.southwest then--3
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-0, pos.y+2}, direction = dirs.northeast, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x+4, pos.y+6}, direction = dirs.north, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x+4, pos.y+10}, direction = dirs.north, force = game.forces.player}
+      end
+   elseif dir == dirs.northwest then
+      if anchor_dir == dirs.southwest then--2
+         can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x-2, pos.y-2}, direction = dirs.south, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-4, pos.y-8}, direction = dirs.north, force = game.forces.player}
+      elseif anchor_dir == dirs.northeast then--3
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-0, pos.y-2}, direction = dirs.southwest, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x-2, pos.y-4}, direction = dirs.south, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-4, pos.y-10}, direction = dirs.north, force = game.forces.player}
+      end
+   end
+   
+   --4C. Check if can append forward ****
+   local append_rail_pos = nil
+   local append_rail_dir = nil
+   
+   if include_forward then
+      local end_rail_dir = dir
+      local end_rail_pos = pos
+      local ent = anchor_rail
+      local end_dir = nil
+      
+      local end_rail_1, end_dir_1 = ent.get_rail_segment_end(defines.rail_direction.front)
+      local end_rail_2, end_dir_2 = ent.get_rail_segment_end(defines.rail_direction.back)
+      if ent.unit_number == end_rail_1.unit_number then
+         end_dir = end_dir_1
+      elseif ent.unit_number == end_rail_2.unit_number then
+         end_dir = end_dir_2
+      end
+     
+      if end_rail_dir == dirs.north or end_rail_dir == dirs.south then 
+         append_rail_dir = dirs.north
+         if end_dir == defines.rail_direction.front then
+            append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y-2}
+         else
+            append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y+2}
+         end
+         
+      elseif end_rail_dir == dirs.east or end_rail_dir == dirs.west then
+         append_rail_dir = dirs.east
+         if end_dir == defines.rail_direction.front then
+            append_rail_pos = {end_rail_pos.x+2, end_rail_pos.y+0}
+         else
+            append_rail_pos = {end_rail_pos.x-2, end_rail_pos.y-0}
+         end
+         
+      elseif end_rail_dir == dirs.northeast then
+         append_rail_dir = dirs.southwest
+         if end_dir == defines.rail_direction.front then
+            append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y-2}
+         else
+            append_rail_pos = {end_rail_pos.x+2, end_rail_pos.y+0}
+         end
+      elseif end_rail_dir == dirs.southwest then
+         append_rail_dir = dirs.northeast
+         if end_dir == defines.rail_direction.front then
+            append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y+2}
+         else
+            append_rail_pos = {end_rail_pos.x-2, end_rail_pos.y+0}
+         end
+         
+      elseif end_rail_dir == dirs.southeast then
+         append_rail_dir = dirs.northwest
+         if end_dir == defines.rail_direction.front then
+            append_rail_pos = {end_rail_pos.x+2, end_rail_pos.y+0}
+         else
+            append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y+2}
+         end
+      elseif end_rail_dir == dirs.northwest then
+         append_rail_dir = dirs.southeast
+         if end_dir == defines.rail_direction.front then
+            append_rail_pos = {end_rail_pos.x-2, end_rail_pos.y+0}
+         else
+            append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y-2}
+         end
+      end
+      
+      if append_rail_pos == nil then
+         game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+         printout(end_rail_dir .. " and " .. rail_api_dir .. ", rail appending direction error.",pindex)
+         return
+      end
+      
+      if not surf.can_place_entity{name = "straight-rail", position = append_rail_pos, direction = append_rail_dir} then
+         can_place_all = false
+      end
+   end
+  
+   if not can_place_all then
+      game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+      printout("Building area occupied.", pindex)
+      game.get_player(pindex).clear_cursor()
+      return
+   end
+   
+   --5A. Build the rail entities to create the turn (LEFT)
+   if dir == dirs.north then 
+      surf.create_entity{name = "curved-rail", position = {pos.x+0, pos.y-4}, direction = dirs.north, force = game.forces.player}
+      surf.create_entity{name = "straight-rail", position = {pos.x-4, pos.y-8}, direction = dirs.northeast, force = game.forces.player}
+   elseif dir == dirs.east then
+      surf.create_entity{name = "curved-rail", position = {pos.x+6, pos.y+0}, direction = dirs.east, force = game.forces.player} 
+      surf.create_entity{name = "straight-rail", position = {pos.x+8, pos.y-4}, direction = dirs.southeast, force = game.forces.player}
+   elseif dir == dirs.south then
+      surf.create_entity{name = "curved-rail", position = {pos.x+2, pos.y+6}, direction = dirs.south, force = game.forces.player}
+      surf.create_entity{name = "straight-rail", position = {pos.x+4, pos.y+8}, direction = dirs.southwest, force = game.forces.player}
+   elseif dir == dirs.west then
+      surf.create_entity{name = "curved-rail", position = {pos.x-4, pos.y+2}, direction = dirs.west, force = game.forces.player}
+      surf.create_entity{name = "straight-rail", position = {pos.x-8, pos.y+4}, direction = dirs.northwest, force = game.forces.player}
+   elseif dir == dirs.northeast then
+      if anchor_dir == dirs.southeast then--2
+         surf.create_entity{name = "curved-rail", position = {pos.x+4, pos.y-2}, direction = dirs.southwest, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x+4, pos.y-8}, direction = dirs.north, force = game.forces.player}
+      elseif anchor_dir == dirs.northwest then--3
+         surf.create_entity{name = "straight-rail", position = {pos.x+0, pos.y-2}, direction = dirs.southeast, force = game.forces.player}
+         surf.create_entity{name = "curved-rail", position = {pos.x+4, pos.y-4}, direction = dirs.southwest, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x+4, pos.y-10}, direction = dirs.north, force = game.forces.player}
+      end
+   elseif dir == dirs.southwest then
+      if anchor_dir == dirs.northwest then--2
+         surf.create_entity{name = "curved-rail", position = {pos.x-2, pos.y+4}, direction = dirs.northeast, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x-4, pos.y+8}, direction = dirs.north, force = game.forces.player}
+      elseif anchor_dir == dirs.southeast then--3
+         surf.create_entity{name = "straight-rail", position = {pos.x-0, pos.y+2}, direction = dirs.northwest, force = game.forces.player}
+         surf.create_entity{name = "curved-rail", position = {pos.x-2, pos.y+6}, direction = dirs.northeast, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x-4, pos.y+10}, direction = dirs.north, force = game.forces.player}
+      end
+   elseif dir == dirs.southeast then
+      if anchor_dir == dirs.southwest then--2
+         surf.create_entity{name = "curved-rail", position = {pos.x+4, pos.y+4}, direction = dirs.northwest, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x+8, pos.y+4}, direction = dirs.east, force = game.forces.player}
+      elseif anchor_dir == dirs.northeast then--3
+         surf.create_entity{name = "straight-rail", position = {pos.x+2, pos.y+0}, direction = dirs.southwest, force = game.forces.player}
+         surf.create_entity{name = "curved-rail", position = {pos.x+6, pos.y+4}, direction = dirs.northwest, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x+10, pos.y+4}, direction = dirs.east, force = game.forces.player}
+      end
+   elseif dir == dirs.northwest then
+      if anchor_dir == dirs.northeast then--2
+         surf.create_entity{name = "curved-rail", position = {pos.x-2, pos.y-2}, direction = dirs.southeast, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x-8, pos.y-4}, direction = dirs.east, force = game.forces.player}
+      elseif anchor_dir == dirs.southwest then--3
+         surf.create_entity{name = "straight-rail", position = {pos.x-2, pos.y-0}, direction = dirs.northeast, force = game.forces.player}
+         surf.create_entity{name = "curved-rail", position = {pos.x-4, pos.y-2}, direction = dirs.southeast, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x-10, pos.y-4}, direction = dirs.east, force = game.forces.player}
+      end
+   end
+   
+   --5B. Build the rail entities to create the turn (RIGHT)
+   if dir == dirs.north then 
+      surf.create_entity{name = "curved-rail", position = {pos.x+2, pos.y-4}, direction = dirs.northeast, force = game.forces.player}
+      surf.create_entity{name = "straight-rail", position = {pos.x+4, pos.y-8}, direction = dirs.northwest, force = game.forces.player}
+   elseif dir == dirs.east then
+      surf.create_entity{name = "curved-rail", position = {pos.x+6, pos.y+2}, direction = dirs.southeast, force = game.forces.player} 
+      surf.create_entity{name = "straight-rail", position = {pos.x+8, pos.y+4}, direction = dirs.northeast, force = game.forces.player}
+   elseif dir == dirs.south then
+      surf.create_entity{name = "curved-rail", position = {pos.x+0, pos.y+6}, direction = dirs.southwest, force = game.forces.player}
+      surf.create_entity{name = "straight-rail", position = {pos.x-4, pos.y+8}, direction = dirs.southeast, force = game.forces.player}
+   elseif dir == dirs.west then
+      surf.create_entity{name = "curved-rail", position = {pos.x-4, pos.y+0}, direction = dirs.northwest, force = game.forces.player}
+      surf.create_entity{name = "straight-rail", position = {pos.x-8, pos.y-4}, direction = dirs.southwest, force = game.forces.player}
+   elseif dir == dirs.northeast then
+      if anchor_dir == dirs.northwest then
+         surf.create_entity{name = "curved-rail", position = {pos.x+4, pos.y-2}, direction = dirs.west, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x+8, pos.y-4}, direction = dirs.east, force = game.forces.player}
+      elseif anchor_dir == dirs.southeast then
+         surf.create_entity{name = "straight-rail", position = {pos.x+2, pos.y-0}, direction = dirs.northwest, force = game.forces.player}
+         surf.create_entity{name = "curved-rail", position = {pos.x+6, pos.y-2}, direction = dirs.west, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x+10, pos.y-4}, direction = dirs.east, force = game.forces.player}
+      end
+   elseif dir == dirs.southwest then
+      if anchor_dir == dirs.southeast then--2
+         surf.create_entity{name = "curved-rail", position = {pos.x-2, pos.y+4}, direction = dirs.east, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x-8, pos.y+4}, direction = dirs.east, force = game.forces.player}
+      elseif anchor_dir == dirs.northwest then--3
+         surf.create_entity{name = "straight-rail", position = {pos.x-2, pos.y+0}, direction = dirs.southeast, force = game.forces.player}
+         surf.create_entity{name = "curved-rail", position = {pos.x-4, pos.y+4}, direction = dirs.east, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x-10, pos.y+4}, direction = dirs.east, force = game.forces.player}
+      end
+   elseif dir == dirs.southeast then
+      if anchor_dir == dirs.northeast then--2
+         surf.create_entity{name = "curved-rail", position = {pos.x+4, pos.y+4}, direction = dirs.north, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x+4, pos.y+8}, direction = dirs.north, force = game.forces.player}
+      elseif anchor_dir == dirs.southwest then--3
+         surf.create_entity{name = "straight-rail", position = {pos.x-0, pos.y+2}, direction = dirs.northeast, force = game.forces.player}
+         surf.create_entity{name = "curved-rail", position = {pos.x+4, pos.y+6}, direction = dirs.north, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x+4, pos.y+10}, direction = dirs.north, force = game.forces.player}
+      end
+   elseif dir == dirs.northwest then
+      if anchor_dir == dirs.southwest then--2
+         surf.create_entity{name = "curved-rail", position = {pos.x-2, pos.y-2}, direction = dirs.south, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x-4, pos.y-8}, direction = dirs.north, force = game.forces.player}
+      elseif anchor_dir == dirs.northeast then--3
+         surf.create_entity{name = "straight-rail", position = {pos.x-0, pos.y-2}, direction = dirs.southwest, force = game.forces.player}
+         surf.create_entity{name = "curved-rail", position = {pos.x-2, pos.y-4}, direction = dirs.south, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x-4, pos.y-10}, direction = dirs.north, force = game.forces.player}
+      end
+   end
+   
+   --5C. Add Forward section
+   if include_forward then
+      local created_rail = surf.create_entity{name = "straight-rail", position = append_rail_pos, direction = append_rail_dir, force = game.forces.player}
+   end
+   
+   --6 Remove rail units from the player's hand
+   game.get_player(pindex).cursor_stack.count = game.get_player(pindex).cursor_stack.count - 5
+   game.get_player(pindex).clear_cursor()
+   
+   --7. Sounds and results
+   game.get_player(pindex).play_sound{path = "entity-build/straight-rail"}
+   game.get_player(pindex).play_sound{path = "entity-build/curved-rail"}
+   local result = "Rail fork built with 2 exits, " .. build_comment
+   if include_forward then
+      result = "Rail fork built with 3 exits, " .. build_comment
+   end
+   printout(result,pindex) --****
+   return
+   
+end
+
 --Builds a minimal straight rail intersection on a horizontal or vertical end rail. Note: We should build other intersections with blueprint imports.
 function build_small_plus_intersection(anchor_rail, pindex)
    local build_comment = ""
@@ -2184,9 +2543,23 @@ function append_rail(pos, pindex)
    end
    temp1, build_comment = clear_obstacles_in_circle(append_rail_pos,3, pindex)
    if not surf.can_place_entity{name = "straight-rail", position = append_rail_pos, direction = append_rail_dir} then 
-      game.get_player(pindex).play_sound{path = "utility/cannot_build"}
-      printout("Cannot place here to extend the rail.",pindex)
-      return
+      --Cannot build here, but check if any other rails are there. This would also be fine.
+      local other_rails = false
+      local ents = surf.find_entities_filtered{position = append_rail_pos}
+      for i,ent in ipairs(ents) do
+         if ent.name == "straight-rail" or ent.name == "curved-rail" then
+            other_rails = true
+         end
+      end
+      if other_rails == false then
+         game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+         printout("Cannot place here to extend the rail.",pindex)
+         return
+      else
+         game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+         printout("Cannot place automatically, but you can manually extend this rail.",pindex)
+         return
+      end
    end
    
    --7. Create the appended rail and subtract 1 rail from the hand.
@@ -2624,6 +2997,7 @@ function rail_builder_open(pindex, rail)
    --Set the player menu tracker to this menu
    players[pindex].menu = "rail_builder"
    players[pindex].in_menu = true
+   players[pindex].move_queue = {}
    
    --Set the menu line counter to 0
    players[pindex].rail_builder.index = 0
@@ -2635,7 +3009,7 @@ function rail_builder_open(pindex, rail)
       if dir == dirs.north or dir == dirs.east or dir == dirs.south or dir == dirs.west then 
          --Straight end rails
          players[pindex].rail_builder.rail_type = 1
-         players[pindex].rail_builder.index_max = 6
+         players[pindex].rail_builder.index_max = 7
       else 
          --Diagonal end rails
          players[pindex].rail_builder.rail_type = 2
@@ -2777,14 +3151,22 @@ function rail_builder(pindex, clicked_in)
             --Build it here
             build_train_stop(rail, pindex)
          end
-      --elseif menu_line == 6 then
-      --   if not clicked then
-      --      comment = comment .. "Plus intersection"
-      --      printout(comment,pindex)
-      --   else
-      --      --Build it here
-      --      build_small_plus_intersection(rail, pindex)
-      --   end
+      elseif menu_line == 6 then
+         if not clicked then
+            comment = comment .. "Rail fork with 2 exits"
+            printout(comment,pindex)
+         else
+            --Build it here
+            build_fork_at_end_rail(rail, pindex, false)
+         end
+      elseif menu_line == 7 then
+         if not clicked then
+            comment = comment .. "Rail fork with 3 exits"
+            printout(comment,pindex)
+         else
+            --Build it here
+            build_fork_at_end_rail(rail, pindex, true)
+         end
       end
    elseif rail_type == 2 then
       --Diagonal end rails
@@ -3001,6 +3383,7 @@ function train_menu_open(pindex)
    --Set the player menu tracker to this menu
    players[pindex].menu = "train_menu"
    players[pindex].in_menu = true
+   players[pindex].move_queue = {}
    
    --Set the menu line counter to 0
    players[pindex].train_menu.index = 0
@@ -3102,6 +3485,7 @@ function train_stop_menu_open(pindex)
    --Set the player menu tracker to this menu
    players[pindex].menu = "train_stop_menu"
    players[pindex].in_menu = true
+   players[pindex].move_queue = {}
    
    --Set the menu line counter to 0
    players[pindex].train_stop_menu.index = 0
