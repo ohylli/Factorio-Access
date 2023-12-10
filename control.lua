@@ -4171,7 +4171,10 @@ function initialize(player)
    faplayer.train_stop_menu = faplayer.train_stop_menu or {
       index = 0,
       renaming = false,
-      stop = nil
+      stop = nil,
+      wait_condition = "time",
+      wait_time_seconds = 30,
+      safety_wait_enabled = true
    }
 
    if table_size(faplayer.mapped) == 0 then
@@ -5555,6 +5558,8 @@ script.on_event("increase-train-wait-times-by-5", function(event)
    end
    if players[pindex].in_menu and players[pindex].menu == "train_menu" then 
       change_instant_schedule_wait_time(5,pindex)
+   elseif players[pindex].in_menu and players[pindex].menu == "train_stop_menu" then 
+      nearby_train_schedule_change_wait_time(5,pindex)
    end
 end)
 
@@ -5565,6 +5570,8 @@ script.on_event("increase-train-wait-times-by-60", function(event)
    end
    if players[pindex].in_menu and players[pindex].menu == "train_menu" then 
       change_instant_schedule_wait_time(60,pindex)
+   elseif players[pindex].in_menu and players[pindex].menu == "train_stop_menu" then 
+      nearby_train_schedule_change_wait_time(60,pindex)
    end
 end)
 
@@ -5575,6 +5582,8 @@ script.on_event("decrease-train-wait-times-by-5", function(event)
    end
    if players[pindex].in_menu and players[pindex].menu == "train_menu" then 
       change_instant_schedule_wait_time(-5,pindex)
+   elseif players[pindex].in_menu and players[pindex].menu == "train_stop_menu" then 
+      nearby_train_schedule_change_wait_time(-5,pindex)
    end
 end)
 
@@ -5585,6 +5594,8 @@ script.on_event("decrease-train-wait-times-by-60", function(event)
    end
    if players[pindex].in_menu and players[pindex].menu == "train_menu" then 
       change_instant_schedule_wait_time(-60,pindex)
+   elseif players[pindex].in_menu and players[pindex].menu == "train_stop_menu" then 
+      nearby_train_schedule_change_wait_time(-60,pindex)
    end
 end)
 

@@ -100,15 +100,15 @@ function rail_ent_info(pindex, ent, description)
    
    --Check if intersection
    if is_intersection_rail(ent, pindex) then
-      result = result .. ", intersection " --todo*** test
+      result = result .. ", intersection " 
    end
    --Check if at junction: The rail has at least 3 connections
    local connection_count = count_rail_connections(ent)
    if connection_count > 2 then
-      result = result .. ", junction "
+      result = result .. ", fork "
    end
    
-   --Check if it has rail signals ***todo test overlaps
+   --Check if it has rail signals 
    local chain_s_count = 0
    local rail_s_count = 0
    local signals = ent.surface.find_entities_filtered{position = ent.position, radius = 2, name = "rail-chain-signal"}
@@ -259,6 +259,37 @@ function count_rail_connections(ent)
       connection_count = connection_count + 1
    end
    return connection_count
+end
+
+--Determines how many connections a rail has
+function list_rail_fork_directions(ent)
+   local result = ""
+   local front_left_rail,r_dir_back,c_dir_back = ent.get_connected_rail{ rail_direction = defines.rail_direction.front,rail_connection_direction = defines.rail_connection_direction.left}
+   local front_right_rail,r_dir_back,c_dir_back = ent.get_connected_rail{rail_direction = defines.rail_direction.front,rail_connection_direction = defines.rail_connection_direction.right}
+   local back_left_rail,r_dir_back,c_dir_back = ent.get_connected_rail{ rail_direction = defines.rail_direction.back,rail_connection_direction = defines.rail_connection_direction.left}
+   local back_right_rail,r_dir_back,c_dir_back = ent.get_connected_rail{rail_direction = defines.rail_direction.back,rail_connection_direction = defines.rail_connection_direction.right}
+   local next_rail,r_dir_back,c_dir_back = ent.get_connected_rail{rail_direction = defines.rail_direction.front,  rail_connection_direction = defines.rail_connection_direction.straight}
+   local prev_rail,r_dir_back,c_dir_back = ent.get_connected_rail{rail_direction = defines.rail_direction.back,   rail_connection_direction = defines.rail_connection_direction.straight}
+   
+   if next_rail ~= nil then
+      result = result .. "straight forward, "
+   end
+   if front_left_rail ~= nil then
+      result = result .. "left forward, "
+   end
+   if front_right_rail ~= nil then
+      result = result .. "right forward, "
+   end
+   if prev_rail ~= nil then
+      result = result .. "straight back, "
+   end
+   if back_left_rail ~= nil then
+      result = result .. "left back, "
+   end
+   if back_right_rail ~= nil then
+      result = result .. "right back, "
+   end
+   return result
 end
 
 
@@ -1024,7 +1055,8 @@ function train_read_next_rail_entity_ahead(pindex, invert)
    elseif next_entity_label == "fork split" then
       local entering_segment_rail = result_extra  
       message = message .. "rail fork splitting "
-      --laterdo here, list available fork directions
+      --***test here, give rail fork directions***
+      message = message .. list_rail_fork_directions(next_entity)
    
    elseif next_entity_label == "fork merge" then
       local entering_segment_rail = result_extra  
@@ -1146,7 +1178,8 @@ function rail_read_next_rail_entity_ahead(pindex, rail, is_forward)
    elseif next_entity_label == "fork split" then
       local entering_segment_rail = result_extra  
       message = message .. "rail fork splitting "
-      --laterdo here, give rail fork directions
+      --***test here, give rail fork directions***
+      message = message .. list_rail_fork_directions(next_entity)
    
    elseif next_entity_label == "fork merge" then
       local entering_segment_rail = result_extra  
@@ -1955,7 +1988,7 @@ function build_fork_at_end_rail(anchor_rail, pindex, include_forward)
       end
    end
    
-   --4C. Check if can append forward ****
+   --4C. Check if can append forward
    local append_rail_pos = nil
    local append_rail_dir = nil
    
@@ -2156,7 +2189,7 @@ function build_fork_at_end_rail(anchor_rail, pindex, include_forward)
    if include_forward then
       result = "Rail fork built with 3 exits, " .. build_comment
    end
-   printout(result,pindex) --****
+   printout(result,pindex) --***test
    return
    
 end
@@ -3309,7 +3342,7 @@ function train_menu(menu_index, pindex, clicked, other_input)
 		 if schedule ~= nil then
 		    records = schedule.records 
 		 end
-		 if #records == 0 then
+		 if records == nil or #records == 0 then
 		    result = " No schedule, "
 		 else
 		    for i,record in ipairs(records) do
@@ -3337,7 +3370,7 @@ function train_menu(menu_index, pindex, clicked, other_input)
 		 if schedule ~= nil then
 		    records = schedule.records 
 		 end
-		 if #records == 0 then
+		 if records == nil or #records == 0 then
 		    result = " No schedule, "
 		 else
 		    for i,record in ipairs(records) do
@@ -3365,6 +3398,15 @@ function train_menu(menu_index, pindex, clicked, other_input)
          players[pindex].train_menu.wait_time = 300
       end
       printout(players[pindex].train_menu.wait_time .. " seconds waited at each station, modify this with PAGE UP or PAGE DOWN, and then apply it by setting a new schedule. ", pindex)
+   elseif index == 9 then 
+      if clicked then
+         train.manual_mode = not train.manual_mode
+      end
+      if train.manual_mode then
+         printout("Manual mode enabled, select here to toggle,", pindex)
+      else
+         printout("Automatic mode enabled, select here to toggle,", pindex)
+      end
    end
    --[[ Train menu options summary
    0. name, id, menu instructions
@@ -3376,6 +3418,7 @@ function train_menu(menu_index, pindex, clicked, other_input)
    6. Review and clear automatic schedule.
    7. Subautomatic travel.
    8. Read wait time
+   9. Toggle manual mode
    ]]
 end
 
@@ -3433,8 +3476,8 @@ end
 
 function train_menu_down(pindex)
    players[pindex].train_menu.index = players[pindex].train_menu.index + 1
-   if players[pindex].train_menu.index > 8 then
-      players[pindex].train_menu.index = 8
+   if players[pindex].train_menu.index > 9 then
+      players[pindex].train_menu.index = 9
       game.get_player(pindex).play_sound{path = "Mine-Building"}
    else
       --Play sound
@@ -3463,7 +3506,7 @@ function train_stop_menu(menu_index, pindex, clicked, other_input)
       printout("Train stop " .. train_stop.backer_name .. ", Press W and S to navigate options, press LEFT BRACKET to select an option or press E to exit this menu.", pindex)
    elseif index == 1 then
       if not clicked then
-         printout("Rename this stop.", pindex)
+         printout("Select here to rename this train stop.", pindex)
       else
          printout("Enter a new name for this train stop, then press ENTER to confirm.", pindex)
          players[pindex].train_stop_menu.renaming = true
@@ -3476,7 +3519,79 @@ function train_stop_menu(menu_index, pindex, clicked, other_input)
          input.focus()
       end
    elseif index == 2 then
-      printout("Note, you are recommended to set up a fast travel point near this stop.",pindex)--laterdo: add clickable option to add/remove this stop to the list.
+      local result = nearby_train_schedule_read_this_stop(train_stop)
+         printout(result .. ", Use the below menu options to modify the train schedule.",pindex)
+   elseif index == 3 then
+      if not clicked then
+         if players[pindex].train_stop_menu.wait_condition == nil then
+            players[pindex].train_stop_menu.wait_condition = "time"
+         end
+         printout("Proposed wait condition: " .. players[pindex].train_stop_menu.wait_condition .. " selected, change by selecting here,",pindex)
+      else
+         local condi = players[pindex].train_stop_menu.wait_condition
+         if condi == "time" then
+            condi = "inactivity"
+         elseif condi == "inactivity" then
+            condi = "empty"
+         elseif condi == "empty" then
+            condi = "full"
+         elseif condi == "full" then
+            condi = "passenger_present"
+         elseif condi == "passenger_present" then
+            condi = "passenger_not_present"
+         else
+            condi = "time"
+         end
+         players[pindex].train_stop_menu.wait_condition = condi
+         printout(" " .. players[pindex].train_stop_menu.wait_condition .. " selected, change by selecting here. This change needs to also be applied.",pindex)
+      end
+   elseif index == 4 then
+      if players[pindex].train_stop_menu.wait_time_seconds == nil then
+         players[pindex].train_stop_menu.wait_time_seconds = 60
+      end
+      printout("Proposed wait time: " .. players[pindex].train_stop_menu.wait_time_seconds .. " seconds selected, if applicable, change using page up or page down, and hold control to increase step size. This change needs to also be applied.",pindex)
+   elseif index == 5 then
+      if not clicked then
+         if players[pindex].train_stop_menu.safety_wait_enabled == nil then
+            players[pindex].train_stop_menu.safety_wait_enabled = true
+         end
+         local result = ""
+         if players[pindex].train_stop_menu.safety_wait_enabled == true then
+            result = "Proposed safety wait status is ENABLED, select here to disable it, Enabling it makes the train wait at this stop for 5 seconds regardless of the main wait condition. This change needs to also be applied."
+         else
+            result = "Proposed safety wait status is DISABLED, select here to enable it, Enabling it makes the train wait at this stop for 5 seconds regardless of the main wait condition. This change needs to also be applied."
+         end
+         printout(result,pindex)
+      else
+         players[pindex].train_stop_menu.safety_wait_enabled = not players[pindex].train_stop_menu.safety_wait_enabled
+         if players[pindex].train_stop_menu.safety_wait_enabled == true then
+            result = "Proposed safety wait status is ENABLED, select here to disable it, Enabling it makes the train wait at this stop for 5 seconds regardless of the main wait condition. This change needs to also be applied."
+         else
+            result = "Proposed safety wait status is DISABLED, select here to enable it, Enabling it makes the train wait at this stop for 5 seconds regardless of the main wait condition. This change needs to also be applied."
+         end
+         printout(result,pindex)
+      end
+   elseif index == 6 then
+      if not clicked then
+         printout("Select here to ADD A NEW ENTRY for this train stop, with the selected conditions appiled, for a train parked by this train stop.",pindex)
+      else
+         local result = nearby_train_schedule_add_stop(train_stop, players[pindex].train_stop_menu.wait_condition, players[pindex].train_stop_menu.wait_time_seconds)
+         printout(result,pindex)
+      end
+   elseif index == 7 then
+      if not clicked then
+         printout("Select here to UPDATE ALL ENTRIES for this train stop, with the selected conditions appiled, for a train parked by this train stop.",pindex)
+      else
+         local result = nearby_train_schedule_update_stop(train_stop, players[pindex].train_stop_menu.wait_condition, players[pindex].train_stop_menu.wait_time_seconds)
+         printout(result,pindex)
+      end
+   elseif index == 8 then
+      if not clicked then
+         printout("Select here to REMOVE ALL ENTRIES for this train stop, for a train parked by this train stop.",pindex)
+      else
+         local result = nearby_train_schedule_remove_stop(train_stop)
+         printout(result,pindex)
+      end
    end
 end
 
@@ -3535,8 +3650,8 @@ end
 
 function train_stop_menu_down(pindex)
    players[pindex].train_stop_menu.index = players[pindex].train_stop_menu.index + 1
-   if players[pindex].train_stop_menu.index > 2 then
-      players[pindex].train_stop_menu.index = 2
+   if players[pindex].train_stop_menu.index > 8 then
+      players[pindex].train_stop_menu.index = 8
       game.get_player(pindex).play_sound{path = "Mine-Building"}
    else
       --Play sound
@@ -3544,6 +3659,230 @@ function train_stop_menu_down(pindex)
    end
    --Load menu 
    train_stop_menu(players[pindex].train_stop_menu.index, pindex, false)
+end
+
+function nearby_train_schedule_change_wait_time(increment,pindex)
+   local seconds = players[pindex].train_stop_menu.wait_time_seconds
+   if seconds == nil then 
+      seconds = 300 
+   end
+   seconds = seconds + increment
+   if seconds < 5 then
+      seconds = 5
+   elseif seconds > 10000 then
+      seconds = 10000
+   end
+   players[pindex].train_stop_menu.wait_time_seconds = seconds
+   printout(players[pindex].train_stop_menu.wait_time_seconds .. " seconds wait time set.",pindex)
+end
+
+function nearby_train_schedule_read_this_stop(train_stop)
+   local result = "Reading parked train: "
+   --Locate the nearby train
+   local train = train_stop.get_stopped_train()
+   if train == nil or not train.valid then
+      local locos = train_stop.surface.find_entities_filtered{position = train_stop.position, radius = 5, name = "locomotive"}
+      if locos[1] ~= nil and locos[1].valid then
+         train = locos[1].train
+      else
+         result = "Reading parked train: Error: No locomotive found nearby,"
+         return result
+      end
+   end
+   if train == nil or not train.valid then
+      result = "Reading parked train: Error: No train found nearby,"
+      return result
+   end
+   --Read the schedule and find this station's entry
+   local schedule = train.schedule
+   if schedule == nil then
+      result = "Reading parked train: Error: The nearby train schedule is empty,"
+      return result
+   else
+      local records = schedule.records
+      local found_any = false
+      result = "Reading parked train, "
+      for i,r in ipairs(records) do
+         if r.station == train_stop.backer_name then
+            found_any = true
+            result = result .. ", Schedule record " .. i .. ", at this stop it waits for "
+            local wait_condition_read_1 = r.wait_conditions[1]
+            local wait_condition_read_2 = r.wait_conditions[2]
+            if wait_condition_read_1 == nil then
+               result = result .. " nothing "
+            else
+               result = result .. wait_condition_read_1.type
+               if wait_condition_read_1.type == "time" or wait_condition_read_1.type == "inactivity" then
+                  result = result .. ", " .. math.floor(wait_condition_read_1.ticks / 60) .. " seconds"
+               end
+            end
+            if wait_condition_read_2 ~= nil and wait_condition_read_2.type == "time" then
+               result = result .. ", and a safety wait of " .. math.floor(wait_condition_read_2.ticks / 60) .. " seconds"
+            end
+         end
+      end
+   end
+   
+   if found_any == false then
+      result = "Reading parked train: Error: The nearby train schedule does not contain this train stop,"
+   end
+   return result
+end
+
+function nearby_train_schedule_add_stop(train_stop, wait_condition_type, wait_time_seconds)
+   local result = "initial"
+   --Locate the nearby train
+   local train = train_stop.get_stopped_train()
+   if train == nil or not train.valid then
+      local locos = train_stop.surface.find_entities_filtered{position = train_stop.position, radius = 5, name = "locomotive"}
+      if locos[1] ~= nil and locos[1].valid then
+         train = locos[1].train
+      else
+         result = "Error: No locomotive found nearby."
+         return result
+      end
+   end
+   if train == nil or not train.valid then
+      result = "Error: No train found nearby."
+      return result
+   end
+   --Create new record
+   local wait_condition_1 = {type = wait_condition_type , ticks = wait_time_seconds * 60 , compare_type = "and"}
+   local wait_condition_2 = {type = "time", ticks = 300, compare_type = "and"}
+   local new_record = {wait_conditions = {wait_condition_1}, station = train_stop.backer_name, temporary = false}
+   if players[pindex].train_stop_menu.safety_wait_enabled then
+      new_record = {wait_conditions = {wait_condition_1,wait_condition_2}, station = train_stop.backer_name, temporary = false}
+   end
+   --Copy and modify the schedule
+   local schedule = train.schedule
+   local records = nil
+   if schedule == nil then
+      schedule = {current = 1, records = {new_record}}
+   else
+      records = schedule.records
+      table.insert(records,#records+1, new_record)
+   end
+   --Apply the new schedule
+   train.manual_mode = true
+   train.schedule = schedule
+   --Return result
+   result = "Successfully added this train stop to the nearby train's schedule."
+   return result
+end
+
+function nearby_train_schedule_update_stop(train_stop, wait_condition_type, wait_time_seconds)--todo test***
+   local result = "initial"
+   --Locate the nearby train
+   local train = train_stop.get_stopped_train()
+   if train == nil or not train.valid then
+      local locos = train_stop.surface.find_entities_filtered{position = train_stop.position, radius = 5, name = "locomotive"}
+      if locos[1] ~= nil and locos[1].valid then
+         train = locos[1].train
+      else
+         result = "Error: No locomotive found nearby."
+         return result
+      end
+   end
+   if train == nil or not train.valid then
+      result = "Error: No train found nearby."
+      return result
+   end
+   --Create new record
+   local wait_condition_1 = {type = wait_condition_type , ticks = wait_time_seconds * 60 , compare_type = "and"}
+   local wait_condition_2 = {type = "time", ticks = 300, compare_type = "and"}
+   local new_record = {wait_conditions = {wait_condition_1}, station = train_stop.backer_name, temporary = false}
+   if players[pindex].train_stop_menu.safety_wait_enabled then
+      new_record = {wait_conditions = {wait_condition_1,wait_condition_2}, station = train_stop.backer_name, temporary = false}
+   end
+   --Copy and modify the schedule
+   local schedule = train.schedule
+   local records = nil
+   local updated_any = false
+   if schedule == nil then
+      result = "Error: The nearby train schedule is empty."
+      return result
+   else
+      records = schedule.records
+      local new_records = {}
+      for i,r in ipairs(records) do
+         if r.station == train_stop.backer_name then
+            updated_any = true
+            table.insert(new_records,new_record)
+            game.get_player(pindex).print(" hit " .. i)--***
+         else
+            table.insert(new_records,r)
+            game.get_player(pindex).print(" miss " .. i)--***
+         end
+      end
+      schedule.records = new_records
+   end
+   --Apply the new schedule
+   train.manual_mode = true
+   train.schedule = schedule
+   --Return result
+   if updated_any == true then
+      result = "Successfully updated all entries for this train stop on the nearby train's schedule."
+   else
+      result = "Error: The nearby train schedule did not include this stop."
+   end
+   return result
+end
+
+function nearby_train_schedule_remove_stop(train_stop)
+   local result = "initial"
+   --Locate the nearby train
+   local train = train_stop.get_stopped_train()
+   if train == nil or not train.valid then
+      local locos = train_stop.surface.find_entities_filtered{position = train_stop.position, radius = 5, name = "locomotive"}
+      if locos[1] ~= nil and locos[1].valid then
+         train = locos[1].train
+      else
+         result = "Error: No locomotive found nearby."
+         return result
+      end
+   end
+   if train == nil or not train.valid then
+      result = "Error: No train found nearby."
+      return result
+   end
+   --Copy and modify the schedule
+   local schedule = train.schedule
+   local records = nil
+   local updated_any = false
+   if schedule == nil then
+      result = "Error: The nearby train schedule is already empty."
+      return result
+   else
+      records = schedule.records
+      local new_records = {}
+      for i,r in ipairs(records) do
+         if r.station == train_stop.backer_name then
+            records[i] = nil
+            updated_any = true
+            --game.get_player(pindex).print(" hit ".. i)--***
+         else
+            table.insert(new_records,r)
+            --game.get_player(pindex).print(" miss ".. i)--***
+         end
+      end
+      schedule.records = new_records
+      schedule.current = 1
+   end
+   --Apply the new schedule
+   if records == nil or #records == 0 then
+      train.schedule = nil
+      train.manual_mode = true
+   else
+      train.manual_mode = true
+      train.schedule = schedule
+   end
+   --Return result
+   if updated_any then
+      result = "Successfully removed all entries for this train stop on the nearby train's schedule."
+   else
+      result = "Error: The nearby train schedule already did not include this stop."
+   end
+   return result
 end
 
 --Returns most common items in a cargo wagon. laterdo a full inventory screen maybe.
@@ -3703,7 +4042,7 @@ function instant_schedule(train,seconds_in)
 			--game.get_player(pindex).print("Removing " .. stop.backer_name)
 			local records = schedule.records
 			table.remove(records, 1)
-			if #records == 0 then
+			if records == nil or #records == 0 then
 			   train.schedule = nil
 			   train.manual_mode = true
 			else
@@ -3788,7 +4127,7 @@ function sub_automatic_travel_to_other_stop(train)
 	     --Invalid path or path to an station nearby
 		    local records = schedule.records
 			table.remove(records, 1)
-			if #records == 0 then
+			if records == nil or #records == 0 then
 			   train.schedule = nil
 			   train.manual_mode = true
 			else
