@@ -3573,14 +3573,14 @@ function train_stop_menu(menu_index, pindex, clicked, other_input)
       end
    elseif index == 6 then
       if not clicked then
-         printout("Select here to ADD A NEW ENTRY for this train stop, with the selected conditions appiled, for a train parked by this train stop.",pindex)
+         printout("Select here to ADD A NEW ENTRY for this train stop, with the proposed conditions applied, for a train parked by this train stop.",pindex)
       else
          local result = nearby_train_schedule_add_stop(train_stop, players[pindex].train_stop_menu.wait_condition, players[pindex].train_stop_menu.wait_time_seconds)
          printout(result,pindex)
       end
    elseif index == 7 then
       if not clicked then
-         printout("Select here to UPDATE ALL ENTRIES for this train stop, with the selected conditions appiled, for a train parked by this train stop.",pindex)
+         printout("Select here to UPDATE ALL ENTRIES for this train stop, with the proposed conditions applied, for a train parked by this train stop.",pindex)
       else
          local result = nearby_train_schedule_update_stop(train_stop, players[pindex].train_stop_menu.wait_condition, players[pindex].train_stop_menu.wait_time_seconds)
          printout(result,pindex)
