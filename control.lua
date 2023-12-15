@@ -5069,12 +5069,37 @@ function on_tick(event)
             if player.menu == "technology" then
                update_overhead_sprite("item.lab",2,1.25,pindex)
                update_custom_GUI_sprite("item.lab", 3, pindex)
+            elseif player.menu == "inventory" then
+               update_overhead_sprite("item.wooden-chest",2,1.25,pindex)
+               update_custom_GUI_sprite("item.wooden-chest", 3, pindex)
+               if players[pindex].vanilla_mode then
+                  update_custom_GUI_sprite(nil,1,pindex)
+               end
+            elseif player.menu == "crafting" then
+               update_overhead_sprite("item.repair-pack",2,1.25,pindex)
+               update_custom_GUI_sprite("item.repair-pack", 3, pindex)
+            elseif player.menu == "crafting_queue" then
+               update_overhead_sprite("item.repair-pack",2,1.25,pindex)
+               update_custom_GUI_sprite("item.repair-pack", 3, pindex)
             elseif player.menu == "travel" then
                update_overhead_sprite("utility.downloading_white",4,1.25,pindex)
                update_custom_GUI_sprite("utility.downloading_white", 3, pindex)
             elseif player.menu == "warnings" then
                update_overhead_sprite("utility.warning_white",4,1.25,pindex)
                update_custom_GUI_sprite("utility.warning_white", 3, pindex)
+            elseif player.menu == "rail_builder" then
+               update_overhead_sprite("item.rail",2,1.25,pindex)
+               update_custom_GUI_sprite("item.rail", 3, pindex)
+            elseif player.menu == "train_menu" then
+               update_overhead_sprite("item.locomotive",2,1.25,pindex)
+               update_custom_GUI_sprite("item.locomotive", 3, pindex)
+            elseif player.menu == "train_stop_menu" then
+               update_overhead_sprite("item.train-stop",2,1.25,pindex)
+               update_custom_GUI_sprite("item.train-stop", 3, pindex)
+            else
+               --includes: structure travel
+               update_overhead_sprite(nil,1,1,pindex)
+               update_custom_GUI_sprite(nil,1,pindex)
             end
          else
             update_overhead_sprite(nil,1,1,pindex)
