@@ -809,8 +809,8 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "toggle-cursor-drawing",
-    key_sequence = "CONTROL + ALT + C",--todo**
+    name = "toggle-cursor-hiding",
+    key_sequence = "CONTROL + ALT + C",
     consuming = "none"
 },
 

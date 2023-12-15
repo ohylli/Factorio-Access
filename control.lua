@@ -4039,6 +4039,7 @@ function initialize(player)
    faplayer.zoom = faplayer.zoom or 1
    faplayer.build_lock = faplayer.build_lock or false
    faplayer.vanilla_mode = faplayer.vanilla_mode or false
+   faplayer.hide_cursor = faplayer.hide_cursor or false
    faplayer.allow_reading_flying_text = faplayer.allow_reading_flying_text or true
    faplayer.resources = fa_force.resources
    faplayer.mapped = fa_force.mapped
@@ -8090,6 +8091,9 @@ script.on_event("read-time-and-research-progress", function(event)
    else
       printout("The local time is " .. hour .. ":" .. string.format("%02d", minute), pindex)
    end
+   if players[pindex].vanilla_mode then
+      game.get_player(pindex).open_technology_gui()
+   end
 end)
 
 script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
@@ -8315,6 +8319,24 @@ script.on_event("toggle-vanilla-mode",function(event)
       game.get_player(pindex).print("Vanilla mode : ON")
    else
       game.get_player(pindex).print("Vanilla mode : OFF")
+   end
+end)
+
+script.on_event("toggle-cursor-hiding",function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].hide_cursor == nil or players[pindex].hide_cursor == false then
+      players[pindex].hide_cursor = true
+   else
+      players[pindex].hide_cursor = false
+   end
+   game.get_player(pindex).play_sound{path = "utility/confirm"}
+   if players[pindex].hide_cursor then
+      game.get_player(pindex).print("Cursor hiding : ON")
+   else
+      game.get_player(pindex).print("Cursor hiding : OFF")
    end
 end)
 
@@ -9835,6 +9857,9 @@ function sync_build_arrow(pindex)
          surface = game.get_player(pindex).surface, players = {pindex}, target = player.cursor_pos, orientation = (dir/dirs.east/dirs.south)}
       dir_indicator = player.building_direction_arrow
       rendering.set_visible(dir_indicator,true)
+      if players[pindex].hide_cursor then
+         rendering.set_visible(dir_indicator,false)
+      end
       
       --Redraw footprint
       if player.building_footprint ~= nil then 
@@ -9869,6 +9894,9 @@ function sync_build_arrow(pindex)
       player.building_footprint = rendering.draw_rectangle{left_top = left_top, right_bottom = right_bottom , color = {r = 0.25, b = 0.25, g = 1.0, a = 0.25}, draw_on_ground = true, 
          surface = game.get_player(pindex).surface, players = {pindex} }
       rendering.set_visible(player.building_footprint,true)
+      if players[pindex].hide_cursor then
+         rendering.set_visible(player.building_footprint,false)
+      end
    else
       if dir_indicator ~= nil then rendering.set_visible(dir_indicator,false) end
       if player.building_footprint ~= nil then rendering.set_visible(player.building_footprint,false) end
@@ -9889,6 +9917,12 @@ function cursor_highlight(pindex, ent, box_type)
    end
    if h_tile ~= nil and rendering.is_valid(h_tile) then
       rendering.destroy(h_tile)
+   end
+   
+   if players[pindex].hide_cursor then
+      players[pindex].cursor_ent_highlight_box = nil
+      players[pindex].cursor_tile_highlight_box = nil
+      return
    end
    
    if ent ~= nil and ent.valid and ent.name ~= "highlight-box" and ent.type ~= "flying-text" then
