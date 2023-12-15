@@ -3027,6 +3027,9 @@ end
 
 
 function rail_builder_open(pindex, rail)
+   if players[pindex].vanilla_mode then
+      return 
+   end
    --Set the player menu tracker to this menu
    players[pindex].menu = "rail_builder"
    players[pindex].in_menu = true
@@ -3423,6 +3426,9 @@ function train_menu(menu_index, pindex, clicked, other_input)
 end
 
 function train_menu_open(pindex)
+   if players[pindex].vanilla_mode then
+      return 
+   end
    --Set the player menu tracker to this menu
    players[pindex].menu = "train_menu"
    players[pindex].in_menu = true
@@ -3597,6 +3603,9 @@ end
 
 
 function train_stop_menu_open(pindex)
+   if players[pindex].vanilla_mode then
+      return 
+   end
    --Set the player menu tracker to this menu
    players[pindex].menu = "train_stop_menu"
    players[pindex].in_menu = true

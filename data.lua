@@ -809,6 +809,13 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "toggle-cursor-drawing",
+    key_sequence = "CONTROL + ALT + C",--todo**
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "recalibrate-zoom",
     key_sequence = "CONTROL + END",
     alternative_key_sequence = "CONTROL + RCTRL",
