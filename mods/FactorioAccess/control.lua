@@ -3068,7 +3068,6 @@ function scan_index(pindex)
             dir_dist} , pindex)
       end
    end
-   --if not players[pindex].vanilla_mode then game.get_player(pindex).game_view_settings.update_entity_selection = false end
 end 
 
 function scan_down(pindex)
@@ -3262,7 +3261,7 @@ function scan_area (x,y,w,h, pindex)
 end
 
 function toggle_cursor(pindex)
-   if not(players[pindex].cursor) then
+   if not players[pindex].cursor and not players[pindex].vanilla_mode then
       players[pindex].cursor = true
       players[pindex].build_lock = false
       players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos)
@@ -3358,16 +3357,16 @@ function read_tile(pindex, start_text)
       end
    end
      
-   --If the build lock is on and the player is holding a cut or copy tool, every entity being read gets mined as soon as you read a new tile.
+   --If the player is holding a cut or copy tool, every entity being read gets mined as soon as you read a new tile.
    local stack = game.get_player(pindex).cursor_stack
-   if stack and stack.valid_for_read and stack.name == "cut-paste-tool" then
+   if stack and stack.valid_for_read and stack.name == "cut-paste-tool" and not players[pindex].vanilla_mode then
       if ent and ent.valid then--not while loop, because it causes crashes
          local name = ent.name
          game.get_player(pindex).play_sound{path = "Mine-Building"}
          if try_to_mine_with_sound(ent,pindex) then
             result = result .. name .. " mined, "
          end
-         --Second round, but no more...
+         --Second round, in case two entities are there. While loops do not work!
          ent = get_selected_ent(pindex)
          if ent and ent.valid and players[pindex].walk ~= 2 then--not while
             local name = ent.name
@@ -6469,7 +6468,7 @@ script.on_event("mine-area", function(event) --laterdo** proper tallying of clea
    end
    cleared_total = cleared_total + cleared_count
    
-   --Also, if cut-paste tool in hand, mine every non-resource entity in the area that you can.
+   --Also, if cut-paste tool in hand, mine every non-resource entity in the area that you can. **todo document this
    local p = game.get_player(pindex)
    local stack = p.cursor_stack
    if stack and stack.valid_for_read and stack.name == "cut-paste-tool" then
@@ -8337,7 +8336,7 @@ end)
 
 script.on_event("open-warnings-menu", function(event)
    pindex = event.player_index
-   if not check_for_player(pindex) then
+   if not check_for_player(pindex) or players[pindex].vanilla_mode then
       return
    end
    if players[pindex].in_menu == false or game.get_player(pindex).opened_gui_type == defines.gui_type.production then
@@ -8358,11 +8357,11 @@ end)
 
 script.on_event("open-fast-travel-menu", function(event)
    pindex = event.player_index
-   if not check_for_player(pindex) then
+   if not check_for_player(pindex) or players[pindex].vanilla_mode then
       return
    end
    if players[pindex].in_menu == false and game.get_player(pindex).driving == false and game.get_player(pindex).opened == nil then
-      if not players[pindex].vanilla_mode then game.get_player(pindex).game_view_settings.update_entity_selection = false end
+      game.get_player(pindex).game_view_settings.update_entity_selection = false
       game.get_player(pindex).selected = nil
 
       players[pindex].menu = "travel"
@@ -8442,11 +8441,11 @@ end)
 --note: need to review functionality, test for bugs, review wiki pages (laterdo)
 script.on_event("open-structure-travel-menu", function(event)
    local pindex = event.player_index
-   if not check_for_player(pindex) then
+   if not check_for_player(pindex) or players[pindex].vanilla_mode then
       return
    end
    if players[pindex].in_menu == false then
-      if not players[pindex].vanilla_mode then game.get_player(pindex).game_view_settings.update_entity_selection = false end
+      game.get_player(pindex).game_view_settings.update_entity_selection = false
       game.get_player(pindex).selected = nil
       players[pindex].menu = "structure-travel"
       players[pindex].in_menu = true
