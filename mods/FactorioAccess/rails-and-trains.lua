@@ -3462,13 +3462,25 @@ function train_menu(menu_index, pindex, clicked, other_input)
 		 printout("Train schedule cleared.",pindex)
       end
    elseif index == 7 then 
-	  --Click here to travel to the next train stop
-	  if not clicked then
-         printout("Single-time travel to a new train stop, press LEFT BRACKET, the train waits until all passengers get off, then resumes its schedule.", pindex)
+      if not players[pindex].train_menu.selecting_station then
+         --Click here to travel to the next train stop
+         if not clicked then
+            printout("Single-time travel to a new train stop, press LEFT BRACKET to select one, the train waits until all passengers get off, then it resumes its schedule.", pindex)
+         else
+            local comment = "Select a station with LEFT and RIGHT arrow keys and confirm with LEFT BRACKET."
+            printout(comment,pindex)
+            players[pindex].train_menu.selecting_station = true
+            refresh_valid_train_stop_list(train,pindex)
+         end
       else
-	     local comment = sub_automatic_travel_to_other_stop(train)
-		 printout(comment,pindex)
-      end	  
+         if not clicked then
+            --Read the list item
+            read_valid_train_stop_from_list(pindex)
+         else
+            --Go to the list item
+            go_to_valid_train_stop_from_list(pindex,train)
+         end
+      end
    elseif index == 8 then 
       if players[pindex].train_menu.wait_time == nil then
          players[pindex].train_menu.wait_time = 300
@@ -3562,6 +3574,38 @@ function train_menu_down(pindex)
       --Play sound
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
    end
+   --Load menu
+   train_menu(players[pindex].train_menu.index, pindex, false)
+end
+
+function train_menu_left(pindex)
+   local index = players[pindex].train_menu.index_2
+   if index == nil then
+      index = 1
+   else 
+      index = index - 1
+   end
+   if index == 0 then
+      index = 1
+      game.get_player(pindex).play_sound{path = "Inventory-Move"}
+   end
+   players[pindex].train_menu.index_2 = index
+   --Load menu
+   train_menu(players[pindex].train_menu.index, pindex, false)
+end
+
+function train_menu_right(pindex)
+   local index = players[pindex].train_menu.index_2
+   if index == nil then
+      index = 1
+   else 
+      index = index + 1
+   end
+   if index > #players[pindex].valid_train_stop_list then
+      index = #players[pindex].valid_train_stop_list
+      game.get_player(pindex).play_sound{path = "Inventory-Move"}
+   end
+   players[pindex].train_menu.index_2 = index
    --Load menu
    train_menu(players[pindex].train_menu.index, pindex, false)
 end
@@ -4187,10 +4231,12 @@ end
 function sub_automatic_travel_to_other_stop(train)
    local surf = train.front_stock.surface
    local train_stops = surf.get_train_stops()
+   local str = ""
    for i,stop in ipairs(train_stops) do
       --Set a stop
 	  local wait_condition_1 = {type = "passenger_not_present", compare_type = "and"}
-	  local new_record = {wait_conditions = {wait_condition_1}, station = stop.backer_name, temporary = true}
+     local wait_condition_2 = {type = "time", ticks = 60, compare_type = "and"}
+	  local new_record = {wait_conditions = {wait_condition_1,wait_condition_2}, station = stop.backer_name, temporary = true}
 	  
 	  --train.schedule = {current = 1, records = {new_record}}
 	  local schedule = train.schedule
@@ -4235,6 +4281,125 @@ function sub_automatic_travel_to_other_stop(train)
    return str
 end
 
+function refresh_valid_train_stop_list(train,pindex)--table.insert
+   players[pindex].valid_train_stop_list = {}
+   train.manual_mode = true
+   local surf = train.front_stock.surface
+   local train_stops = surf.get_train_stops()
+   local str = ""
+   for i,stop in ipairs(train_stops) do
+      --Set a stop
+	  local wait_condition_1 = {type = "passenger_not_present", compare_type = "and"}
+	  local wait_condition_2 = {type = "time", ticks = 60, compare_type = "and"}
+	  local new_record = {wait_conditions = {wait_condition_1,wait_condition_2}, station = stop.backer_name, temporary = true}
+	  
+	  local schedule = train.schedule
+	  if schedule == nil then
+	     schedule = {current = 1, records = {new_record}}
+		 --game.get_player(pindex).print("made new schedule")
+	  else
+		 local records = schedule.records
+		 table.insert(records,1, new_record)
+	  end
+	  train.schedule = schedule
+	  
+	  --Make the train aim for the stop
+	  train.go_to_station(1)
+	  if not train.has_path then
+	     --Invalid path: Do not add to list
+	  else
+	     --Valid station and path selected.
+		 table.insert(players[pindex].valid_train_stop_list, stop.backer_name)
+	  end
+     
+     --Clear the record
+     local records = schedule.records
+      table.remove(records, 1)
+      if records == nil or #records == 0 then
+         train.schedule = nil
+         train.manual_mode = true
+      else
+         train.schedule = schedule
+      end
+   end
+   return #players[pindex].valid_train_stop_list
+end
+
+function read_valid_train_stop_from_list(pindex)
+   local index = players[pindex].train_menu.index_2
+   local name = ""
+   if players[pindex].valid_train_stop_list == nil or #players[pindex].valid_train_stop_list == 0 then
+      printout("Error: No reachable train stops found",pindex)
+      return
+   end
+   if index == nil then
+      index = 1
+   end
+   players[pindex].train_menu.index_2 = index
+   
+   name = players[pindex].valid_train_stop_list[index]
+   --Return the name
+   printout(name,pindex)
+end
+
+function go_to_valid_train_stop_from_list(pindex,train)
+   local index = players[pindex].train_menu.index_2
+   local name = ""
+   if players[pindex].valid_train_stop_list == nil or #players[pindex].valid_train_stop_list == 0 then
+      printout("Error: No reachable train stops found",pindex)
+      return
+   end
+   if index == nil then
+      index = 1
+   end
+   players[pindex].train_menu.index_2 = index
+   name = players[pindex].valid_train_stop_list[index]
+   
+   --Set the station target
+   local wait_condition_1 = {type = "passenger_not_present", compare_type = "and"}
+   local wait_condition_2 = {type = "time", ticks = 60, compare_type = "and"}
+   local new_record = {wait_conditions = {wait_condition_1,wait_condition_2}, station = name, temporary = true}
+
+   local schedule = train.schedule
+   if schedule == nil then
+     schedule = {current = 1, records = {new_record}}
+    --game.get_player(pindex).print("made new schedule")
+   else
+    local records = schedule.records
+    table.insert(records,1, new_record)
+   end
+   train.schedule = schedule
+
+   --Make the train aim for the stop
+   train.go_to_station(1)
+   if not train.has_path or train.path.size < 3 then
+     --Invalid path or path to an station nearby
+       local records = schedule.records
+      table.remove(records, 1)
+      if records == nil or #records == 0 then
+         train.schedule = nil
+         train.manual_mode = true
+      else
+         train.schedule = schedule
+      end
+   else
+     --Valid station and path selected.
+    --(do nothing)
+   end
+   
+   --Check valid path again
+   local str = ""
+   if train.path_end_stop == nil then
+      --Announce error to all passengers
+      str = "Error: Train stop pathing error."
+      for i,player in ipairs(train.passengers) do
+         players[player.index].last = str
+         localised_print{"","out ",str}
+      end
+   else
+      --Train will announce its new path by itself
+   end
+end
 
 --Plays a train track alert sound for every player standing on or facing train tracks that meet the condition.
 function play_train_track_alert_sounds(step)

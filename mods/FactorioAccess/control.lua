@@ -4208,7 +4208,9 @@ function initialize(player)
       index = 0,
       renaming = false,
       locomotive = nil,
-      wait_time = 300
+      wait_time = 300,
+      index_2 = 0,
+      selecting_station = false
    }
    
    faplayer.train_stop_menu = faplayer.train_stop_menu or {
@@ -4219,6 +4221,8 @@ function initialize(player)
       wait_time_seconds = 30,
       safety_wait_enabled = true
    }
+   
+   faplayer.valid_train_stop_list = faplayer.valid_train_stop_list or {}
 
    if table_size(faplayer.mapped) == 0 then
       player.force.rechart()
@@ -8716,6 +8720,26 @@ script.on_event("train-menu-down", function(event)
    end
    if players[pindex].in_menu and players[pindex].menu == "train_menu" then
       train_menu_down(pindex)
+   end
+end)
+
+script.on_event("train-menu-left", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].in_menu and players[pindex].menu == "train_menu" then
+      train_menu_left(pindex)
+   end
+end)
+
+script.on_event("train-menu-right", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].in_menu and players[pindex].menu == "train_menu" then
+      train_menu_right(pindex)
    end
 end)
 
