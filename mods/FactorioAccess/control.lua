@@ -2463,6 +2463,9 @@ function populate_categories(pindex)
    players[pindex].nearby.resources = {}
    players[pindex].nearby.containers = {}
    players[pindex].nearby.buildings = {}
+   players[pindex].nearby.vehicles = {}
+   players[pindex].nearby.players = {}
+   players[pindex].nearby.enemies = {}
    players[pindex].nearby.other = {}
 
    for i, ent in ipairs(players[pindex].nearby.ents) do
@@ -2480,10 +2483,16 @@ function populate_categories(pindex)
             table.insert(players[pindex].nearby.resources, ent)
          elseif ent.ents[1].type == "container" then
             table.insert(players[pindex].nearby.containers, ent)
-         elseif ent.ents[1].type == "simple-entity" or ent.ents[1].type == "simple-entity-with-owner" then
-            table.insert(players[pindex].nearby.other, ent)
-         elseif ent.ents[1].prototype.is_building then
+         elseif ent.ents[1].prototype.is_building and not ent.ents[1].type == "unit-spawner" and not ent.ents[1].type == "turret" then
             table.insert(players[pindex].nearby.buildings, ent)
+         elseif ent.ents[1].type == "car" or ent.ents[1].type == "locomotive" or ent.ents[1].type == "cargo-wagon" or ent.ents[1].type == "fluid-wagon" or ent.ents[1].type == "artillery-wagon" or ent.ents[1].type == "spider-vehicle" then
+            table.insert(players[pindex].nearby.vehicles, ent)
+         elseif ent.ents[1].type == "character" or ent.ents[1].type == "character-corpse" then
+            table.insert(players[pindex].nearby.players, ent)
+         elseif ent.ents[1].type == "unit" or ent.ents[1].type == "unit-spawner" or ent.ents[1].type == "turret" then
+            table.insert(players[pindex].nearby.enemies, ent)
+         elseif ent.ents[1].type == "simple-entity" or ent.ents[1].type == "simple-entity-with-owner" or ent.ents[1].type == "entity-ghost" or ent.ents[1].type == "item-entity" then
+            table.insert(players[pindex].nearby.other, ent)
          end
       end
    end
@@ -2972,8 +2981,11 @@ function scan_index(pindex)
    if (players[pindex].nearby.category == 1 and next(players[pindex].nearby.ents) == nil) 
       or (players[pindex].nearby.category == 2 and next(players[pindex].nearby.resources) == nil) 
       or (players[pindex].nearby.category == 3 and next(players[pindex].nearby.containers) == nil) 
-      or (players[pindex].nearby.category == 4 and next(players[pindex].nearby.buildings) == nil) 
-      or (players[pindex].nearby.category == 5 and next(players[pindex].nearby.other) == nil) 
+      or (players[pindex].nearby.category == 4 and next(players[pindex].nearby.buildings) == nil)
+      or (players[pindex].nearby.category == 5 and next(players[pindex].nearby.vehicles) == nil)
+      or (players[pindex].nearby.category == 6 and next(players[pindex].nearby.players) == nil)
+      or (players[pindex].nearby.category == 7 and next(players[pindex].nearby.enemies) == nil)
+      or (players[pindex].nearby.category == 8 and next(players[pindex].nearby.other) == nil) 
       then
       printout("No entities found.  Try refreshing with end key.", pindex)
    else
@@ -2987,6 +2999,12 @@ function scan_index(pindex)
       elseif players[pindex].nearby.category == 4 then
          ents = players[pindex].nearby.buildings
       elseif players[pindex].nearby.category == 5 then
+         ents = players[pindex].nearby.vehicles
+      elseif players[pindex].nearby.category == 6 then
+         ents = players[pindex].nearby.players
+      elseif players[pindex].nearby.category == 7 then
+         ents = players[pindex].nearby.enemies
+      elseif players[pindex].nearby.category == 8 then
          ents = players[pindex].nearby.other
       end
       local ent = nil
@@ -3079,7 +3097,10 @@ function scan_down(pindex)
       (players[pindex].nearby.category == 2 and players[pindex].nearby.index < #players[pindex].nearby.resources) or 
       (players[pindex].nearby.category == 3 and players[pindex].nearby.index < #players[pindex].nearby.containers) or 
       (players[pindex].nearby.category == 4 and players[pindex].nearby.index < #players[pindex].nearby.buildings)  or 
-      (players[pindex].nearby.category == 5 and players[pindex].nearby.index < #players[pindex].nearby.other) then
+      (players[pindex].nearby.category == 5 and players[pindex].nearby.index < #players[pindex].nearby.vehicles)  or 
+      (players[pindex].nearby.category == 6 and players[pindex].nearby.index < #players[pindex].nearby.players)  or 
+      (players[pindex].nearby.category == 7 and players[pindex].nearby.index < #players[pindex].nearby.enemies)  or 
+      (players[pindex].nearby.category == 8 and players[pindex].nearby.index < #players[pindex].nearby.other) then
       players[pindex].nearby.index = players[pindex].nearby.index + 1
       players[pindex].nearby.selection = 1
    else 
@@ -3098,6 +3119,12 @@ function scan_down(pindex)
 --      elseif players[pindex].nearby.category == 4 then
 --         table.remove(players[pindex].nearby.buildings, players[pindex].nearby.index)
 --      elseif players[pindex].nearby.category == 5 then
+--         table.remove(players[pindex].nearby.vehicles, players[pindex].nearby.index)
+--      elseif players[pindex].nearby.category == 6 then
+--         table.remove(players[pindex].nearby.players, players[pindex].nearby.index)
+--      elseif players[pindex].nearby.category == 7 then
+--         table.remove(players[pindex].nearby.enemies, players[pindex].nearby.index)
+--      elseif players[pindex].nearby.category == 8 then
 --         table.remove(players[pindex].nearby.other, players[pindex].nearby.index)
 --      end
 --      scan_up(pindex)
@@ -3130,6 +3157,12 @@ function scan_up(pindex)
 --      elseif players[pindex].nearby.category == 4 then
 --         table.remove(players[pindex].nearby.buildings, players[pindex].nearby.index)
 --      elseif players[pindex].nearby.category == 5 then
+--         table.remove(players[pindex].nearby.vehicles, players[pindex].nearby.index)
+--      elseif players[pindex].nearby.category == 6 then
+--         table.remove(players[pindex].nearby.players, players[pindex].nearby.index)
+--      elseif players[pindex].nearby.category == 7 then
+--         table.remove(players[pindex].nearby.enemies, players[pindex].nearby.index)
+--      elseif players[pindex].nearby.category == 8 then
 --         table.remove(players[pindex].nearby.other, players[pindex].nearby.index)
 --      end
 --      scan_down(pindex)
@@ -3152,6 +3185,12 @@ function scan_middle(pindex)
    elseif players[pindex].nearby.category == 4 then
       ents = players[pindex].nearby.buildings
    elseif players[pindex].nearby.category == 5 then
+      ents = players[pindex].nearby.vehicles
+   elseif players[pindex].nearby.category == 6 then
+      ents = players[pindex].nearby.players
+   elseif players[pindex].nearby.category == 7 then
+      ents = players[pindex].nearby.enemies
+   elseif players[pindex].nearby.category == 8 then
       ents = players[pindex].nearby.other
    end
 
@@ -4063,6 +4102,9 @@ function initialize(player)
       resources = {},
       containers = {},
       buildings = {},
+      vehicles = {},
+      players = {},
+      enemies = {},
       other = {}
    }
    faplayer.nearby.ents = faplayer.nearby.ents or {}
@@ -5705,7 +5747,14 @@ script.on_event("jump-to-scan", function(event)--NOTE: This might be deprecated 
       return
    end
    if not (players[pindex].in_menu) then
-      if (players[pindex].nearby.category == 1 and next(players[pindex].nearby.ents) == nil) or (players[pindex].nearby.category == 2 and next(players[pindex].nearby.resources) == nil) or (players[pindex].nearby.category == 3 and next(players[pindex].nearby.containers) == nil) or (players[pindex].nearby.category == 4 and next(players[pindex].nearby.buildings) == nil) or (players[pindex].nearby.category == 5 and next(players[pindex].nearby.other) == nil) then
+      if (players[pindex].nearby.category == 1 and next(players[pindex].nearby.ents) == nil) or 
+         (players[pindex].nearby.category == 2 and next(players[pindex].nearby.resources) == nil) or 
+         (players[pindex].nearby.category == 3 and next(players[pindex].nearby.containers) == nil) or 
+         (players[pindex].nearby.category == 4 and next(players[pindex].nearby.buildings) == nil) or 
+         (players[pindex].nearby.category == 5 and next(players[pindex].nearby.vehicles) == nil) or 
+         (players[pindex].nearby.category == 6 and next(players[pindex].nearby.players) == nil) or 
+         (players[pindex].nearby.category == 7 and next(players[pindex].nearby.enemies) == nil) or 
+         (players[pindex].nearby.category == 8 and next(players[pindex].nearby.other) == nil) then
          printout("No entities found.  Try refreshing with end key.", pindex)
       else
          local ents = {}
@@ -5718,6 +5767,12 @@ script.on_event("jump-to-scan", function(event)--NOTE: This might be deprecated 
          elseif players[pindex].nearby.category == 4 then
             ents = players[pindex].nearby.buildings
          elseif players[pindex].nearby.category == 5 then
+            ents = players[pindex].nearby.vehicles
+         elseif players[pindex].nearby.category == 6 then
+            ents = players[pindex].nearby.players
+         elseif players[pindex].nearby.category == 7 then
+            ents = players[pindex].nearby.enemies
+         elseif players[pindex].nearby.category == 8 then
             ents = players[pindex].nearby.other
          end
          local ent = nil
@@ -5802,11 +5857,19 @@ script.on_event("scan-category-up", function(event)
    end
    if not (players[pindex].in_menu) then
       local new_category = players[pindex].nearby.category - 1
-      while new_category > 0 and ((new_category == 1 and next(players[pindex].nearby.ents) == nil) or (new_category == 2 and next(players[pindex].nearby.resources) == nil) or (new_category == 3 and next(players[pindex].nearby.containers) == nil) or (new_category == 4 and next(players[pindex].nearby.buildings) == nil) or (new_category == 5 and next(players[pindex].nearby.other) == nil)) do
+      while new_category > 0 and (
+      (new_category == 1 and next(players[pindex].nearby.ents) == nil) or 
+      (new_category == 2 and next(players[pindex].nearby.resources) == nil) or 
+      (new_category == 3 and next(players[pindex].nearby.containers) == nil) or 
+      (new_category == 4 and next(players[pindex].nearby.buildings) == nil) or 
+      (new_category == 5 and next(players[pindex].nearby.vehicles) == nil) or 
+      (new_category == 6 and next(players[pindex].nearby.players) == nil) or 
+      (new_category == 7 and next(players[pindex].nearby.enemies) == nil) or 
+      (new_category == 8 and next(players[pindex].nearby.other) == nil)) do
          new_category = new_category - 1
       end
       if new_category > 0 then
-      players[pindex].nearby.index = 1
+         players[pindex].nearby.index = 1
          players[pindex].nearby.category = new_category
       end
       if players[pindex].nearby.category == 1 then
@@ -5818,8 +5881,13 @@ script.on_event("scan-category-up", function(event)
       elseif players[pindex].nearby.category == 4 then
          printout("Buildings", pindex)
       elseif players[pindex].nearby.category == 5 then
+         printout("Vehicles", pindex)
+      elseif players[pindex].nearby.category == 6 then
+         printout("Players", pindex)
+      elseif players[pindex].nearby.category == 7 then
+         printout("Enemies", pindex)
+      elseif players[pindex].nearby.category == 8 then
          printout("Other", pindex)
-
       end
    end
 end)
@@ -5831,12 +5899,20 @@ script.on_event("scan-category-down", function(event)
    end
    if not (players[pindex].in_menu) then
       local new_category  = players[pindex].nearby.category + 1
-      while new_category < 6 and ((new_category == 1 and next(players[pindex].nearby.ents) == nil) or (new_category == 2 and next(players[pindex].nearby.resources) == nil) or (new_category == 3 and next(players[pindex].nearby.containers) == nil) or (new_category == 4 and next(players[pindex].nearby.buildings) == nil) or (new_category == 5 and next(players[pindex].nearby.other) == nil)) do
+      while new_category <= 8 and (
+         (new_category == 1 and next(players[pindex].nearby.ents) == nil) or 
+         (new_category == 2 and next(players[pindex].nearby.resources) == nil) or 
+         (new_category == 3 and next(players[pindex].nearby.containers) == nil) or 
+         (new_category == 4 and next(players[pindex].nearby.buildings) == nil) or 
+         (new_category == 5 and next(players[pindex].nearby.vehicles) == nil) or 
+         (new_category == 6 and next(players[pindex].nearby.players) == nil) or 
+         (new_category == 7 and next(players[pindex].nearby.enemies) == nil) or 
+         (new_category == 8 and next(players[pindex].nearby.other) == nil) ) do
          new_category = new_category + 1
       end
-      if new_category <= 5 then
+      if new_category <= 8 then
          players[pindex].nearby.category = new_category
-      players[pindex].nearby.index = 1
+         players[pindex].nearby.index = 1
       end
     
       if players[pindex].nearby.category == 1 then
@@ -5848,8 +5924,13 @@ script.on_event("scan-category-down", function(event)
       elseif players[pindex].nearby.category == 4 then
          printout("Buildings", pindex)
       elseif players[pindex].nearby.category == 5 then
+         printout("Vehicles", pindex)
+      elseif players[pindex].nearby.category == 6 then
+         printout("Players", pindex)
+      elseif players[pindex].nearby.category == 7 then
+         printout("Enemies", pindex)
+      elseif players[pindex].nearby.category == 8 then
          printout("Other", pindex)
-
       end
    end
 end)
@@ -5863,7 +5944,7 @@ script.on_event("scan-mode-up", function(event)
    if not (players[pindex].in_menu) then
       players[pindex].nearby.index = 1
       players[pindex].nearby.count = false
-      printout("Sorting by distance", pindex)
+      printout("Sorting by distance from this position", pindex)
       scan_sort(pindex)
    end
 end)
@@ -5903,7 +5984,14 @@ script.on_event("scan-selection-down", function(event)
       return
    end
    if not (players[pindex].in_menu) then
-      if (players[pindex].nearby.category == 1 and next(players[pindex].nearby.ents) == nil) or (players[pindex].nearby.category == 2 and next(players[pindex].nearby.resources) == nil) or (players[pindex].nearby.category == 3 and next(players[pindex].nearby.containers) == nil) or (players[pindex].nearby.category == 4 and next(players[pindex].nearby.buildings) == nil) or (players[pindex].nearby.category == 5 and next(players[pindex].nearby.other) == nil) then
+      if (players[pindex].nearby.category == 1 and next(players[pindex].nearby.ents) == nil) or 
+      (players[pindex].nearby.category == 2 and next(players[pindex].nearby.resources) == nil) or 
+      (players[pindex].nearby.category == 3 and next(players[pindex].nearby.containers) == nil) or 
+      (players[pindex].nearby.category == 4 and next(players[pindex].nearby.buildings) == nil) or 
+      (players[pindex].nearby.category == 5 and next(players[pindex].nearby.vehicles) == nil) or 
+      (players[pindex].nearby.category == 6 and next(players[pindex].nearby.players) == nil) or 
+      (players[pindex].nearby.category == 7 and next(players[pindex].nearby.enemies) == nil) or 
+      (players[pindex].nearby.category == 8 and next(players[pindex].nearby.other) == nil) then
          printout("No entities found.  Try refreshing with end key.", pindex)
       else
          local ents = {}
@@ -5916,6 +6004,12 @@ script.on_event("scan-selection-down", function(event)
          elseif players[pindex].nearby.category == 4 then
             ents = players[pindex].nearby.buildings
          elseif players[pindex].nearby.category == 5 then
+            ents = players[pindex].nearby.vehicles
+         elseif players[pindex].nearby.category == 6 then
+            ents = players[pindex].nearby.players
+         elseif players[pindex].nearby.category == 7 then
+            ents = players[pindex].nearby.enemies
+         elseif players[pindex].nearby.category == 8 then
             ents = players[pindex].nearby.other
          end
    
@@ -6477,9 +6571,9 @@ script.on_event("mine-area", function(event) --laterdo** proper tallying of clea
          --Obstacles within 5 tiles: trees and rocks and ground items
          game.get_player(pindex).play_sound{path = "Mine-Building"}
          cleared_count, comment = clear_obstacles_in_circle(pos, 5, pindex)
-      elseif ent.name == "straight-rail" then
+      elseif ent.name == "straight-rail" or ent.name == "curved-rail" then
          --Rails within 5 tiles (and their signals)
-         local rails = surf.find_entities_filtered{position = pos, radius = 5, name = "straight-rail"}
+         local rails = surf.find_entities_filtered{position = pos, radius = 7, name = {"straight-rail","curved-rail"}}
          for i,rail in ipairs(rails) do
             mine_signals(rail,pindex)
             game.get_player(pindex).play_sound{path = "entity-mined/straight-rail"}
@@ -6546,6 +6640,7 @@ function clear_obstacles_in_circle(position, radius, pindex)
    local comment = ""
    local trees_cleared = 0
    local rocks_cleared = 0
+   local remnants_cleared = 0
    local ground_items_cleared = 0
    players[pindex].allow_reading_flying_text = false
    
@@ -6567,6 +6662,17 @@ function clear_obstacles_in_circle(position, radius, pindex)
       end
    end
    
+   --Find and mine corpse entities such as building remnants
+   local corpse_ents = surf.find_entities_filtered{position = position, radius = radius, name = {"tree-01-stump","tree-02-stump","tree-03-stump","tree-04-stump","tree-05-stump","tree-06-stump","tree-07-stump","tree-08-stump","tree-09-stump","small-scorchmark","small-scorchmark-tintable","medium-scorchmark","medium-scorchmark-tintable","big-scorchmark","big-scorchmark-tintable","huge-scorchmark","huge-scorchmark-tintable"}}
+   for i,corpse_ent in ipairs(corpse_ents) do
+      if corpse_ent ~= nil and corpse_ent.valid then
+         rendering.draw_circle{color = {1, 0, 0},radius = 2,width = 2,target = corpse_ent.position,surface = corpse_ent.surface,time_to_live = 60}
+         corpse_ent.destroy{}
+         remnants_cleared = remnants_cleared + 1
+      end
+   end
+   --game.get_player(pindex).print("remnants cleared: " .. remnants_cleared)--debug
+   
    --Find and mine items on the ground
    local ground_items = surf.find_entities_filtered{position = position, radius = 5, name = "item-on-ground"}
    for i,ground_item in ipairs(ground_items) do
@@ -6575,11 +6681,11 @@ function clear_obstacles_in_circle(position, radius, pindex)
       ground_items_cleared = ground_items_cleared + 1
    end
          
-   if trees_cleared + rocks_cleared + ground_items_cleared > 0 then
-      comment = "cleared " .. trees_cleared .. " trees and " .. rocks_cleared .. " rocks and " .. ground_items_cleared .. " ground items "
+   if trees_cleared + rocks_cleared + ground_items_cleared + remnants_cleared > 0 then
+      comment = "cleared " .. trees_cleared .. " trees and " .. rocks_cleared .. " rocks and " .. remnants_cleared .. " remnants and " .. ground_items_cleared .. " ground items "
    end
    rendering.draw_circle{color = {0, 1, 0},radius = radius,width = radius,target = position,surface = surf,time_to_live = 60}
-   return (trees_cleared + rocks_cleared + ground_items_cleared), comment
+   return (trees_cleared + rocks_cleared + remnants_cleared + ground_items_cleared), comment
 end
 
 
