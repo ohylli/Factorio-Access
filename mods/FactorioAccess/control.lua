@@ -385,7 +385,7 @@ function increment_inventory_bar(ent, amount)
 end
 
 
-function extra_info_for_scan_list(ent)
+function extra_info_for_scan_list(ent,pindex)
    local result = ""
    if ent.name ~= "water" and ent.type == "mining-drill"  then
       local pos = ent.position
@@ -435,8 +435,29 @@ function extra_info_for_scan_list(ent)
    end
    
    if ent.name == "locomotive" and ent.train ~= nil and ent.train.valid then
-      result = " of train " .. get_train_name(ent.train)
+      result = result .. " of train " .. get_train_name(ent.train)
+   elseif ent.name == "character" 
+      local p = ent.player
+      local p2 = ent.associated_player
+      if p ~= nil and p.valid and p.name ~= nil and p.name ~= "" then
+         result = result .. " " .. p.name 
+      elseif p2 ~= nil and p2.valid and p2.name ~= nil and p2.name ~= "" then
+         result = result .. " " .. p2.name 
+      elseif p ~= nil and p.valid and p.index == pindex then
+         result = result .. " you "
+      elseif pindex ~= nil then
+         result = result .. " " .. pindex
+      else
+         result = result .. " X "
+      end
+   elseif ent.name == "character-corpse" then
+      if ent.character_corpse_player_index == pindex then
+         result = result .. " of your character "
+      elseif ent.character_corpse_player_index ~= nil then
+         result = result .. " of another character "
+      end
    end
+   
    return result
 end
 
@@ -3077,7 +3098,7 @@ function scan_index(pindex)
       if players[pindex].nearby.count == false then
          --Read the entity in terms of distance and direction
          local result={"access.thing-producing-listpos-dirdist",ent_name_locale(ent)}
-         table.insert(result,extra_info_for_scan_list(ent))
+         table.insert(result,extra_info_for_scan_list(ent),pindex)
          table.insert(result,{"description.of", players[pindex].nearby.selection , #ents[players[pindex].nearby.index].ents})
          table.insert(result,dir_dist)
          printout(result,pindex)
@@ -3248,7 +3269,7 @@ function scan_area (x,y,w,h, pindex)
       end
    end
    for i=1, #ents, 1 do
-      local prod_info = extra_info_for_scan_list(ents[i])
+      local prod_info = extra_info_for_scan_list(ents[i],pindex)
       local index = index_of_entity(result, ents[i].name .. prod_info)
       if index == nil then
          table.insert(result, {name = ents[i].name .. prod_info, count = 1, ents = {ents[i]}, aggregate = false}) --laterdo save ent type here?
