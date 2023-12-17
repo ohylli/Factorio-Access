@@ -344,6 +344,20 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "a-scan-list-main-up-key",
+    key_sequence = "PAGEUP",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "a-scan-list-main-down-key",
+    key_sequence = "PAGEDOWN",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "scan-list-up",
     key_sequence = "PAGEUP",
     alternative_key_sequence = "UP",
