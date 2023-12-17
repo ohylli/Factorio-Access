@@ -385,7 +385,7 @@ function increment_inventory_bar(ent, amount)
 end
 
 
-function ent_production(ent)
+function extra_info_for_scan_list(ent)
    local result = ""
    if ent.name ~= "water" and ent.type == "mining-drill"  then
       local pos = ent.position
@@ -432,9 +432,11 @@ function ent_production(ent)
       elseif #itemtable > 1 then
          result = result .. " with various items "
       end
-      
    end
-
+   
+   if ent.name == "locomotive" and ent.train ~= nil and ent.train.valid then
+      result = " of train " .. get_train_name(ent.train)
+   end
    return result
 end
 
@@ -3075,7 +3077,7 @@ function scan_index(pindex)
       if players[pindex].nearby.count == false then
          --Read the entity in terms of distance and direction
          local result={"access.thing-producing-listpos-dirdist",ent_name_locale(ent)}
-         table.insert(result,ent_production(ent))
+         table.insert(result,extra_info_for_scan_list(ent))
          table.insert(result,{"description.of", players[pindex].nearby.selection , #ents[players[pindex].nearby.index].ents})
          table.insert(result,dir_dist)
          printout(result,pindex)
@@ -3234,7 +3236,7 @@ end
 function scan_area (x,y,w,h, pindex)
    local first_player = game.get_player(pindex)
    local surf = first_player.surface
-   local ents = surf.find_entities_filtered{area = {{x, y},{x+w, y+h}}, type = {"resource", "tree"}, invert = true}--**bug here about invert, because it inverts everything
+   local ents = surf.find_entities_filtered{area = {{x, y},{x+w, y+h}}, type = {"resource", "tree"}, invert = true}--**possible bug here about invert, because it inverts everything, possibly resolved
    local result = {}
          local pos = players[pindex].cursor_pos
    for name, resource in pairs(players[pindex].resources) do
@@ -3246,7 +3248,7 @@ function scan_area (x,y,w,h, pindex)
       end
    end
    for i=1, #ents, 1 do
-      local prod_info = ent_production(ents[i])
+      local prod_info = extra_info_for_scan_list(ents[i])
       local index = index_of_entity(result, ents[i].name .. prod_info)
       if index == nil then
          table.insert(result, {name = ents[i].name .. prod_info, count = 1, ents = {ents[i]}, aggregate = false}) --laterdo save ent type here?
