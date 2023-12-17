@@ -8113,6 +8113,9 @@ script.on_event("item-info", function(event)
       local ent =  get_selected_ent(pindex)
       if ent then
          local str = ent.localised_description
+         if str == nil or str == "" then
+            str = "No description"
+         end
          printout(str, pindex)
       end
    elseif players[pindex].in_menu then
@@ -8125,9 +8128,12 @@ script.on_event("item-info", function(event)
             else
                str = stack.prototype.localised_description
             end
+            if str == nil or str == "" then
+               str = "No description"
+            end
             printout(str, pindex)
          else
-            printout("Blank", pindex)
+            printout("No description", pindex)
          end
 
       elseif players[pindex].menu == "technology" then
@@ -8164,9 +8170,12 @@ script.on_event("item-info", function(event)
                   else
                      str = product.localised_description
                   end
+                  if str == nil or str == "" then
+                     str = "No description"
+                  end
                   printout(str, pindex)
          else
-            printout("Blank", pindex)
+            printout("No description", pindex)
          end
       elseif players[pindex].menu == "building" then
          if players[pindex].building.recipe_selection then
@@ -8176,14 +8185,17 @@ script.on_event("item-info", function(event)
                local product = game.item_prototypes[product_name] or game.fluid_prototypes[product_name] 
                local str = ""
                str = product.localised_description
+               if str == nil or str == "" then
+                  str = "No description"
+               end
                printout(str, pindex)
             else
-               printout("Blank", pindex)
+               printout("No description", pindex)
             end
          elseif players[pindex].building.sector <= #players[pindex].building.sectors then
             local inventory = players[pindex].building.sectors[players[pindex].building.sector].inventory
             if players[pindex].building.sectors[players[pindex].building.sector].name ~= "Fluid" and inventory.is_empty() then --Catches inventory size 0 crash
-               printout("Blank", pindex)
+               printout("No description", pindex)
                return
             end
             local stack = inventory[players[pindex].building.index]
@@ -8194,9 +8206,12 @@ script.on_event("item-info", function(event)
                else
                   str = stack.prototype.localised_description
                end
+               if str == nil or str == "" then
+                  str = "No description"
+               end
                printout(str, pindex)
             else
-               printout("Blank", pindex)
+               printout("No description", pindex)
             end
          end
 
