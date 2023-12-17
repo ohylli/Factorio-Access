@@ -486,7 +486,7 @@ function vehicle_info(pindex)
    end
 end
 
---Look up and translate the train state. -laterdo better explanations
+--Look up and translate the train state. -laterdo better state explanations***
 function get_train_state_info(train)
    local train_state_id = train.state
    local train_state_text = ""
@@ -2194,7 +2194,7 @@ function build_fork_at_end_rail(anchor_rail, pindex, include_forward)
    
 end
 
---Builds a starter for a rail bypass junction todo 3rd and 4th rails and signals***
+--Builds a starter for a rail bypass junction
 function build_rail_bypass_junction(anchor_rail, pindex)
    local build_comment = ""
    local surf = game.get_player(pindex).surface
@@ -3381,8 +3381,24 @@ function train_menu(menu_index, pindex, clicked, other_input)
       printout("Train ".. get_train_name(train) .. ", with ID " .. train.id 
       .. ", Press UP ARROW and DOWN ARROW to navigate options, press LEFT BRACKET to select an option or press E to exit this menu.", pindex)
    elseif index == 1 then
-      printout("Train state, " .. get_train_state_info(train) .. " ", pindex)
+      --Get train state and toggle manual control
+      if not clicked then
+         local result = "Train state, " .. get_train_state_info(train)
+         if train.path_end_stop ~= nil then
+            result = result .. ", going to station " .. train.path_end_stop.backer_name
+         end
+         result = result .. ", press LEFT BRACKET to toggle manual control "
+         printout(result, pindex)
+      else
+         train.manual_mode = not train.manual_mode
+         if train.manual_mode then
+            printout("Manual mode enabled, press LEFT BRACKET to toggle,", pindex)
+         else
+            printout("Automatic mode enabled, press LEFT BRACKET to toggle,", pindex)
+         end
+      end
    elseif index == 2 then
+      --Rename this train
       if not clicked then
          printout("Rename this train, press LEFT BRACKET.", pindex)
       else
@@ -3401,71 +3417,71 @@ function train_menu(menu_index, pindex, clicked, other_input)
          input.focus()
       end
    elseif index == 3 then
+      --Train vehicles info
       local locos = train.locomotives
       printout("Vehicle counts, " .. #locos["front_movers"] .. " locomotives facing front, " 
       .. #locos["back_movers"] .. " locomotives facing back, " .. #train.cargo_wagons .. " cargo wagons, "
       .. #train.fluid_wagons .. " fluid wagons, ", pindex) 
    elseif index == 4 then 
-	  --Train contents
-      printout("Cargo " .. train_top_contents_info(train) .. " ", pindex)
+	  --Train cargo info
+      printout("Cargo, " .. train_top_contents_info(train) .. " ", pindex)
    elseif index == 5 then 
-	  --Instant schedule
-	  if not clicked then
-	     local result = ""
-		 local namelist = ""
-		 local schedule = train.schedule
-	     local records = {}
-		 if schedule ~= nil then
-		    records = schedule.records 
-		 end
-		 if records == nil or #records == 0 then
-		    result = " No schedule, "
-		 else
-		    for i,record in ipairs(records) do
-			   if record.station ~= nil then
-			      namelist = namelist .. record.station .. ", " 
-			   end
-		    end
-		    result = " Train schedule has stations " .. namelist
-		 end
-         printout(result .. " press LEFT BRACKET to set an instant schedule where the train waits for a certain time at each reachable station. ", pindex)
+      --Train schedule info
+      local result = ""
+      local namelist = ""
+      local schedule = train.schedule
+      local records = {}
+      if schedule ~= nil then
+         records = schedule.records 
+      end
+      if schedule == nil or records == nil or #records == 0 then
+         result = " No schedule, "
       else
-         if players[pindex].train_menu.wait_time == nil then
-            players[pindex].train_menu.wait_time = 300
+         for i,record in ipairs(records) do
+            if record.station ~= nil then
+               namelist = namelist .. ", station " .. record.station 
+               local wait_cond_1 = record.wait_conditions[1]
+               if wait_cond_1 ~= nil then
+                  namelist = namelist .. ", waiting for " .. wait_cond_1.type 
+               end
+               local wait_cond_2 = record.wait_conditions[2]
+               if wait_cond_2 ~= nil then
+                  namelist = namelist .. " " .. wait_cond_2.type 
+               end
+               namelist = namelist .. ", "
+            end
          end
+         if namelist == "" then
+            namelist = " is empty"
+         end
+         result = " Train schedule" .. namelist
+      end
+      printout(result,pindex)
+   elseif index == 6 then 
+	  --Set instant schedule
+     if players[pindex].train_menu.wait_time == nil then
+         players[pindex].train_menu.wait_time = 300
+      end
+	  if not clicked then
+         printout(" Set an instant schedule for the train by pressing LEFT BRACKET, where the train waits for a set amount of time at each reachable station, modify this time with PAGE UP or PAGE DOWN before settting the schedule and hold CONTROL to increase the step size", pindex)
+      else
          local comment = instant_schedule(train,players[pindex].train_menu.wait_time)
          printout(comment,pindex)
       end
-   elseif index == 6 then 
-	  --Review schedule
-	  if not clicked then
-	     local result = ""
-		 local namelist = ""
-		 local schedule = train.schedule
-	     local records = {}
-		 if schedule ~= nil then
-		    records = schedule.records 
-		 end
-		 if records == nil or #records == 0 then
-		    result = " No schedule, "
-		 else
-		    for i,record in ipairs(records) do
-			   if record.station ~= nil then
-			      namelist = namelist .. record.station .. ", " 
-			   end
-		    end
-		    result = " Schedule reset button, "
-		 end
-         printout(result .. " press LEFT BRACKET to clear the schedule and drive manually. ", pindex)
-      else
-	     train.schedule = nil
-		 printout("Train schedule cleared.",pindex)
-      end
    elseif index == 7 then 
+	  --Clear schedule
+      if not clicked then
+         printout("Clear the schedule and drive manually by pressing LEFT BRACKET ", pindex)
+      else
+         train.schedule = nil
+         train.manual_mode = true
+         printout("Train schedule cleared.",pindex)
+      end
+   elseif index == 8 then 
       if not players[pindex].train_menu.selecting_station then
-         --Click here to travel to the next train stop
+         --Subautomatic travel to a selected train stop
          if not clicked then
-            printout("Single-time travel to a new train stop, press LEFT BRACKET to select one, the train waits until all passengers get off, then it resumes its schedule.", pindex)
+            printout("Single-time travel to a reachable train stop, press LEFT BRACKET to select one, the train waits there until all passengers get off, then it resumes its original schedule.", pindex)
          else
             local comment = "Select a station with LEFT and RIGHT arrow keys and confirm with LEFT BRACKET."
             printout(comment,pindex)
@@ -3481,32 +3497,17 @@ function train_menu(menu_index, pindex, clicked, other_input)
             go_to_valid_train_stop_from_list(pindex,train)
          end
       end
-   elseif index == 8 then 
-      if players[pindex].train_menu.wait_time == nil then
-         players[pindex].train_menu.wait_time = 300
-      end
-      printout(players[pindex].train_menu.wait_time .. " seconds waited at each station, modify this with PAGE UP or PAGE DOWN, and then apply it by setting a new schedule. ", pindex)
-   elseif index == 9 then 
-      if clicked then
-         train.manual_mode = not train.manual_mode
-      end
-      if train.manual_mode then
-         printout("Manual mode enabled, select here to toggle,", pindex)
-      else
-         printout("Automatic mode enabled, select here to toggle,", pindex)
-      end
    end
    --[[ Train menu options summary
    0. name, id, menu instructions
-   1. Train state , destination
-   2. click to rename
-   3. vehicles
-   4. Cargo
-   5. Review and set automatic schedule
-   6. Review and clear automatic schedule.
-   7. Subautomatic travel.
-   8. Read wait time
-   9. Toggle manual mode
+   1. Train state , destination info. Click to toggle manual mode.
+   2. Click to rename
+   3. Vehicles info
+   4. Cargo info
+   5. Read schedule
+   6. Set instant schedule + wait time info
+   7. Clear schedule
+   8. Subautomatic travel
    ]]
 end
 
@@ -3564,11 +3565,10 @@ function train_menu_up(pindex)
    train_menu(players[pindex].train_menu.index, pindex, false)
 end
 
-
 function train_menu_down(pindex)
    players[pindex].train_menu.index = players[pindex].train_menu.index + 1
-   if players[pindex].train_menu.index > 9 then
-      players[pindex].train_menu.index = 9
+   if players[pindex].train_menu.index > 8 then
+      players[pindex].train_menu.index = 8
       game.get_player(pindex).play_sound{path = "Mine-Building"}
    else
       --Play sound
@@ -4227,7 +4227,7 @@ function change_instant_schedule_wait_time(increment,pindex)
 end
 
 
---Subautomatic one-time travel to a reachable train stop that is at least 3 rails away. Does not delete the train schedule.
+--Subautomatic one-time travel to a reachable train stop that is at least 3 rails away. Does not delete the train schedule. Note: Now obsolete?
 function sub_automatic_travel_to_other_stop(train)
    local surf = train.front_stock.surface
    local train_stops = surf.get_train_stops()
