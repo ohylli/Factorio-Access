@@ -880,6 +880,20 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "train-menu-left",
+    key_sequence = "LEFT",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "train-menu-right",
+    key_sequence = "RIGHT",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "cursor-one-tile-north",
     key_sequence = "UP",
     consuming = "none"
