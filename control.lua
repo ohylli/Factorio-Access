@@ -8932,7 +8932,7 @@ script.on_event("inventory-remove-all-equipment-and-armor", function(event)
    
 end)
 
---**Use this key to test stuff
+--**Use this key to test stuff (ALT-G)
 script.on_event("debug-test-key", function(event)
    local pindex = event.player_index
    local p = game.get_player(pindex)
@@ -8944,7 +8944,11 @@ script.on_event("debug-test-key", function(event)
    if stack and stack.valid_for_read and stack.valid then
       --
    end
-   if ent ~= nil and ent.valid and ent.fluidbox ~= nil then
+   --Build left turns on end rails
+   if ent.name == "straight-rail" then
+      build_rail_bypass_junction(ent, pindex)
+   end
+   --if ent ~= nil and ent.valid and ent.fluidbox ~= nil then
      -- p.print(#ent.fluidbox .. " fluids ")
      -- for i = 1, #ent.fluidbox, 1 do
         -- if ent.fluidbox[i] ~= nil then
@@ -8958,7 +8962,7 @@ script.on_event("debug-test-key", function(event)
      --set_temporary_train_stop(ent.train,pindex)
 	  --sub_automatic_travel_to_other_stop(ent.train)
 	  --instant_schedule(ent.train)
-   end   
+   --end 
 end)
 
 --Attempt to launch a rocket
