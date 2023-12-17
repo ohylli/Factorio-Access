@@ -8946,7 +8946,7 @@ script.on_event("debug-test-key", function(event)
    end
    --Build left turns on end rails
    if ent.name == "straight-rail" then
-      build_rail_bypass_junction(ent, pindex)
+      --build_rail_bypass_junction(ent, pindex)
    end
    --if ent ~= nil and ent.valid and ent.fluidbox ~= nil then
      -- p.print(#ent.fluidbox .. " fluids ")
