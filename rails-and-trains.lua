@@ -2698,7 +2698,7 @@ function find_nearest_intersection(rail, pindex, radius_in)
    local radius = radius_in or 1000
    local pos = rail.position
    local scan_area = {{pos.x-radius,pos.y-radius},{pos.x+radius,pos.y+radius}} 
-   local ents = game.get_player(pindex).surface.find_entities_filtered{area = scan_area, name = "straight-rail"}
+   local ents = game.get_player(pindex).surface.find_entities_filtered{area = scan_area, name = {"straight-rail","curved-rail"}}
    local nearest = nil
    local min_dist = radius
    for i,other_rail in ipairs(ents) do
