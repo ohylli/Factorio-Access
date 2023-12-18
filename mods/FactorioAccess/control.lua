@@ -9411,9 +9411,9 @@ script.on_event(defines.events.on_train_changed_state,function(event)
 	  for i,player in ipairs(event.train.passengers) do
          local stop = event.train.path_end_stop
 		 if stop ~= nil then
-		    str = " Arriving at station " .. stop.backer_name .. " "
-			players[player.index].last = str
-	        localised_print{"","out ",str}
+         str = " Arriving at station " .. stop.backer_name .. " "
+         players[player.index].last = str
+         localised_print{"","out ",str}
 		 end
       end
    elseif event.train.state == defines.train_state.on_the_path then --laterdo make this announce only when near another trainstop.
