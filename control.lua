@@ -460,15 +460,15 @@ function extra_info_for_scan_list(ent,pindex)
    
    if ent.name == "forest" then
       local tree_count = 0
-      local tree_group = game.get_player(pindex).surface.find_entities_filtered{type = "tree", position = ent.position, radius = 16, limit = 7}
+      local tree_group = game.get_player(pindex).surface.find_entities_filtered{type = "tree", position = ent.position, radius = 16, limit = 10}
       rendering.draw_circle{color = {0, 1, 0.25},radius = 16,width = 4,target = ent.position, surface = game.get_player(pindex).surface, time_to_live = 60, draw_on_ground = true}
       for i,tree in ipairs(tree_group) do
          tree_count = tree_count + 1
-         rendering.draw_circle{color = {0, 1, 0.5},radius = 1,width = 1,target = tree.position, surface = tree.surface, time_to_live = 60, draw_on_ground = true}--***
+         rendering.draw_circle{color = {0, 1, 0.5},radius = 1,width = 4,target = tree.position, surface = tree.surface, time_to_live = 60, draw_on_ground = true}
       end
       if tree_count < 1 then
-         result = result .. " depleted "
-      elseif tree_count < 7 then
+         result = result .. " empty "
+      elseif tree_count < 10 then
          result = result .. " sparse "
       else
          result = result .. " dense "

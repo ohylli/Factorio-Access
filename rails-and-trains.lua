@@ -486,7 +486,7 @@ function vehicle_info(pindex)
    end
 end
 
---Look up and translate the train state. -laterdo better state explanations***
+--Look up and translate the train state. -laterdo better state explanations**
 function get_train_state_info(train)
    local train_state_id = train.state
    local train_state_text = ""
@@ -495,6 +495,11 @@ function get_train_state_info(train)
       train_state_text = state_lookup[train_state_id]
    else
       train_state_text = "None"
+   end
+   
+   --Explanations
+   if train_state_text == "wait_station" then
+      train_state_text = "waiting at a station"
    end
    return train_state_text
 end
@@ -1055,7 +1060,6 @@ function train_read_next_rail_entity_ahead(pindex, invert)
    elseif next_entity_label == "fork split" then
       local entering_segment_rail = result_extra  
       message = message .. "rail fork splitting "
-      --***test here, give rail fork directions
       message = message .. list_rail_fork_directions(next_entity)
    
    elseif next_entity_label == "fork merge" then
@@ -1178,7 +1182,6 @@ function rail_read_next_rail_entity_ahead(pindex, rail, is_forward)
    elseif next_entity_label == "fork split" then
       local entering_segment_rail = result_extra  
       message = message .. "rail fork splitting "
-      --***test here, give rail fork directions
       message = message .. list_rail_fork_directions(next_entity)
    
    elseif next_entity_label == "fork merge" then
@@ -3439,14 +3442,26 @@ function train_menu(menu_index, pindex, clicked, other_input)
       else
          for i,record in ipairs(records) do
             if record.station ~= nil then
-               namelist = namelist .. ", station " .. record.station 
+               if record.temporary == false or record.temporary == nil then
+                  namelist = namelist .. ", station " .. record.station 
+               else
+                  namelist = namelist .. ", temporary station " .. record.station 
+               end
                local wait_cond_1 = record.wait_conditions[1]
                if wait_cond_1 ~= nil then
-                  namelist = namelist .. ", waiting for " .. wait_cond_1.type 
+                  local cond = wait_cond_1.type
+                  namelist = namelist .. ", waiting for " .. cond
+                  if cond == "time" or cond == "inactivity" then
+                     namelist = namelist .. " " .. math.ceil(wait_cond_1.ticks/60) .. " seconds "
+                  end
                end
                local wait_cond_2 = record.wait_conditions[2]
                if wait_cond_2 ~= nil then
-                  namelist = namelist .. " " .. wait_cond_2.type 
+                  local cond = wait_cond_2.type
+                  namelist = namelist .. ", and waiting for " .. cond
+                  if cond == "time" or cond == "inactivity" then
+                     namelist = namelist .. " " .. math.ceil(wait_cond_2.ticks/60) .. " seconds "
+                  end 
                end
                namelist = namelist .. ", "
             end
@@ -3463,7 +3478,7 @@ function train_menu(menu_index, pindex, clicked, other_input)
          players[pindex].train_menu.wait_time = 300
       end
 	  if not clicked then
-         printout(" Set an instant schedule for the train by pressing LEFT BRACKET, where the train waits for a set amount of time at each reachable station, modify this time with PAGE UP or PAGE DOWN before settting the schedule and hold CONTROL to increase the step size", pindex)
+         printout(" Set a new instant schedule for the train here by pressing LEFT BRACKET, where the train waits for a set amount of time at immediately reachable station, modify this time with PAGE UP or PAGE DOWN before settting the schedule and hold CONTROL to increase the step size", pindex)
       else
          local comment = instant_schedule(train,players[pindex].train_menu.wait_time)
          printout(comment,pindex)
@@ -3471,7 +3486,7 @@ function train_menu(menu_index, pindex, clicked, other_input)
    elseif index == 7 then 
 	  --Clear schedule
       if not clicked then
-         printout("Clear the schedule and drive manually by pressing LEFT BRACKET ", pindex)
+         printout("Clear the schedule here by pressing LEFT BRACKET ", pindex)
       else
          train.schedule = nil
          train.manual_mode = true
@@ -3489,12 +3504,14 @@ function train_menu(menu_index, pindex, clicked, other_input)
             refresh_valid_train_stop_list(train,pindex)
          end
       else
+         train.manual_mode = true
          if not clicked then
             --Read the list item
             read_valid_train_stop_from_list(pindex)
          else
             --Go to the list item
             go_to_valid_train_stop_from_list(pindex,train)
+            players[pindex].train_menu.selecting_station = false
          end
       end
    end
@@ -3649,7 +3666,7 @@ function train_stop_menu(menu_index, pindex, clicked, other_input)
          if players[pindex].train_stop_menu.wait_condition == nil then
             players[pindex].train_stop_menu.wait_condition = "time"
          end
-         printout("Proposed wait condition: " .. players[pindex].train_stop_menu.wait_condition .. " selected, change by selecting here,",pindex)
+         printout("Proposed wait condition: " .. players[pindex].train_stop_menu.wait_condition .. " selected, change by selecting here, this change needs to also be applied.",pindex)
       else
          local condi = players[pindex].train_stop_menu.wait_condition
          if condi == "time" then
@@ -3666,7 +3683,7 @@ function train_stop_menu(menu_index, pindex, clicked, other_input)
             condi = "time"
          end
          players[pindex].train_stop_menu.wait_condition = condi
-         printout(" " .. players[pindex].train_stop_menu.wait_condition .. " selected, change by selecting here. This change needs to also be applied.",pindex)
+         printout(" " .. players[pindex].train_stop_menu.wait_condition .. " condition proposed, change by selecting here, this change needs to also be applied.",pindex)
       end
    elseif index == 4 then
       if players[pindex].train_stop_menu.wait_time_seconds == nil then
@@ -3680,37 +3697,37 @@ function train_stop_menu(menu_index, pindex, clicked, other_input)
          end
          local result = ""
          if players[pindex].train_stop_menu.safety_wait_enabled == true then
-            result = "Proposed safety wait status is ENABLED, select here to disable it, Enabling it makes the train wait at this stop for 5 seconds regardless of the main wait condition. This change needs to also be applied."
+            result = "ENABLED proposed safety waiting, select here to disable it, Enabling it makes the train wait at this stop for 5 seconds regardless of the main wait condition, this change needs to also be applied."
          else
-            result = "Proposed safety wait status is DISABLED, select here to enable it, Enabling it makes the train wait at this stop for 5 seconds regardless of the main wait condition. This change needs to also be applied."
+            result = "DISABLED proposed safety waiting, select here to enable it, Enabling it makes the train wait at this stop for 5 seconds regardless of the main wait condition, this change needs to also be applied."
          end
          printout(result,pindex)
       else
          players[pindex].train_stop_menu.safety_wait_enabled = not players[pindex].train_stop_menu.safety_wait_enabled
          if players[pindex].train_stop_menu.safety_wait_enabled == true then
-            result = "Proposed safety wait status is ENABLED, select here to disable it, Enabling it makes the train wait at this stop for 5 seconds regardless of the main wait condition. This change needs to also be applied."
+            result = "ENABLED proposed safety waiting, select here to disable it, Enabling it makes the train wait at this stop for 5 seconds regardless of the main wait condition, this change needs to also be applied."
          else
-            result = "Proposed safety wait status is DISABLED, select here to enable it, Enabling it makes the train wait at this stop for 5 seconds regardless of the main wait condition. This change needs to also be applied."
+            result = "DISABLED proposed safety waiting, select here to enable it, Enabling it makes the train wait at this stop for 5 seconds regardless of the main wait condition, this change needs to also be applied."
          end
          printout(result,pindex)
       end
    elseif index == 6 then
       if not clicked then
-         printout("Select here to ADD A NEW ENTRY for this train stop, with the proposed conditions applied, for a train parked by this train stop.",pindex)
+         printout("ADD A NEW ENTRY for this train stop by selecting here, with the proposed conditions applied, for a train parked by this train stop.",pindex)
       else
          local result = nearby_train_schedule_add_stop(train_stop, players[pindex].train_stop_menu.wait_condition, players[pindex].train_stop_menu.wait_time_seconds)
          printout(result,pindex)
       end
    elseif index == 7 then
       if not clicked then
-         printout("Select here to UPDATE ALL ENTRIES for this train stop, with the proposed conditions applied, for a train parked by this train stop.",pindex)
+         printout("UPDATE ALL ENTRIES for this train stop by selecting here, with the proposed conditions applied, for a train parked by this train stop.",pindex)
       else
          local result = nearby_train_schedule_update_stop(train_stop, players[pindex].train_stop_menu.wait_condition, players[pindex].train_stop_menu.wait_time_seconds)
          printout(result,pindex)
       end
    elseif index == 8 then
       if not clicked then
-         printout("Select here to REMOVE ALL ENTRIES for this train stop, for a train parked by this train stop.",pindex)
+         printout("REMOVE ALL ENTRIES for this train stop by selecting here, for a train parked by this train stop.",pindex)
       else
          local result = nearby_train_schedule_remove_stop(train_stop)
          printout(result,pindex)
@@ -3831,7 +3848,7 @@ function nearby_train_schedule_read_this_stop(train_stop)
       for i,r in ipairs(records) do
          if r.station == train_stop.backer_name then
             found_any = true
-            result = result .. ", Schedule record " .. i .. ", at this stop it waits for "
+            result = result .. ", at this stop it waits for "--****
             local wait_condition_read_1 = r.wait_conditions[1]
             local wait_condition_read_2 = r.wait_conditions[2]
             if wait_condition_read_1 == nil then
@@ -3839,11 +3856,11 @@ function nearby_train_schedule_read_this_stop(train_stop)
             else
                result = result .. wait_condition_read_1.type
                if wait_condition_read_1.type == "time" or wait_condition_read_1.type == "inactivity" then
-                  result = result .. ", " .. math.floor(wait_condition_read_1.ticks / 60) .. " seconds"
+                  result = result .. ", " .. math.ceil(wait_condition_read_1.ticks / 60) .. " seconds"
                end
             end
             if wait_condition_read_2 ~= nil and wait_condition_read_2.type == "time" then
-               result = result .. ", and a safety wait of " .. math.floor(wait_condition_read_2.ticks / 60) .. " seconds"
+               result = result .. ", and a safety wait of " .. math.ceil(wait_condition_read_2.ticks / 60) .. " seconds"
             end
          end
       end
@@ -4399,6 +4416,8 @@ function go_to_valid_train_stop_from_list(pindex,train)
    else
       --Train will announce its new path by itself
    end
+   
+   train_menu_close(pindex, false)
 end
 
 --Plays a train track alert sound for every player standing on or facing train tracks that meet the condition.
