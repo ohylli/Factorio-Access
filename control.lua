@@ -436,7 +436,7 @@ function extra_info_for_scan_list(ent,pindex)
    
    if ent.name == "locomotive" and ent.train ~= nil and ent.train.valid then
       result = result .. " of train " .. get_train_name(ent.train)
-   elseif ent.name == "character" 
+   elseif ent.name == "character" then
       local p = ent.player
       local p2 = ent.associated_player
       if p ~= nil and p.valid and p.name ~= nil and p.name ~= "" then
@@ -455,6 +455,23 @@ function extra_info_for_scan_list(ent,pindex)
          result = result .. " of your character "
       elseif ent.character_corpse_player_index ~= nil then
          result = result .. " of another character "
+      end
+   end
+   
+   if ent.name == "forest" then
+      local tree_count = 0
+      local tree_group = game.get_player(pindex).surface.find_entities_filtered{type = "tree", position = ent.position, radius = 16, limit = 7}
+      rendering.draw_circle{color = {0, 1, 0.25},radius = 16,width = 4,target = ent.position, surface = game.get_player(pindex).surface, time_to_live = 60, draw_on_ground = true}
+      for i,tree in ipairs(tree_group) do
+         tree_count = tree_count + 1
+         rendering.draw_circle{color = {0, 1, 0.5},radius = 1,width = 1,target = tree.position, surface = tree.surface, time_to_live = 60, draw_on_ground = true}--***
+      end
+      if tree_count < 1 then
+         result = result .. " depleted "
+      elseif tree_count < 7 then
+         result = result .. " sparse "
+      else
+         result = result .. " dense "
       end
    end
    
@@ -3098,7 +3115,7 @@ function scan_index(pindex)
       if players[pindex].nearby.count == false then
          --Read the entity in terms of distance and direction
          local result={"access.thing-producing-listpos-dirdist",ent_name_locale(ent)}
-         table.insert(result,extra_info_for_scan_list(ent),pindex)
+         table.insert(result,extra_info_for_scan_list(ent,pindex))
          table.insert(result,{"description.of", players[pindex].nearby.selection , #ents[players[pindex].nearby.index].ents})
          table.insert(result,dir_dist)
          printout(result,pindex)
