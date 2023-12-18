@@ -3502,6 +3502,7 @@ function train_menu(menu_index, pindex, clicked, other_input)
             printout(comment,pindex)
             players[pindex].train_menu.selecting_station = true
             refresh_valid_train_stop_list(train,pindex)
+            train.manual_mode = true
          end
       else
          train.manual_mode = true
