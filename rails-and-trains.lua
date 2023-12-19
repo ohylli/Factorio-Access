@@ -1017,8 +1017,9 @@ end
 
 
 --Takes all the output from the get_next_rail_entity_ahead and adds extra info before reading them out. Does NOT detect trains.
-function train_read_next_rail_entity_ahead(pindex, invert)
+function train_read_next_rail_entity_ahead(pindex, invert, mute_in)
    local message = "Ahead, "
+   local honk_score = 0
    local train = game.get_player(pindex).vehicle.train
    local leading_rail, dir_ahead, leading_stock = get_leading_rail_and_dir_of_train_by_boarded_vehicle(pindex,train)
    if invert then
@@ -1031,15 +1032,24 @@ function train_read_next_rail_entity_ahead(pindex, invert)
    end
    --Correction for trains: Curved rails report different directions based on where the train sits and so are unreliable.
    if leading_rail.name == "curved-rail" then
+      if mute_in == true then
+         return -1
+      end
       printout("Curved rail analysis error, check from another rail.",pindex)
-	  return
+      return -1
    end
    local next_entity, next_entity_label, result_extra, next_is_forward, iteration_count = get_next_rail_entity_ahead(leading_rail, dir_ahead, false)
    if next_entity == nil then
+      if mute_in == true then
+         return -1
+      end
       printout("Analysis error, this rail might be looping.",pindex)
-      return
+      return -1
    end
    local distance = math.floor(util.distance(leading_stock.position, next_entity.position))
+   if distance < 10 then
+      honk_score = honk_score + 1
+   end
       
    --Test message
    --message = message .. iteration_count .. " iterations, "
@@ -1051,6 +1061,7 @@ function train_read_next_rail_entity_ahead(pindex, invert)
    --Report opposite direction entities.
    if next_is_forward == false and (next_entity_label == "train stop" or next_entity_label == "rail signal" or next_entity_label == "chain signal") then
       message = message .. " Opposite direction's "
+      honk_score = -100
    end
    
    --Add more info depending on entity label
@@ -1071,10 +1082,18 @@ function train_read_next_rail_entity_ahead(pindex, invert)
       message = message .. "end rail "
       
    elseif next_entity_label == "rail signal" then
-      message = message .. "rail signal with state " .. get_signal_state_info(next_entity) .. " "
+      local signal_state = get_signal_state_info(next_entity)
+      message = message .. "rail signal with state " .. signal_state .. " "
+      if signal_state == "closed" then
+         honk_score = honk_score + 1
+      end
       
    elseif next_entity_label == "chain signal" then
-      message = message .. "chain signal with state " .. get_signal_state_info(next_entity) .. " "
+      local signal_state = get_signal_state_info(next_entity)
+      message = message .. "chain signal with state " .. signal_state .. " "
+      if signal_state == "closed" then
+         honk_score = honk_score + 1
+      end
       
    elseif next_entity_label == "train stop" then
       local stop_name = next_entity.backer_name
@@ -1142,9 +1161,12 @@ function train_read_next_rail_entity_ahead(pindex, invert)
          message = message .. " for the front vehicle. "
       end
    end
-   printout(message,pindex)
+   if not mute_in == true then
+      printout(message,pindex)
+   end
    --Draw circles for visual debugging
-   rendering.draw_circle{color = {0, 1, 0},radius = 1,width = 10,target = next_entity,surface = next_entity.surface,time_to_live = 100}
+   rendering.draw_circle{color = {0, 1, 1},radius = 1,width = 8,target = next_entity,surface = next_entity.surface,time_to_live = 100}
+   return honk_score
 end
 
 
@@ -3849,7 +3871,7 @@ function nearby_train_schedule_read_this_stop(train_stop)
       for i,r in ipairs(records) do
          if r.station == train_stop.backer_name then
             found_any = true
-            result = result .. ", at this stop it waits for "--****
+            result = result .. ", at this stop it waits for "--***test
             local wait_condition_read_1 = r.wait_conditions[1]
             local wait_condition_read_2 = r.wait_conditions[2]
             if wait_condition_read_1 == nil then
@@ -4491,3 +4513,72 @@ function play_train_track_alert_sounds(step)
    end
 end
 
+--Honks if the following conditions are met: 1. The player is manually driving a train, 2. The train is moving, 3. Ahead of the train is a closed rail signal or rail chain signal, 4. It has been 5 seconds since the last honk.
+function check_and_honk_at_closed_signal(tick,pindex)
+   if not check_for_player(pindex) then
+      return
+   end
+   --0. Check if it has been 5 seconds since the last honk
+   if players[pindex].last_honk_tick == nil then
+      players[pindex].last_honk_tick = 1
+   end
+   if tick - players[pindex].last_honk_tick < 300 then
+      return
+   end
+   --1. Check if the player is on a train 
+   local p = game.get_player(pindex)
+   local train = nil
+   if p.vehicle == nil or p.vehicle.train == nil then
+      return
+   else
+      train = p.vehicle.train
+   end
+   --2. Check if the train is manually driving and has nonzero speed
+   if train.speed == 0 or not train.manual_mode then
+      return
+   end
+   --3. Check if ahead of the train is a closed rail signal or rail chain signal
+   local honk_score = train_read_next_rail_entity_ahead(pindex, false, true)
+   if honk_score < 2 then 
+      return
+   end
+   --4. HONK (short)
+   game.get_player(pindex).play_sound{path="train-honk-short"}
+   players[pindex].last_honk_tick = tick
+end
+
+--Honks if the following conditions are met: 1. The player is on a train, 2. The train is moving, 3. There is another train within the same rail block, 4. It has been 5 seconds since the last honk.
+function check_and_honk_at_trains_in_same_block(tick,pindex)
+   if not check_for_player(pindex) then
+      return
+   end
+   --0. Check if it has been 5 seconds since the last honk
+   if players[pindex].last_honk_tick == nil then
+      players[pindex].last_honk_tick = 1
+   end
+   if tick - players[pindex].last_honk_tick < 300 then
+      return
+   end
+   --1. Check if the player is on a train 
+   local p = game.get_player(pindex)
+   local train = nil
+   if p.vehicle == nil or p.vehicle.train == nil then
+      return
+   else
+      train = p.vehicle.train
+   end
+   --2. Check if the train has nonzero speed
+   if train.speed == 0 then
+      return
+   end
+   --3. Check if there is another train within the same rail block (for both the front rail and the back rail)
+   if train.front_rail == nil or not train.front_rail.valid or train.back_rail == nil or not train.back_rail.valid then
+      return
+   end
+   if train.front_rail.trains_in_block < 2 and train.back_rail.trains_in_block < 2 then
+      return
+   end
+   --4. HONK (long)
+   game.get_player(pindex).play_sound{path="train-honk-long"}
+   players[pindex].last_honk_tick = tick
+end

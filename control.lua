@@ -3943,6 +3943,8 @@ function read_coords(pindex, start_phrase)
             location = " "
          end
          result = result .. " " .. location .. ", at " .. math.floor(players[pindex].cursor_pos.x) .. ", " .. math.floor(players[pindex].cursor_pos.y)
+         game.get_player(pindex).print(result,{sound = false})--***test
+         rendering.draw_circle{color = {1, 0.5, 0},radius = 0.2,width = 5,target = players[pindex].cursor_pos,surface = game.get_player(pindex).surface,time_to_live = 300}
          
          --If there is a build preview, give its dimensions and which way they extend
          local stack = game.get_player(pindex).cursor_stack
@@ -4127,6 +4129,7 @@ function initialize(player)
    faplayer.last_click_tick = faplayer.last_click_tick or 1
    faplayer.last_damage_alert_tick = faplayer.last_damage_alert_tick or 1
    faplayer.last_pg_key_tick = faplayer.last_pg_key_tick or 1
+   faplayer.last_honk_tick = faplayer.last_honk_tick or 1
 
    faplayer.preferences = {
       building_inventory_row_length = building_inventory_row_length or 8,
@@ -5136,9 +5139,9 @@ function on_tick(event)
       global.scheduled_events[event.tick] = nil
    end
    move_characters(event)
-   
-   --Play train track warning sounds at appropriate frequencies
+
    if event.tick % 15 == 0 then
+      --Check and play train track warning sounds at appropriate frequencies
       play_train_track_alert_sounds(3)
       play_enemy_alert_sound(3)
       if event.tick % 30 == 0 then
@@ -5147,51 +5150,62 @@ function on_tick(event)
          if event.tick % 60 == 0 then
             play_train_track_alert_sounds(1)
             play_enemy_alert_sound(1)
-		 end
-	  end
+         end
+      end
    elseif event.tick % 30 == 1 then
-      --Update all player overhead sprites
+      --Check and play train horns
       for pindex, player in pairs(players) do
-         if player.in_menu then
-            if player.menu == "technology" then
-               update_overhead_sprite("item.lab",2,1.25,pindex)
-               update_custom_GUI_sprite("item.lab", 3, pindex)
-            elseif player.menu == "inventory" then
-               update_overhead_sprite("item.wooden-chest",2,1.25,pindex)
-               update_custom_GUI_sprite("item.wooden-chest", 3, pindex)
-               if players[pindex].vanilla_mode then
-                  update_custom_GUI_sprite(nil,1,pindex)
-               end
-            elseif player.menu == "crafting" then
-               update_overhead_sprite("item.repair-pack",2,1.25,pindex)
-               update_custom_GUI_sprite("item.repair-pack", 3, pindex)
-            elseif player.menu == "crafting_queue" then
-               update_overhead_sprite("item.repair-pack",2,1.25,pindex)
-               update_custom_GUI_sprite("item.repair-pack", 3, pindex)
-            elseif player.menu == "travel" then
-               update_overhead_sprite("utility.downloading_white",4,1.25,pindex)
-               update_custom_GUI_sprite("utility.downloading_white", 3, pindex)
-            elseif player.menu == "warnings" then
-               update_overhead_sprite("utility.warning_white",4,1.25,pindex)
-               update_custom_GUI_sprite("utility.warning_white", 3, pindex)
-            elseif player.menu == "rail_builder" then
-               update_overhead_sprite("item.rail",2,1.25,pindex)
-               update_custom_GUI_sprite("item.rail", 3, pindex)
-            elseif player.menu == "train_menu" then
-               update_overhead_sprite("item.locomotive",2,1.25,pindex)
-               update_custom_GUI_sprite("item.locomotive", 3, pindex)
-            elseif player.menu == "train_stop_menu" then
-               update_overhead_sprite("item.train-stop",2,1.25,pindex)
-               update_custom_GUI_sprite("item.train-stop", 3, pindex)
-            else
-               --includes: structure travel
-               update_overhead_sprite(nil,1,1,pindex)
+         check_and_honk_at_trains_in_same_block(event.tick,pindex)
+         check_and_honk_at_closed_signal(event.tick,pindex)
+      end
+   elseif event.tick % 30 == 2 then
+      --Update menu visuals
+      update_menu_visuals()
+   end
+end
+
+--For each player, checks the open menu and appropriately calls to update the overhead sprite and GUI sprite
+function update_menu_visuals()
+   for pindex, player in pairs(players) do
+      if player.in_menu then
+         if player.menu == "technology" then
+            update_overhead_sprite("item.lab",2,1.25,pindex)
+            update_custom_GUI_sprite("item.lab", 3, pindex)
+         elseif player.menu == "inventory" then
+            update_overhead_sprite("item.wooden-chest",2,1.25,pindex)
+            update_custom_GUI_sprite("item.wooden-chest", 3, pindex)
+            if players[pindex].vanilla_mode then
                update_custom_GUI_sprite(nil,1,pindex)
             end
+         elseif player.menu == "crafting" then
+            update_overhead_sprite("item.repair-pack",2,1.25,pindex)
+            update_custom_GUI_sprite("item.repair-pack", 3, pindex)
+         elseif player.menu == "crafting_queue" then
+            update_overhead_sprite("item.repair-pack",2,1.25,pindex)
+            update_custom_GUI_sprite("item.repair-pack", 3, pindex)
+         elseif player.menu == "travel" then
+            update_overhead_sprite("utility.downloading_white",4,1.25,pindex)
+            update_custom_GUI_sprite("utility.downloading_white", 3, pindex)
+         elseif player.menu == "warnings" then
+            update_overhead_sprite("utility.warning_white",4,1.25,pindex)
+            update_custom_GUI_sprite("utility.warning_white", 3, pindex)
+         elseif player.menu == "rail_builder" then
+            update_overhead_sprite("item.rail",2,1.25,pindex)
+            update_custom_GUI_sprite("item.rail", 3, pindex)
+         elseif player.menu == "train_menu" then
+            update_overhead_sprite("item.locomotive",2,1.25,pindex)
+            update_custom_GUI_sprite("item.locomotive", 3, pindex)
+         elseif player.menu == "train_stop_menu" then
+            update_overhead_sprite("item.train-stop",2,1.25,pindex)
+            update_custom_GUI_sprite("item.train-stop", 3, pindex)
          else
+            --includes: structure travel
             update_overhead_sprite(nil,1,1,pindex)
             update_custom_GUI_sprite(nil,1,pindex)
          end
+      else
+         update_overhead_sprite(nil,1,1,pindex)
+         update_custom_GUI_sprite(nil,1,pindex)
       end
    end
 end
@@ -8553,6 +8567,16 @@ script.on_event("toggle-cursor-hiding",function(event)
    else
       game.get_player(pindex).print("Cursor hiding : OFF")
    end
+end)
+
+script.on_event("clear-renders",function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   rendering.clear("")--***test, maybe remove the ""
+   game.get_player(pindex).gui.screen.clear()
+   printout("Cleared renders",pindex)
 end)
 
 script.on_event("recalibrate-zoom",function(event)
