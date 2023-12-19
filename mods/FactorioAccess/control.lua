@@ -459,25 +459,34 @@ function extra_info_for_scan_list(ent,pindex)
    end
    
    if ent.name == "forest" then
-      local tree_count = 0
-      local tree_group = game.get_player(pindex).surface.find_entities_filtered{type = "tree", position = ent.position, radius = 16, limit = 10}
-      rendering.draw_circle{color = {0, 1, 0.25},radius = 16,width = 4,target = ent.position, surface = game.get_player(pindex).surface, time_to_live = 60, draw_on_ground = true}
-      for i,tree in ipairs(tree_group) do
-         tree_count = tree_count + 1
-         rendering.draw_circle{color = {0, 1, 0.5},radius = 1,width = 4,target = tree.position, surface = tree.surface, time_to_live = 60, draw_on_ground = true}
-      end
-      if tree_count < 1 then
-         result = result .. " empty "
-      elseif tree_count < 10 then
-         result = result .. " sparse "
-      else
-         result = result .. " dense "
-      end
+      result = result .. classify_forest(ent.position,pindex,true)
    end
    
    return result
 end
 
+function classify_forest(position,pindex,drawing)
+   local tree_count = 0
+   local tree_group = game.get_player(pindex).surface.find_entities_filtered{type = "tree", position = position, radius = 16, limit = 15}
+   if drawing then
+      rendering.draw_circle{color = {0, 1, 0.25},radius = 16,width = 4,target = position, surface = game.get_player(pindex).surface, time_to_live = 60, draw_on_ground = true}
+   end
+   for i,tree in ipairs(tree_group) do
+      tree_count = tree_count + 1
+      if drawing then
+         rendering.draw_circle{color = {0, 1, 0.5},radius = 1,width = 4,target = tree.position, surface = tree.surface, time_to_live = 60, draw_on_ground = true}
+      end
+   end
+   if tree_count < 1 then
+      return "empty"
+   elseif tree_count < 6 then
+      return "sparse"
+   elseif tree_count < 11 then
+      return "medium"
+   else
+      return "dense"
+   end
+end
 
 function nudge_key(direction, event)
    local pindex = event.player_index
@@ -2306,7 +2315,7 @@ function get_scan_summary(scan_left_top, scan_right_bottom, pindex)
    end
    
    res_count = surf.count_entities_filtered{ type = "tree", area = {scan_left_top,scan_right_bottom} }
-   percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
+   percent = math.floor((res_count * 4 / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)--trees are 4 tiles wide
    if percent > 0 then
       table.insert(percentages, {name = "trees", percent = percent})
    end
@@ -3048,6 +3057,7 @@ function scan_index(pindex)
       local ent = nil
 
       if ents[players[pindex].nearby.index].aggregate == false then
+         --The scan target is an entity
          local i = 1
          while i <= #ents[players[pindex].nearby.index].ents do
             if ents[players[pindex].nearby.index].ents[i].valid and ents[players[pindex].nearby.index].ents[i].name ~= "highlight-box" 
@@ -3088,6 +3098,7 @@ function scan_index(pindex)
          cursor_highlight(pindex, ent, "train-visualization")
 --      end
       else
+         --The scan target is an aggregate
          if players[pindex].nearby.selection > #ents[players[pindex].nearby.index].ents then
             players[pindex].selection = 1
          end
@@ -3274,20 +3285,29 @@ function scan_area (x,y,w,h, pindex)
    local surf = first_player.surface
    local ents = surf.find_entities_filtered{area = {{x, y},{x+w, y+h}}, type = {"resource", "tree"}, invert = true}
    local result = {}
-         local pos = players[pindex].cursor_pos
+   local pos = players[pindex].cursor_pos
+   local forest_density = nil
+   
    for name, resource in pairs(players[pindex].resources) do
-
-      table.insert(result, {name = name, count = table_size(players[pindex].resources[name].patches), ents = {}, aggregate = true})         
+      table.insert(result, {name = name, count = table_size(players[pindex].resources[name].patches), ents = {}, aggregate = true}) --****todo here save forests by density
       local index = #result
       for group, patch in pairs(resource.patches) do
-         table.insert(result[index].ents, {group = group, position = nearest_edge(patch.edges, pos, name)})
+         if name == "forest" then
+            local forest_pos = nearest_edge(patch.edges, pos, name)
+            forest_density = classify_forest(forest_post,pindex,false)
+         else
+            forest_density = nil
+         end
+         if forest_density ~= "empty" and forest_density ~= "sparse" then --Do not add empty forests
+            table.insert(result[index].ents, {group = group, position = nearest_edge(patch.edges, pos, name)})
+         end
       end
    end
    for i=1, #ents, 1 do
       local prod_info = extra_info_for_scan_list(ents[i],pindex)
       local index = index_of_entity(result, ents[i].name .. prod_info)
       if index == nil then
-         table.insert(result, {name = ents[i].name .. prod_info, count = 1, ents = {ents[i]}, aggregate = false}) --laterdo save ent type here?
+         table.insert(result, {name = ents[i].name .. prod_info, count = 1, ents = {ents[i]}, aggregate = false}) 
 
       elseif #result[index] >= 100 then
          table.remove(result[index].ents, math.random(100))
@@ -5910,7 +5930,7 @@ script.on_event("jump-to-scan", function(event)--NOTE: This might be deprecated 
                printout("Error: This scanned object no longer exists. Try rescanning.", pindex)
                return
             end
-            if not entry.valid and not (name == "water" or name == "coal" or name == "stone" or name == "iron-ore" or name == "copper-ore" or name == "uranium-ore" or name == "crude-oil" or name == "forest") then
+            if not entry.valid and not (name == "water" or name == "coal" or name == "stone" or name == "iron-ore" or name == "copper-ore" or name == "uranium-ore" or name == "crude-oil" or name == "forest") then--laterdo maybe this check needs to just be an aggregate check
                printout("Error: This scanned object is no longer valid. Try rescanning.", pindex)--laterdo possible crash when trying to teleport to an entry that was depleted...
                --game.get_player(pindex).print("invalid: " .. name)
                return
@@ -6054,6 +6074,9 @@ script.on_event("scan-selection-up", function(event)
    if not (players[pindex].in_menu) then
       if players[pindex].nearby.selection > 1 then
          players[pindex].nearby.selection = players[pindex].nearby.selection - 1
+      else
+         game.get_player(pindex).play_sound{path = "Mine-Building"}
+         players[pindex].nearby.selection = 1
       end
       scan_index(pindex)
    end
@@ -6097,6 +6120,9 @@ script.on_event("scan-selection-down", function(event)
    
          if players[pindex].nearby.selection < #ents[players[pindex].nearby.index].ents then
             players[pindex].nearby.selection = players[pindex].nearby.selection + 1
+         else
+            game.get_player(pindex).play_sound{path = "Mine-Building"}
+            players[pindex].nearby.selection = #ents[players[pindex].nearby.index].ents
          end
       end
       scan_index(pindex)
