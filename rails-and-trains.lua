@@ -4474,7 +4474,7 @@ function play_train_track_alert_sounds(step)
          for i,train in ipairs(trains) do
             if train.speed ~= 0 and (util.distance(p.position,train.front_stock.position) < 400 or util.distance(p.position,train.back_stock.position) < 400) then 
                p.play_sound{path = "utility/blueprint_selection_ended"}
-               rendering.draw_circle{color = {1, 1, 0},radius = 2,width = 2,target = found_rail.position,surface = found_rail.surface,time_to_live = 10}
+               rendering.draw_circle{color = {1, 1, 0},radius = 2,width = 2,target = found_rail.position,surface = found_rail.surface,time_to_live = 15}
             end
          end
       --Condition for step 2: Any moving trains nearby (within 200 tiles), and heading towards the player
@@ -4485,27 +4485,39 @@ function play_train_track_alert_sounds(step)
             and ((train.speed > 0 and util.distance(p.position,train.front_stock.position) <= util.distance(p.position,train.back_stock.position)) 
             or   (train.speed < 0 and util.distance(p.position,train.front_stock.position) >= util.distance(p.position,train.back_stock.position))) then 
                p.play_sound{path = "utility/blueprint_selection_ended"}
-               rendering.draw_circle{color = {1, 0.5, 0},radius = 3,width = 4,target = found_rail.position,surface = found_rail.surface,time_to_live = 10}
+               rendering.draw_circle{color = {1, 0.5, 0},radius = 3,width = 4,target = found_rail.position,surface = found_rail.surface,time_to_live = 15}
             end
          end
-      --Condition for step 3: Any moving trains in the same rail block, and heading towards the player OR if the block inbound signals are yellow
+      --Condition for step 3: Any moving trains in the same rail block, and heading towards the player OR if the block inbound signals are yellow. More urgent sound if also within 200 distance of the player
       elseif not skip and step == 3 then
          local trains = p.surface.get_trains()
          for i,train in ipairs(trains) do
             if   train.speed ~= 0 and (found_rail.is_rail_in_same_rail_block_as(train.front_rail) or found_rail.is_rail_in_same_rail_block_as(train.back_rail))
             and ((train.speed > 0 and util.distance(p.position,train.front_stock.position) <= util.distance(p.position,train.back_stock.position)) 
             or   (train.speed < 0 and util.distance(p.position,train.front_stock.position) >= util.distance(p.position,train.back_stock.position))) then 
-               p.play_sound{path = "utility/new_objective"}
-               p.play_sound{path = "utility/new_objective"}
-               rendering.draw_circle{color = {1, 0, 0},radius = 4,width = 8,target = found_rail.position,surface = found_rail.surface,time_to_live = 10}
+               if (util.distance(p.position,train.front_stock.position) < 200 or util.distance(p.position,train.back_stock.position) < 200) then
+                  p.play_sound{path = "utility/new_objective"}
+                  p.play_sound{path = "utility/new_objective"}
+                  rendering.draw_circle{color = {1, 0, 0},radius = 4,width = 8,target = found_rail.position,surface = found_rail.surface,time_to_live = 15}
+               else
+                  p.play_sound{path = "utility/blueprint_selection_ended"}
+                  p.play_sound{path = "utility/blueprint_selection_ended"}
+                  rendering.draw_circle{color = {1, 0.25, 0},radius = 4,width = 8,target = found_rail.position,surface = found_rail.surface,time_to_live = 15}
+               end
             end
          end
          local signals = found_rail.get_inbound_signals()
          for i,signal in ipairs(signals) do
             if signal.signal_state == defines.signal_state.reserved then
-               p.play_sound{path = "utility/new_objective"}
-               p.play_sound{path = "utility/new_objective"}
-               rendering.draw_circle{color = {1, 0, 0},radius = 4,width = 8,target = found_rail.position,surface = found_rail.surface,time_to_live = 10}
+               if (util.distance(p.position,train.front_stock.position) < 200 or util.distance(p.position,train.back_stock.position) < 200) then
+                  p.play_sound{path = "utility/new_objective"}
+                  p.play_sound{path = "utility/new_objective"}
+                  rendering.draw_circle{color = {1, 0, 0},radius = 4,width = 8,target = found_rail.position,surface = found_rail.surface,time_to_live = 15}
+               else
+                  p.play_sound{path = "utility/blueprint_selection_ended"}
+                  p.play_sound{path = "utility/blueprint_selection_ended"}
+                  rendering.draw_circle{color = {1, 0.25, 0},radius = 4,width = 8,target = found_rail.position,surface = found_rail.surface,time_to_live = 15}
+               end
             end
          end
       end
