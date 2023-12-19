@@ -142,6 +142,22 @@ data:extend({
 },
 
 {
+   type = "sound",
+   name = "train-honk-short",
+   filename = "__FactorioAccess__/Audio/train-honk-short-2x-GotLag.ogg",
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "train-honk-long",
+   filename = "__FactorioAccess__/Audio/train-honk-long-freesound.ogg",
+   volume = 1,
+   preload = true
+},
+
+{
     type = "custom-input",
     name = "cursor-up",
     key_sequence = "W",
@@ -825,6 +841,13 @@ data:extend({
     type = "custom-input",
     name = "toggle-cursor-hiding",
     key_sequence = "CONTROL + ALT + C",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "clear-renders",
+    key_sequence = "CONTROL + ALT + R",
     consuming = "none"
 },
 
