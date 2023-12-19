@@ -211,7 +211,7 @@ function find_islands(surf, area, pindex)
       end
    end
    if #trents > 0 then
-      --printout("trees galore", pindex) **beta**
+      --printout("trees galore", pindex) **beta
    end
    if #ents == 0 and #waters == 0 and #trents == 0 then return {} end
 
@@ -496,7 +496,7 @@ function nudge_key(direction, event)
                cursor_highlight(pindex, ent, "train-visualization")
                sync_build_arrow(pindex)
             end
-            if ent.type == "electric-pole" then -- WIP**
+            if ent.type == "electric-pole" then -- WIP***
                -- if ent.clone{position = new_pos, surface = ent.surface, force = ent.force, create_build_effect_smoke = false} == true then
                   -- ent.destroy{}
                -- end
@@ -2310,12 +2310,13 @@ function get_scan_summary(scan_left_top, scan_right_bottom, pindex)
    if percent > 0 then
       table.insert(percentages, {name = "trees", percent = percent})
    end
+   percent_total = percent_total + percent
    
    if #players[pindex].nearby.ents > 0 then --Note: Resources are included here as aggregates.
       for i, ent in ipairs(players[pindex].nearby.ents) do
          local area = 0
          --this confirmation is necessary because all we have is the ent name, and some distant resources show up on the list.
-         if confirm_ent_is_in_area( get_substring_before_comma(ent.name) , scan_left_top , scan_right_bottom, pindex) then --**bug, there is an insistance to read out aggregates that are not even in this area...
+         if confirm_ent_is_in_area( get_substring_before_comma(ent.name) , scan_left_top , scan_right_bottom, pindex) then 
             area = get_ent_area_from_name(get_substring_before_comma(ent.name),pindex)
             --game.get_player(pindex).print(get_substring_before_comma(ent.name) .. " " .. area)--
          end 
@@ -3000,9 +3001,6 @@ function printout(str, pindex)
    if not players[pindex].vanilla_mode then
       localised_print{"","out "..pindex.." ",str}
    end
-   if str ~= "" and pindex > 0 and (game.players[pindex].name == "SirFendi") then 
-      --game.get_player(pindex).print(str)--**Print all to in game console, later to add silent printing
-   end
 end
 
 function repeat_last_spoken(pindex)
@@ -3274,7 +3272,7 @@ end
 function scan_area (x,y,w,h, pindex)
    local first_player = game.get_player(pindex)
    local surf = first_player.surface
-   local ents = surf.find_entities_filtered{area = {{x, y},{x+w, y+h}}, type = {"resource", "tree"}, invert = true}--**possible bug here about invert, because it inverts everything, possibly resolved
+   local ents = surf.find_entities_filtered{area = {{x, y},{x+w, y+h}}, type = {"resource", "tree"}, invert = true}
    local result = {}
          local pos = players[pindex].cursor_pos
    for name, resource in pairs(players[pindex].resources) do
@@ -3878,7 +3876,7 @@ function build_preview_checks_info(stack, pindex)
                left_top = {(position.x + math.ceil(ent_p.selection_box.left_top.x) - supply_dist), (position.y + math.ceil(ent_p.selection_box.left_top.y) - supply_dist)},
                right_bottom = {(position.x + math.floor(ent_p.selection_box.right_bottom.x) + supply_dist), (position.y + math.floor(ent_p.selection_box.right_bottom.y) + supply_dist)},
                orientation = players[pindex].building_direction/4
-           }--**todo "connected" check is a little buggy at the supply area edges, need to trim and tune, maybe re-enable direction based offset? The offset could be due to the pole width: 1 vs 2
+           }--**laterdo "connected" check is a little buggy at the supply area edges, need to trim and tune, maybe re-enable direction based offset? The offset could be due to the pole width: 1 vs 2
             local T = {
                area = area,
                name = names
@@ -3924,6 +3922,9 @@ function read_coords(pindex, start_phrase)
       offset = 1
    end
    if not(players[pindex].in_menu) then
+      if players[pindex].vanilla_mode then
+         players[pindex].cursor_pos = game.get_player(pindex).position
+      end
       if game.get_player(pindex).driving then
          --Give vehicle coords and orientation and speed --laterdo find exact speed coefficient
          local vehicle = game.get_player(pindex).vehicle
@@ -3943,8 +3944,8 @@ function read_coords(pindex, start_phrase)
             location = " "
          end
          result = result .. " " .. location .. ", at " .. math.floor(players[pindex].cursor_pos.x) .. ", " .. math.floor(players[pindex].cursor_pos.y)
-         game.get_player(pindex).print(result,{sound = false})--***test
-         rendering.draw_circle{color = {1, 0.5, 0},radius = 0.2,width = 5,target = players[pindex].cursor_pos,surface = game.get_player(pindex).surface,time_to_live = 300}
+         game.get_player(pindex).print("At " ..  math.floor(players[pindex].cursor_pos.x) .. ", " .. math.floor(players[pindex].cursor_pos.y) , {volume_modifier = 0})
+         rendering.draw_circle{color = {1, 0.2, 0},radius = 0.1,width = 5,target = players[pindex].cursor_pos,surface = game.get_player(pindex).surface,time_to_live = 180}
          
          --If there is a build preview, give its dimensions and which way they extend
          local stack = game.get_player(pindex).cursor_stack
@@ -4103,13 +4104,11 @@ function initialize(player)
    faplayer.cursor_pos = faplayer.cursor_pos or offset_position(faplayer.position,faplayer.player_direction,1)
    faplayer.walk = faplayer.walk or 0
    faplayer.move_queue = faplayer.move_queue or {}
+   faplayer.building_direction = faplayer.building_direction or nil
    faplayer.building_footprint = faplayer.building_footprint or nil
-   faplayer.building_direction = faplayer.building_direction or rendering.draw_rectangle{color = {r = 0.25, b = 0.25, g = 1.0, a = 0.8}, left_top = {0,0}, right_bottom = {1,1},
-      render_layer = 253, surface = character.surface, players = {pindex}, visible = false}
-   faplayer.building_direction_arrow = faplayer.building_direction_arrow or rendering.draw_sprite{sprite = "fluid.crude-oil", tint = {r = 0.25, b = 0.25, g = 1.0, a = 0.8}, 
-      render_layer = 254, target = {0,0}, surface = character.surface, players = {pindex}, visible = false}
+   faplayer.building_direction_arrow = faplayer.building_direction_arrow or nil
    faplayer.overhead_sprite = nil
-   faplayer.ocerhead_circle = nil
+   faplayer.overhead_circle = nil
    faplayer.custom_GUI_frame = nil
    faplayer.custom_GUI_sprite = nil
    faplayer.direction_lag = faplayer.direction_lag or true
@@ -6590,7 +6589,7 @@ function play_mining_sound(pindex)
    end
 end
 
---Creates sound effects for vanilla mining. todo maybe connect to game control's keybind?
+--Creates sound effects for vanilla mining. Needs to be same key as vanilla mining key. laterdo maybe connect to game control's keybind?
 script.on_event("mine-access-sounds", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -6665,13 +6664,13 @@ script.on_event("mine-area", function(event) --laterdo** proper tallying of clea
          end
       end
    else
-      --For empty tiles, clear obtsacles again
+      --For empty tiles, clear obstacles again
       game.get_player(pindex).play_sound{path = "Mine-Building"}
       cleared_count, comment = clear_obstacles_in_circle(players[pindex].cursor_pos, 5, pindex) 
    end
    cleared_total = cleared_total + cleared_count
    
-   --Also, if cut-paste tool in hand, mine every non-resource entity in the area that you can. **todo document this
+   --Also, if cut-paste tool in hand, mine every non-resource entity in the area that you can. 
    local p = game.get_player(pindex)
    local stack = p.cursor_stack
    if stack and stack.valid_for_read and stack.name == "cut-paste-tool" then
@@ -6690,7 +6689,7 @@ script.on_event("mine-area", function(event) --laterdo** proper tallying of clea
    printout(" Cleared away " .. cleared_total .. " objects. ", pindex)
 end)
 
---Cut-paste-tool. NOTE: This keybind needs to be the same as that for the cut paste tool (default CONTROL + X). todo maybe keybind to game control somehow
+--Cut-paste-tool. NOTE: This keybind needs to be the same as that for the cut paste tool (default CONTROL + X). laterdo maybe keybind to game control somehow
 script.on_event("cut-paste-tool-comment", function(event)
    local pindex = event.player_index
    if not check_for_player(pindex) then
@@ -8514,7 +8513,7 @@ script.on_event("toggle-walk",function(event)
       players[pindex].character_running_speed_modifier = 0  -- default 100%
    else
       players[pindex].walk = 0
-      players[pindex].character_running_speed_modifier = -0.99 -- 100% - 100% = 0%--***experimental
+      players[pindex].character_running_speed_modifier = -0.99 -- 100% - 100% = 0%--***test in multiplayer
    end
    --players[pindex].walk = (players[pindex].walk + 1) % 3
    printout(walk_type_speech[players[pindex].walk +1], pindex)
@@ -8574,8 +8573,19 @@ script.on_event("clear-renders",function(event)
    if not check_for_player(pindex) then
       return
    end
-   rendering.clear("")--***test, maybe remove the ""
    game.get_player(pindex).gui.screen.clear()
+   
+   rendering.clear()
+   for pindex, player in pairs(players) do
+      player.cursor_ent_highlight_box = nil
+      player.cursor_tile_highlight_box = nil
+      player.building_footprint = nil
+      player.building_direction_arrow = nil
+      player.overhead_sprite = nil
+      player.overhead_circle = nil
+      player.custom_GUI_frame = nil
+      player.custom_GUI_sprite = nil
+   end
    printout("Cleared renders",pindex)
 end)
 
@@ -9126,7 +9136,7 @@ script.on_event(defines.events.on_gui_opened, function(event)
    end
    players[pindex].move_queue = {}
    if event.gui_type == defines.gui_type.controller and players[event.player_index].menu == "none" then
-      game.get_player(event.player_index).opened = nil --**note: we may prefer to have some GUI's stay open.
+      game.get_player(event.player_index).opened = nil --note: we may prefer to have some GUI's stay open.
       --printout("Banana",event.player_index)
    elseif game.get_player(event.player_index).opened ~= nil then
       players[event.player_index].in_menu = true
@@ -9279,10 +9289,10 @@ script.on_event(defines.events.on_chunk_charted,function(event)
                new_group = math.min(new_group, resource_group)
             end
             for resource_group, b in pairs(resource_groups) do
-               if new_group < resource_group and players[pindex].resources[i].patches ~= nil and players[pindex].resources[i].patches[resource_group] ~= nil and islands[i] ~= nil and islands[i].resources ~= nil and islands[i].resources[b] ~= nil then--**beta** changed "p" to "b"
+               if new_group < resource_group and players[pindex].resources[i].patches ~= nil and players[pindex].resources[i].patches[resource_group] ~= nil and islands[i] ~= nil and islands[i].resources ~= nil and islands[i].resources[b] ~= nil then--**beta changed "p" to "b"
                   for i1, pos in pairs(players[pindex].resources[i].patches[resource_group].positions) do
                      players[pindex].resources[i].positions[pos] = new_group
-                     players[pindex].resources[i].count = islands[i].resources[b].count--**beta** "p" to "b"
+                     players[pindex].resources[i].count = islands[i].resources[b].count--**beta "p" to "b"
                   end
                   table_concat(players[pindex].resources[i].patches[new_group].positions, players[pindex].resources[i].patches[resource_group].positions)
                   for pos, val in pairs(players[pindex].resources[i].patches[resource_group].edges) do
@@ -9386,7 +9396,7 @@ script.on_event(defines.events.on_entity_destroyed,function(event) --DOES NOT HA
    end
    local str = pos2str(ent.position)
    if ent.type == "resource" then
-      if ent.name ~= "crude-oil" and players[pindex].resources[ent.name].positions[str] ~= nil then--**beta** added a check here to not run for nil "group"s...
+      if ent.name ~= "crude-oil" and players[pindex].resources[ent.name].positions[str] ~= nil then--**beta added a check here to not run for nil "group"s...
          local group = players[pindex].resources[ent.name].positions[str]
          players[pindex].resources[ent.name].positions[str] = nil
          --game.get_player(pindex).print("Pos str: " .. str)
@@ -9419,7 +9429,7 @@ script.on_event(defines.events.on_entity_destroyed,function(event) --DOES NOT HA
       adj[pos2str({x = math.floor(ent.area.left_top.x/32),y = math.floor(ent.area.right_bottom.y/32)})] = true
       adj[pos2str({x = math.floor(ent.area.right_bottom.x/32),y = math.floor(ent.area.right_bottom.y/32)})] = true
       for pos, val in pairs(adj) do
-         --players[pindex].tree_chunks[pos].count = players[pindex].tree_chunks[pos].count - 1--**beta** Forests need updating but these lines are incorrectly named
+         --players[pindex].tree_chunks[pos].count = players[pindex].tree_chunks[pos].count - 1--**beta Forests need updating but these lines are incorrectly named
       end
    end
    players[pindex].destroyed[event.registration_number] = nil
@@ -10247,17 +10257,17 @@ function update_custom_GUI_sprite(sprite, scale_in, pindex)
    local p = game.get_player(pindex)
    local scale = scale_in
    
-   if sprite == nil and player.custom_GUI_frame ~= nil then
+   if sprite == nil and player.custom_GUI_frame ~= nil and player.custom_GUI_frame.valid then
       player.custom_GUI_frame.visible = false
    else
       local f = player.custom_GUI_frame
       local s1 = player.custom_GUI_sprite
-      if f == nil then
+      if f == nil or not f.valid then
          f = game.get_player(pindex).gui.screen.add{type="frame"}
          f.force_auto_center()
          f.bring_to_front()
       end
-      if s1 == nil then
+      if s1 == nil or not s1.valid then
          s1 = f.add{type="sprite",caption = "custom menu"}
       end
       if s1.sprite ~= sprite then 
