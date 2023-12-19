@@ -480,9 +480,9 @@ function classify_forest(position,pindex,drawing)
    if tree_count < 1 then
       return "empty"
    elseif tree_count < 6 then
-      return "sparse"
+      return "patch"
    elseif tree_count < 11 then
-      return "medium"
+      return "sparse"
    else
       return "dense"
    end
@@ -3289,20 +3289,23 @@ function scan_area (x,y,w,h, pindex)
    local forest_density = nil
    
    for name, resource in pairs(players[pindex].resources) do
-      table.insert(result, {name = name, count = table_size(players[pindex].resources[name].patches), ents = {}, aggregate = true}) --****todo here save forests by density
+      table.insert(result, {name = name, count = table_size(players[pindex].resources[name].patches), ents = {}, aggregate = true})
       local index = #result
       for group, patch in pairs(resource.patches) do
          if name == "forest" then
             local forest_pos = nearest_edge(patch.edges, pos, name)
-            forest_density = classify_forest(forest_post,pindex,false)
+            forest_density = classify_forest(forest_pos,pindex,false)
          else
             forest_density = nil
          end
-         if forest_density ~= "empty" and forest_density ~= "sparse" then --Do not add empty forests
+         if forest_density ~= "empty" and forest_density ~= "patch" then --Do not add empty forests
             table.insert(result[index].ents, {group = group, position = nearest_edge(patch.edges, pos, name)})
+         else
+            --do not include in results
          end
       end
    end
+
    for i=1, #ents, 1 do
       local prod_info = extra_info_for_scan_list(ents[i],pindex)
       local index = index_of_entity(result, ents[i].name .. prod_info)
