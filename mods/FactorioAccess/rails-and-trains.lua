@@ -472,7 +472,7 @@ function vehicle_info(pindex)
       --Add the train state
       result = result .. get_train_state_info(train) .. ", "
       
-      --Declare destination if any. Note: Not tested yet. laterdo
+      --Declare destination if any. 
       if train.path_end_stop ~= nil then
          result = result .. " heading to station " .. train.path_end_stop.backer_name .. ", "
       --   result = result .. " traveled a distance of " .. train.path.travelled_distance .. " out of " train.path.total_distance " distance, "
@@ -500,6 +500,10 @@ function get_train_state_info(train)
    --Explanations
    if train_state_text == "wait_station" then
       train_state_text = "waiting at a station"
+   elseif train_state_text == "wait_signal" then
+      train_state_text = "waiting at a closed rail signal"
+   elseif train_state_text == "on_the_path" then
+      train_state_text = "traveling"
    end
    return train_state_text
 end
@@ -623,7 +627,7 @@ function get_rail_segment_other_end(rail)
 end
 
 
---For a rail at the end of its segment, returns the neighboring rail segment's end rail. Respects dir in terms of left/right/straight if it is given, else returns the first found option. NOTE: Not tested individually but worked in combination with other functions.
+--For a rail at the end of its segment, returns the neighboring rail segment's end rail. Respects dir in terms of left/right/straight if it is given, else returns the first found option.
 function get_neighbor_rail_segment_end(rail, con_dir_in)
    local dir = con_dir_in or nil
    local requested_neighbor_rail_1 = nil
@@ -1163,9 +1167,13 @@ function train_read_next_rail_entity_ahead(pindex, invert, mute_in)
    end
    if not mute_in == true then
       printout(message,pindex)
+      --Draw circles for visual debugging
+      rendering.draw_circle{color = {0, 0.5, 1},radius = 1,width = 8,target = next_entity,surface = next_entity.surface,time_to_live = 100}
    end
-   --Draw circles for visual debugging
-   rendering.draw_circle{color = {0, 1, 1},radius = 1,width = 8,target = next_entity,surface = next_entity.surface,time_to_live = 100}
+   
+   if honk_score > 1 then
+      rendering.draw_circle{color = {1, 0, 0},radius = 1,width = 4,target = next_entity,surface = next_entity.surface,time_to_live = 60}
+   end
    return honk_score
 end
 
@@ -3871,7 +3879,7 @@ function nearby_train_schedule_read_this_stop(train_stop)
       for i,r in ipairs(records) do
          if r.station == train_stop.backer_name then
             found_any = true
-            result = result .. ", at this stop it waits for "--***test
+            result = result .. ", at this stop it waits for "
             local wait_condition_read_1 = r.wait_conditions[1]
             local wait_condition_read_2 = r.wait_conditions[2]
             if wait_condition_read_1 == nil then
@@ -3936,7 +3944,7 @@ function nearby_train_schedule_add_stop(train_stop, wait_condition_type, wait_ti
    return result
 end
 
-function nearby_train_schedule_update_stop(train_stop, wait_condition_type, wait_time_seconds)--todo test***
+function nearby_train_schedule_update_stop(train_stop, wait_condition_type, wait_time_seconds)
    local result = "initial"
    --Locate the nearby train
    local train = train_stop.get_stopped_train()
@@ -4498,25 +4506,27 @@ function play_train_track_alert_sounds(step)
                if (util.distance(p.position,train.front_stock.position) < 200 or util.distance(p.position,train.back_stock.position) < 200) then
                   p.play_sound{path = "utility/new_objective"}
                   p.play_sound{path = "utility/new_objective"}
-                  rendering.draw_circle{color = {1, 0, 0},radius = 4,width = 8,target = found_rail.position,surface = found_rail.surface,time_to_live = 15}
+                  rendering.draw_circle{color = {1, 0.0, 0},radius = 4,width = 8,target = found_rail.position,surface = found_rail.surface,time_to_live = 15}
                else
                   p.play_sound{path = "utility/blueprint_selection_ended"}
                   p.play_sound{path = "utility/blueprint_selection_ended"}
-                  rendering.draw_circle{color = {1, 0.25, 0},radius = 4,width = 8,target = found_rail.position,surface = found_rail.surface,time_to_live = 15}
+                  rendering.draw_circle{color = {1, 0.4, 0},radius = 4,width = 8,target = found_rail.position,surface = found_rail.surface,time_to_live = 15}
                end
             end
          end
          local signals = found_rail.get_inbound_signals()
          for i,signal in ipairs(signals) do
             if signal.signal_state == defines.signal_state.reserved then
-               if (util.distance(p.position,train.front_stock.position) < 200 or util.distance(p.position,train.back_stock.position) < 200) then
-                  p.play_sound{path = "utility/new_objective"}
-                  p.play_sound{path = "utility/new_objective"}
-                  rendering.draw_circle{color = {1, 0, 0},radius = 4,width = 8,target = found_rail.position,surface = found_rail.surface,time_to_live = 15}
-               else
-                  p.play_sound{path = "utility/blueprint_selection_ended"}
-                  p.play_sound{path = "utility/blueprint_selection_ended"}
-                  rendering.draw_circle{color = {1, 0.25, 0},radius = 4,width = 8,target = found_rail.position,surface = found_rail.surface,time_to_live = 15}
+               for i,train in ipairs(trains) do
+                  if (util.distance(p.position,train.front_stock.position) < 200 or util.distance(p.position,train.back_stock.position) < 200) then
+                     p.play_sound{path = "utility/new_objective"}
+                     p.play_sound{path = "utility/new_objective"}
+                     rendering.draw_circle{color = {1, 0.0, 0},radius = 4,width = 8,target = found_rail.position,surface = found_rail.surface,time_to_live = 15}
+                  else
+                     p.play_sound{path = "utility/blueprint_selection_ended"}
+                     p.play_sound{path = "utility/blueprint_selection_ended"}
+                     rendering.draw_circle{color = {1, 0.4, 0},radius = 4,width = 8,target = found_rail.position,surface = found_rail.surface,time_to_live = 15}
+                  end
                end
             end
          end
