@@ -10142,11 +10142,11 @@ function rotate_180(dir)
 end
 
 function sync_build_arrow(pindex)
+   local player = players[pindex]
+   local stack = game.get_player(pindex).cursor_stack
    if player.building_direction == nil then
       player.building_direction = 0
    end
-   local player = players[pindex]
-   local stack = game.get_player(pindex).cursor_stack
    local dir = player.building_direction * dirs.east
    local dir_indicator = player.building_direction_arrow
    local p_dir = player.player_direction
