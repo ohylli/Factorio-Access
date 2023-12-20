@@ -2315,7 +2315,7 @@ function get_scan_summary(scan_left_top, scan_right_bottom, pindex)
    end
    
    res_count = surf.count_entities_filtered{ type = "tree", area = {scan_left_top,scan_right_bottom} }
-   percent = math.floor((res_count * 4 / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)--trees are 4 tiles wide
+   percent = math.floor((res_count * 8 / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)--trees are bigger than 1 tile
    if percent > 0 then
       table.insert(percentages, {name = "trees", percent = percent})
    end
@@ -4127,7 +4127,7 @@ function initialize(player)
    faplayer.cursor_pos = faplayer.cursor_pos or offset_position(faplayer.position,faplayer.player_direction,1)
    faplayer.walk = faplayer.walk or 0
    faplayer.move_queue = faplayer.move_queue or {}
-   faplayer.building_direction = faplayer.building_direction or nil
+   faplayer.building_direction = faplayer.building_direction or 0 --Values are 0,1,2,3 for N,E,S,W
    faplayer.building_footprint = faplayer.building_footprint or nil
    faplayer.building_direction_arrow = faplayer.building_direction_arrow or nil
    faplayer.overhead_sprite = nil
@@ -5380,7 +5380,7 @@ function move(direction,pindex)
       --Rotate belts in hand for build lock Mode
       local stack = game.get_player(pindex).cursor_stack
       if players[pindex].build_lock and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and stack.prototype.place_result.type == "transport-belt" then 
-         players[pindex].building_direction = math.floor(players[pindex].player_direction / dirs.east)--laterdo might need to correct this if we redesign the build_direction
+         players[pindex].building_direction = math.floor(players[pindex].player_direction / dirs.east)
       end
    end
    
@@ -10142,16 +10142,14 @@ function rotate_180(dir)
 end
 
 function sync_build_arrow(pindex)
+   if player.building_direction == nil then
+      player.building_direction = 0
+   end
    local player = players[pindex]
    local stack = game.get_player(pindex).cursor_stack
    local dir = player.building_direction * dirs.east
    local dir_indicator = player.building_direction_arrow
    local p_dir = player.player_direction
-   if dir == nil then
-      dir = 0
-      player.building_direction = 0
-      --game.get_player(pindex).print("dir was nil ")--
-   end
    if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result then
       --Redraw arrow
       if dir_indicator ~= nil then rendering.destroy(player.building_direction_arrow) end
