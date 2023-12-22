@@ -7111,20 +7111,7 @@ script.on_event("click-hand", function(event)
          build_offshore_pump_in_hand(pindex)
       elseif stack and stack.valid and stack.valid_for_read and stack.is_repair_tool then
          players[pindex].last_click_tick = event.tick
-         --Repair the entity found . Laterdo improve this 
-         --game.get_player(pindex).use_from_cursor{players[pindex].cursor_pos.x,players[pindex].cursor_pos.y}--does not work
-         if ent and ent.is_entity_with_health and ent.get_health_ratio() < 1 and ent.type ~= "resource" and ent.name ~= "character" then
-            local health_diff = ent.prototype.max_health - ent.health
-            if health_diff > 200 then
-               ent.health = ent.health + 200 
-               printout("Partially repaired " .. ent.name .. " and consumed a repair pack", pindex)
-               stack.count = stack.count - 1
-            else
-               ent.health = ent.prototype.max_health 
-               printout("Fully repaired " .. ent.name, pindex)
-            end
-            --game.get_player(pindex).print("healed " .. health_diff)--laterdo repair consumes the pack
-         end
+         repair_pack_used(ent,pindex)
          return
       elseif stack and stack.valid and stack.valid_for_read then
          players[pindex].last_click_tick = event.tick
@@ -7151,6 +7138,10 @@ script.on_event("click-entity", function(event)
       if game.get_player(pindex).driving and game.get_player(pindex).vehicle.train ~= nil then
          players[pindex].last_click_tick = event.tick
          train_menu_open(pindex)
+      elseif stack and stack.valid and stack.valid_for_read and stack.is_repair_tool then
+         players[pindex].last_click_tick = event.tick
+         repair_pack_used(ent,pindex)
+         return
       elseif ent and not (stack and stack.valid and stack.valid_for_read and (stack.prototype.place_result or stack.prototype.place_as_tile_result)) then
          players[pindex].last_click_tick = event.tick
          --Clicking on an entity in the world
@@ -7274,6 +7265,24 @@ script.on_event("click-entity", function(event)
       end
    end
 end)
+
+function repair_pack_used(ent,pindex)
+   local p = game.get_player(pindex)
+   --Repair the entity found . Laterdo improve this 
+   --game.get_player(pindex).use_from_cursor{players[pindex].cursor_pos.x,players[pindex].cursor_pos.y}--does not work
+   if ent and ent.is_entity_with_health and ent.get_health_ratio() < 1 and ent.type ~= "resource" and not ent.force.is_enemy(p.force) and ent.name ~= "character" then
+      local health_diff = ent.prototype.max_health - ent.health
+      if health_diff > 200 then
+         ent.health = ent.health + 200 
+         printout("Partially repaired " .. ent.name .. " and consumed a repair pack", pindex)
+         stack.count = stack.count - 1
+      else
+         ent.health = ent.prototype.max_health 
+         printout("Fully repaired " .. ent.name, pindex)
+      end
+      --game.get_player(pindex).print("healed " .. health_diff)--laterdo repair consumes the pack
+   end
+end
 
 --[[Attempts to build the item in hand.
 * Does nothing if the hand is empty or the item is not a place-able entity.
@@ -8031,7 +8040,7 @@ script.on_event("read-entity-status", function(event)
          elseif ent.name == "lab" then
             if ent.speed_bonus ~= 0 then
                result = result .. ", with speed " .. math.floor(100 * (1 + ent.force.laboratory_speed_modifier * (1 + (ent.speed_bonus - ent.force.laboratory_speed_modifier))) + 0.5) .. " percent " --laterdo fix bug**
-               game.get_player(pindex).print(result)
+               --game.get_player(pindex).print(result)
             end
             if ent.productivity_bonus ~= 0 then
                result = result .. ", with productivity bonus " .. math.floor(100 * (0 + ent.productivity_bonus + ent.force.laboratory_productivity_bonus) + 0.5) .. " percent "
