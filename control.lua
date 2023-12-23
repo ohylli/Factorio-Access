@@ -6233,6 +6233,7 @@ script.on_event("close-menu", function(event)
    if not check_for_player(pindex) then
       return
    end
+   players[pindex].move_queue = {}
    if not players[pindex].in_menu or players[pindex].last_menu_toggle_tick == event.tick then
       return
    elseif players[pindex].in_menu and players[pindex].menu ~= "prompt" then
@@ -6259,6 +6260,7 @@ script.on_event("close-menu", function(event)
       end
       
       players[pindex].menu = "none"
+      players[pindex].in_menu = false
       players[pindex].item_selection = false
       players[pindex].item_cache = {}
       players[pindex].item_selector = {index = 0, group = 0, subgroup = 0}
@@ -7182,6 +7184,7 @@ script.on_event("click-entity", function(event)
             if ent.prototype.subgroup.name == "belt" then
                players[pindex].in_menu = true
                players[pindex].menu = "belt"
+               players[pindex].move_queue = {}
                players[pindex].belt.line1 = ent.get_transport_line(1)
                players[pindex].belt.line2 = ent.get_transport_line(2)
                players[pindex].belt.ent = ent
@@ -7276,6 +7279,7 @@ script.on_event("click-entity", function(event)
                players[pindex].building.ent = ent
                players[pindex].in_menu = true
                players[pindex].menu = "building"
+               players[pindex].move_queue = {}
                players[pindex].inventory.index = 1
                players[pindex].building.index = 1
                read_building_slot(pindex, true)
@@ -7558,6 +7562,7 @@ function build_offshore_pump_in_hand(pindex)
       else
          players[pindex].in_menu = true
          players[pindex].menu = "pump"
+         players[pindex].move_queue = {}
          printout("There are " .. #players[pindex].pump.positions .. " possibilities, scroll up and down, then select one to build, or press e to cancel.", pindex)
          table.sort(players[pindex].pump.positions, function(k1, k2) 
             return distance(initial_position, k1.position) < distance(initial_position, k2.position)
@@ -8685,6 +8690,7 @@ script.on_event("open-warnings-menu", function(event)
       players[pindex].category = 1
       players[pindex].menu = "warnings"
       players[pindex].in_menu = true
+      players[pindex].move_queue = {}
       game.get_player(pindex).play_sound{path = "Open-Inventory-Sound"}
       printout("Short Range: " .. players[pindex].warnings.short.summary, pindex)
    else
@@ -8703,6 +8709,7 @@ script.on_event("open-fast-travel-menu", function(event)
 
       players[pindex].menu = "travel"
       players[pindex].in_menu = true
+      players[pindex].move_queue = {}
       players[pindex].travel.index = {x = 1, y = 0}
       players[pindex].travel.creating = false
       printout("Navigate up and down to select a fast travel location, and jump to it with LEFT BRACKET.  Alternatively, select an option by navigating left and right.", pindex)
@@ -8786,6 +8793,7 @@ script.on_event("open-structure-travel-menu", function(event)
       game.get_player(pindex).selected = nil
       players[pindex].menu = "structure-travel"
       players[pindex].in_menu = true
+      players[pindex].move_queue = {}
       players[pindex].structure_travel.direction = "none"
       local ent = get_selected_ent(pindex)
       if ent ~= nil and ent.valid and ent.unit_number ~= nil and building_types[ent.type] then
