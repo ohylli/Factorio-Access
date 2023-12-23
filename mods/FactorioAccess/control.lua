@@ -1282,7 +1282,7 @@ function transport_belt_junction_info(sideload_count, backload_count, outload_co
 end
 --Notes for the wiki: A pouring end either pours into a sideloading something, or into a corner. Lanes are preserved if corner.
 
-function compile_building_network (ent, radius)
+function compile_building_network (ent, radius)--****
    local ents = ent.surface.find_entities_filtered{position = ent.position, radius = radius, type = building_types}
    local adj = {hor = {}, vert = {}}
    local PQ = {}
@@ -3365,7 +3365,7 @@ function scan_area (x,y,w,h, pindex)
 end
 
 function toggle_cursor(pindex)
-   if not players[pindex].cursor and not players[pindex].vanilla_mode then
+   if not players[pindex].cursor and not players[pindex].hide_cursor then
       players[pindex].cursor = true
       players[pindex].build_lock = false
       players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos)
@@ -5224,14 +5224,34 @@ function update_menu_visuals()
          elseif player.menu == "train_stop_menu" then
             update_overhead_sprite("item.train-stop",2,1.25,pindex)
             update_custom_GUI_sprite("item.train-stop", 3, pindex)
+         elseif player.menu == "belt" then
+            update_overhead_sprite("item.transport-belt",1,1,pindex)
+            update_custom_GUI_sprite(nil,1,pindex)
+         elseif player.menu == "building" then
+            if game.get_player(pindex).opened == nil then
+               --Open building menu with no GUI
+               update_overhead_sprite("utility.search_white",2,1.25,pindex)
+               update_custom_GUI_sprite("utility.search_white", 3, pindex)
+            else
+               --A building with a GUI is open
+               update_overhead_sprite("utility.search_white",2,1.25,pindex)
+               update_custom_GUI_sprite(nil,1,pindex)
+            end
          else
-            --includes: structure travel
+            --Other menu type such as: structure travel
+            update_overhead_sprite("utility.select_icon_white",1,1,pindex)
+            update_custom_GUI_sprite("utility.select_icon_white",1,pindex)
+         end
+      else
+         if game.get_player(pindex).opened ~= nil then
+            --Not in menu, but open GUI
+            update_overhead_sprite("utility.white_square",2,1.25,pindex)
+            update_custom_GUI_sprite(nil,1,pindex)
+         else
+            --Not in menu, no open GUI
             update_overhead_sprite(nil,1,1,pindex)
             update_custom_GUI_sprite(nil,1,pindex)
          end
-      else
-         update_overhead_sprite(nil,1,1,pindex)
-         update_custom_GUI_sprite(nil,1,pindex)
       end
    end
 end
@@ -8473,6 +8493,7 @@ script.on_event(defines.events.on_gui_closed, function(event)
    if not check_for_player(pindex) then
       return
    end
+   players[pindex].move_queue = {}
 --   rescan(pindex)
    if players[pindex].in_menu == true and players[pindex].menu ~= "prompt"then
       if players[pindex].menu == "inventory" then
@@ -8754,7 +8775,7 @@ script.on_event(defines.events.on_gui_confirmed,function(event)
    end
 end)   
 
---note: need to review functionality, test for bugs, review wiki pages (laterdo)
+--note: need to review functionality, test for bugs, review wiki pages (laterdo)***
 script.on_event("open-structure-travel-menu", function(event)
    local pindex = event.player_index
    if not check_for_player(pindex) or players[pindex].vanilla_mode then
@@ -8767,7 +8788,7 @@ script.on_event("open-structure-travel-menu", function(event)
       players[pindex].in_menu = true
       players[pindex].structure_travel.direction = "none"
       local ent = get_selected_ent(pindex)
-      if ent and ent.unit_number ~= nil and building_types[ent.type] then
+      if ent ~= nil and ent.valid and ent.unit_number ~= nil and building_types[ent.type] then
          players[pindex].structure_travel.current = ent.unit_number
          players[pindex].structure_travel.network = compile_building_network(ent, 200)
       else
@@ -10259,7 +10280,10 @@ function cursor_highlight(pindex, ent, box_type)
    players[pindex].cursor_tile_highlight_box = h_tile
    game.get_player(pindex).game_view_settings.update_entity_selection = true
    
-   --Highlight nearby entities by default means
+   --Highlight nearby entities by default means (reposition the cursor)
+   if players[pindex].vanilla_mode then
+      return 
+   end 
    if util.distance(p.position,c_pos) < 11 then
       move_cursor_map(center_of_tile(c_pos),pindex)
    else
