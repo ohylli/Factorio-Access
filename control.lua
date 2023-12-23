@@ -385,7 +385,7 @@ function increment_inventory_bar(ent, amount)
 end
 
 
-function extra_info_for_scan_list(ent,pindex)
+function extra_info_for_scan_list(ent,pindex,info_comes_after_indexing)
    local result = ""
    if ent.name ~= "water" and ent.type == "mining-drill"  then
       local pos = ent.position
@@ -456,11 +456,15 @@ function extra_info_for_scan_list(ent,pindex)
       elseif ent.character_corpse_player_index ~= nil then
          result = result .. " of another character "
       end
+   elseif info_comes_after_indexing == true and ent.name == "train-stop" then
+      result = result .. " " .. ent.backer_name --***test
    end
    
    if ent.name == "forest" then
       result = result .. classify_forest(ent.position,pindex,true)
    end
+   
+   
    
    return result
 end
@@ -2533,9 +2537,9 @@ function populate_categories(pindex)
             table.insert(players[pindex].nearby.resources, ent)
          elseif ent.ents[1].type == "container" then
             table.insert(players[pindex].nearby.containers, ent)
-         elseif ent.ents[1].prototype.is_building and not ent.ents[1].type == "unit-spawner" and not ent.ents[1].type == "turret" then
+         elseif ent.ents[1].prototype.is_building and not ent.ents[1].type == "unit-spawner" and not ent.ents[1].type == "turret" and not ent.ents[1].name == "train-stop" then
             table.insert(players[pindex].nearby.buildings, ent)
-         elseif ent.ents[1].type == "car" or ent.ents[1].type == "locomotive" or ent.ents[1].type == "cargo-wagon" or ent.ents[1].type == "fluid-wagon" or ent.ents[1].type == "artillery-wagon" or ent.ents[1].type == "spider-vehicle" then
+         elseif ent.ents[1].type == "car" or ent.ents[1].type == "locomotive" or ent.ents[1].type == "cargo-wagon" or ent.ents[1].type == "fluid-wagon" or ent.ents[1].type == "artillery-wagon" or ent.ents[1].type == "spider-vehicle" or ent.ents[1].name == "train-stop" then --***test
             table.insert(players[pindex].nearby.vehicles, ent)
          elseif ent.ents[1].type == "character" or ent.ents[1].type == "character-corpse" then
             table.insert(players[pindex].nearby.players, ent)
@@ -3124,8 +3128,8 @@ function scan_index(pindex)
       if players[pindex].nearby.count == false then
          --Read the entity in terms of distance and direction
          local result={"access.thing-producing-listpos-dirdist",ent_name_locale(ent)}
-         table.insert(result,extra_info_for_scan_list(ent,pindex))
-         table.insert(result,{"description.of", players[pindex].nearby.selection , #ents[players[pindex].nearby.index].ents})
+         table.insert(result,extra_info_for_scan_list(ent,pindex,true))
+         table.insert(result,{"description.of", players[pindex].nearby.selection , #ents[players[pindex].nearby.index].ents})--"X of Y"
          table.insert(result,dir_dist)
          printout(result,pindex)
       else
@@ -3307,7 +3311,7 @@ function scan_area (x,y,w,h, pindex)
    end
 
    for i=1, #ents, 1 do
-      local prod_info = extra_info_for_scan_list(ents[i],pindex)
+      local prod_info = extra_info_for_scan_list(ents[i],pindex,false)
       local index = index_of_entity(result, ents[i].name .. prod_info)
       if index == nil then
          table.insert(result, {name = ents[i].name .. prod_info, count = 1, ents = {ents[i]}, aggregate = false}) 
@@ -8583,8 +8587,11 @@ script.on_event("toggle-vanilla-mode",function(event)
    game.get_player(pindex).play_sound{path = "utility/confirm"}
    if players[pindex].vanilla_mode then
       game.get_player(pindex).print("Vanilla mode : ON")
+      players[pindex].walk = 2
+      players[pindex].hide_cursor = true
    else
       game.get_player(pindex).print("Vanilla mode : OFF")
+      players[pindex].hide_cursor = false
    end
 end)
 
@@ -10243,20 +10250,16 @@ function cursor_highlight(pindex, ent, box_type)
          h_box.highlight_box_type = "entity"
       end
    end
-   if not players[pindex].vanilla_mode then
-      --Highlight the currently focused ground tile.
-      h_tile = rendering.draw_rectangle{color = {0.75,1,1,0.75}, surface = p.surface, draw_on_ground = true, 
-         left_top = {math.floor(c_pos.x)+0.05,math.floor(c_pos.y)+0.05}, right_bottom = {math.ceil(c_pos.x)-0.05,math.ceil(c_pos.y)-0.05}}
-   end
+   
+   --Highlight the currently focused ground tile.
+   h_tile = rendering.draw_rectangle{color = {0.75,1,1,0.75}, surface = p.surface, draw_on_ground = true, 
+      left_top = {math.floor(c_pos.x)+0.05,math.floor(c_pos.y)+0.05}, right_bottom = {math.ceil(c_pos.x)-0.05,math.ceil(c_pos.y)-0.05}}
    
    players[pindex].cursor_ent_highlight_box = h_box
    players[pindex].cursor_tile_highlight_box = h_tile
    game.get_player(pindex).game_view_settings.update_entity_selection = true
    
    --Highlight nearby entities by default means
-   if players[pindex].vanilla_mode then
-      return
-   end
    if util.distance(p.position,c_pos) < 11 then
       move_cursor_map(center_of_tile(c_pos),pindex)
    else
