@@ -1088,3 +1088,125 @@ data:extend({
 }
 
 })
+
+--Additions below for removing tips and tricks
+vanilla_tip_and_tricks_item_table=
+{
+   "introduction",
+      "game-interaction",
+      "show-info",
+      --"e-confirm",
+      "clear-cursor",
+      "pipette",
+      "stack-transfers",
+      
+      "entity-transfers",
+      "z-dropping",
+      "shoot-targeting",
+      "bulk-crafting",
+   
+   
+   "inserters",
+      "burner-inserter-refueling",
+      "long-handed-inserters",
+      "move-between-labs",
+      "insertion-limits",
+      "limit-chests",
+   
+   
+   "transport-belts",--in category "belt"
+      "belt-lanes",
+      "splitters",
+      "splitter-filters",
+      "underground-belts",
+   
+   
+   "electric-network",
+      "steam-power",
+      "low-power",
+      "electric-pole-connections",
+      "connect-switch",
+   
+   
+   "copy-entity-settings",--in category "copy-paste"
+      "copy-paste-trains",
+      "copy-paste-filters",
+      "copy-paste-requester-chest",
+      "copy-paste-spidertron",
+   
+   
+   "drag-building",
+      "drag-building-poles",
+      "pole-dragging-coverage",
+      "drag-building-underground-belts",
+      "fast-belt-bending",
+      "fast-obstacle-traversing",
+   
+   
+   "trains",
+      "rail-building",
+      "train-stops",
+      "rail-signals-basic",
+      "rail-signals-advanced",
+      "gate-over-rail",
+      
+      "pump-connection",
+      "train-stop-same-name",
+   
+   
+   "logistic-network",
+      "personal-logistics",
+      "construction-robots",
+      "passive-provider-chest",
+      "storage-chest",
+      "requester-chest",
+   
+      "active-provider-chest",
+      "buffer-chest",
+   
+   
+   "ghost-building",
+      "ghost-rail-planner",
+      "copy-paste",
+   
+   
+   "fast-replace",
+      "fast-replace-direction",
+      "fast-replace-belt-splitter",
+      "fast-replace-belt-underground",
+   
+   --no category
+      "rotating-assemblers",
+      "circuit-network",
+   
+};
+
+function remove_tip_and_tricks_item(inname)
+   data.raw["tips-and-tricks-item"][inname]=nil;
+   for _,item in pairs(data.raw["tips-and-tricks-item"]) do
+      if(item.dependencies) then
+         local backup=table.deepcopy(item.dependencies);
+         item.dependencies={"e-confirm"};
+         for _,str in pairs(backup) do
+            if(str~=inname) then table.insert(item.dependencies,str); end
+         end
+      end
+   end
+end
+
+   data.raw["tips-and-tricks-item"]["introduction"].category="game-interaction";
+   data.raw["tips-and-tricks-item"]["introduction"].trigger=nil;
+
+   data.raw["tips-and-tricks-item"]["show-info"].starting_status="unlocked";
+   data.raw["tips-and-tricks-item"]["show-info"].dependencies=nil;
+
+   data.raw["tips-and-tricks-item"]["e-confirm"].starting_status="unlocked";
+   data.raw["tips-and-tricks-item"]["e-confirm"].trigger=nil;
+   data.raw["tips-and-tricks-item"]["e-confirm"].skip_trigger={type="use-confirm"};--**nil
+   data.raw["tips-and-tricks-item"]["e-confirm"].dependencies=nil;
+
+
+for _,item in pairs(vanilla_tip_and_tricks_item_table) do
+   remove_tip_and_tricks_item(item);
+end
+--Additions above for removing tips and tricks

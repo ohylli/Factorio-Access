@@ -10319,7 +10319,7 @@ end
 script.on_event(defines.events.on_entity_damaged,function(event)
    local ent = event.entity
    local tick = event.tick
-   if ent == nil or not ent.valid then
+   if ent == nil or not ent.valid or tick < 3000 then
       return
    elseif ent.name == "character" then
       return
