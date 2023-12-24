@@ -1282,15 +1282,16 @@ function transport_belt_junction_info(sideload_count, backload_count, outload_co
 end
 --Notes for the wiki: A pouring end either pours into a sideloading something, or into a corner. Lanes are preserved if corner.
 
-function compile_building_network (ent, radius)--****
-   local ents = ent.surface.find_entities_filtered{position = ent.position, radius = radius, type = building_types}
+function compile_building_network(ent, radius,pindex)--****stuck in loop bug here!!!
+   local ents = ent.surface.find_entities_filtered{position = ent.position, radius = radius}
+   game.get_player(pindex).print(#ents .. " ents at start")--***example test found 4000 ents!
    local adj = {hor = {}, vert = {}}
    local PQ = {}
    local result = {}
-
+   game.get_player(pindex).print("checkpoint 0")--***
    for i = #ents, 1, -1 do
       local row = ents[i]
-      if row.unit_number ~= nil then
+      if row.unit_number ~= nil and row.prototype.is_building then
          adj.hor[row.unit_number] = {}
          adj.vert[row.unit_number] = {}
          result[row.unit_number] = {
@@ -1306,7 +1307,10 @@ function compile_building_network (ent, radius)--****
          table.remove(ents, i)
       end
    end
-
+   game.get_player(pindex).print(#ents .. " ents")--***example test found 4000 ents!
+   game.get_player(pindex).print("checkpoint 1")--***loop stuck after here
+   if true then return result end--***
+   
    for i, row in pairs(ents) do
       for i1, col in pairs(ents) do
          if adj.hor[row.unit_number][col.unit_number] == nil then
@@ -1332,11 +1336,18 @@ function compile_building_network (ent, radius)--****
       
       end
    end
+   game.get_player(pindex).print("checkpoint 2")--***loop stuck before here
+   if true then return result end--***
    table.sort(PQ, function (k1, k2)
       return k1.man > k2.man
    end)
+   game.get_player(pindex).print("checkpoint 3")--***
+   if true then return result end--***
+   
    local entry = table.remove(PQ)
-   while entry~= nil do
+   local loop_count = 0
+   while entry~= nil and not loop_count > 9 do
+      loop_count = loop_count + 1
       if math.abs(entry.dy) >= math.abs(entry.dx) then
          if not adj.vert[entry.source.unit_number][entry.dest.unit_number] then
             for i, explored in pairs(adj.vert[entry.source.unit_number]) do
@@ -1412,6 +1423,9 @@ function compile_building_network (ent, radius)--****
 
       end
       entry = table.remove(PQ)
+   end
+   if loop_count > 9 then
+      game.print("It is over 9.000!!!!!")--***
    end
    return result
 end   
@@ -5237,8 +5251,11 @@ function update_menu_visuals()
                update_overhead_sprite("utility.search_white",2,1.25,pindex)
                update_custom_GUI_sprite(nil,1,pindex)
             end
+         elseif player.menu == "structure-travel" then
+            update_overhead_sprite("utility.expand_dots_white",2,1.25,pindex)
+            update_custom_GUI_sprite("utility.expand_dots_white",3,pindex)
          else
-            --Other menu type such as: structure travel
+            --Other menu type ...
             update_overhead_sprite("utility.select_icon_white",1,1,pindex)
             update_custom_GUI_sprite("utility.select_icon_white",1,pindex)
          end
@@ -8798,11 +8815,11 @@ script.on_event("open-structure-travel-menu", function(event)
       local ent = get_selected_ent(pindex)
       if ent ~= nil and ent.valid and ent.unit_number ~= nil and building_types[ent.type] then
          players[pindex].structure_travel.current = ent.unit_number
-         players[pindex].structure_travel.network = compile_building_network(ent, 200)
+         players[pindex].structure_travel.network = compile_building_network(ent, 50,pindex)
       else
          ent = game.get_player(pindex).character
          players[pindex].structure_travel.current = ent.unit_number
-         players[pindex].structure_travel.network = compile_building_network(ent, 200)      
+         players[pindex].structure_travel.network = compile_building_network(ent, 50,pindex)      
       end
       local description = ""
       local network = players[pindex].structure_travel.network
