@@ -384,7 +384,7 @@ function increment_inventory_bar(ent, amount)
    return {"access.inventory-limit-status",value,current_bar}
 end
 
-
+--Brief extra entity info is given here. If the parameter info_comes_after_indexing is false, then this info distinguishes the entity with its description as a new line of the scanner list, such as how assembling machines with different recipes are listed separately.
 function extra_info_for_scan_list(ent,pindex,info_comes_after_indexing)
    local result = ""
    if ent.name ~= "water" and ent.type == "mining-drill"  then
@@ -522,8 +522,9 @@ function nudge_key(direction, event)
    
 end
 
+--The travel part of the structure travel feature.
 function move_cursor_structure(pindex, dir)
-   
+   game.get_player(pindex).game_view_settings.update_entity_selection = true
    local direction = players[pindex].structure_travel.direction
    local adjusted = {}
    adjusted[0] = "north"
@@ -558,9 +559,12 @@ function move_cursor_structure(pindex, dir)
          end
          local ent = network[network[current][adjusted[(0 + dir) %8]][index].num]
          if ent.ent.valid then
-            printout(ent_info(pindex, ent.ent, description)  .. ", " .. index .. " of " .. #network[current][adjusted[(0 + dir) % 8]], pindex)
+            move_cursor_map(ent.ent.position,pindex)
+            players[pindex].cursor_pos = ent.ent.position
+            --Case 1: Proposing a new structure
+            printout("To " .. ent.name .. " " .. extra_info_for_scan_list(ent.ent,pindex,true) .. ", " .. description  .. ", " .. index .. " of " .. #network[current][adjusted[(0 + dir) % 8]], pindex)
          else
-            printout("Destroyed " .. ent.name .. " " .. description, pindex) 
+            printout("Missing " .. ent.name .. " " .. description, pindex) 
          end
       else
          printout("There are no buildings directly " .. adjusted[(0 + dir) %8] .. " of this one.", pindex)
@@ -585,9 +589,12 @@ function move_cursor_structure(pindex, dir)
       end
       local ent = network[current]
       if ent.ent.valid then
-         printout(ent_info(pindex, ent.ent, description), pindex)
+         move_cursor_map(ent.ent.position,pindex)
+         players[pindex].cursor_pos = ent.ent.position
+         --Case 2: Returning to the current structure
+         printout("Back at " .. ent.name .. " " .. extra_info_for_scan_list(ent.ent,pindex,true) .. ", " .. description, pindex)
       else
-         printout("Destroyed " .. ent.name .. " " .. description, pindex)
+         printout("Missing " .. ent.name .. " " .. description, pindex)
       end
    elseif direction == adjusted[(0 + dir) %8] then
       players[pindex].structure_travel.direction = "none"
@@ -612,9 +619,12 @@ function move_cursor_structure(pindex, dir)
       end
       local ent = network[current]
      if ent.ent.valid then
-         printout(ent_info(pindex, ent.ent, description), pindex)
+         move_cursor_map(ent.ent.position,pindex)
+         players[pindex].cursor_pos = ent.ent.position
+         --Case 3: Moved to the new structure
+         printout("Now at " .. ent.name .. " " .. extra_info_for_scan_list(ent.ent,pindex,true) .. ", " .. description, pindex)
       else
-         printout("Destroyed " .. ent.name .. " " .. description, pindex)
+         printout("Missing " .. ent.name .. " " .. description, pindex)
       end
    elseif direction == adjusted[(2 + dir)%8] or direction == adjusted[(6 + dir) %8] then
       if (dir == 0 or dir == 6) and index > 1 then
@@ -644,9 +654,12 @@ function move_cursor_structure(pindex, dir)
       end
       local ent = network[network[current][direction][index].num]
       if ent.ent.valid then
-         printout(ent_info(pindex, ent.ent, description)  .. ", " .. index .. " of " .. #network[current][direction], pindex)
+         move_cursor_map(ent.ent.position,pindex)
+         players[pindex].cursor_pos = ent.ent.position
+         --Case 4: Propose a new structure within the same direction
+         printout("To " .. ent.name .. " " .. extra_info_for_scan_list(ent.ent,pindex,true) .. ", " .. description  .. ", " .. index .. " of " .. #network[current][direction], pindex)
       else
-         printout("Destroyed " .. ent.name .. " " .. description, pindex)
+         printout("Missing " .. ent.name .. " " .. description, pindex)
       end
    end
 end
@@ -1279,32 +1292,34 @@ function transport_belt_junction_info(sideload_count, backload_count, outload_co
       result = result .. " unknown state " --unexpected case
    end
    return result
+   --Note: A pouring end either pours into a sideloading junction, or into a corner. Lanes are preserved if the target is a corner.
 end
---Notes for the wiki: A pouring end either pours into a sideloading something, or into a corner. Lanes are preserved if corner.
 
-function compile_building_network(ent, radius_in,pindex)--****stuck in loop bug here!!!
+--Creates the building network that is traveled during structure travel. 
+function compile_building_network(ent, radius_in,pindex)--**Todo bug: Some neighboring structures are not picked up when they should be such as machines next to inserters
    local radius = radius_in
    local ents = ent.surface.find_entities_filtered{position = ent.position, radius = radius}
-   game.get_player(pindex).print(#ents .. " ents at first pass")--***
+   game.get_player(pindex).print(#ents .. " ents at first pass")
    if #ents < 100 then
       radius = radius_in * 2
       ents = ent.surface.find_entities_filtered{position = ent.position, radius = radius}
-   elseif #ents > 3000 then
+   elseif #ents > 2000 then
       radius = math.floor(radius_in/4)
       ents = ent.surface.find_entities_filtered{position = ent.position, radius = radius}
-   elseif #ents > 1500 then
+   elseif #ents > 1000 then
       radius = math.floor(radius_in/2)
       ents = ent.surface.find_entities_filtered{position = ent.position, radius = radius}
    end
    rendering.draw_circle{color = {1, 1, 1},radius = radius,width = 20,target = ent.position, surface = ent.surface, draw_on_ground = true, time_to_live = 200}
-   game.get_player(pindex).print(#ents .. " ents at start")--***example test found 4000 ents!
+   --game.get_player(pindex).print(#ents .. " ents at start")
    local adj = {hor = {}, vert = {}}
    local PQ = {}
    local result = {}
-   game.get_player(pindex).print("checkpoint 0")--***
+   --game.get_player(pindex).print("checkpoint 0")
+   table.insert(ents, 1, ent)
    for i = #ents, 1, -1 do
       local row = ents[i]
-      if row.unit_number ~= nil and row.prototype.is_building then
+      if row.unit_number ~= nil and (row.prototype.is_building or row.unit_number == ent.unit_number) then
          adj.hor[row.unit_number] = {}
          adj.vert[row.unit_number] = {}
          result[row.unit_number] = {
@@ -1320,8 +1335,9 @@ function compile_building_network(ent, radius_in,pindex)--****stuck in loop bug 
          table.remove(ents, i)
       end
    end
-   game.get_player(pindex).print(#ents .. " buildings")--***
-   game.get_player(pindex).print("checkpoint 1")--***loop stuck after here
+   
+   game.get_player(pindex).print(#ents .. " buildings found")--**keep here intentionally
+   --game.get_player(pindex).print("checkpoint 1")
    
    for i, row in pairs(ents) do
       for i1, col in pairs(ents) do
@@ -1348,12 +1364,11 @@ function compile_building_network(ent, radius_in,pindex)--****stuck in loop bug 
       
       end
    end
-   game.get_player(pindex).print("checkpoint 2")--***loop stuck before here
+   --game.get_player(pindex).print("checkpoint 2")
    table.sort(PQ, function (k1, k2)
       return k1.man > k2.man
    end)
-   game.get_player(pindex).print("checkpoint 3, #PQ = " .. #PQ)--***
-   --if true then return result end--***
+   --game.get_player(pindex).print("checkpoint 3, #PQ = " .. #PQ)--
    
    local entry = table.remove(PQ)
    local loop_count = 0
@@ -1435,7 +1450,7 @@ function compile_building_network(ent, radius_in,pindex)--****stuck in loop bug 
       end
       entry = table.remove(PQ)
    end
-   game.get_player(pindex).print("checkpoint 4, loop count: " .. loop_count )--***
+   --game.get_player(pindex).print("checkpoint 4, loop count: " .. loop_count )
    return result
 end   
 
@@ -3971,7 +3986,7 @@ function read_coords(pindex, start_phrase)
    if players[pindex].menu == "building" and players[pindex].building.recipe_list ~= nil then
       offset = 1
    end
-   if not(players[pindex].in_menu) then
+   if not(players[pindex].in_menu) or players[pindex].menu == "structure-travel" then
       if players[pindex].vanilla_mode then
          players[pindex].cursor_pos = game.get_player(pindex).position
       end
@@ -7097,7 +7112,7 @@ script.on_event("click-menu", function(event)
             input.select(1, 0)
          end
          
-      elseif players[pindex].menu == "structure-travel" then--q: is this b stride?
+      elseif players[pindex].menu == "structure-travel" then--Also called "b stride"
          local tar = nil
          local network = players[pindex].structure_travel.network
          local index = players[pindex].structure_travel.index
@@ -8808,7 +8823,6 @@ script.on_event(defines.events.on_gui_confirmed,function(event)
    end
 end)   
 
---note: need to review functionality, test for bugs, review wiki pages (laterdo)***
 script.on_event("open-structure-travel-menu", function(event)
    local pindex = event.player_index
    if not check_for_player(pindex) or players[pindex].vanilla_mode then
@@ -8823,7 +8837,6 @@ script.on_event("open-structure-travel-menu", function(event)
       players[pindex].structure_travel.direction = "none"
       local ent = get_selected_ent(pindex)
       local initial_scan_radius = 50
-      rendering.draw_circle{color = {0.7, 0.7, 0.7},radius = initial_scan_radius,width = 20,target = ent.position, surface = ent.surface, draw_on_ground = true, time_to_live = 200}
       if ent ~= nil and ent.valid and ent.unit_number ~= nil and building_types[ent.type] then
          players[pindex].structure_travel.current = ent.unit_number
          players[pindex].structure_travel.network = compile_building_network(ent, initial_scan_radius,pindex)
@@ -8851,7 +8864,7 @@ script.on_event("open-structure-travel-menu", function(event)
       if description == "" then
          description = "No nearby buildings."
       end
-      printout("Select a direction, confirm with same direction, and use perpendicular directions to select a target.  Press left bracket to teleport." .. ", " .. description , pindex)
+      printout("Now at " .. ent.name .. " " .. extra_info_for_scan_list(ent,pindex,true) .. " " .. description .. ", Select a direction, confirm with same direction, and use perpendicular directions to select a target,  press left bracket to teleport to selection", pindex)
       local screen = game.get_player(pindex).gui.screen
       local frame = screen.add{type = "frame", name = "structure-travel"}
       frame.bring_to_front()
