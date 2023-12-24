@@ -1310,7 +1310,7 @@ function compile_building_network(ent, radius_in,pindex)--**Todo bug: Some neigh
       radius = math.floor(radius_in/2)
       ents = ent.surface.find_entities_filtered{position = ent.position, radius = radius}
    end
-   rendering.draw_circle{color = {1, 1, 1},radius = radius,width = 20,target = ent.position, surface = ent.surface, draw_on_ground = true, time_to_live = 200}
+   rendering.draw_circle{color = {1, 1, 1},radius = radius,width = 20,target = ent.position, surface = ent.surface, draw_on_ground = true, time_to_live = 300}
    --game.get_player(pindex).print(#ents .. " ents at start")
    local adj = {hor = {}, vert = {}}
    local PQ = {}
@@ -1372,7 +1372,7 @@ function compile_building_network(ent, radius_in,pindex)--**Todo bug: Some neigh
    
    local entry = table.remove(PQ)
    local loop_count = 0
-   while entry~= nil and loop_count < #PQ do
+   while entry~= nil and loop_count < #PQ * 2 do
       loop_count = loop_count + 1
       if math.abs(entry.dy) >= math.abs(entry.dx) then
          if not adj.vert[entry.source.unit_number][entry.dest.unit_number] then
