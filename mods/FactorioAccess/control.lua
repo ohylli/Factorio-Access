@@ -1282,8 +1282,21 @@ function transport_belt_junction_info(sideload_count, backload_count, outload_co
 end
 --Notes for the wiki: A pouring end either pours into a sideloading something, or into a corner. Lanes are preserved if corner.
 
-function compile_building_network(ent, radius,pindex)--****stuck in loop bug here!!!
+function compile_building_network(ent, radius_in,pindex)--****stuck in loop bug here!!!
+   local radius = radius_in
    local ents = ent.surface.find_entities_filtered{position = ent.position, radius = radius}
+   game.get_player(pindex).print(#ents .. " ents at first pass")--***
+   if #ents < 100 then
+      radius = radius_in * 2
+      ents = ent.surface.find_entities_filtered{position = ent.position, radius = radius}
+   elseif #ents > 3000 then
+      radius = math.floor(radius_in/4)
+      ents = ent.surface.find_entities_filtered{position = ent.position, radius = radius}
+   elseif #ents > 1500 then
+      radius = math.floor(radius_in/2)
+      ents = ent.surface.find_entities_filtered{position = ent.position, radius = radius}
+   end
+   rendering.draw_circle{color = {1, 1, 1},radius = radius,width = 20,target = ent.position, surface = ent.surface, draw_on_ground = true, time_to_live = 200}
    game.get_player(pindex).print(#ents .. " ents at start")--***example test found 4000 ents!
    local adj = {hor = {}, vert = {}}
    local PQ = {}
@@ -1307,9 +1320,8 @@ function compile_building_network(ent, radius,pindex)--****stuck in loop bug her
          table.remove(ents, i)
       end
    end
-   game.get_player(pindex).print(#ents .. " ents")--***example test found 4000 ents!
+   game.get_player(pindex).print(#ents .. " buildings")--***
    game.get_player(pindex).print("checkpoint 1")--***loop stuck after here
-   if true then return result end--***
    
    for i, row in pairs(ents) do
       for i1, col in pairs(ents) do
@@ -1337,16 +1349,15 @@ function compile_building_network(ent, radius,pindex)--****stuck in loop bug her
       end
    end
    game.get_player(pindex).print("checkpoint 2")--***loop stuck before here
-   if true then return result end--***
    table.sort(PQ, function (k1, k2)
       return k1.man > k2.man
    end)
-   game.get_player(pindex).print("checkpoint 3")--***
-   if true then return result end--***
+   game.get_player(pindex).print("checkpoint 3, #PQ = " .. #PQ)--***
+   --if true then return result end--***
    
    local entry = table.remove(PQ)
    local loop_count = 0
-   while entry~= nil and not loop_count > 9 do
+   while entry~= nil and loop_count < #PQ do
       loop_count = loop_count + 1
       if math.abs(entry.dy) >= math.abs(entry.dx) then
          if not adj.vert[entry.source.unit_number][entry.dest.unit_number] then
@@ -1359,28 +1370,28 @@ function compile_building_network(ent, radius,pindex)--****stuck in loop bug her
             end
          end
             if entry.dy > 0 then
- 
-            table.insert(result[entry.source.unit_number].south, {
-               num = entry.dest.unit_number,
-               dx = entry.dx,
-               dy = entry.dy
-            })
-            table.insert(result[entry.dest.unit_number].north, {
-               num = entry.source.unit_number,
-               dx = entry.dx * -1,
-               dy = entry.dy * -1
-            })
-         else
-            table.insert(result[entry.source.unit_number].north, {
-               num = entry.dest.unit_number,
-               dx = entry.dx,
-               dy = entry.dy
-            })
-            table.insert(result[entry.dest.unit_number].south, {
-               num = entry.source.unit_number,
-               dx = entry.dx * -1,
-               dy = entry.dy * -1
-            })
+    
+               table.insert(result[entry.source.unit_number].south, {
+                  num = entry.dest.unit_number,
+                  dx = entry.dx,
+                  dy = entry.dy
+               })
+               table.insert(result[entry.dest.unit_number].north, {
+                  num = entry.source.unit_number,
+                  dx = entry.dx * -1,
+                  dy = entry.dy * -1
+               })
+            else
+               table.insert(result[entry.source.unit_number].north, {
+                  num = entry.dest.unit_number,
+                  dx = entry.dx,
+                  dy = entry.dy
+               })
+               table.insert(result[entry.dest.unit_number].south, {
+                  num = entry.source.unit_number,
+                  dx = entry.dx * -1,
+                  dy = entry.dy * -1
+               })
 
             end
          end
@@ -1396,27 +1407,27 @@ function compile_building_network(ent, radius,pindex)--****stuck in loop bug her
             end
          end
             if entry.dx > 0 then
-            table.insert(result[entry.source.unit_number].east, {
-               num = entry.dest.unit_number,
-               dx = entry.dx,
-               dy = entry.dy
-            })
-            table.insert(result[entry.dest.unit_number].west, {
-               num = entry.source.unit_number,
-               dx = entry.dx * -1,
-               dy = entry.dy * -1
-            })
-         else
-            table.insert(result[entry.source.unit_number].west, {
-               num = entry.dest.unit_number,
-               dx = entry.dx,
-               dy = entry.dy
-            })
-            table.insert(result[entry.dest.unit_number].east, {
-               num = entry.source.unit_number,
-               dx = entry.dx * -1,
-               dy = entry.dy * -1
-            })
+               table.insert(result[entry.source.unit_number].east, {
+                  num = entry.dest.unit_number,
+                  dx = entry.dx,
+                  dy = entry.dy
+               })
+               table.insert(result[entry.dest.unit_number].west, {
+                  num = entry.source.unit_number,
+                  dx = entry.dx * -1,
+                  dy = entry.dy * -1
+               })
+            else
+               table.insert(result[entry.source.unit_number].west, {
+                  num = entry.dest.unit_number,
+                  dx = entry.dx,
+                  dy = entry.dy
+               })
+               table.insert(result[entry.dest.unit_number].east, {
+                  num = entry.source.unit_number,
+                  dx = entry.dx * -1,
+                  dy = entry.dy * -1
+               })
 
             end
          end
@@ -1424,9 +1435,7 @@ function compile_building_network(ent, radius,pindex)--****stuck in loop bug her
       end
       entry = table.remove(PQ)
    end
-   if loop_count > 9 then
-      game.print("It is over 9.000!!!!!")--***
-   end
+   game.get_player(pindex).print("checkpoint 4, loop count: " .. loop_count )--***
    return result
 end   
 
@@ -8813,27 +8822,30 @@ script.on_event("open-structure-travel-menu", function(event)
       players[pindex].move_queue = {}
       players[pindex].structure_travel.direction = "none"
       local ent = get_selected_ent(pindex)
+      local initial_scan_radius = 50
+      rendering.draw_circle{color = {0.7, 0.7, 0.7},radius = initial_scan_radius,width = 20,target = ent.position, surface = ent.surface, draw_on_ground = true, time_to_live = 200}
       if ent ~= nil and ent.valid and ent.unit_number ~= nil and building_types[ent.type] then
          players[pindex].structure_travel.current = ent.unit_number
-         players[pindex].structure_travel.network = compile_building_network(ent, 50,pindex)
+         players[pindex].structure_travel.network = compile_building_network(ent, initial_scan_radius,pindex)
       else
          ent = game.get_player(pindex).character
          players[pindex].structure_travel.current = ent.unit_number
-         players[pindex].structure_travel.network = compile_building_network(ent, 50,pindex)      
+         players[pindex].structure_travel.network = compile_building_network(ent, initial_scan_radius,pindex)      
       end
       local description = ""
       local network = players[pindex].structure_travel.network
       local current = players[pindex].structure_travel.current
-      if #network[current].north > 0 then
+      game.get_player(pindex).print("current id = " .. current)
+      if network[current].north and #network[current].north > 0 then
          description = description .. ", " .. #network[current].north .. " connections north,"
       end
-      if #network[current].east > 0 then
+      if network[current].east  and #network[current].east > 0 then
          description = description .. ", " .. #network[current].east .. " connections east,"
       end
-      if #network[current].south > 0 then
+      if network[current].south and #network[current].south > 0 then
          description = description .. ", " .. #network[current].south .. " connections south,"
       end
-      if #network[current].west > 0 then
+      if network[current].west  and #network[current].west > 0 then
          description = description .. ", " .. #network[current].west .. " connections west,"
       end
       if description == "" then
