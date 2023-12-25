@@ -7335,22 +7335,30 @@ script.on_event("click-entity", function(event)
    end
 end)
 
+--One-click repair pack usage.
 function repair_pack_used(ent,pindex)
    local p = game.get_player(pindex)
-   --Repair the entity found . Laterdo improve this 
-   --game.get_player(pindex).use_from_cursor{players[pindex].cursor_pos.x,players[pindex].cursor_pos.y}--does not work
-   if ent and ent.is_entity_with_health and ent.get_health_ratio() < 1 and ent.type ~= "resource" and not ent.force.is_enemy(p.force) and ent.name ~= "character" then
+   --Repair the entity found
+   if ent and ent.valid and ent.is_entity_with_health and ent.get_health_ratio() < 1 and ent.type ~= "resource" and not ent.force.is_enemy(p.force) and ent.name ~= "character" then
+      p.play_sound{path = "utility/default_manual_repair"}
+      local stack = game.get_player(pindex).cursor_stack
       local health_diff = ent.prototype.max_health - ent.health
-      if health_diff > 200 then
-         ent.health = ent.health + 200 
-         printout("Partially repaired " .. ent.name .. " and consumed a repair pack", pindex)
-         stack.count = stack.count - 1
-      else
+      local dura = stack.durability
+      if health_diff < 10 then --free repair for tiny damages
          ent.health = ent.prototype.max_health 
          printout("Fully repaired " .. ent.name, pindex)
+      elseif health_diff < dura then
+         ent.health = ent.prototype.max_health 
+         stack.drain_durability(health_diff)
+         printout("Fully repaired " .. ent.name, pindex)
+      else--if health_diff >= dura then
+         stack.drain_durability(dura)
+         ent.health = ent.health + dura
+         printout("Partially repaired " .. ent.name .. " and consumed a repair pack", pindex)
+         --Note: This automatically subtracts correctly and decerements the pack in hand.
       end
-      --game.get_player(pindex).print("healed " .. health_diff)--laterdo repair consumes the pack
    end
+   --Note: game.get_player(pindex).use_from_cursor{players[pindex].cursor_pos.x,players[pindex].cursor_pos.y}--This does not work.
 end
 
 --[[Attempts to build the item in hand.
