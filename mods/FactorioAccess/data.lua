@@ -255,14 +255,14 @@ data:extend({
 {
     type = "custom-input",
     name = "cursor-size-increment",
-    key_sequence = "CONTROL + I",
+    key_sequence = "SHIFT + I",
     consuming = "none"
 },
 
 {
     type = "custom-input",
     name = "cursor-size-decrement",
-    key_sequence = "CONTROL + SHIFT + I",
+    key_sequence = "CONTROL + I",
     consuming = "none"
 },
 
@@ -798,7 +798,7 @@ data:extend({
 {
     type = "custom-input",
     name = "item-info",
-    key_sequence = "L",
+    key_sequence = "Y",
     consuming = "none"
 },
 
@@ -1074,12 +1074,42 @@ data:extend({
     linked_game_control = "debug-reset-zoom",
     consuming = "none"
 },
+
+{
+    type = "custom-input",
+    name = "logistic-request-read",
+    key_sequence = "L",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "logistic-request-increment",
+    key_sequence = "SHIFT + L",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "logistic-request-decrement",
+    key_sequence = "CONTROL + L",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "logistic-request-toggle-personal-logistics",
+    key_sequence = "CONTROL + SHIFT + L",
+    consuming = "none"
+},
+
 {
     type = "custom-input",
     name = "access-config-version1-DO-NOT-EDIT",
     key_sequence = "A",
     consuming = "none"
 },
+
 {
     type = "custom-input",
     name = "access-config-version2-DO-NOT-EDIT",
