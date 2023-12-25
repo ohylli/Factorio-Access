@@ -2645,13 +2645,6 @@ function append_rail(pos, pindex)
       end
    end
    
-   --Correct to vertical/horizontal defaults
-   if append_rail_dir == dirs.south then
-      append_rail_dir = dirs.north
-   elseif append_rail_dir == dirs.west then
-      append_rail_dir = dirs.east
-   end
-
    --6. Clear trees and rocks nearby and check if the selected 2x2 space is free for building, else return
    if append_rail_pos == nil then
       game.get_player(pindex).play_sound{path = "utility/cannot_build"}
@@ -2660,30 +2653,35 @@ function append_rail(pos, pindex)
    end
    temp1, build_comment = clear_obstacles_in_circle(append_rail_pos,4, pindex)
    if not surf.can_place_entity{name = "straight-rail", position = append_rail_pos, direction = append_rail_dir} then 
-      --Cannot build here, but check if any other rails are there. This would also be fine.
-      local other_rails_present = false
-      local ents = surf.find_entities_filtered{position = append_rail_pos}
-      for i,ent in ipairs(ents) do
-         if ent.name == "straight-rail" or ent.name == "curved-rail" then
-            other_rails_present = true
-         end
-      end
-      if game.get_player(pindex).can_build_from_cursor({name = "straight-rail", position = append_rail_pos, direction = append_rail_dir}) then--****maybe thisll work
-         game.get_player(pindex).print("Building from hand",{volume_modifier = 0})
-      elseif other_rails_present == true then
-         game.get_player(pindex).print("Forcing building from hand",{volume_modifier = 0})
-         --printout("Cannot place automatically, but you can manually extend this rail.",pindex)
-         --game.get_player(pindex).play_sound{path = "utility/cannot_build"}
-         --return
-      else
+      --Check if you can build from cursor or if you have other rails here already
+      -- local other_rails_present = false
+      -- local ents = surf.find_entities_filtered{position = append_rail_pos}
+      -- for i,ent in ipairs(ents) do
+         -- if ent.name == "straight-rail" or ent.name == "curved-rail" then
+            -- other_rails_present = true
+         -- end
+      -- end
+      -- if game.get_player(pindex).can_build_from_cursor({name = "straight-rail", position = append_rail_pos, direction = append_rail_dir}) then--****maybe thisll work
+         -- game.get_player(pindex).print("Can build from hand",{volume_modifier = 0})
+      -- end
+      -- if other_rails_present == true then
+         -- game.get_player(pindex).print("Other rails present",{volume_modifier = 0})
+      -- end
+      --Patch a bug with South and West dirs in certain conditions such as after a train stop, where it is detected as North/East
+      if end_rail_dir == dirs.east then
+         append_rail_pos = {end_rail_pos.x-2, end_rail_pos.y-0}
+      elseif end_rail_dir == dirs.north then
+         append_rail_pos = {end_rail_pos.x-0, end_rail_pos.y+2}
+      end 
+      if not surf.can_place_entity{name = "straight-rail", position = append_rail_pos, direction = append_rail_dir} then 
          printout("Cannot place here to extend the rail.",pindex)
          game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+         rendering.draw_circle{color = {1, 0, 0},radius = 0.5,width = 5,target = append_rail_pos,surface = surf,time_to_live = 120}
          return
       end
    end
    
    --7. Create the appended rail and subtract 1 rail from the hand.
-   --game.get_player(pindex).build_from_cursor{position = append_rail_pos, direction = append_rail_dir}--acts unsolvably weird when building diagonals of rotation 5 and 7
    created_rail = surf.create_entity{name = "straight-rail", position = append_rail_pos, direction = append_rail_dir, force = game.forces.player}
    
    if not (created_rail ~= nil and created_rail.valid) then
@@ -2691,6 +2689,7 @@ function append_rail(pos, pindex)
       if not (created_rail ~= nil and created_rail.valid) then
          game.get_player(pindex).play_sound{path = "utility/cannot_build"}
          printout("Error: Invalid appended rail, try placing by hand.",pindex)
+         rendering.draw_circle{color = {1, 0, 0},radius = 0.5,width = 5,target = append_rail_pos,surface = surf,time_to_live = 120}
          return
       end
    end
