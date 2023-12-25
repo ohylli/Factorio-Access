@@ -2665,6 +2665,13 @@ function append_rail(pos, pindex)
          end 
       end
    end
+   
+   --Correct to vertical/horizontal defaults
+   if append_rail_dir == dirs.south then
+      append_rail_dir = dirs.north
+   elseif append_rail_dir == dirs.west then
+      append_rail_dir = dirs.east
+   end
 
    --6. Clear trees and rocks nearby and check if the selected 2x2 space is free for building, else return
    if append_rail_pos == nil then
@@ -2672,23 +2679,26 @@ function append_rail(pos, pindex)
       printout(end_rail_dir .. " and " .. rail_api_dir .. ", rail appending direction error.",pindex)
       return
    end
-   temp1, build_comment = clear_obstacles_in_circle(append_rail_pos,3, pindex)
+   temp1, build_comment = clear_obstacles_in_circle(append_rail_pos,4, pindex)
    if not surf.can_place_entity{name = "straight-rail", position = append_rail_pos, direction = append_rail_dir} then 
       --Cannot build here, but check if any other rails are there. This would also be fine.
-      local other_rails = false
+      local other_rails_present = false
       local ents = surf.find_entities_filtered{position = append_rail_pos}
       for i,ent in ipairs(ents) do
          if ent.name == "straight-rail" or ent.name == "curved-rail" then
-            other_rails = true
+            other_rails_present = true
          end
       end
-      if other_rails == false then
-         game.get_player(pindex).play_sound{path = "utility/cannot_build"}
-         printout("Cannot place here to extend the rail.",pindex)
-         return
+      if game.get_player(pindex).can_build_from_cursor({name = "straight-rail", position = append_rail_pos, direction = append_rail_dir}) then--****maybe thisll work
+         game.get_player(pindex).print("Building from hand",{volume_modifier = 0})
+      elseif other_rails_present == true then
+         game.get_player(pindex).print("Forcing building from hand",{volume_modifier = 0})
+         --printout("Cannot place automatically, but you can manually extend this rail.",pindex)
+         --game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+         --return
       else
+         printout("Cannot place here to extend the rail.",pindex)
          game.get_player(pindex).play_sound{path = "utility/cannot_build"}
-         printout("Cannot place automatically, but you can manually extend this rail.",pindex)
          return
       end
    end
@@ -2696,14 +2706,18 @@ function append_rail(pos, pindex)
    --7. Create the appended rail and subtract 1 rail from the hand.
    --game.get_player(pindex).build_from_cursor{position = append_rail_pos, direction = append_rail_dir}--acts unsolvably weird when building diagonals of rotation 5 and 7
    created_rail = surf.create_entity{name = "straight-rail", position = append_rail_pos, direction = append_rail_dir, force = game.forces.player}
-   game.get_player(pindex).cursor_stack.count = game.get_player(pindex).cursor_stack.count - 1
-   game.get_player(pindex).play_sound{path = "entity-build/straight-rail"}
    
    if not (created_rail ~= nil and created_rail.valid) then
-      game.get_player(pindex).play_sound{path = "utility/cannot_build"}
-      printout("Rail invalid error.",pindex)
-      return
+      created_rail = game.get_player(pindex).build_from_cursor({name = "straight-rail", position = append_rail_pos, direction = append_rail_dir})
+      if not (created_rail ~= nil and created_rail.valid) then
+         game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+         printout("Error: Invalid appended rail, try placing by hand.",pindex)
+         return
+      end
    end
+   
+   game.get_player(pindex).cursor_stack.count = game.get_player(pindex).cursor_stack.count - 1
+   game.get_player(pindex).play_sound{path = "entity-build/straight-rail"}
    
    --8. Check if the appended rail is with 4 tiles of a parallel rail. If so, delete it.
    if created_rail.valid and has_parallel_neighbor(created_rail,pindex) then
