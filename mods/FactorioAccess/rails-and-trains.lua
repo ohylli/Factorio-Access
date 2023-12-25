@@ -2021,79 +2021,33 @@ function build_fork_at_end_rail(anchor_rail, pindex, include_forward)
       end
    end
    
-   --4C. Check if can append forward
-   local append_rail_pos = nil
-   local append_rail_dir = nil
-   
+   --4C. Check if can append forward  
    if include_forward then
-      local end_rail_dir = dir
-      local end_rail_pos = pos
-      local ent = anchor_rail
-      local end_dir = nil
-      
-      local end_rail_1, end_dir_1 = ent.get_rail_segment_end(defines.rail_direction.front)
-      local end_rail_2, end_dir_2 = ent.get_rail_segment_end(defines.rail_direction.back)
-      if ent.unit_number == end_rail_1.unit_number then
-         end_dir = end_dir_1
-      elseif ent.unit_number == end_rail_2.unit_number then
-         end_dir = end_dir_2
-      end
-     
-      if end_rail_dir == dirs.north or end_rail_dir == dirs.south then 
-         append_rail_dir = dirs.north
-         if end_dir == defines.rail_direction.front then
-            append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y-2}
-         else
-            append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y+2}
-         end
-         
-      elseif end_rail_dir == dirs.east or end_rail_dir == dirs.west then
-         append_rail_dir = dirs.east
-         if end_dir == defines.rail_direction.front then
-            append_rail_pos = {end_rail_pos.x+2, end_rail_pos.y+0}
-         else
-            append_rail_pos = {end_rail_pos.x-2, end_rail_pos.y-0}
-         end
-         
-      elseif end_rail_dir == dirs.northeast then
-         append_rail_dir = dirs.southwest
-         if end_dir == defines.rail_direction.front then
-            append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y-2}
-         else
-            append_rail_pos = {end_rail_pos.x+2, end_rail_pos.y+0}
-         end
-      elseif end_rail_dir == dirs.southwest then
-         append_rail_dir = dirs.northeast
-         if end_dir == defines.rail_direction.front then
-            append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y+2}
-         else
-            append_rail_pos = {end_rail_pos.x-2, end_rail_pos.y+0}
-         end
-         
-      elseif end_rail_dir == dirs.southeast then
-         append_rail_dir = dirs.northwest
-         if end_dir == defines.rail_direction.front then
-            append_rail_pos = {end_rail_pos.x+2, end_rail_pos.y+0}
-         else
-            append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y+2}
-         end
-      elseif end_rail_dir == dirs.northwest then
-         append_rail_dir = dirs.southeast
-         if end_dir == defines.rail_direction.front then
-            append_rail_pos = {end_rail_pos.x-2, end_rail_pos.y+0}
-         else
-            append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y-2}
-         end
-      end
-      
-      if append_rail_pos == nil then
+      if dir == dirs.north then 
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-0, pos.y-2}, direction = dir, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-0, pos.y-4}, direction = dir, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-0, pos.y-6}, direction = dir, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-0, pos.y-8}, direction = dir, force = game.forces.player}
+      elseif dir == dirs.east then 
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x+2, pos.y-0}, direction = dir, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x+4, pos.y-0}, direction = dir, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x+6, pos.y-0}, direction = dir, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x+8, pos.y-0}, direction = dir, force = game.forces.player}
+      elseif dir == dirs.south then
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-0, pos.y+2}, direction = dir, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-0, pos.y+4}, direction = dir, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-0, pos.y+6}, direction = dir, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-0, pos.y+8}, direction = dir, force = game.forces.player}
+      elseif dir == dirs.west then
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-2, pos.y-0}, direction = dir, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-4, pos.y-0}, direction = dir, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-6, pos.y-0}, direction = dir, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-8, pos.y-0}, direction = dir, force = game.forces.player}
+      else
          game.get_player(pindex).play_sound{path = "utility/cannot_build"}
-         printout(end_rail_dir .. " and " .. rail_api_dir .. ", rail appending direction error.",pindex)
+         printout("Error: rail placement not defined", pindex)
+         game.get_player(pindex).clear_cursor()
          return
-      end
-      
-      if not surf.can_place_entity{name = "straight-rail", position = append_rail_pos, direction = append_rail_dir} then
-         can_place_all = false
       end
    end
   
@@ -2208,7 +2162,32 @@ function build_fork_at_end_rail(anchor_rail, pindex, include_forward)
    
    --5C. Add Forward section
    if include_forward then
-      local created_rail = surf.create_entity{name = "straight-rail", position = append_rail_pos, direction = append_rail_dir, force = game.forces.player}
+      if dir == dirs.north then 
+         surf.create_entity{name = "straight-rail", position = {pos.x-0, pos.y-2}, direction = dir, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x-0, pos.y-4}, direction = dir, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x-0, pos.y-6}, direction = dir, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x-0, pos.y-8}, direction = dir, force = game.forces.player}
+      elseif dir == dirs.east then 
+         surf.create_entity{name = "straight-rail", position = {pos.x+2, pos.y-0}, direction = dir, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x+4, pos.y-0}, direction = dir, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x+6, pos.y-0}, direction = dir, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x+8, pos.y-0}, direction = dir, force = game.forces.player}
+      elseif dir == dirs.south then
+         surf.create_entity{name = "straight-rail", position = {pos.x-0, pos.y+2}, direction = dir, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x-0, pos.y+4}, direction = dir, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x-0, pos.y+6}, direction = dir, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x-0, pos.y+8}, direction = dir, force = game.forces.player}
+      elseif dir == dirs.west then
+         surf.create_entity{name = "straight-rail", position = {pos.x-2, pos.y-0}, direction = dir, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x-4, pos.y-0}, direction = dir, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x-6, pos.y-0}, direction = dir, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x-8, pos.y-0}, direction = dir, force = game.forces.player}
+      else
+         game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+         printout("Error: rail placement not defined", pindex)
+         game.get_player(pindex).clear_cursor()
+         return
+      end
    end
    
    --6 Remove rail units from the player's hand
