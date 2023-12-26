@@ -7190,6 +7190,9 @@ script.on_event("click-hand", function(event)
       elseif stack.prototype ~= nil and (stack.prototype.name == "capsule" or stack.prototype.type == "capsule") then
          --If holding a capsule type, e.g. cliff explosives or robot capsules, or remotes, try to use it at the cursor position (no feedback about successful usage)
          game.get_player(pindex).use_from_cursor(players[pindex].cursor_pos)
+      elseif ent ~= nil then
+         --If holding an item with no special left click actions, allow entity left click actions.
+         clicked_on_entity(ent,pindex)
       else
          printout("No actions for " .. stack.name .. " in hand",pindex)
       end
@@ -7219,31 +7222,35 @@ script.on_event("click-entity", function(event)
       end
       
       --If the hand is empty...
-      if game.get_player(pindex).vehicle ~= nil and game.get_player(pindex).vehicle.train ~= nil then
-         --If player is on a train, open it
-         train_menu_open(pindex)
-      elseif ent == nil then
-         --No entity clicked 
-         return 
-      elseif not ent.valid then
-         --Invalid entity clicked
-         game.get_player(pindex).print("Invalid entity clicked",{volume_modifier=0})
-      elseif ent.train ~= nil then
-         --If checking a rail vehicle, open its train
-         train_menu_open(pindex)
-      elseif ent.name == "train-stop" then
-         --If checking a train stop, open its menu
-         train_stop_menu_open(pindex)
-      elseif ent.operable and ent.prototype.is_building then
-         --If checking an operable building, open its menu
-         open_operable_building(ent,pindex)
-      elseif ent.operable then
-         printout("No actions for operable " .. ent.name,pindex)
-      else
-         printout("No actions for " .. ent.name,pindex)
-      end
+      clicked_on_entity(ent,pindex)
    end
 end)
+
+function clicked_on_entity(ent,pindex)
+   if game.get_player(pindex).vehicle ~= nil and game.get_player(pindex).vehicle.train ~= nil then
+      --If player is on a train, open it
+      train_menu_open(pindex)
+   elseif ent == nil then
+      --No entity clicked 
+      return 
+   elseif not ent.valid then
+      --Invalid entity clicked
+      game.get_player(pindex).print("Invalid entity clicked",{volume_modifier=0})
+   elseif ent.train ~= nil then
+      --If checking a rail vehicle, open its train
+      train_menu_open(pindex)
+   elseif ent.name == "train-stop" then
+      --If checking a train stop, open its menu
+      train_stop_menu_open(pindex)
+   elseif ent.operable and ent.prototype.is_building then
+      --If checking an operable building, open its menu
+      open_operable_building(ent,pindex)
+   elseif ent.operable then
+      printout("No actions for operable " .. ent.name,pindex)
+   else
+      printout("No actions for " .. ent.name,pindex)
+   end
+end
 
 function open_operable_building(ent,pindex)
    if ent.operable and ent.prototype.is_building then

@@ -107,6 +107,17 @@ function toggle_player_logistic_requests_enabled(pindex)
    end   
 end
 
+--Returns info string on the current logistics network, or the nearest one, for the current position
+function logistics_networks_info(position) --***
+   local result = ""
+   local result_code = -1
+   --Check if in range of a logistic network ***
+      
+   --If not, report nearest logistic network ***
+   
+   return result, result_code
+end
+
 function get_personal_logistic_slot_index(item_stack,pindex)
    local p = game.get_player(pindex)
    local slots_nil_counter = 0
@@ -168,13 +179,14 @@ function player_logistic_request_read(item_stack,pindex,additional_checks)
    
    
    if additional_checks then
-      --Check if in range of a logistic network ***
+      --Check if inside any logistic network or not *** (simpler than logistics network info)
+      local network = ***
       
-      --If not, report nearest logistic network ***
-      
+      if network == nil then
+         ...
       --Check if personal logistics are enabled
       if not p.character_personal_logistic_requests_enabled then
-         result = result .. " Requests paused, "
+         result = result .. ", Requests paused, "
       end
    end
    
@@ -323,3 +335,5 @@ end
 function chest_logistic_request_decrement(item_stack,chest_ent)
    --...
 end
+
+
