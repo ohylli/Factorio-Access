@@ -6866,7 +6866,7 @@ function clear_obstacles_in_circle(position, radius, pindex)
    return (trees_cleared + rocks_cleared + remnants_cleared + ground_items_cleared), comment
 end
 
-
+--Left click actions in menus
 script.on_event("click-menu", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -7154,7 +7154,7 @@ script.on_event("click-menu", function(event)
    end
 end)
 
---Includes building previewed buildings, throwing capsules, etc.
+--Left click actions with items in hand
 script.on_event("click-hand", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -7169,25 +7169,34 @@ script.on_event("click-hand", function(event)
       --Not in a menu
       local stack = game.get_player(pindex).cursor_stack
       local ent = get_selected_ent(pindex)
-      if stack and stack.valid_for_read and stack.valid and (stack.prototype.place_result ~= nil or stack.prototype.place_as_tile_result ~= nil) and stack.name ~= "offshore-pump" then
+
+      if stack and stack.valid_for_read and stack.valid then
          players[pindex].last_click_tick = event.tick
+      else
+         return
+      end
+      
+      --If something is in hand...     
+      if stack.prototype ~= nil and (stack.prototype.place_result ~= nil or stack.prototype.place_as_tile_result ~= nil) and stack.name ~= "offshore-pump" then
+         --If holding a preview of a building/tile, try to place it here
          local offset = 0
          build_item_in_hand(pindex, offset)
-      elseif stack and stack.valid and stack.valid_for_read and stack.name == "offshore-pump" then
-         players[pindex].last_click_tick = event.tick
+      elseif stack.name == "offshore-pump" then
+         --If holding an offshore pump, open the offshore pump builder
          build_offshore_pump_in_hand(pindex)
-      elseif stack and stack.valid and stack.valid_for_read and stack.is_repair_tool then
-         players[pindex].last_click_tick = event.tick
+      elseif stack.is_repair_tool then
+         --If holding a repair pack, try to use it (will not work on enemies)
          repair_pack_used(ent,pindex)
-         return
-      elseif stack and stack.valid and stack.valid_for_read then
-         players[pindex].last_click_tick = event.tick
-         local p = game.get_player(pindex)
-         p.use_from_cursor{p.position.x+1,p.position.y+1}--tolaterdo adjust it to use an item 3 tiles in front of the player instead.
+      elseif stack.prototype ~= nil and (stack.prototype.name == "capsule" or stack.prototype.type == "capsule") then
+         --If holding a capsule type, e.g. cliff explosives or robot capsules, or remotes, try to use it at the cursor position (no feedback about successful usage)
+         game.get_player(pindex).use_from_cursor(players[pindex].cursor_pos)
+      else
+         printout("No actions for " .. stack.name .. " in hand",pindex)
       end
    end
 end)
 
+--Left click actions without items in hand
 script.on_event("click-entity", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -7202,138 +7211,153 @@ script.on_event("click-entity", function(event)
       --Not in a menu
       local stack = game.get_player(pindex).cursor_stack
       local ent = get_selected_ent(pindex)
-      if game.get_player(pindex).driving and game.get_player(pindex).vehicle.train ~= nil then
+      
+      if stack and stack.valid_for_read and stack.valid then
+         return 
+      else
          players[pindex].last_click_tick = event.tick
+      end
+      
+      --If the hand is empty...
+      if game.get_player(pindex).vehicle ~= nil and game.get_player(pindex).vehicle.train ~= nil then
+         --If player is on a train, open it
          train_menu_open(pindex)
-      elseif stack and stack.valid and stack.valid_for_read and stack.is_repair_tool then
-         players[pindex].last_click_tick = event.tick
-         repair_pack_used(ent,pindex)
-         return
-      elseif ent and not (stack and stack.valid and stack.valid_for_read and (stack.prototype.place_result or stack.prototype.place_as_tile_result)) then
-         players[pindex].last_click_tick = event.tick
-         --Clicking on an entity in the world
-         if util.distance(players[pindex].position, ent.position) > 11 then
-            --game.get_player(pindex).play_sound{path = "utility/entity_settings_pasted"}--identify remote sounds
-            printout("Out of player reach",pindex)
-            return
-         end
-         if ent.name == "train-stop" then
-            train_stop_menu_open(pindex)
-         elseif ent.name == "locomotive" or ent.name == "cargo-wagon" or ent.name == "fluid-wagon" then
-            train_menu_open(pindex)
-         elseif ent.operable and ent.prototype.is_building then
-            if ent.prototype.subgroup.name == "belt" then
-               players[pindex].in_menu = true
-               players[pindex].menu = "belt"
-               players[pindex].move_queue = {}
-               players[pindex].belt.line1 = ent.get_transport_line(1)
-               players[pindex].belt.line2 = ent.get_transport_line(2)
-               players[pindex].belt.ent = ent
-               players[pindex].belt.sector = 1
-               players[pindex].belt.network = {}
-               local network = get_connected_lines(ent)
-               players[pindex].belt.network = get_line_items(network)
-               players[pindex].belt.index = 1
-               players[pindex].belt.side = 1
-               players[pindex].belt.direction = ent.direction 
-               printout(#players[pindex].belt.line1 .. " " .. #players[pindex].belt.line2 .. " " .. players[pindex].belt.ent.get_max_transport_line_index(), pindex)
-
-               return
-            end
---            target(pindex)
-            if ent.prototype.ingredient_count ~= nil then
-               players[pindex].building.recipe = ent.get_recipe()
-               players[pindex].building.recipe_list = get_recipes(pindex, ent)
-               players[pindex].building.category = 1
-            else
-               players[pindex].building.recipe = nil
-               players[pindex].building.recipe_list = nil
-               players[pindex].building.category = 0
-            end
-            players[pindex].building.item_selection = false
-            players[pindex].inventory.lua_inventory = game.get_player(pindex).get_main_inventory()
-            players[pindex].inventory.max = #players[pindex].inventory.lua_inventory
-            players[pindex].building.sectors = {}
-            players[pindex].building.sector = 1
-            if ent.get_output_inventory() ~= nil then
-               table.insert(players[pindex].building.sectors, {
-                  name = "Output",
-                  inventory = ent.get_output_inventory()})
-            end
-            if ent.get_fuel_inventory() ~= nil then
-               table.insert(players[pindex].building.sectors, {
-                  name = "Fuel",
-                  inventory = ent.get_fuel_inventory()})
-            end
-            if ent.prototype.ingredient_count ~= nil then
-               table.insert(players[pindex].building.sectors, {
-                  name = "Input",
-                  inventory = ent.get_inventory(defines.inventory.assembling_machine_input)})
-            end
-            if ent.get_module_inventory() ~= nil and #ent.get_module_inventory() > 0 then
-               table.insert(players[pindex].building.sectors, {
-                  name = "Modules",
-                  inventory = ent.get_module_inventory()})
-                        end
-            if ent.get_burnt_result_inventory() ~= nil and #ent.get_burnt_result_inventory() > 0 then
-               table.insert(players[pindex].building.sectors, {
-                  name = "Burned",
-                  inventory = ent.get_burnt_result_inventory()})
-            end
-            if ent.fluidbox ~= nil and #ent.fluidbox > 0 then
-               table.insert(players[pindex].building.sectors, {
-                  name = "Fluid",
-                  inventory = ent.fluidbox})
-            end
-
-            if ent.filter_slot_count > 0 and ent.type == "inserter" then
-               table.insert(players[pindex].building.sectors, {
-                  name = "Filters",
-                  inventory = {}})
-               for i = 1, ent.filter_slot_count do
-                  local filter = ent.get_filter(i)
-                  if filter == nil then
-                     filter = "No filter selected."
-                  end
-                  table.insert(players[pindex].building.sectors[#players[pindex].building.sectors].inventory, filter)
-               end
-               table.insert(players[pindex].building.sectors[#players[pindex].building.sectors].inventory, ent.inserter_filter_mode)
-               players[pindex].item_selection = false
-               players[pindex].item_cache = {}
-               players[pindex].item_selector = {
-                  index = 0,
-                  group = 0,
-                  subgroup = 0
-               }
-
-            end
-
-            for i1=#players[pindex].building.sectors, 2, -1 do
-               for i2 = i1-1, 1, -1 do
-                  if players[pindex].building.sectors[i1].inventory == players[pindex].building.sectors[i2].inventory then
-                     table.remove(players[pindex].building.sectors, i2)
-                     i2 = i2 + 1
-                  end
-               end
-            end
-            if #players[pindex].building.sectors > 0 then
-               players[pindex].building.ent = ent
-               players[pindex].in_menu = true
-               players[pindex].menu = "building"
-               players[pindex].move_queue = {}
-               players[pindex].inventory.index = 1
-               players[pindex].building.index = 1
-               read_building_slot(pindex, true)
-            else
-               printout("This building has no inventory", pindex)
-            end
-
-	        else
-            printout("Not a building.", pindex)
-         end
+      elseif ent == nil then
+         --No entity clicked 
+         return 
+      elseif not ent.valid then
+         --Invalid entity clicked
+         game.get_player(pindex).print("Invalid entity clicked",{volume_modifier=0})
+      elseif ent.train ~= nil then
+         --If checking a rail vehicle, open its train
+         train_menu_open(pindex)
+      elseif ent.name == "train-stop" then
+         --If checking a train stop, open its menu
+         train_stop_menu_open(pindex)
+      elseif ent.operable and ent.prototype.is_building then
+         --If checking an operable building, open its menu
+         open_operable_building(ent,pindex)
+      elseif ent.operable then
+         printout("No actions for operable " .. ent.name,pindex)
+      else
+         printout("No actions for " .. ent.name,pindex)
       end
    end
 end)
+
+function open_operable_building(ent,pindex)
+   if ent.operable and ent.prototype.is_building then
+      if util.distance(players[pindex].position, ent.position) > 11 then
+         game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+         printout("Building is out of player reach",pindex)
+         return
+      end
+      if ent.prototype.subgroup.name == "belt" then
+         players[pindex].in_menu = true
+         players[pindex].menu = "belt"
+         players[pindex].move_queue = {}
+         players[pindex].belt.line1 = ent.get_transport_line(1)
+         players[pindex].belt.line2 = ent.get_transport_line(2)
+         players[pindex].belt.ent = ent
+         players[pindex].belt.sector = 1
+         players[pindex].belt.network = {}
+         local network = get_connected_lines(ent)
+         players[pindex].belt.network = get_line_items(network)
+         players[pindex].belt.index = 1
+         players[pindex].belt.side = 1
+         players[pindex].belt.direction = ent.direction 
+         printout(#players[pindex].belt.line1 .. " " .. #players[pindex].belt.line2 .. " " .. players[pindex].belt.ent.get_max_transport_line_index(), pindex)
+         return
+      end
+      if ent.prototype.ingredient_count ~= nil then
+         players[pindex].building.recipe = ent.get_recipe()
+         players[pindex].building.recipe_list = get_recipes(pindex, ent)
+         players[pindex].building.category = 1
+      else
+         players[pindex].building.recipe = nil
+         players[pindex].building.recipe_list = nil
+         players[pindex].building.category = 0
+      end
+      players[pindex].building.item_selection = false
+      players[pindex].inventory.lua_inventory = game.get_player(pindex).get_main_inventory()
+      players[pindex].inventory.max = #players[pindex].inventory.lua_inventory
+      players[pindex].building.sectors = {}
+      players[pindex].building.sector = 1
+      if ent.get_output_inventory() ~= nil then
+         table.insert(players[pindex].building.sectors, {
+            name = "Output",
+            inventory = ent.get_output_inventory()})
+      end
+      if ent.get_fuel_inventory() ~= nil then
+         table.insert(players[pindex].building.sectors, {
+            name = "Fuel",
+            inventory = ent.get_fuel_inventory()})
+      end
+      if ent.prototype.ingredient_count ~= nil then
+         table.insert(players[pindex].building.sectors, {
+            name = "Input",
+            inventory = ent.get_inventory(defines.inventory.assembling_machine_input)})
+      end
+      if ent.get_module_inventory() ~= nil and #ent.get_module_inventory() > 0 then
+         table.insert(players[pindex].building.sectors, {
+            name = "Modules",
+            inventory = ent.get_module_inventory()})
+                  end
+      if ent.get_burnt_result_inventory() ~= nil and #ent.get_burnt_result_inventory() > 0 then
+         table.insert(players[pindex].building.sectors, {
+            name = "Burned",
+            inventory = ent.get_burnt_result_inventory()})
+      end
+      if ent.fluidbox ~= nil and #ent.fluidbox > 0 then
+         table.insert(players[pindex].building.sectors, {
+            name = "Fluid",
+            inventory = ent.fluidbox})
+      end
+
+      if ent.filter_slot_count > 0 and ent.type == "inserter" then
+         table.insert(players[pindex].building.sectors, {
+            name = "Filters",
+            inventory = {}})
+         for i = 1, ent.filter_slot_count do
+            local filter = ent.get_filter(i)
+            if filter == nil then
+               filter = "No filter selected."
+            end
+            table.insert(players[pindex].building.sectors[#players[pindex].building.sectors].inventory, filter)
+         end
+         table.insert(players[pindex].building.sectors[#players[pindex].building.sectors].inventory, ent.inserter_filter_mode)
+         players[pindex].item_selection = false
+         players[pindex].item_cache = {}
+         players[pindex].item_selector = {
+            index = 0,
+            group = 0,
+            subgroup = 0
+         }
+      end
+
+      for i1=#players[pindex].building.sectors, 2, -1 do
+         for i2 = i1-1, 1, -1 do
+            if players[pindex].building.sectors[i1].inventory == players[pindex].building.sectors[i2].inventory then
+               table.remove(players[pindex].building.sectors, i2)
+               i2 = i2 + 1
+            end
+         end
+      end
+      if #players[pindex].building.sectors > 0 then
+         players[pindex].building.ent = ent
+         players[pindex].in_menu = true
+         players[pindex].menu = "building"
+         players[pindex].move_queue = {}
+         players[pindex].inventory.index = 1
+         players[pindex].building.index = 1
+         read_building_slot(pindex, true)
+      else
+         printout("This building has no inventory", pindex)
+      end
+   else
+      printout("Not an operable building.", pindex)
+   end
+end
 
 --One-click repair pack usage.
 function repair_pack_used(ent,pindex)
