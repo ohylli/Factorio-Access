@@ -5204,6 +5204,7 @@ function on_tick(event)
    end
    move_characters(event)
 
+   --The elseifs can schedule up to 16 events.
    if event.tick % 15 == 0 then
       --Check and play train track warning sounds at appropriate frequencies
       play_train_track_alert_sounds(3)
@@ -5216,21 +5217,22 @@ function on_tick(event)
             play_enemy_alert_sound(1)
          end
       end
-   elseif event.tick % 15 == 1 then
-      for pindex, player in pairs(players) do
-         if game.get_player(pindex).in_combat then
-            aim_gun_at_nearest_enemy(pindex)
-         end
-      end
-   elseif event.tick % 30 == 0 then
+   elseif event.tick % 30 == 6 then
       --Check and play train horns
       for pindex, player in pairs(players) do
          check_and_honk_at_trains_in_same_block(event.tick,pindex)
          check_and_honk_at_closed_signal(event.tick,pindex)
       end
-   elseif event.tick % 30 == 1 then
+   elseif event.tick % 30 == 7 then
       --Update menu visuals
       update_menu_visuals()
+   elseif event.tick % 60 == 11 then
+      for pindex, player in pairs(players) do
+         if game.get_player(pindex).in_combat then
+            --Aim at enemies and play sound to notify enemies within range
+            aim_gun_at_nearest_enemy(pindex)
+         end
+      end
    end
 end
 
@@ -10271,7 +10273,8 @@ function remove_equipment_and_armor(pindex)
    return result
 end
 
-function aim_gun_at_nearest_enemy(pindex)--todo test, does the player in fact fire at the cursor? ***
+--Locks the cursor to the nearest enemy within 40 tiles. Also plays a sound if the enemy is within range of the gun in hand.
+function aim_gun_at_nearest_enemy(pindex)--todo test, does the player in fact fire at the cursor? How is the sound? ***
    local p = game.get_player(pindex)
    local gun_index  = p.character.selected_gun_index
    local guns_inv   = p.get_inventory(defines.inventory.character_guns)
@@ -10285,15 +10288,22 @@ function aim_gun_at_nearest_enemy(pindex)--todo test, does the player in fact fi
    if ammo_stack == nil or not ammo_stack.valid then
       return
    end
-   --Return if there is a gun and ammo combination that already aims by itself
-   if gun_stack.name == "pistol" or gun_stack.name == "submachine-gun" or ammo_stack.name == "rocket" or ammo_stack.name == "explosive-rocket" then
-      return 
-   end 
    --Check for nearby enemies
    local enemy = p.surface.find_nearest_enemy{position = p.position, max_distance = 40, force = p.force}
    if enemy == nil or not enemy.valid then
       return
    end
+   --Play a sound when the enemy is within range of the gun 
+   local range = gun_stack.attack_parameters.range
+   local dist = util.distance(p.position,enemy.position)
+   if dist < range then      
+      p.play_sound{path = "utility/cut_activated"}
+   end
+   --Return if there is a gun and ammo combination that already aims by itself
+   if gun_stack.name == "pistol" or gun_stack.name == "submachine-gun" or ammo_stack.name == "rocket" or ammo_stack.name == "explosive-rocket" then
+      return 
+   end 
+   --Aim at the enemy
    players[pindex].cursor_pos = enemy.position
    move_cursor_map(enemy.position,pindex)
 end
