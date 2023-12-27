@@ -1,5 +1,8 @@
 dirs = defines.direction
 
+--https://lua-api.factorio.com/latest/classes/LuaLogisticCell.html
+--defines.inventory.character_trash
+
 --Finds the nearest roboport
 function find_nearest_roboport(surf,pos,radius_in)
    local nearest = nil
@@ -108,13 +111,31 @@ function toggle_player_logistic_requests_enabled(pindex)
 end
 
 --Returns info string on the current logistics network, or the nearest one, for the current position
-function logistics_networks_info(position) --***
+function logistics_networks_info(ent,pos_in)
    local result = ""
    local result_code = -1
-   --Check if in range of a logistic network ***
-      
-   --If not, report nearest logistic network ***
-   
+   local network = nil
+   local pos = pos_in
+   if pos_in == nil then
+      pos = ent.position
+   end
+   --Check if in range of a logistic network 
+   network = ent.surface.find_logistic_network_by_position(pos, ent.force)
+   if network ~= nil and network.valid then
+      result_code = 1
+      result = "Logistics connected to a network with " .. (network.all_logistic_robots + network.all_construction_robots) .. " robots"
+   else
+      --If not, report nearest logistic network
+      network = ent.surface.find_closest_logistic_network_by_position(pos, ent.force)
+      if network ~= nil and network.valid then
+         result_code = 2
+         local pos_n = network.find_cell_closest_to(pos).owner.position
+         result = "No logistics connected, nearest network is " .. util.distance(pos,pos_n) .. " tiles " .. direction_lookup(get_direction_of_that_from_this(pos_n,pos))
+      else
+         result_code = 3
+         result = "No logistics connected, no logistic networks nearby."
+      end
+   end
    return result, result_code
 end
 
@@ -163,6 +184,19 @@ function get_personal_logistic_slot_index(item_stack,pindex)
    return correct_slot_id
 end
 
+--Returns summary info string
+function player_logistic_requests_summary_info(pindex)
+   --***todo
+   "y of z personal logistic requests fulfilled, x items in trash, missing items include [3], take an item in hand and press L to check its request status."
+end
+
+--laterdo full personal logistics menu where you can go line by line along requests and edit them, iterate through trash?
+
+function player_logistic_requests_clear_all(pindex)
+   --***todo
+end
+
+--Read the current personal logistics request set for this item
 function player_logistic_request_read(item_stack,pindex,additional_checks)
    local p = game.get_player(pindex)
    local current_slot = nil
@@ -177,16 +211,16 @@ function player_logistic_request_read(item_stack,pindex,additional_checks)
       end
    end
    
-   
    if additional_checks then
-      --Check if inside any logistic network or not *** (simpler than logistics network info)
-      local network = ***
+      --Check if inside any logistic network or not (simpler than logistics network info)
+      local network = p.surface.find_logistic_network_by_position(p.position, p.force)
+      if network == nil or not network.valid then
+         result = result .. "Not in a network, "
+      end
       
-      if network == nil then
-         ...
       --Check if personal logistics are enabled
       if not p.character_personal_logistic_requests_enabled then
-         result = result .. ", Requests paused, "
+         result = result .. "Requests paused, "
       end
    end
    
@@ -208,17 +242,23 @@ function player_logistic_request_read(item_stack,pindex,additional_checks)
       if current_slot.max ~= nil and current_slot.max > 0 then
          local count = current_slot.max
          local units = " units "
-         if count > item_stack.stack_size then
+         if count == item_stack.stack_size then
+            units = " stack "
+            count = 1
+         elseif count > item_stack.stack_size then
             units = " stacks "
-            count = math.floor(count / item_stack.stack_size)
+            count = math.floor(0.1 + count / item_stack.stack_size)--***todo read existing item count 
          end
          printout(result .. "Maximum of " .. count .. units .. "requested for " .. item_stack.name .. ", Press SHIFT + L to decrease this maximum target item count, or Press CONTROL + L to increase it.",pindex)
       elseif current_slot.min ~= nil and current_slot.min > 0 then
          local count = current_slot.min
          local units = " units "
-         if count > item_stack.stack_size then
+         if count == item_stack.stack_size then
+            units = " stack "
+            count = 1
+         elseif count > item_stack.stack_size then
             units = " stacks "
-            count = math.floor(count / item_stack.stack_size)
+            count = math.floor(0.1 + count / item_stack.stack_size)
          end
          printout(result .. "Minimum of " .. count .. units .. "requested for " .. item_stack.name .. ", Press SHIFT + L to increase this minimum target item count, or Press CONTROL + L to decrease it.",pindex)
       else--Both are nil
@@ -326,6 +366,11 @@ function player_logistic_request_decrement(item_stack,pindex)
    player_logistic_request_read(item_stack,pindex)
 end
 
+--Read the chest's current logistics request set for this item
+function chest_logistic_request_read(item_stack,chest_ent,additional_checks)
+
+end
+
 --Increments min value, but if its nil, decrements MAX value
 function chest_logistic_request_increment(item_stack,chest_ent)
    --...
@@ -336,4 +381,6 @@ function chest_logistic_request_decrement(item_stack,chest_ent)
    --...
 end
 
+--laterdo vehicle logistic requests...
 
+--todo: add to trash***, restore all trash*** 
