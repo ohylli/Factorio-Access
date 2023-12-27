@@ -158,6 +158,54 @@ data:extend({
 },
 
 {
+   type = "sound",
+   name = "damaged-character-shield",
+   filename = "__FactorioAccess__/Audio/beep_16-shield-damaged.wav",
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "damaged-character-no-shield",
+   filename = "__FactorioAccess__/Audio/beep-06-character-damaged.wav",
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "damaged-entity-alert",
+   filename = "__FactorioAccess__/Audio/alarm-siren-warning-01-structure-damaged.wav",
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "teleported",
+   filename = "__FactorioAccess__/Audio/alarm-siren-loop-09-teleported.wav",
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "aim-locked",
+   filename = "__FactorioAccess__/Audio/beep-12-aim-locked.wav", 
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "enemy-presence-high",
+   filename = "__FactorioAccess__/Audio/alarm-siren-loop-11-enemy-presence-high.wav",
+   volume = 1,
+   preload = true
+},
+
+{
     type = "custom-input",
     name = "cursor-up",
     key_sequence = "W",

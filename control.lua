@@ -1493,6 +1493,7 @@ function teleport_to_closest(pindex, pos, muted)
          smoke_effect.destroy{}
          if not muted then
             game.get_player(pindex).play_sound{path = "utility/scenario_message"}
+            game.get_player(pindex).play_sound{path = "teleported"}
          end
       end
       local teleported = first_player.teleport(new_pos)
@@ -1503,6 +1504,7 @@ function teleport_to_closest(pindex, pos, muted)
             rendering.draw_circle{color = {0.0, 0.0, 0.9},radius = 0.3,width = 20,target = new_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
             if not muted then
                game.get_player(pindex).play_sound{path = "utility/scenario_message"}
+               game.get_player(pindex).play_sound{path = "teleported"}
             end
             local smoke_effect = first_player.surface.create_entity{name = "iron-chest", position = first_player.position, raise_built = false, force = first_player.force}
             smoke_effect.destroy{}
@@ -1511,11 +1513,13 @@ function teleport_to_closest(pindex, pos, muted)
             if not muted then
                printout("Teleported " .. math.ceil(distance(pos,first_player.position)) .. " " .. direction(pos, first_player.position) .. " of target", pindex)
                game.get_player(pindex).play_sound{path = "utility/scenario_message"}
+               game.get_player(pindex).play_sound{path = "teleported"}
             end
          else
             if not muted then
                printout("Teleported to target", pindex)
                game.get_player(pindex).play_sound{path = "utility/scenario_message"}
+               game.get_player(pindex).play_sound{path = "teleported"}
             end
          end
          --Update cursor after teleport
@@ -10302,7 +10306,7 @@ function aim_gun_at_nearest_enemy(pindex)--todo test, does the player in fact fi
    local range = gun_stack.attack_parameters.range
    local dist = util.distance(p.position,enemy.position)
    if dist < range then      
-      p.play_sound{path = "utility/cut_activated"}
+      p.play_sound{path = "aim-locked"}
    end
    --Return if there is a gun and ammo combination that already aims by itself
    if gun_stack.name == "pistol" or gun_stack.name == "submachine-gun" or ammo_stack.name == "rocket" or ammo_stack.name == "explosive-rocket" then
@@ -10568,12 +10572,25 @@ script.on_event(defines.events.on_entity_damaged,function(event)
    if ent == nil or not ent.valid then
       return
    elseif ent.name == "character" then
-      --Play character damage alert sound ***
-      if ent.get_health_ratio() < 1 then
-         --character damaged
-      else
-         --shield damaged 
+      --Check character has any energy shield health remaining
+      if ent.player == nil or not ent.player.valid then
+         return
       end
+      local shield damaged = false
+      local armor_inv = ent.player.get_inventory(defines.inventory.character_armor)
+      if not armor_inv.is_empty() and not armor_inv[1].grid == nil and armor_inv[1].grid.valid  then
+         local grid = armor_inv[1].grid
+         if grid.count() > 0 and grid.shield > 0 then
+            shield_damaged = true
+         end
+      end
+      --Play shield or character damaged sound
+      if shield_damaged then
+         ent.player.play_sound{path = "damaged-character-shield"}
+      else
+         ent.player.play_sound{path = "damaged-character-no-shield"}
+      end
+      return
    elseif tick < 3600 and tick > 100 then
       --No repeated alerts for the first 60 seconds (because of the spaceship fire damage)
       return
@@ -10594,8 +10611,8 @@ script.on_event(defines.events.on_entity_damaged,function(event)
          local dir = direction_lookup(get_direction_of_that_from_this(ent.position,players[pindex].position))
          local result = ent.name .. " damaged by " .. attacker_force.name .. " forces at " .. dist .. " " .. dir
          printout(result,pindex)
-         --game.get_player(pindex).print(result)--**
-         game.get_player(pindex).play_sound{path = "utility/alert_destroyed"}
+         --game.get_player(pindex).print(result,{volume_modifier=0)--**
+         game.get_player(pindex).play_sound{path = "damaged-entity-alert"}
       end
    end
 end)
@@ -10651,7 +10668,7 @@ function play_enemy_alert_sound(mode_in)
       local mode = mode_in or 1
       local p = game.get_player(pindex)
       if p ~= nil and p.valid then
-         local nearest_enemy = p.surface.find_nearest_enemy{position = p.position, max_distance = 100}
+         local nearest_enemy = p.surface.find_nearest_enemy{position = p.position, max_distance = 100, force = p.force}
          local dist = -1
          if nearest_enemy ~= nil and nearest_enemy.valid then
             dist = math.floor(util.distance(nearest_enemy.position,p.position))
@@ -10669,6 +10686,11 @@ function play_enemy_alert_sound(mode_in)
          elseif mode == 3 then -- Nearest enemy is too close (highest freq)
             if dist < 25 then
                p.play_sound{path = "utility/item_deleted"}
+            end
+            --Additional alert if there are more than 5 enemies nearby
+            local enemies = find_enemy_units(p.position, 25, p.force)
+            if #enemies > 5 then
+               p.play_sound{path = "enemy-presence-high"}
             end
          end
       end
