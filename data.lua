@@ -684,6 +684,13 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "repair-area",
+    key_sequence = "CONTROL + SHIFT + LEFTBRACKET",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "crafting-all",
     key_sequence = "SHIFT + LEFTBRACKET",
     consuming = "none"
