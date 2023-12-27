@@ -7197,7 +7197,12 @@ script.on_event("click-hand", function(event)
          repair_pack_used(ent,pindex)
       elseif stack.prototype ~= nil and (stack.prototype.name == "capsule" or stack.prototype.type == "capsule") then
          --If holding a capsule type, e.g. cliff explosives or robot capsules, or remotes, try to use it at the cursor position (no feedback about successful usage)
-         game.get_player(pindex).use_from_cursor(players[pindex].cursor_pos)
+         local range = game.get_player(pindex).reach_distance
+         if util.distance(game.get_player(pindex).position,players[pindex].cursor_pos) < range then
+            game.get_player(pindex).use_from_cursor(players[pindex].cursor_pos)
+         else
+            printout("Target position is out of range",pindex)
+         end
       elseif ent ~= nil then
          --If holding an item with no special left click actions, allow entity left click actions.
          clicked_on_entity(ent,pindex)
@@ -10560,9 +10565,17 @@ end
 script.on_event(defines.events.on_entity_damaged,function(event)
    local ent = event.entity
    local tick = event.tick
-   if ent == nil or not ent.valid or tick < 3000 then
+   if ent == nil or not ent.valid then
       return
    elseif ent.name == "character" then
+      --Play character damage alert sound ***
+      if ent.get_health_ratio() < 1 then
+         --character damaged
+      else
+         --shield damaged 
+      end
+   elseif tick < 3600 and tick > 100 then
+      --No repeated alerts for the first 60 seconds (because of the spaceship fire damage)
       return
    end
    
