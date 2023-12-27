@@ -503,7 +503,7 @@ function nudge_key(direction, event)
          local new_pos = offset_position(ent.position,direction,1)
          local teleported = ent.teleport(new_pos)
          if teleported then
-            printout({"access.nudged-one-dir",{"access.direction",direction}}, pindex)
+            printout({"access.nudged-one-direction",{"access.direction",direction}}, pindex)
             if players[pindex].cursor then
                players[pindex].cursor_pos = offset_position(players[pindex].cursor_pos,direction,1)
                cursor_highlight(pindex, ent, "train-visualization")
@@ -6412,7 +6412,7 @@ local set_quickbar_names = {}
 for i = 1,10 do
    table.insert(set_quickbar_names,"set-quickbar-"..i)
 end
-script.on_event(set_quickbar_names,function(event)
+script.on_event(set_quickbar_names,function(event)--all 10 quickbar setting event handlers
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -7252,9 +7252,38 @@ function clicked_on_entity(ent,pindex)
    end
 end
 
+script.on_event("repair-area", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].last_click_tick == event.tick then
+      return
+   end
+   if players[pindex].in_menu then
+      return
+   else
+      --Not in a menu
+      local stack = game.get_player(pindex).cursor_stack
+      local ent = get_selected_ent(pindex)
+
+      if stack and stack.valid_for_read and stack.valid then
+         players[pindex].last_click_tick = event.tick
+      else
+         return
+      end
+      
+      --If something is in hand...     
+      if stack.is_repair_tool then
+         --If holding a repair pack
+         repair_area(math.ceil(game.get_player(pindex).reach_distance),pindex)
+      end
+   end
+end)
+
 function open_operable_building(ent,pindex)
    if ent.operable and ent.prototype.is_building then
-      if util.distance(players[pindex].position, ent.position) > 11 then
+      if util.distance(game.get_player(pindex).position, ent.position) > game.get_player(pindex).reach_distance then
          game.get_player(pindex).play_sound{path = "utility/cannot_build"}
          printout("Building is out of player reach",pindex)
          return
@@ -7369,10 +7398,11 @@ end
 --One-click repair pack usage.
 function repair_pack_used(ent,pindex)
    local p = game.get_player(pindex)
+   local stack = p.cursor_stack
    --Repair the entity found
-   if ent and ent.valid and ent.is_entity_with_health and ent.get_health_ratio() < 1 and ent.type ~= "resource" and not ent.force.is_enemy(p.force) and ent.name ~= "character" then
+   if ent and ent.valid and ent.is_entity_with_health and ent.get_health_ratio() < 1 
+   and ent.type ~= "resource" and not ent.force.is_enemy(p.force) and ent.name ~= "character" then
       p.play_sound{path = "utility/default_manual_repair"}
-      local stack = game.get_player(pindex).cursor_stack
       local health_diff = ent.prototype.max_health - ent.health
       local dura = stack.durability
       if health_diff < 10 then --free repair for tiny damages
@@ -7390,6 +7420,75 @@ function repair_pack_used(ent,pindex)
       end
    end
    --Note: game.get_player(pindex).use_from_cursor{players[pindex].cursor_pos.x,players[pindex].cursor_pos.y}--This does not work.
+end
+
+--Tries to repair all relevant entities within a certain distance from the player
+function repair_area(radius_in,pindex)
+   local p = game.get_player(pindex)
+   local stack = p.cursor_stack
+   local repaired_count = 0
+   local packs_used = 0
+   local radius = math.min(radius_in,25)
+   if stack.count < 2 then
+      --If you are low on repair packs, stop
+      printout("You need at least 2 repair packs to repair the area.")
+      return 
+   end
+   local ents = p.surface.find_entities_filtered{position = p.position, radius = radius}
+   for ent in ents do 
+      --Repair the entity found
+      if ent and ent.valid and ent.is_entity_with_health and ent.get_health_ratio() < 1 
+      and ent.type ~= "resource" and not ent.force.is_enemy(p.force) and ent.name ~= "character" then
+         p.play_sound{path = "utility/default_manual_repair"}
+         local health_diff = ent.prototype.max_health - ent.health
+         local dura = stack.durability
+         if health_diff < 10 then --free repair for tiny damages
+            ent.health = ent.prototype.max_health 
+            repaired_count = repaired_count + 1
+         elseif health_diff < dura then
+            ent.health = ent.prototype.max_health 
+            stack.drain_durability(health_diff)
+            repaired_count = repaired_count + 1
+         elseif stack.count < 2 then
+            --If you are low on repair packs, stop
+            printout("Repaired " .. repaired_count .. " structures using " .. packs_used .. " repair packs, stopped because you are low on repair packs.",pindex)
+            return 
+         else
+            --Finish the current repair pack
+            stack.drain_durability(dura)
+            packs_used = packs_used + 1
+            ent.health = ent.health + dura
+            
+            --Repeat unhtil fully repaired or out of packs
+            while ent.get_health_ratio() < 1 do
+               health_diff = ent.prototype.max_health - ent.health
+               dura = stack.durability
+               if health_diff < 10 then --free repair for tiny damages
+                  ent.health = ent.prototype.max_health 
+                  repaired_count = repaired_count + 1
+               elseif health_diff < dura then
+                  ent.health = ent.prototype.max_health 
+                  stack.drain_durability(health_diff)
+                  repaired_count = repaired_count + 1
+               elseif stack.count < 2 then
+                  --If you are low on repair packs, stop
+                  printout("Repaired " .. repaired_count .. " structures using " .. packs_used .. " repair packs, stopped because you are low on repair packs.",pindex)
+                  return 
+               else
+                  --Finish the current repair pack
+                  stack.drain_durability(dura)
+                  packs_used = packs_used + 1
+                  ent.health = ent.health + dura
+               end
+            end 
+         end
+      end
+   end
+   if repaired_count == 0 then
+      printout("Nothing to repair within " .. radius .. " tiles of you.",pindex)
+      return
+   end
+   printout("Repaired all " .. repaired_count .. " structures within " .. radius .. " tiles of you using " .. packs_used .. " repair packs.",pindex)
 end
 
 --[[Attempts to build the item in hand.
