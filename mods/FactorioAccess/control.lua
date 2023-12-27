@@ -5216,13 +5216,19 @@ function on_tick(event)
             play_enemy_alert_sound(1)
          end
       end
-   elseif event.tick % 30 == 1 then
+   elseif event.tick % 15 == 1 then
+      for pindex, player in pairs(players) do
+         if game.get_player(pindex).in_combat then
+            aim_gun_at_nearest_enemy(pindex)
+         end
+      end
+   elseif event.tick % 30 == 0 then
       --Check and play train horns
       for pindex, player in pairs(players) do
          check_and_honk_at_trains_in_same_block(event.tick,pindex)
          check_and_honk_at_closed_signal(event.tick,pindex)
       end
-   elseif event.tick % 30 == 2 then
+   elseif event.tick % 30 == 1 then
       --Update menu visuals
       update_menu_visuals()
    end
@@ -10265,6 +10271,33 @@ function remove_equipment_and_armor(pindex)
    return result
 end
 
+function aim_gun_at_nearest_enemy(pindex)--todo test, does the player in fact fire at the cursor? ***
+   local p = game.get_player(pindex)
+   local gun_index  = p.character.selected_gun_index
+   local guns_inv   = p.get_inventory(defines.inventory.character_guns)
+   local ammo_inv   = game.get_player(pindex).get_inventory(defines.inventory.character_ammo)
+   local gun_stack  = guns_inv[gun_index]
+   local ammo_stack = ammo_inv[gun_index]
+   --Return if missing a gun or ammo
+   if gun_stack == nil or not gun_stack.valid then
+      return
+   end
+   if ammo_stack == nil or not ammo_stack.valid then
+      return
+   end
+   --Return if there is a gun and ammo combination that already aims by itself
+   if gun_stack.name == "pistol" or gun_stack.name == "submachine-gun" or ammo_stack.name == "rocket" or ammo_stack.name == "explosive-rocket" then
+      return 
+   end 
+   --Check for nearby enemies
+   local enemy = p.surface.find_nearest_enemy{position = p.position, max_distance = 40, force = p.force}
+   if enemy == nil or not enemy.valid then
+      return
+   end
+   players[pindex].cursor_pos = enemy.position
+   move_cursor_map(enemy.position,pindex)
+end
+
 --Set the input priority or the output priority or filter for a splitter
 function set_splitter_priority(splitter, is_input, is_left, filter_item_stack, clear)
    local clear = clear or false
@@ -10455,7 +10488,7 @@ function cursor_highlight(pindex, ent, box_type)
    if players[pindex].vanilla_mode then
       return 
    end 
-   if util.distance(p.position,c_pos) < 11 then
+   if util.distance(p.position,c_pos) <= game.get_player(pindex).reach_distance then
       move_cursor_map(center_of_tile(c_pos),pindex)
    else
       move_cursor_map(center_of_tile(p.position),pindex)
