@@ -10312,6 +10312,10 @@ function aim_gun_at_nearest_enemy(pindex)--todo test, does the player in fact fi
    if gun_stack.name == "pistol" or gun_stack.name == "submachine-gun" or ammo_stack.name == "rocket" or ammo_stack.name == "explosive-rocket" then
       return 
    end 
+   --Return if in Cursor Mode
+   if players[pindex].cursor then
+      return
+   end
    --Aim at the enemy
    players[pindex].cursor_pos = enemy.position
    move_cursor_map(enemy.position,pindex)
@@ -10611,7 +10615,7 @@ script.on_event(defines.events.on_entity_damaged,function(event)
          local dir = direction_lookup(get_direction_of_that_from_this(ent.position,players[pindex].position))
          local result = ent.name .. " damaged by " .. attacker_force.name .. " forces at " .. dist .. " " .. dir
          printout(result,pindex)
-         --game.get_player(pindex).print(result,{volume_modifier=0)--**
+         --game.get_player(pindex).print(result,{volume_modifier=0})--**
          game.get_player(pindex).play_sound{path = "damaged-entity-alert"}
       end
    end
@@ -10657,7 +10661,7 @@ script.on_event(defines.events.on_entity_died,function(event)
          local dir = direction_lookup(get_direction_of_that_from_this(ent.position,players[pindex].position))
          local result = ent.name .. " destroyed by " .. attacker_force.name .. " forces at " .. dist .. " " .. dir
          printout(result,pindex)
-         --game.get_player(pindex).print(result)--**
+         --game.get_player(pindex).print(result,{volume_modifier=0})--**
          game.get_player(pindex).play_sound{path = "utility/alert_destroyed"}
       end
    end
