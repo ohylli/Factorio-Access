@@ -1492,8 +1492,8 @@ function teleport_to_closest(pindex, pos, muted)
          local smoke_effect = first_player.surface.create_entity{name = "iron-chest", position = first_player.position, raise_built = false, force = first_player.force}
          smoke_effect.destroy{}
          if not muted then
+            game.get_player(pindex).play_sound{path = "teleported", volume_modifier = 0.1}
             game.get_player(pindex).play_sound{path = "utility/scenario_message"}
-            game.get_player(pindex).play_sound{path = "teleported"}
          end
       end
       local teleported = first_player.teleport(new_pos)
@@ -1503,8 +1503,8 @@ function teleport_to_closest(pindex, pos, muted)
             rendering.draw_circle{color = {0.3, 0.3, 0.9},radius = 0.5,width = 15,target = new_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
             rendering.draw_circle{color = {0.0, 0.0, 0.9},radius = 0.3,width = 20,target = new_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
             if not muted then
+               game.get_player(pindex).play_sound{path = "teleported", volume_modifier = 0.1}
                game.get_player(pindex).play_sound{path = "utility/scenario_message"}
-               game.get_player(pindex).play_sound{path = "teleported"}
             end
             local smoke_effect = first_player.surface.create_entity{name = "iron-chest", position = first_player.position, raise_built = false, force = first_player.force}
             smoke_effect.destroy{}
@@ -1512,14 +1512,14 @@ function teleport_to_closest(pindex, pos, muted)
          if new_pos.x ~= pos.x or new_pos.y ~= pos.y then
             if not muted then
                printout("Teleported " .. math.ceil(distance(pos,first_player.position)) .. " " .. direction(pos, first_player.position) .. " of target", pindex)
+               game.get_player(pindex).play_sound{path = "teleported", volume_modifier = 0.1}
                game.get_player(pindex).play_sound{path = "utility/scenario_message"}
-               game.get_player(pindex).play_sound{path = "teleported"}
             end
          else
             if not muted then
                printout("Teleported to target", pindex)
+               game.get_player(pindex).play_sound{path = "teleported", volume_modifier = 0.1}
                game.get_player(pindex).play_sound{path = "utility/scenario_message"}
-               game.get_player(pindex).play_sound{path = "teleported"}
             end
          end
          --Update cursor after teleport
@@ -2581,7 +2581,7 @@ function populate_categories(pindex)
             table.insert(players[pindex].nearby.containers, ent)
          elseif ent.ents[1].prototype.is_building and not ent.ents[1].type == "unit-spawner" and not ent.ents[1].type == "turret" and not ent.ents[1].name == "train-stop" then
             table.insert(players[pindex].nearby.buildings, ent)
-         elseif ent.ents[1].type == "car" or ent.ents[1].type == "locomotive" or ent.ents[1].type == "cargo-wagon" or ent.ents[1].type == "fluid-wagon" or ent.ents[1].type == "artillery-wagon" or ent.ents[1].type == "spider-vehicle" or ent.ents[1].name == "train-stop" then --***test
+         elseif ent.ents[1].type == "car" or ent.ents[1].type == "locomotive" or ent.ents[1].type == "cargo-wagon" or ent.ents[1].type == "fluid-wagon" or ent.ents[1].type == "artillery-wagon" or ent.ents[1].type == "spider-vehicle" or ent.ents[1].name == "train-stop" then 
             table.insert(players[pindex].nearby.vehicles, ent)
          elseif ent.ents[1].type == "character" or ent.ents[1].type == "character-corpse" then
             table.insert(players[pindex].nearby.players, ent)
@@ -7448,11 +7448,11 @@ function repair_area(radius_in,pindex)
    local radius = math.min(radius_in,25)
    if stack.count < 2 then
       --If you are low on repair packs, stop
-      printout("You need at least 2 repair packs to repair the area.")
+      printout("You need at least 2 repair packs to repair the area.",pindex)
       return 
    end
    local ents = p.surface.find_entities_filtered{position = p.position, radius = radius}
-   for ent in ents do 
+   for i,ent in ipairs(ents) do 
       --Repair the entity found
       if ent and ent.valid and ent.is_entity_with_health and ent.get_health_ratio() < 1 
       and ent.type ~= "resource" and not ent.force.is_enemy(p.force) and ent.name ~= "character" then
@@ -7505,7 +7505,7 @@ function repair_area(radius_in,pindex)
       printout("Nothing to repair within " .. radius .. " tiles of you.",pindex)
       return
    end
-   printout("Repaired all " .. repaired_count .. " structures within " .. radius .. " tiles of you using " .. packs_used .. " repair packs.",pindex)
+   printout("Repaired all " .. repaired_count .. " structures within " .. radius .. " tiles of you, using " .. packs_used .. " repair packs.",pindex)
 end
 
 --[[Attempts to build the item in hand.
@@ -8522,7 +8522,7 @@ script.on_event("item-info", function(event)
          else
             printout("No description", pindex)
          end
-      elseif players[pindex].menu == "building" then
+      elseif players[pindex].menu == "building" then --***bug here about filter inserter filter selection info key, no?
          if players[pindex].building.recipe_selection then
             local recipe = players[pindex].building.recipe_list[players[pindex].building.category][players[pindex].building.index]
             if recipe ~= nil and #recipe.products > 0 then
@@ -10303,7 +10303,7 @@ function aim_gun_at_nearest_enemy(pindex)--todo test, does the player in fact fi
       return
    end
    --Play a sound when the enemy is within range of the gun 
-   local range = gun_stack.attack_parameters.range
+   local range = gun_stack.prototype.attack_parameters.range
    local dist = util.distance(p.position,enemy.position)
    if dist < range then      
       p.play_sound{path = "aim-locked"}
@@ -10624,6 +10624,7 @@ end)
 script.on_event(defines.events.on_entity_died,function(event)
    local ent = event.entity
    local causer = event.cause
+   game.print("ded1")--****
    if ent == nil or not ent.valid or ent.name then
       return
    elseif ent.name == "character" then
@@ -10647,7 +10648,7 @@ script.on_event(defines.events.on_entity_died,function(event)
       end
       return
    end
-   
+   game.print("ded2")--****bug: missing alert  because the ent is no longer valid or maybe cos it is nil
    -- for pindex, player in pairs(players) do 
       -- game.get_player(pindex).print("destroyed alert!")
    -- end
@@ -10657,6 +10658,7 @@ script.on_event(defines.events.on_entity_died,function(event)
    --Alert all players of the damaged force
    for pindex, player in pairs(players) do
       if players[pindex] ~= nil and game.get_player(pindex).force.name == damaged_force.name then
+         players[pindex].last_damage_alert_tick = tick
          local dist = math.ceil(util.distance(players[pindex].position,ent.position))
          local dir = direction_lookup(get_direction_of_that_from_this(ent.position,players[pindex].position))
          local result = ent.name .. " destroyed by " .. attacker_force.name .. " forces at " .. dist .. " " .. dir
@@ -10683,18 +10685,23 @@ function play_enemy_alert_sound(mode_in)
             if dist < 100 then
                p.play_sound{path = "utility/item_deleted"}
             end
+            --Additional alert if there are more than 5 enemies nearby
+            local enemies = p.surface.find_enemy_units(p.position, 25, p.force)
+            if #enemies > 5 then
+               p.play_sound{path = "enemy-presence-high", volume_modifier = 0.5}
+            end
          elseif mode == 2 then -- Nearest enemy is closer (medium freq)
             if dist < 50 then
                p.play_sound{path = "utility/item_deleted"}
             end
+            --Additional alert if there are more than 5 enemies nearby
+            local enemies = p.surface.find_enemy_units(p.position, 25, p.force)
+            if #enemies > 10 then
+               p.play_sound{path = "enemy-presence-high", volume_modifier = 0.5}
+            end
          elseif mode == 3 then -- Nearest enemy is too close (highest freq)
             if dist < 25 then
                p.play_sound{path = "utility/item_deleted"}
-            end
-            --Additional alert if there are more than 5 enemies nearby
-            local enemies = find_enemy_units(p.position, 25, p.force)
-            if #enemies > 5 then
-               p.play_sound{path = "enemy-presence-high"}
             end
          end
       end

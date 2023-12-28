@@ -187,7 +187,7 @@ end
 --Returns summary info string
 function player_logistic_requests_summary_info(pindex)
    --***todo
-   "y of z personal logistic requests fulfilled, x items in trash, missing items include [3], take an item in hand and press L to check its request status."
+   --"y of z personal logistic requests fulfilled, x items in trash, missing items include [3], take an item in hand and press L to check its request status."
 end
 
 --laterdo full personal logistics menu where you can go line by line along requests and edit them, iterate through trash?
