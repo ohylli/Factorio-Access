@@ -4198,6 +4198,8 @@ function initialize(player)
    faplayer.last_damage_alert_tick = faplayer.last_damage_alert_tick or 1
    faplayer.last_pg_key_tick = faplayer.last_pg_key_tick or 1
    faplayer.last_honk_tick = faplayer.last_honk_tick or 1
+   faplayer.last_pickup_tick = faplayer.last_pickup_tick or 1
+   faplayer.last_item_picked_up = faplayer.last_item_picked_up or nil
 
    faplayer.preferences = {
       building_inventory_row_length = building_inventory_row_length or 8,
@@ -6216,6 +6218,85 @@ script.on_event("repeat-last-spoken", function(event)
       return
    end
    repeat_last_spoken(pindex)
+end)
+
+--Calls function to notify if items are being picked up via vanilla F key. laterdo: need to bind with the item pickup key
+script.on_event("pickup-items", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   read_item_pickup_state(pindex)
+end)
+
+function read_item_pickup_state(pindex)
+   if players[pindex].in_menu then
+      printout("Cannot pickup items while in a menu",pindex)
+      return
+   end
+   local p = game.get_player(pindex)
+   local result = ""
+   local check_last_pickup = false
+   local nearby_belts = p.surface.find_entities_filtered{position = p.position, radius = 1.1, type = "transport-belt"}
+   local nearby_ground_items = p.surface.find_entities_filtered{position = p.position, radius = 1.1, name = "item-on-ground"}
+   rendering.draw_circle{color = {0.3, 1, 0.3},radius = 1.1,width = 4,target = p.position, surface = p.surface,time_to_live = 60, draw_on_ground = true}
+   --Check if there is a belt within n tiles
+   if #nearby_belts > 0 then
+      result = "Picking up items from nearby belts"
+      --Check contents being picked up
+      local ent = nearby_belts[1]
+      if ent == nil or not ent.valid then
+         printout(result,pindex)
+         return 
+      end
+      local left = ent.get_transport_line(1).get_contents()
+      local right = ent.get_transport_line(2).get_contents()
+
+      for name, count in pairs(right) do
+         if left[name] ~= nil then
+            left[name] = left[name] + count
+         else
+            left[name] = count
+         end
+      end
+      local contents = {}
+      for name, count in pairs(left) do
+         table.insert(contents, {name = name, count = count})
+      end
+      table.sort(contents, function(k1, k2)
+         return k1.count > k2.count
+      end)
+      if #contents > 0 then
+         result = result .. " including " .. contents[1].name
+         if #contents > 1 then
+            result = result .. ", and " .. contents[2].name
+            if #contents > 2 then
+               result = result .. ", and other item types " 
+            end
+         end
+      end
+   --Check if there are ground items within n tiles   
+   elseif #nearby_ground_items > 0 then
+      result = "Picking up ground items "
+      if nearby_ground_items[1] and nearby_ground_items[1].valid then
+         result = result .. " including " .. nearby_ground_items[1].stack.name 
+      end
+   else
+      result = "No items within range to pick up"
+   end
+   printout(result,pindex)
+end
+
+--Save info about last item pickup and draw radius
+script.on_event(defines.events.on_picked_up_item, function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local p = game.get_player(pindex)
+   rendering.draw_circle{color = {0.3, 1, 0.3},radius = 1.1,width = 4,target = p.position, surface = p.surface,time_to_live = 10, draw_on_ground = true}
+   players[pindex].last_pickup_tick = event.tick
+   players[pindex].last_item_picked_up = event.item_stack.name
 end)
 
 --Reads other entities on the same tile? Note: Possibly unneeded

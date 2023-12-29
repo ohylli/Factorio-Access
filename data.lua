@@ -507,6 +507,13 @@ data:extend({
 {
     type = "custom-input",
     name = "tile-cycle",
+    key_sequence = "SHIFT + F",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "pickup-items",
     key_sequence = "F",
     consuming = "none"
 },
