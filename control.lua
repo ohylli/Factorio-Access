@@ -2949,6 +2949,10 @@ function set_quick_bar(index, pindex)
 end
 
 function read_hand(pindex)
+   if players[pindex].skip_read_hand == true then
+      players[pindex].skip_read_hand = false
+      return
+   end
    local cursor_stack=game.get_player(pindex).cursor_stack
    if cursor_stack and cursor_stack.valid and cursor_stack.valid_for_read then
       local out={"access.cursor-description"}
@@ -4200,6 +4204,7 @@ function initialize(player)
    faplayer.last_honk_tick = faplayer.last_honk_tick or 1
    faplayer.last_pickup_tick = faplayer.last_pickup_tick or 1
    faplayer.last_item_picked_up = faplayer.last_item_picked_up or nil
+   faplayer.skip_read_hand = faplayer.skip_read_hand or false
 
    faplayer.preferences = {
       building_inventory_row_length = building_inventory_row_length or 8,
@@ -8026,8 +8031,8 @@ script.on_event("equip-item", function(event)
       end
    elseif players[pindex].menu == "inventory" then
       --Equip the selected inventory item
-      local stack = game.get_player(pindex).get_main_inventory(players[pindex].inventory.index)
-      result = equip_it(stack,pindex)--****swap or clear check...
+      local stack = game.get_player(pindex).get_main_inventory()[players[pindex].inventory.index]
+      result = equip_it(stack,pindex)
       
    elseif players[pindex].menu == "building" then
       --Something will be smart-inserted so do nothing here
@@ -8035,7 +8040,7 @@ script.on_event("equip-item", function(event)
    end
    
    if result ~= "" then
-      game.get_player(pindex).print(result)--***
+      --game.get_player(pindex).print(result)--**
       printout(result,pindex)
    end
 end)
@@ -10159,6 +10164,7 @@ function equip_it(stack,pindex)
          message = " Equipped " .. stack.name .. " and took in hand " .. armor[1].name
       end
       stack.swap_stack(armor[1])
+      players[pindex].skip_read_hand = true
    elseif stack.type == "gun" then
       --Equip gun ("arms")
 	  local gun_inv = game.get_player(pindex).get_inventory(defines.inventory.character_guns)
@@ -10166,6 +10172,7 @@ function equip_it(stack,pindex)
 	     local inserted = gun_inv.insert(stack)
 		 message = " Equipped " .. stack.name
 		 stack.count = stack.count - inserted
+       players[pindex].skip_read_hand = true
 	  else
 	    if gun_inv.count_empty_stacks() == 0 then 
 		    message = "All gun slots full."
@@ -10180,6 +10187,7 @@ function equip_it(stack,pindex)
 	     local inserted = ammo_inv.insert(stack)
 		 message = "Reloaded with " .. stack.name
 		 stack.count = stack.count - inserted
+       players[pindex].skip_read_hand = true
 	  else
 	    if ammo_inv.count_empty_stacks() == 0 then 
 		    message = "All ammo slots full."
@@ -10210,10 +10218,11 @@ function equip_it(stack,pindex)
 		   break
 		 end
 	  end    
-      local slots_left = count_empty_equipment_slots(grid)
+     local slots_left = count_empty_equipment_slots(grid)
 	  if placed ~= nil then
 	     message = "Equipped " .. stack.name .. ", " .. slots_left .. " empty slots remaining."
 		 stack.count = stack.count - 1
+       players[pindex].skip_read_hand = true
 	  else
 	     --Check if the grid is full 
 		 if slots_left == 0 then
@@ -10223,7 +10232,7 @@ function equip_it(stack,pindex)
 		 end
 	  end
    else
-      message = stack.name .. " cannot be equipped. "
+      message = " Cannot equip " .. stack.name
    end
    
    return message
