@@ -2978,6 +2978,37 @@ function read_hand(pindex)
    end
 end
 
+function open_hand_from_inventory(pindex)--****WIP
+   --Check if stack empty and menu supported
+   local stack = game.get_player(pindex).cursor_stack
+   if stack == nil or not stack.valid_for_read or not stack.valid then
+      --Hand is empty
+      return
+   end
+   if players[pindex].in_menu and players[pindex].menu ~= "inventory" then
+      --Unsupported menu type laterdo add support for building menu and closing the menu with a call
+      printout("Another menu is open.",pindex)
+      return
+   end
+   --Save the hand stack item name
+   local item_name = stack.name
+   --Empty hand stack (clear cursor stack)
+   players[pindex].skip_read_hand = true
+   local successful = game.get_player(pindex).clear_cursor()
+   if not successful then
+      printout("Unable to empty hand",pindex)
+      return
+   end
+   if not players[pindex].in_menu then
+      --Open inventory menu 
+      open_player_inventory(game.tick,pindex)
+   end
+   --Iterate the inventory until you find the matching item name's index
+   --stop at that index
+     
+   --Find the hand stack in the inventory (maybe just the hand icon thingy?)
+end
+
 function read_quick_bar(index,pindex)
    page = game.get_player(pindex).get_active_quick_bar_page(1)-1
    local item = game.get_player(pindex).get_quick_bar_slot(index+ 10*page)
@@ -6322,50 +6353,55 @@ script.on_event("open-inventory", function(event)
    elseif (players[pindex].in_menu) or players[pindex].last_menu_toggle_tick == event.tick then
       return
    elseif not (players[pindex].in_menu) then
-      game.get_player(pindex).play_sound{path = "Open-Inventory-Sound"}
-      players[pindex].last_menu_toggle_tick = event.tick 
-      players[pindex].in_menu = true
-      players[pindex].menu="inventory"
-      players[pindex].inventory.lua_inventory = game.get_player(pindex).get_main_inventory()
-      players[pindex].inventory.max = #players[pindex].inventory.lua_inventory
-      players[pindex].inventory.index = 1
-      read_inventory_slot(pindex, "Inventory, ")
-      players[pindex].crafting.lua_recipes = get_recipes(pindex, game.get_player(pindex).character)
-      players[pindex].crafting.max = #players[pindex].crafting.lua_recipes
-      players[pindex].crafting.category = 1
-      players[pindex].crafting.index = 1
-      players[pindex].technology.category = 1
-      players[pindex].technology.lua_researchable = {}
-      players[pindex].technology.lua_unlocked = {}
-      players[pindex].technology.lua_locked = {}
-      -- Create technologies list
-      for i, tech in pairs(game.get_player(pindex).force.technologies) do
-         if tech.researched then
-            table.insert(players[pindex].technology.lua_unlocked, tech)
+      open_player_inventory(event.tick,pindex)
+   end
+end)
+
+--Sets up mod character menus. Cannot actually open the character GUI.
+function open_player_inventory(tick,pindex)
+   game.get_player(pindex).play_sound{path = "Open-Inventory-Sound"}
+   players[pindex].last_menu_toggle_tick = tick 
+   players[pindex].in_menu = true
+   players[pindex].menu="inventory"
+   players[pindex].inventory.lua_inventory = game.get_player(pindex).get_main_inventory()
+   players[pindex].inventory.max = #players[pindex].inventory.lua_inventory
+   players[pindex].inventory.index = 1
+   read_inventory_slot(pindex, "Inventory, ")
+   players[pindex].crafting.lua_recipes = get_recipes(pindex, game.get_player(pindex).character)
+   players[pindex].crafting.max = #players[pindex].crafting.lua_recipes
+   players[pindex].crafting.category = 1
+   players[pindex].crafting.index = 1
+   players[pindex].technology.category = 1
+   players[pindex].technology.lua_researchable = {}
+   players[pindex].technology.lua_unlocked = {}
+   players[pindex].technology.lua_locked = {}
+   -- Create technologies list
+   for i, tech in pairs(game.get_player(pindex).force.technologies) do
+      if tech.researched then
+         table.insert(players[pindex].technology.lua_unlocked, tech)
+      else
+         local check = true
+         for i1, preq in pairs(tech.prerequisites) do
+            if not(preq.researched) then
+               check = false
+            end
+         end
+         if check then
+            table.insert(players[pindex].technology.lua_researchable, tech)
          else
-            local check = true
+            local check = false
             for i1, preq in pairs(tech.prerequisites) do
-               if not(preq.researched) then
-                  check = false
+               if preq.researched then
+                  check = true
                end
             end
             if check then
-               table.insert(players[pindex].technology.lua_researchable, tech)
-            else
-               local check = false
-               for i1, preq in pairs(tech.prerequisites) do
-                  if preq.researched then
-                     check = true
-                  end
-               end
-               if check then
-                  table.insert(players[pindex].technology.lua_locked, tech)
-               end
+               table.insert(players[pindex].technology.lua_locked, tech)
             end
          end
       end
    end
-end)
+end
 
 script.on_event("close-menu", function(event)
    pindex = event.player_index
@@ -6381,7 +6417,7 @@ script.on_event("close-menu", function(event)
       players[pindex].last_menu_toggle_tick = event.tick 
       game.get_player(pindex).game_view_settings.update_entity_selection = true
 
-      if players[pindex].menu == "inventory" or players[pindex].menu == "crafting" or players[pindex].menu == "technology" or players[pindex].menu == "crafting_queue" or players[pindex].menu == "warnings" then
+      if players[pindex].menu == "inventory" or players[pindex].menu == "crafting" or players[pindex].menu == "technology" or players[pindex].menu == "crafting_queue" or players[pindex].menu == "warnings" then--**laterdo open close inv sounds in other menus?
          game.get_player(pindex).play_sound{path="Close-Inventory-Sound"}
       end
       if players[pindex].menu == "travel" then
@@ -9041,6 +9077,15 @@ script.on_event("read-hand",function(event)
    read_hand(pindex)
 end)
 
+--Empties hand and opens the item from the player inventory
+script.on_event("open-hand-from-inventory",function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   open_hand_from_inventory(pindex)
+end)
+
 script.on_event("open-warnings-menu", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) or players[pindex].vanilla_mode then
@@ -9523,7 +9568,7 @@ script.on_event("debug-test-key", function(event)
       --
    end
    --Build left turns on end rails
-   if ent.name == "straight-rail" then
+   if ent and ent.valid and ent.name == "straight-rail" then
       --build_rail_bypass_junction(ent, pindex)
    end
    --if ent ~= nil and ent.valid and ent.fluidbox ~= nil then
@@ -9541,6 +9586,24 @@ script.on_event("debug-test-key", function(event)
 	  --sub_automatic_travel_to_other_stop(ent.train)
 	  --instant_schedule(ent.train)
    --end 
+   
+   --open_player_inventory with API ****
+   local gui = p.gui
+   if gui and gui.valid then
+      game.print("gui valid")
+      local screen = gui.screen
+      if screen and screen.valid then
+         game.print("screen valid")
+         local visible = screen.visible
+         screen.visible = true
+         game.print(visible)
+         --screen.bring_to_front()
+         screen.focus()
+      end
+   end
+   p.gui.screen.visible = true
+   p.opened = p.gui--achievement works
+   --p.print(defines.gui_type.controller)
 end)
 
 --Attempt to launch a rocket
