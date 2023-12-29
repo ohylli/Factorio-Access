@@ -930,6 +930,13 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "open-hand-from-inventory",
+    key_sequence = "CONTROL + Q",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "open-warnings-menu",
     key_sequence = "P",
     consuming = "none"
