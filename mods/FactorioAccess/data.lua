@@ -753,7 +753,7 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "inventory-equip-item-in-hand",
+    name = "equip-item",
     key_sequence = "SHIFT + LEFTBRACKET",
     consuming = "none"
 },
