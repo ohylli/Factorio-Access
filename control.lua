@@ -7930,24 +7930,32 @@ script.on_event("transfer-one-stack", function(event)
    end
 end)
 
---You can equip armor, armor equipment, guns, ammo. You can equip from the hand in any menu, or from the inventory with an empty hand.
-script.on_event("equip-item", function(event)--****
+--You can equip armor, armor equipment, guns, ammo. You can equip from the hand, or from the inventory with an empty hand.
+script.on_event("equip-item", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
    end
    local stack = game.get_player(pindex).cursor_stack
-   if players[pindex].in_menu and players[pindex].menu == "inventory" then
-      
-   end
-   if players[pindex].in_menu then
-      if players[pindex].menu == "inventory" then
-         --Equip item grabbed in hand
-         local stack = game.get_player(pindex).cursor_stack
-         local result = equip_it(stack,pindex)
-         --game.get_player(pindex).print(result)--
-         printout(result,pindex)
+   local result = ""
+   if stack ~= nil and stack.valid_for_read and stack.valid then
+      --Equip item grabbed in hand, for selected menus
+      if not players[pindex].in_menu or players[pindex].menu == "inventory" or players[pindex].menu == "building" then
+         result = equip_it(stack,pindex)
       end
+   elseif players[pindex].menu == "inventory" then
+      --Equip the selected inventory item
+      local stack = game.get_player(pindex).get_main_inventory(players[pindex].inventory.index)
+      result = equip_it(stack,pindex)--****swap or clear check...
+      
+   elseif players[pindex].menu == "building" then
+      --Something will be smart-inserted so do nothing here
+      return
+   end
+   
+   if result ~= "" then
+      game.get_player(pindex).print(result)--***
+      printout(result,pindex)
    end
 end)
 
@@ -10059,7 +10067,7 @@ function equip_it(stack,pindex)
    local message = "no message"
    
    if stack == nil or not stack.valid_for_read or not stack.valid then
-      return "Nothing in hand to equip."
+      return "Nothing found to equip."
    end
    
    if stack.is_armor then
