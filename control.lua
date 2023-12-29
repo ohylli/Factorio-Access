@@ -6527,74 +6527,35 @@ script.on_event("switch-menu-or-gun", function(event)
       end
    end
    
-   --Gun related changes
+   --Gun related changes (this seems to run before the actual switch happens so even when we write the new index, it will change, so we need to be predictive)
    local p = game.get_player(pindex)
-   local gun_index = p.character.selected_gun_index
    local guns_inv = p.get_inventory(defines.inventory.character_guns)
    local ammo_inv = game.get_player(pindex).get_inventory(defines.inventory.character_ammo)
-   local stack = guns_inv[gun_index]
-   local guns_count  = #guns_inv - guns_inv.count_empty_stacks()
-   local ammos_count = #ammo_inv - ammo_inv.count_empty_stacks()
    local result = ""
+   local switched_index = -2
+
+   if players[pindex].in_menu then
+      --switch_success = swap_weapon_backward(pindex,true)
+      switched_index = swap_weapon_backward(pindex,true)
+      return 
+   else
+      switched_index = swap_weapon_forward(pindex,false)
+   end
+   
+   --Declare the selected weapon
+   local gun_index = switched_index
+   local ammo_stack = ammo_inv[gun_index]
+   local gun_stack  = guns_inv[gun_index]
+   if gun_index >= 0 then
+      --game.print("print " .. gun_index)--
+      result = gun_stack.name .. " with " .. ammo_stack.count .. " " .. ammo_stack.name .. "s "
+   else
+      --game.print("print error " .. gun_index)--
+      result = "Weapon switching error."
+   end
    
    if not players[pindex].in_menu then
-      --Increment the selected weapon
-	  if gun_index >= guns_count then
-	     gun_index = 1
-	  else
-	     gun_index = gun_index + 1
-	  end
-	  stack = guns_inv[gun_index]
-	  
-	  --Select weapon
-	  if stack ~= nil and stack.valid_for_read and stack.valid then
-	     result = stack.name
-	  else
-	     result = " weapon name error 1"
-	  end
-	  
-	  --Check if need to skip due to no ammo
-	  if guns_count ~= ammos_count then
-	     --Cycle forward until the first filled ammo slot (as the game does)
-		 result = " weapon name error 2 "
-		 local ammo_stack = ammo_inv[gun_index]
-		 local tries = 0
-		 while tries < 4 and not (ammo_stack ~= nil and ammo_stack.valid_for_read and ammo_stack.valid) do
-		    if gun_index >= guns_count then
-	           gun_index = 1
-	        else
-	           gun_index = gun_index + 1
-	        end
-			tries = tries + 1
-			stack = guns_inv[gun_index]
-			ammo_stack = ammo_inv[gun_index]
-		 end
-		 --Now try the name
-		 if stack ~= nil and stack.valid_for_read and stack.valid then
-	        result = stack.name
-		 else
-		    result = " weapon name error 3"
-		 end
-	  end
-	  --Declare the selected weapon
-	  stack = guns_inv[gun_index]
-	  if stack ~= nil and stack.valid_for_read and stack.valid then
-	     result = stack.name
-		 if ammo_inv[gun_index] ~= nil and ammo_inv[gun_index].valid and ammo_inv[gun_index].valid_for_read then
-	        result = result .. " with " .. ammo_inv[gun_index].count .. " " .. ammo_inv[gun_index].name .. "s "
-	     end
-	  else
-	     result = " missing or unknown weapon "
-	  end
-	  --p.print(result)
-	  printout(result,pindex)
-   else
-      --Re-apply the previous gun index so that weapons do not switch when in a menu
-      if p.character.selected_gun_index == 1 then
-         p.character.selected_gun_index = math.max(guns_count,1)
-      else
-         p.character.selected_gun_index = p.character.selected_gun_index - 1
-      end
+      printout(result,pindex)
    end
 end)
 
@@ -6687,12 +6648,121 @@ script.on_event("reverse-switch-menu-or-gun", function(event)
 
       end
    end
+   
+   --Gun related changes (Vanilla Factorio DOES NOT have shift + tab weapon revserse switching, so we add it without prediction needed)
+   local p = game.get_player(pindex)
+   local guns_inv = p.get_inventory(defines.inventory.character_guns)
+   local ammo_inv = game.get_player(pindex).get_inventory(defines.inventory.character_ammo)
+   local result = ""
+   local switched_index = -2
+
+   if players[pindex].in_menu then
+      --do nothing
+      return 
+   else
+      switched_index = swap_weapon_backward(pindex,true)
+   end
+   
+   --Declare the selected weapon
+   local gun_index = switched_index
+   local ammo_stack = ammo_inv[gun_index]
+   local gun_stack  = guns_inv[gun_index]
+   if gun_index >= 0 then
+      --game.print("print " .. gun_index)--
+      result = gun_stack.name .. " with " .. ammo_stack.count .. " " .. ammo_stack.name .. "s "
+   else
+      --game.print("print error " .. gun_index)--
+      result = "Weapon switching error."
+   end
+   
+   if not players[pindex].in_menu then
+      printout(result,pindex)
+   end
 end)
+
+function swap_weapon_forward(pindex, write_to_character)
+   local p = game.get_player(pindex)
+   local gun_index = p.character.selected_gun_index
+   local guns_inv = p.get_inventory(defines.inventory.character_guns)
+   local ammo_inv = game.get_player(pindex).get_inventory(defines.inventory.character_ammo)
+   
+   --Simple index increment (not needed)
+   gun_index = gun_index + 1
+   if gun_index > 3 then 
+      gun_index = 1
+   end
+   --game.print("start " .. gun_index)--
+   
+   --Increment again if the new index has no guns or no ammo
+   local ammo_stack = ammo_inv[gun_index]
+   local gun_stack  = guns_inv[gun_index]
+   local tries = 0
+   while tries < 4 and (ammo_stack == nil or not ammo_stack.valid_for_read or not ammo_stack.valid or gun_stack == nil or not gun_stack.valid_for_read or not gun_stack.valid) do
+      gun_index = gun_index + 1
+      if gun_index > 3 then 
+         gun_index = 1
+      end
+      ammo_stack = ammo_inv[gun_index]
+      gun_stack  = guns_inv[gun_index]
+      tries = tries + 1
+   end
+   
+   if tries > 3 then
+      --game.print("error " .. gun_index)--
+      return -1
+   end
+   
+   if write_to_character then
+      p.character.selected_gun_index = gun_index
+   end
+   --game.print("end " .. gun_index)--
+   return gun_index
+end
+
+function swap_weapon_backward(pindex, write_to_character)
+   local p = game.get_player(pindex)
+   local gun_index = p.character.selected_gun_index
+   local guns_inv = p.get_inventory(defines.inventory.character_guns)
+   local ammo_inv = game.get_player(pindex).get_inventory(defines.inventory.character_ammo)
+   
+   --Simple index increment (not needed)
+   gun_index = gun_index - 1
+   if gun_index < 1 then 
+      gun_index = 3
+   end
+   
+   --Increment again if the new index has no guns or no ammo
+   local ammo_stack = ammo_inv[gun_index]
+   local gun_stack  = guns_inv[gun_index]
+   local tries = 0
+   while tries < 4 and (ammo_stack == nil or not ammo_stack.valid_for_read or not ammo_stack.valid or gun_stack == nil or not gun_stack.valid_for_read or not gun_stack.valid) do
+      gun_index = gun_index - 1
+      if gun_index < 1 then 
+         gun_index = 3
+      end
+      ammo_stack = ammo_inv[gun_index]
+      gun_stack  = guns_inv[gun_index]
+      tries = tries + 1
+   end
+   
+   if tries > 3 then
+      return -1
+   end
+   
+   if write_to_character then
+      p.character.selected_gun_index = gun_index
+   end
+   return gun_index
+end
 
 function play_mining_sound(pindex)
    local player= game.players[pindex]
-   if player and player.mining_state.mining and player.selected and player.selected.valid and player.selected.prototype.is_building then
-      player.play_sound{path = "Mine-Building"}
+   if player and player.mining_state.mining and player.selected and player.selected.valid then 
+      if player.selected.prototype.is_building then
+         player.play_sound{path = "Mine-Building"}
+      else
+         player.play_sound{path = "Mine-Building"}--Mine other things, eg. character corpses, laterdo new sound
+      end
       schedule(25, "play_mining_sound", pindex)
    end
 end
@@ -7823,7 +7893,7 @@ script.on_event("transfer-one-stack", function(event)
                   local result = stack.name
                   local inserted = game.get_player(pindex).insert(stack)
                   players[pindex].building.sectors[players[pindex].building.sector].inventory.remove{name = stack.name, count = inserted}
-                  result = "Moved " .. inserted .. " " .. result .. " to player's inventory."
+                  result = "Moved " .. inserted .. " " .. result .. " to player's inventory."--**laterdo note that ammo gets inserted to ammo slots first
                   printout(result, pindex)
                else
                   local result = "Cannot insert " .. stack.name .. " to player's inventory, "
@@ -7860,10 +7930,15 @@ script.on_event("transfer-one-stack", function(event)
    end
 end)
 
-script.on_event("inventory-equip-item-in-hand", function(event)
+--You can equip armor, armor equipment, guns, ammo. You can equip from the hand in any menu, or from the inventory with an empty hand.
+script.on_event("equip-item", function(event)--****
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
+   end
+   local stack = game.get_player(pindex).cursor_stack
+   if players[pindex].in_menu and players[pindex].menu == "inventory" then
+      
    end
    if players[pindex].in_menu then
       if players[pindex].menu == "inventory" then
@@ -10003,7 +10078,7 @@ function equip_it(stack,pindex)
 		 message = " Equipped " .. stack.name
 		 stack.count = stack.count - inserted
 	  else
-	     if gun_inv.count_empty_stacks() == 0 then 
+	    if gun_inv.count_empty_stacks() == 0 then 
 		    message = "All gun slots full."
 		 else
 		    message = "Cannot insert " .. stack.name
@@ -10017,8 +10092,8 @@ function equip_it(stack,pindex)
 		 message = "Reloaded with " .. stack.name
 		 stack.count = stack.count - inserted
 	  else
-	     if ammo_inv.count_empty_stacks() == 0 then 
-		    message = "All gun slots full."
+	    if ammo_inv.count_empty_stacks() == 0 then 
+		    message = "All ammo slots full."
 		 else
 		    message = "Cannot insert " .. stack.name
 		 end
@@ -10087,11 +10162,15 @@ function read_weapons_and_ammo(pindex)
    local ammos_count = #ammo_inv - ammo_inv.count_empty_stacks()
    local result = "Weapons, "
    
-   for i = 1, guns_count, 1 do
+   for i = 1, 3, 1 do
       if i > 1 then
 	    result = result .. " and "
 	  end
-	  result = result .. guns_inv[i].name
+     if guns_inv[i] and guns_inv[i].valid and guns_inv[i].valid_for_read then
+        result = result .. guns_inv[i].name
+     else
+        result = result .. "empty weapon slot"
+     end
 	  if ammo_inv[i] ~= nil and ammo_inv[i].valid and ammo_inv[i].valid_for_read then
 	     result = result .. " with " .. ammo_inv[i].count .. " " .. ammo_inv[i].name .. "s, "
 	  else
@@ -10109,10 +10188,20 @@ end
 function reload_weapons(pindex)
    local ammo_inv = game.get_player(pindex).get_inventory(defines.inventory.character_ammo)
    local main_inv = game.get_player(pindex).get_inventory(defines.inventory.character_main)
+   local result = ""
+   if ammo_inv.is_full() then
+      result = "All ammo slots are already full."
+      return result
+   end
    --Apply an inventory transfer to the ammo inventory.
    local res, full = transfer_inventory{from = main_inv, to = ammo_inv}
-   
-   local result = "Reloaded weapons with any available ammunition. "--laterdo fail condition message, and maybe add sound?
+   --**laterdo fail conditions messages, and maybe add reload sound?
+   --Check fullness
+   if ammo_inv.is_full() then
+      result = "Fully reloaded all three weapons"
+   else
+      result = "Reloaded weapons with any available ammunition, "
+   end
    return result
 end
 
