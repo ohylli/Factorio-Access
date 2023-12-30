@@ -3149,10 +3149,6 @@ function scan_index(pindex)
       printout("Scan pindex error.", pindex)
       return
    end
-   if players[pindex].is_scanning then
-      printout("Scanning.", pindex)
-      return
-   end
    if (players[pindex].nearby.category == 1 and next(players[pindex].nearby.ents) == nil) 
       or (players[pindex].nearby.category == 2 and next(players[pindex].nearby.resources) == nil) 
       or (players[pindex].nearby.category == 3 and next(players[pindex].nearby.containers) == nil) 
@@ -3187,6 +3183,7 @@ function scan_index(pindex)
       if ents[players[pindex].nearby.index].aggregate == false then
          --The scan target is an entity
          local i = 1
+         --Remove invalid or unwanted instances of the entity
          while i <= #ents[players[pindex].nearby.index].ents do
             if ents[players[pindex].nearby.index].ents[i].valid and ents[players[pindex].nearby.index].ents[i].name ~= "highlight-box" 
                and ents[players[pindex].nearby.index].ents[i].type ~= "flying-text" then
@@ -3198,13 +3195,14 @@ function scan_index(pindex)
                end
             end
          end
+         --If there is none left of the entity, remove it
          if #ents[players[pindex].nearby.index].ents == 0 then
             table.remove(ents,players[pindex].nearby.index)
             players[pindex].nearby.index = math.min(players[pindex].nearby.index, #ents)
             scan_index(pindex)
             return
          end
-
+         --Sort by distance 
          table.sort(ents[players[pindex].nearby.index].ents, function(k1, k2) 
             local pos = players[pindex].cursor_pos
             return squared_distance(pos, k1.position) < squared_distance(pos, k2.position)
@@ -3212,7 +3210,7 @@ function scan_index(pindex)
          if players[pindex].nearby.selection > #ents[players[pindex].nearby.index].ents then
             players[pindex].selection = 1
          end
-         --The scan target is an entity
+         --The scan target is an entity, select it now
          ent = ents[players[pindex].nearby.index].ents[players[pindex].nearby.selection]
          if ent == nil then
             printout("Error: This object no longer exists. Try rescanning.", pindex)
@@ -3224,7 +3222,7 @@ function scan_index(pindex)
          end
          players[pindex].cursor_pos = center_of_tile(ent.position)
          cursor_highlight(pindex, ent, "train-visualization")
---      end
+         players[pindex].last_indexed_ent = ent
       else
          --The scan target is an aggregate
          if players[pindex].nearby.selection > #ents[players[pindex].nearby.index].ents then
@@ -3232,16 +3230,18 @@ function scan_index(pindex)
          end
          local name = ents[players[pindex].nearby.index].name
          local entry = ents[players[pindex].nearby.index].ents[players[pindex].nearby.selection]
+         --If there is none left of the entry or it is an unwanted type (does this ever happen?), remove it
          if table_size(entry) == 0 or name == "highlight-box" then
             table.remove(ents[players[pindex].nearby.index].ents, players[pindex].nearby.selection)
             players[pindex].nearby.selection = players[pindex].nearby.selection - 1
             scan_index(pindex)
             return
          end
-         --The scan target is an aggregate 
-         ent = {name = name, position = table.deepcopy(entry.position), group = entry.group}
+         --The scan target is an aggregate, select it now
+         ent = {name = name, position = table.deepcopy(entry.position), group = entry.group} --maybe use "aggregate = true" ?
          players[pindex].cursor_pos = center_of_tile(ent.position)
          cursor_highlight(pindex, nil, "train-visualization")
+         players[pindex].last_indexed_ent = ent
       end
       
       if not ents[players[pindex].nearby.index].aggregate and not ent.valid then
@@ -4241,7 +4241,6 @@ function initialize(player)
    end
       
    local character = player.cutscene_character or player.character
-   faplayer.is_scanning = faplayer.is_scanning or false
    faplayer.in_menu = faplayer.in_menu or false
    faplayer.in_item_selector = faplayer.in_item_selector or false
    faplayer.menu = faplayer.menu or "none"
@@ -4263,8 +4262,9 @@ function initialize(player)
    faplayer.custom_GUI_frame = nil
    faplayer.custom_GUI_sprite = nil
    faplayer.direction_lag = faplayer.direction_lag or true
-   faplayer.previous_item = faplayer.previous_item or ""
+   faplayer.previous_hand_item_name = faplayer.previous_hand_item_name or ""
    faplayer.last = faplayer.last or ""
+   faplayer.last_indexed_ent = faplayer.last_indexed_ent or nil 
    faplayer.item_selection = faplayer.item_selection or false
    faplayer.item_cache = faplayer.item_cache or {}
    faplayer.zoom = faplayer.zoom or 1
@@ -5945,10 +5945,8 @@ script.on_event("rescan", function(event)
       return
    end
    if not (players[pindex].in_menu) then
-      players[pindex].is_scanning = true
       rescan(pindex)
       printout("Scan Complete", pindex)
-      players[pindex].is_scanning = false
       game.get_player(pindex).play_sound{path = "utility/entity_settings_pasted"}
       game.get_player(pindex).play_sound{path = "utility/entity_settings_copied"}
       rendering.draw_circle{color = {1, 1, 1},radius = 1,width =  4,target = game.get_player(pindex).position, surface = game.get_player(pindex).surface, draw_on_ground = true, time_to_live = 60}
@@ -8773,9 +8771,11 @@ script.on_event("item-info", function(event)
       if ent then
          local str = ent.localised_description
          if str == nil or str == "" then
-            str = "No description"
+            str = "No description for this entity"
          end
          printout(str, pindex)
+      else
+         printout("Nothing selected, use this key to describe an entity or item that you select.", pindex)
       end
    elseif players[pindex].in_menu then
       if players[pindex].menu == "inventory" or (players[pindex].menu == "building" and players[pindex].building.sector > offset + #players[pindex].building.sectors) then
@@ -8830,13 +8830,13 @@ script.on_event("item-info", function(event)
                      str = product.localised_description
                   end
                   if str == nil or str == "" then
-                     str = "No description"
+                     str = "No description found for this item"
                   end
                   printout(str, pindex)
          else
-            printout("No description", pindex)
+            printout("No description found, menu error", pindex)
          end
-      elseif players[pindex].menu == "building" then --***bug here about filter inserter filter selection info key, no?
+      elseif players[pindex].menu == "building" then 
          if players[pindex].building.recipe_selection then
             local recipe = players[pindex].building.recipe_list[players[pindex].building.category][players[pindex].building.index]
             if recipe ~= nil and #recipe.products > 0 then
@@ -8845,16 +8845,19 @@ script.on_event("item-info", function(event)
                local str = ""
                str = product.localised_description
                if str == nil or str == "" then
-                  str = "No description"
+                  str = "No description found for this item"
                end
                printout(str, pindex)
             else
-               printout("No description", pindex)
+               printout("No description found, menu error", pindex)
             end
          elseif players[pindex].building.sector <= #players[pindex].building.sectors then
             local inventory = players[pindex].building.sectors[players[pindex].building.sector].inventory
-            if players[pindex].building.sectors[players[pindex].building.sector].name ~= "Fluid" and inventory.is_empty() then --Catches inventory size 0 crash
-               printout("No description", pindex)
+            if inventory == nil or not inventory.valid then
+               printout("No description found, menu error", pindex)
+            end
+            if players[pindex].building.sectors[players[pindex].building.sector].name ~= "Fluid" and players[pindex].building.sectors[players[pindex].building.sector].name ~= "Filters" and inventory.is_empty() then 
+               printout("No description found, menu error", pindex)
                return
             end
             local stack = inventory[players[pindex].building.index]
@@ -8866,17 +8869,40 @@ script.on_event("item-info", function(event)
                   str = stack.prototype.localised_description
                end
                if str == nil or str == "" then
-                  str = "No description"
+                  str = "No description found for this item"
                end
                printout(str, pindex)
             else
-               printout("No description", pindex)
+               printout("No description found, menu error", pindex)
             end
          end
-
+      else --Another menu
+         printout("Descriptions are not supported for this menu.", pindex)
       end
 
    end
+end)
+
+--Reads the custom info for the last indexed scanner item
+script.on_event("item-info-last-indexed", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].in_menu then
+      printout("Error: Cannot check scanned item descriptions while in a menu",pindex)
+      return
+   end
+   local ent = players[pindex].last_indexed_ent
+   if ent == nil or not ent.valid then
+      printout("Cannot find the scanned item, note that most resources need to be examined from up close",pindex)--laterdo find a workaround for aggregate ents 
+      return
+   end
+   local str = ent.localised_description
+   if str == nil or str == "" then
+      str = "No description found for this entity"
+   end
+   printout(str, pindex)
 end)
 
 --Gives in-game time. The night darkness is from 11 to 13, and peak daylight hours are 18 to 6.
@@ -8907,12 +8933,12 @@ script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
       return
    end
    local stack = game.get_player(pindex).cursor_stack
-   local new_item = ""
+   local new_item_name = ""
    if stack and stack.valid_for_read then 
-      new_item = stack.name
+      new_item_name = stack.name
    end
-   if players[pindex].previous_item ~= new_item then
-      players[pindex].previous_item = new_item
+   if players[pindex].previous_hand_item_name ~= new_item_name then
+      players[pindex].previous_hand_item_name = new_item_name
       players[pindex].building_direction_lag = true
       read_hand(pindex)
    end
