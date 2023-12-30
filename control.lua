@@ -387,6 +387,7 @@ end
 --Brief extra entity info is given here. If the parameter info_comes_after_indexing is false, then this info distinguishes the entity with its description as a new line of the scanner list, such as how assembling machines with different recipes are listed separately.
 function extra_info_for_scan_list(ent,pindex,info_comes_after_indexing)
    local result = ""
+   --Drills
    if ent.name ~= "water" and ent.type == "mining-drill"  then
       local pos = ent.position
       local radius = ent.prototype.mining_drill_radius
@@ -409,13 +410,13 @@ function extra_info_for_scan_list(ent,pindex,info_comes_after_indexing)
          result = result .. ", Out of minable resources"
       end
    end
-
+   --Assemblers and furnaces
    pcall(function()
       if ent.get_recipe() ~= nil then
          result = result .. ", Producing " .. ent.get_recipe().name
       end
    end)
-
+   
    if ent.type == "container" or ent.type == "logistic-container" then --Chests are identified by whether they contain nothing a specific item, or simply various items
       local itemset = ent.get_inventory(defines.inventory.chest).get_contents()
       local itemtable = {}
@@ -432,9 +433,30 @@ function extra_info_for_scan_list(ent,pindex,info_comes_after_indexing)
       elseif #itemtable > 1 then
          result = result .. " with various items "
       end
+   elseif ent.type == "unit-spawner" then
+      --Group by pollution level
+      if ent.absorbed_pollution > 0 then
+         result = " polluted lightly "
+         if ent.absorbed_pollution > 99 then
+            result = " polluted heavily "
+         end
+      else
+         local pos = ent.position
+         local pollution_nearby = false
+         pollution_nearby = pollution_nearby and (ent.surface.get_pollution({pos.x+00,pos.y+00}) > 0)
+         pollution_nearby = pollution_nearby and (ent.surface.get_pollution({pos.x+33,pos.y+00}) > 0)
+         pollution_nearby = pollution_nearby and (ent.surface.get_pollution({pos.x-33,pos.y+00}) > 0)
+         pollution_nearby = pollution_nearby and (ent.surface.get_pollution({pos.x+00,pos.y+33}) > 0)
+         pollution_nearby = pollution_nearby and (ent.surface.get_pollution({pos.x+00,pos.y-33}) > 0)
+         if pollution_nearby then
+            result = " almost polluted "
+         else
+            result = " normal "
+         end
+      end
    end
    
-   if ent.name == "locomotive" and ent.train ~= nil and ent.train.valid then
+   if info_comes_after_indexing == true and ent.train ~= nil and ent.train.valid then
       result = result .. " of train " .. get_train_name(ent.train)
    elseif ent.name == "character" then
       local p = ent.player
@@ -457,14 +479,10 @@ function extra_info_for_scan_list(ent,pindex,info_comes_after_indexing)
          result = result .. " of another character "
       end
    elseif info_comes_after_indexing == true and ent.name == "train-stop" then
-      result = result .. " " .. ent.backer_name --***test
-   end
-   
-   if ent.name == "forest" then
+      result = result .. " " .. ent.backer_name
+   elseif ent.name == "forest" then
       result = result .. classify_forest(ent.position,pindex,true)
    end
-   
-   
    
    return result
 end
@@ -6974,7 +6992,7 @@ script.on_event("mine-tiles", function(event)
 end)
 
 --Mines groups of entities depending on the name or type. Includes trees and rocks, rails.
-script.on_event("mine-area", function(event) --laterdo** proper tallying of cleared_total 
+script.on_event("mine-area", function(event) 
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -6986,6 +7004,15 @@ script.on_event("mine-area", function(event) --laterdo** proper tallying of clea
    local cleared_count = 0
    local cleared_total = 0
    local comment = ""
+   
+   --Check if within reach
+   if ent ~= nil and ent.valid and util.distance(game.get_player(pindex).position, ent.position) > game.get_player(pindex).reach_distance 
+   or util.distance(game.get_player(pindex).position, players[pindex].cursor_pos) > game.get_player(pindex).reach_distance then
+      game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+      printout("This area is out of player reach",pindex)
+      return
+   end
+   
    players[pindex].allow_reading_flying_text = false
    if ent then 
       local surf = ent.surface
