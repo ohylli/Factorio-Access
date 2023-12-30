@@ -7192,11 +7192,12 @@ script.on_event("click-menu", function(event)
          end
          
       elseif players[pindex].menu == "building" then
-         if players[pindex].building.sector <= #players[pindex].building.sectors and #players[pindex].building.sectors[players[pindex].building.sector].inventory > 0  then
-            if players[pindex].building.sectors[players[pindex].building.sector].name == "Fluid" then
+         local sectors_i = players[pindex].building.sectors[players[pindex].building.sector]
+         if players[pindex].building.sector <= #players[pindex].building.sectors and #sectors_i.inventory > 0  then
+            if sectors_i.name == "Fluid" then
                return
-            elseif players[pindex].building.sectors[players[pindex].building.sector].name == "Filters" then
-               if players[pindex].building.index == #players[pindex].building.sectors[players[pindex].building.sector].inventory then
+            elseif sectors_i.name == "Filters" then
+               if players[pindex].building.index == #sectors_i.inventory then
                if players[pindex].building.ent == nil or not players[pindex].building.ent.valid then
                   if players[pindex].building.ent == nil then 
                      printout("Nil entity", pindex)
@@ -7210,7 +7211,7 @@ script.on_event("click-menu", function(event)
                   else
                      players[pindex].building.ent.inserter_filter_mode = "whitelist"
                   end
-                  players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index] = players[pindex].building.ent.inserter_filter_mode 
+                  sectors_i.inventory[players[pindex].building.index] = players[pindex].building.ent.inserter_filter_mode 
                   read_building_slot(pindex,false)
                elseif players[pindex].building.item_selection then
                   if players[pindex].item_selector.group == 0 then
@@ -7228,7 +7229,7 @@ script.on_event("click-menu", function(event)
                      read_item_selector_slot(pindex)
                   else
                      players[pindex].building.ent.set_filter(players[pindex].building.index, players[pindex].item_cache[players[pindex].item_selector.index].name)
-                     players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index] = players[pindex].building.ent.get_filter(players[pindex].building.index)
+                     sectors_i.inventory[players[pindex].building.index] = players[pindex].building.ent.get_filter(players[pindex].building.index)
                      printout("Filter set.", pindex)
                      players[pindex].building.item_selection = false
                      players[pindex].item_selection = false
@@ -7245,24 +7246,69 @@ script.on_event("click-menu", function(event)
                end
                return
             end
-            local stack = players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index]
-               if game.get_player(pindex).cursor_stack.valid_for_read and stack.valid_for_read and game.get_player(pindex).cursor_stack.prototype.name == stack.prototype.name then
-                  stack.transfer_stack(game.get_player(pindex).cursor_stack)
+            local stack = sectors_i.inventory[players[pindex].building.index]
+            local cursor_stack = game.get_player(pindex).cursor_stack
+            --If both stacks have the same item, do a transfer
+            if cursor_stack.valid_for_read and stack.valid_for_read and cursor_stack.name == stack.name then
+               stack.transfer_stack(cursor_stack)
+               if sectors_i.name == "Modules" and cursor_stack.is_module then
+                  printout(" Only one module can be added per module slot " , pindex)
+               else
+                  printout(" Adding to stack of " .. cursor_stack.name , pindex)
+               end
+               return
+            end
+            --Special case for filling module slots
+            if sectors_i.name == "Modules" and cursor_stack ~= nil and cursor_stack.valid_for_read and cursor_stack.is_module then
+               local p_inv = game.get_player(pindex).get_main_inventory()
+               local result = ""
+               if stack.valid_for_read and stack.count > 0 then
+                  if p_inv.count_empty_stacks() < 2 then
+                     printout(" Error: At least two empty player inventory slots needed", pindex)
+                     return
+                  else
+                     result = "Collected " .. stack.name .. " and "
+                     p_inv.insert(stack)
+                     stack.clear()
+                  end
+               end
+               stack = sectors_i.inventory[players[pindex].building.index]
+               if (stack == nil or stack.count == 0) and sectors_i.inventory.can_insert(cursor_stack) then
+                  local module_name = cursor_stack.name
+                  local successful = sectors_i.inventory[players[pindex].building.index].set_stack({name = module_name, count = 1})
+                  if not successful then
+                     printout(" Failed to add module ", pindex)
+                     return
+                  end 
+                  cursor_stack.count = cursor_stack.count - 1
+                  printout(result .. "added " .. module_name, pindex)
+                  return
+               else
+                  printout(" Failed to add module ", pindex)
                   return
                end
-
-            if game.get_player(pindex).cursor_stack.swap_stack(stack) then
+            end
+            --Try to swap stacks and report if there is an error
+            if cursor_stack.swap_stack(stack) then
                game.get_player(pindex).play_sound{path = "utility/inventory_click"}
---               read_building_slot(pindex,false)
-            elseif game.get_player(pindex).cursor_stack.valid_for_read then
-               printout("That item doesn't belong here.", pindex)
+--             read_building_slot(pindex,false)
+            else
+               local name = "This item"
+               if (stack == nil or not stack.valid_for_read) and (cursor_stack == nil or not cursor_stack.valid_for_read) then
+                  printout("Empty", pindex)
+                  return
+               end
+               if cursor_stack.valid_for_read then
+                  name = cursor_stack.name
+               end
+               printout("Cannot insert " .. name .. " in this slot", pindex)
             end
          elseif players[pindex].building.recipe_list == nil then
             game.get_player(pindex).play_sound{path = "utility/inventory_click"}
             local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
             game.get_player(pindex).cursor_stack.swap_stack(stack)
-               players[pindex].inventory.max = #players[pindex].inventory.lua_inventory
---            read_inventory_slot(pindex)
+            players[pindex].inventory.max = #players[pindex].inventory.lua_inventory
+--          read_inventory_slot(pindex)
          else
             if players[pindex].building.sector == #players[pindex].building.sectors + 1 then --Building recipe selection
                if players[pindex].building.recipe_selection then
@@ -7282,7 +7328,7 @@ script.on_event("click-menu", function(event)
                         --p.opened = players[pindex].building.ent--bug** doesnt work 
                      end
                   end)) then
-                     printout("This is only a list of what can be crafted by this machine.  Please put items in input to start the crafting process.", pindex)
+                     printout("For this building, recipes are selected automatically based on the input item, this menu is for information only.", pindex)
                   end
                elseif #players[pindex].building.recipe_list > 0 then
                game.get_player(pindex).play_sound{path = "utility/inventory_click"}
@@ -7863,7 +7909,7 @@ function build_item_in_hand(pindex, offset_val)
    if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then
       local ent = stack.prototype.place_result
       local dimensions = get_tile_dimensions(stack.prototype, players[pindex].building_direction * dirs.east)
-      local position = {x,y}
+      local position = nil
 
       if not(players[pindex].cursor) then
          local old_pos = game.get_player(pindex).position
@@ -7871,6 +7917,7 @@ function build_item_in_hand(pindex, offset_val)
          if stack.name == "locomotive" or stack.name == "cargo-wagon" or stack.name == "fluid-wagon" or stack.name == "artillery-wagon" then
             --Allow easy placement onto rails.
             adjusted_offset = 2.5
+            position = offset_position(old_pos, players[pindex].player_direction, adjusted_offset)
          else
             local width = stack.prototype.place_result.tile_width
             local height = stack.prototype.place_result.tile_height
@@ -7902,9 +7949,10 @@ function build_item_in_hand(pindex, offset_val)
             if flip then
                position = {x = left_top.x + math.floor(height/2),y = left_top.y + math.floor(width/2)}
             end
+            
+            --Apply extra offsets if Any
+            position = offset_position(position, players[pindex].player_direction, adjusted_offset)
          end
-         --Apply extra offsets if Any
-         position = offset_position(position, players[pindex].player_direction, adjusted_offset)
          
       else
          --Cursor offset
@@ -10840,7 +10888,7 @@ function sync_build_arrow(pindex)
          surface = game.get_player(pindex).surface, players = {pindex}, target = player.cursor_pos, orientation = (dir/dirs.east/dirs.south)}
       dir_indicator = player.building_direction_arrow
       rendering.set_visible(dir_indicator,true)
-      if players[pindex].hide_cursor then
+      if players[pindex].hide_cursor or stack.name == "locomotive" or stack.name == "cargo-wagon" or stack.name == "fluid-wagon" or stack.name == "artillery-wagon" then
          rendering.set_visible(dir_indicator,false)
       end
       
@@ -10877,7 +10925,7 @@ function sync_build_arrow(pindex)
       player.building_footprint = rendering.draw_rectangle{left_top = left_top, right_bottom = right_bottom , color = {r = 0.25, b = 0.25, g = 1.0, a = 0.25}, draw_on_ground = true, 
          surface = game.get_player(pindex).surface, players = {pindex} }
       rendering.set_visible(player.building_footprint,true)
-      if players[pindex].hide_cursor then
+      if players[pindex].hide_cursor or stack.name == "locomotive" or stack.name == "cargo-wagon" or stack.name == "fluid-wagon" or stack.name == "artillery-wagon" then
          rendering.set_visible(player.building_footprint,false)
       end
    else
