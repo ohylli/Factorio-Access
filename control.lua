@@ -2597,7 +2597,7 @@ function populate_categories(pindex)
             table.insert(players[pindex].nearby.resources, ent)
          elseif ent.ents[1].type == "container" then
             table.insert(players[pindex].nearby.containers, ent)
-         elseif ent.ents[1].prototype.is_building and not ent.ents[1].type == "unit-spawner" and not ent.ents[1].type == "turret" and not ent.ents[1].name == "train-stop" then
+         elseif ent.ents[1].prototype.is_building and ent.ents[1].type ~= "unit-spawner" and ent.ents[1].type ~= "turret" and ent.ents[1].name ~= "train-stop" then
             table.insert(players[pindex].nearby.buildings, ent)
          elseif ent.ents[1].type == "car" or ent.ents[1].type == "locomotive" or ent.ents[1].type == "cargo-wagon" or ent.ents[1].type == "fluid-wagon" or ent.ents[1].type == "artillery-wagon" or ent.ents[1].type == "spider-vehicle" or ent.ents[1].name == "train-stop" then 
             table.insert(players[pindex].nearby.vehicles, ent)
@@ -2610,6 +2610,15 @@ function populate_categories(pindex)
          end
       end
    end
+   --for debugging
+   -- game.print("resource count: "  .. #players[pindex].nearby.resources,{volume_modifier = 0})
+   -- game.print("container count: " .. #players[pindex].nearby.containers,{volume_modifier = 0})
+   -- game.print("buildings count: " .. #players[pindex].nearby.buildings,{volume_modifier = 0})
+   -- game.print("vehicles count: "  .. #players[pindex].nearby.vehicles,{volume_modifier = 0})
+   -- game.print("'players' count: " .. #players[pindex].nearby.players,{volume_modifier = 0})
+   -- game.print("enemies count: "   .. #players[pindex].nearby.enemies,{volume_modifier = 0})
+   -- game.print("other count: "     .. #players[pindex].nearby.other,{volume_modifier = 0})
+   
 end
 
 function read_belt_slot(pindex, start_phrase)
