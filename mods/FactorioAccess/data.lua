@@ -866,6 +866,13 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "item-info-last-indexed",
+    key_sequence = "SHIFT + Y",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "read-time-and-research-progress",
     key_sequence = "T",
     consuming = "none"
