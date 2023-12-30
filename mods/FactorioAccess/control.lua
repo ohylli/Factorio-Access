@@ -516,7 +516,7 @@ function nudge_key(direction, event)
       return 
    end
    local ent = get_selected_ent(pindex)
-   if ent then
+   if ent and ent.valid then
       if ent.prototype.is_building and ent.operable and ent.force == game.get_player(pindex).force then
          local new_pos = offset_position(ent.position,direction,1)
          local teleported = ent.teleport(new_pos)
@@ -536,6 +536,8 @@ function nudge_key(direction, event)
             printout({"access.failed-to-nudge"}, pindex)
          end
       end
+   else
+      printout("Nudged nothing.", pindex)
    end
    
 end
@@ -3023,7 +3025,7 @@ function locate_hand_in_inventory(pindex)
    end
    if not players[pindex].in_menu then
       --laterdo** figure out how to open inventory with API and do that here
-      printout("Open the inventory to use this feature.",pindex)
+      printout("You need to open the inventory to locate this item from there.",pindex)
       return
    end
    --Save the hand stack item name
@@ -7713,7 +7715,11 @@ function open_operable_building(ent,pindex)--open_building
          end
          read_building_slot(pindex, true)
       else
-         printout("This building has no inventory", pindex)
+         if game.get_player(pindex).opened ~= nil then
+            printout(ent.name .. ", this menu has no options ", pindex)
+         else
+            printout(ent.name .. " has no menu ", pindex)
+         end
       end
    else
       printout("Not an operable building.", pindex)
@@ -10996,7 +11002,7 @@ script.on_event(defines.events.on_entity_damaged,function(event)
       end
       local shield_left = nil
       local armor_inv = ent.player.get_inventory(defines.inventory.character_armor)
-      if armor_inv[1] and armor_inv[1].valid and armor_inv[1].grid and armor_inv[1].grid.valid then
+      if armor_inv[1] and armor_inv[1].valid_for_read and armor_inv[1].valid and armor_inv[1].grid and armor_inv[1].grid.valid then
          local grid = armor_inv[1].grid
          if grid.shield > 0 then
             shield_left = grid.shield
