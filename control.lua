@@ -449,7 +449,7 @@ function extra_info_for_scan_list(ent,pindex,info_comes_after_indexing)
          pollution_nearby = pollution_nearby and (ent.surface.get_pollution({pos.x+00,pos.y+33}) > 0)
          pollution_nearby = pollution_nearby and (ent.surface.get_pollution({pos.x+00,pos.y-33}) > 0)
          if pollution_nearby then
-            result = " almost polluted "
+            result = " almost polluted "--**laterdo bug: this does not seem to ever be reached
          else
             result = " normal "
          end
@@ -725,6 +725,12 @@ function ent_info(pindex, ent, description)
          return ""
       end
       
+   elseif ent.name == "character-corpse" then
+      if ent.character_corpse_player_index == pindex then
+         result = result .. " of your character "
+      elseif ent.character_corpse_player_index ~= nil then
+         result = result .. " of another character "
+      end
    end
    --Explain the contents of a container
    if ent.type == "container" or ent.type == "logistic-container" then --Chests etc: Report the most common item and say "and other items" if there are other types.
@@ -6331,9 +6337,9 @@ function read_item_pickup_state(pindex)
    local p = game.get_player(pindex)
    local result = ""
    local check_last_pickup = false
-   local nearby_belts = p.surface.find_entities_filtered{position = p.position, radius = 1.1, type = "transport-belt"}
-   local nearby_ground_items = p.surface.find_entities_filtered{position = p.position, radius = 1.1, name = "item-on-ground"}
-   rendering.draw_circle{color = {0.3, 1, 0.3},radius = 1.1,width = 4,target = p.position, surface = p.surface,time_to_live = 60, draw_on_ground = true}
+   local nearby_belts = p.surface.find_entities_filtered{position = p.position, radius = 1.25, type = "transport-belt"}
+   local nearby_ground_items = p.surface.find_entities_filtered{position = p.position, radius = 1.25, name = "item-on-ground"}
+   rendering.draw_circle{color = {0.3, 1, 0.3},radius = 1.25,width = 1,target = p.position, surface = p.surface,time_to_live = 60, draw_on_ground = true}
    --Check if there is a belt within n tiles
    if #nearby_belts > 0 then
       result = "Picking up items from nearby belts"
@@ -6388,7 +6394,7 @@ script.on_event(defines.events.on_picked_up_item, function(event)
       return
    end
    local p = game.get_player(pindex)
-   rendering.draw_circle{color = {0.3, 1, 0.3},radius = 1.1,width = 4,target = p.position, surface = p.surface,time_to_live = 10, draw_on_ground = true}
+   rendering.draw_circle{color = {0.3, 1, 0.3},radius = 1.25,width = 1,target = p.position, surface = p.surface,time_to_live = 10, draw_on_ground = true}
    players[pindex].last_pickup_tick = event.tick
    players[pindex].last_item_picked_up = event.item_stack.name
 end)
@@ -6949,11 +6955,15 @@ end
 
 function play_mining_sound(pindex)
    local player= game.players[pindex]
+   game.print("1",{volume_modifier=0})--
    if player and player.mining_state.mining and player.selected and player.selected.valid then 
+      game.print("2",{volume_modifier=0})--
       if player.selected.prototype.is_building then
          player.play_sound{path = "Mine-Building"}
+         game.print("3A",{volume_modifier=0})--
       else
          player.play_sound{path = "Mine-Building"}--Mine other things, eg. character corpses, laterdo new sound
+         game.print("3B",{volume_modifier=0})--
       end
       schedule(25, "play_mining_sound", pindex)
    end
@@ -6968,9 +6978,12 @@ script.on_event("mine-access-sounds", function(event)
    if not (players[pindex].in_menu) and not players[pindex].vanilla_mode then   
       target(pindex)
       local ent = get_selected_ent(pindex)
-      if ent and ent.prototype.is_building and (ent.prototype.mineable_properties.products == nil or ent.prototype.mineable_properties.products[1].name == ent.name) then
+      --if ent and (ent.prototype.mineable_properties.products == nil or ent.prototype.mineable_properties.products[1].name == ent.name) then
+      if ent and ent.valid and (ent.prototype.mineable_properties.products ~= nil) then
          game.get_player(pindex).play_sound{path = "Mine-Building"}
          schedule(25, "play_mining_sound", pindex)
+      elseif ent and ent.valid and ent.name == "character-corpse" then
+         printout("Collecting items ", pindex)
       end
    end
 end)
@@ -7041,9 +7054,22 @@ script.on_event("mine-area", function(event)
             game.get_player(pindex).mine_entity(rail,true)
             cleared_count = cleared_count + 1
          end
+      else
+         --Check if it is a remnant ent, clear obstacles
+         local ent_is_remnant = false
+         local remnant_names = {"tree-01-stump","tree-02-stump","tree-03-stump","tree-04-stump","tree-05-stump","tree-06-stump","tree-07-stump","tree-08-stump","tree-09-stump","small-scorchmark","small-scorchmark-tintable","medium-scorchmark","medium-scorchmark-tintable","big-scorchmark","big-scorchmark-tintable","huge-scorchmark","huge-scorchmark-tintable"}
+         for i,name in ipairs(remnant_names) do 
+            if ent.name == name then
+               ent_is_remnant = true
+            end
+         end
+         if ent_is_remnant then
+            game.get_player(pindex).play_sound{path = "Mine-Building"}
+            cleared_count, comment = clear_obstacles_in_circle(players[pindex].cursor_pos, 5, pindex) 
+         end
       end
    else
-      --For empty tiles, clear obstacles again
+      --For empty tiles, clear obstacles
       game.get_player(pindex).play_sound{path = "Mine-Building"}
       cleared_count, comment = clear_obstacles_in_circle(players[pindex].cursor_pos, 5, pindex) 
    end
@@ -8232,11 +8258,11 @@ script.on_event("equip-item", function(event)
    local result = ""
    if stack ~= nil and stack.valid_for_read and stack.valid then
       --Equip item grabbed in hand, for selected menus
-      if not players[pindex].in_menu or players[pindex].menu == "inventory" or players[pindex].menu == "building" then
+      if not players[pindex].in_menu or players[pindex].menu == "inventory" then
          result = equip_it(stack,pindex)
       end
    elseif players[pindex].menu == "inventory" then
-      --Equip the selected inventory item
+      --Equip the selected item from its inventory slot directly
       local stack = game.get_player(pindex).get_main_inventory()[players[pindex].inventory.index]
       result = equip_it(stack,pindex)
       
