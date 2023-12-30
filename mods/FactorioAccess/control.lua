@@ -2677,26 +2677,26 @@ end
 
 function read_building_recipe(pindex, start_phrase)
    start_phrase = start_phrase or ""
-   if players[pindex].building.recipe_selection then
+   if players[pindex].building.recipe_selection then --inside the selector
       local recipe = players[pindex].building.recipe_list[players[pindex].building.category][players[pindex].building.index]
-      if recipe.valid == true then
+      if recipe and recipe.valid then
          printout(start_phrase .. recipe.name .. " " .. recipe.category .. " " .. recipe.group.name .. " " .. recipe.subgroup.name, pindex)
       else
-         printout(start_phrase .. "Blank",pindex)
+         printout(start_phrase .. "blank",pindex)
       end
    else
       local recipe = players[pindex].building.recipe
       if recipe ~= nil then
-         printout(start_phrase .. "Currently Producing:  " .. recipe.name, pindex)
+         printout(start_phrase .. "Currently Producing: " .. recipe.name, pindex)
       else
-         printout("Select a recipe", pindex)
+         printout(start_phrase .. "Press left bracket", pindex)
       end
    end
 end
       
 
 function read_building_slot(pindex, prefix_inventory_size_and_name)
-   building_sector=players[pindex].building.sectors[players[pindex].building.sector]
+   local building_sector=players[pindex].building.sectors[players[pindex].building.sector]
    if building_sector.name == "Filters" then 
       local inventory = building_sector.inventory
       local start_phrase = #inventory .. " " .. building_sector.name .. ", "
@@ -2978,35 +2978,64 @@ function read_hand(pindex)
    end
 end
 
-function open_hand_from_inventory(pindex)--****WIP
+--Stores the hand item in the player inventory and reads it from the first found slot. For now it requires having the inv already open.
+function locate_hand_in_inventory(pindex)
+   local p = game.get_player(pindex)
+   local inv = p.get_main_inventory() 
+   local stack = p.cursor_stack
+   
    --Check if stack empty and menu supported
-   local stack = game.get_player(pindex).cursor_stack
    if stack == nil or not stack.valid_for_read or not stack.valid then
       --Hand is empty
       return
    end
    if players[pindex].in_menu and players[pindex].menu ~= "inventory" then
-      --Unsupported menu type laterdo add support for building menu and closing the menu with a call
+      --Unsupported menu type, laterdo add support for building menu and closing the menu with a call
       printout("Another menu is open.",pindex)
+      return
+   end
+   if not players[pindex].in_menu then
+      --laterdo** figure out how to open inventory with API and do that here
+      printout("Open the inventory to use this feature.",pindex)
       return
    end
    --Save the hand stack item name
    local item_name = stack.name
    --Empty hand stack (clear cursor stack)
    players[pindex].skip_read_hand = true
-   local successful = game.get_player(pindex).clear_cursor()
+   local successful = p.clear_cursor()
    if not successful then
-      printout("Unable to empty hand",pindex)
+      local message = "Unable to empty hand"
+      if inv.count_empty_stacks() == 0 then
+         message = message .. ", inventory full"
+      end
+      printout(message,pindex)
       return
    end
-   if not players[pindex].in_menu then
-      --Open inventory menu 
-      open_player_inventory(game.tick,pindex)
-   end
+   
+   -- if not players[pindex].in_menu then
+      -- --Open inventory menu 
+      -- open_player_inventory(game.tick,pindex)
+   -- end
+   
    --Iterate the inventory until you find the matching item name's index
-   --stop at that index
-     
-   --Find the hand stack in the inventory (maybe just the hand icon thingy?)
+   local found = false
+   local i = 0
+   while not found and i <= #inv do
+      i = i + 1
+      if inv[i] and inv[i].valid and inv[i].name == item_name then
+         found = true
+      end
+   end
+   --If found, read it from the inventory
+   if not found then
+      printout("Error: " .. item_name .. " not found",pindex)
+      return
+   else
+      players[pindex].inventory.index = i
+      read_inventory_slot(pindex, "inventory ")
+   end
+   
 end
 
 function read_quick_bar(index,pindex)
@@ -6403,7 +6432,7 @@ function open_player_inventory(tick,pindex)
    end
 end
 
-script.on_event("close-menu", function(event)
+script.on_event("close-menu", function(event)--close_menu
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -6439,6 +6468,18 @@ script.on_event("close-menu", function(event)
       players[pindex].item_selection = false
       players[pindex].item_cache = {}
       players[pindex].item_selector = {index = 0, group = 0, subgroup = 0}
+      players[pindex].building = {
+         index = 0,
+         ent = nil,
+         sectors = nil,
+         sector = 0,
+         recipe_selection = false,
+         item_selection = false,
+         category = 0,
+         recipe = nil,
+         recipe_list = nil
+      }
+      
    end
 end)
 
@@ -6572,7 +6613,7 @@ script.on_event("switch-menu-or-gun", function(event)
          players[pindex].building.category = 1
          players[pindex].building.recipe_selection = false
 
-         players[pindex].building.sector = players[pindex].building.sector + 1
+         players[pindex].building.sector = players[pindex].building.sector + 1 --Change sector
          players[pindex].building.item_selection = false
          players[pindex].item_selection = false
          players[pindex].item_cache = {}
@@ -6595,9 +6636,9 @@ script.on_event("switch-menu-or-gun", function(event)
                read_building_slot(pindex, true)
             end
          else
-            if players[pindex].building.sector == #players[pindex].building.sectors + 1 then
-               read_building_recipe(pindex, "Select a Recipe, ", pindex)
-            elseif players[pindex].building.sector == #players[pindex].building.sectors + 2 then
+            if players[pindex].building.sector == #players[pindex].building.sectors + 1 then     --Recipe selection sector
+               read_building_recipe(pindex, "Select a Recipe, ")
+            elseif players[pindex].building.sector == #players[pindex].building.sectors + 2 then --Player inventory sector
                read_inventory_slot(pindex, "Player Inventory, ")
             else
                players[pindex].building.sector = 1
@@ -6719,7 +6760,7 @@ script.on_event("reverse-switch-menu-or-gun", function(event)
             end
          else
             if players[pindex].building.sector == #players[pindex].building.sectors + 1 then
-               read_building_recipe(pindex, "Select a Recipe, ", pindex)
+               read_building_recipe(pindex, "Select a Recipe, ")
             elseif players[pindex].building.sector == #players[pindex].building.sectors + 2 then
                read_inventory_slot(pindex, "Player Inventory, ")
             end
@@ -7185,7 +7226,7 @@ script.on_event("click-menu", function(event)
                players[pindex].inventory.max = #players[pindex].inventory.lua_inventory
 --            read_inventory_slot(pindex)
          else
-            if players[pindex].building.sector == #players[pindex].building.sectors + 1 then
+            if players[pindex].building.sector == #players[pindex].building.sectors + 1 then --Building recipe selection
                if players[pindex].building.recipe_selection then
                   if not(pcall(function()
                      players[pindex].building.recipe = players[pindex].building.recipe_list[players[pindex].building.category][players[pindex].building.index]
@@ -7196,6 +7237,12 @@ script.on_event("click-menu", function(event)
                      players[pindex].building.index = 1
                      printout("Selected", pindex)
                      game.get_player(pindex).play_sound{path = "utility/inventory_click"}
+                     --Open GUI if not already
+                     local p = game.get_player(pindex)
+                     if players[pindex].building.ent.valid then 
+                        --p.opened = nil
+                        --p.opened = players[pindex].building.ent--bug** doesnt work 
+                     end
                   end)) then
                      printout("This is only a list of what can be crafted by this machine.  Please put items in input to start the crafting process.", pindex)
                   end
@@ -7408,7 +7455,7 @@ script.on_event("click-hand", function(event)
    end
 end)
 
---Left click actions without items in hand
+--Left click actions with no menu and no items in hand
 script.on_event("click-entity", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -7455,9 +7502,9 @@ function clicked_on_entity(ent,pindex)
       --If checking an operable building, open its menu
       open_operable_building(ent,pindex)
    elseif ent.operable then
-      printout("No actions for operable " .. ent.name,pindex)
+      printout("No menu for " .. ent.name,pindex)
    else
-      printout("No actions for " .. ent.name,pindex)
+      printout("No menu for " .. ent.name,pindex)
    end
 end
 
@@ -7490,13 +7537,20 @@ script.on_event("repair-area", function(event)
    end
 end)
 
-function open_operable_building(ent,pindex)
+function open_operable_building(ent,pindex)--open_building
    if ent.operable and ent.prototype.is_building then
+      --Check if within reach
       if util.distance(game.get_player(pindex).position, ent.position) > game.get_player(pindex).reach_distance then
          game.get_player(pindex).play_sound{path = "utility/cannot_build"}
          printout("Building is out of player reach",pindex)
          return
       end
+      --Open GUI if not already
+      local p = game.get_player(pindex)
+      if p.opened == nil then 
+         p.opened = ent
+      end
+      --Other stuff...
       if ent.prototype.subgroup.name == "belt" then
          players[pindex].in_menu = true
          players[pindex].menu = "belt"
@@ -7595,6 +7649,26 @@ function open_operable_building(ent,pindex)
          players[pindex].move_queue = {}
          players[pindex].inventory.index = 1
          players[pindex].building.index = 1
+         
+         --For assembling machine types with no recipe, open recipe building sector directly
+         local recipe = players[pindex].building.recipe
+         if (recipe == nil or not recipe.valid) and (ent.prototype.type == "assembling-machine") and players[pindex].building.recipe_list ~= nil then
+            players[pindex].building.sector = #players[pindex].building.sectors + 1
+            players[pindex].building.index = 1
+            players[pindex].building.category = 1
+            players[pindex].building.recipe_selection = false
+
+            players[pindex].building.item_selection = false
+            players[pindex].item_selection = false
+            players[pindex].item_cache = {}
+            players[pindex].item_selector = {
+               index = 0,
+               group = 0,
+               subgroup = 0
+            }
+            read_building_recipe(pindex, "Select a Recipe, ")
+            return
+         end
          read_building_slot(pindex, true)
       else
          printout("This building has no inventory", pindex)
@@ -9083,7 +9157,7 @@ script.on_event("open-hand-from-inventory",function(event)
    if not check_for_player(pindex) then
       return
    end
-   open_hand_from_inventory(pindex)
+   locate_hand_in_inventory(pindex)
 end)
 
 script.on_event("open-warnings-menu", function(event)
@@ -9568,8 +9642,9 @@ script.on_event("debug-test-key", function(event)
       --
    end
    --Build left turns on end rails
-   if ent and ent.valid and ent.name == "straight-rail" then
+   if ent and ent.valid then
       --build_rail_bypass_junction(ent, pindex)
+      p.opened = ent
    end
    --if ent ~= nil and ent.valid and ent.fluidbox ~= nil then
      -- p.print(#ent.fluidbox .. " fluids ")
@@ -9587,23 +9662,28 @@ script.on_event("debug-test-key", function(event)
 	  --instant_schedule(ent.train)
    --end 
    
-   --open_player_inventory with API ****
-   local gui = p.gui
-   if gui and gui.valid then
-      game.print("gui valid")
-      local screen = gui.screen
-      if screen and screen.valid then
-         game.print("screen valid")
-         local visible = screen.visible
-         screen.visible = true
-         game.print(visible)
-         --screen.bring_to_front()
-         screen.focus()
-      end
-   end
-   p.gui.screen.visible = true
-   p.opened = p.gui--achievement works
+   --open_player_inventory with API 
+   -- local gui = p.gui
+   -- if gui and gui.valid then
+      -- game.print("gui valid")
+      -- local screen = gui.screen
+      -- if screen and screen.valid then
+         -- game.print("screen valid")
+         -- local visible = screen.visible
+         -- screen.visible = true
+         -- game.print(visible)
+         -- --screen.bring_to_front()
+         -- screen.focus()
+      -- end
+   -- end
+   --p.gui.screen.visible = true
+   --p.opened = p.gui--achievement works
    --p.print(defines.gui_type.controller)
+   --p.opened = p.character
+   --p.print("opened object_name : " .. p.opened.object_name)
+   --if p.opened.name then
+   --   p.print("opened name : " .. p.opened.name)
+   --end
 end)
 
 --Attempt to launch a rocket
