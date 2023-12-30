@@ -10900,6 +10900,7 @@ function update_custom_GUI_sprite(sprite, scale_in, pindex)
    end
 end
 
+--Alerts a force's players when their structures are destroyed. 300 ticks of cooldown.
 script.on_event(defines.events.on_entity_damaged,function(event)
    local ent = event.entity
    local tick = event.tick
@@ -10925,14 +10926,10 @@ script.on_event(defines.events.on_entity_damaged,function(event)
          ent.player.play_sound{path = "damaged-character-no-shield"}
       end
       return
-   elseif tick < 3600 and tick > 100 then
+   elseif tick < 3600 and tick > 300 then
       --No repeated alerts for the first 60 seconds (because of the spaceship fire damage)
       return
    end
-   
-   --for pindex, player in pairs(players) do 
-   --   game.get_player(pindex).print("damage alert!")
-   --end
    
    local attacker_force = event.force
    local damaged_force = ent.force
@@ -10946,43 +10943,20 @@ script.on_event(defines.events.on_entity_damaged,function(event)
          local result = ent.name .. " damaged by " .. attacker_force.name .. " forces at " .. dist .. " " .. dir
          printout(result,pindex)
          --game.get_player(pindex).print(result,{volume_modifier=0})--**
-         game.get_player(pindex).play_sound{path = "damaged-entity-alert"}
+         game.get_player(pindex).play_sound{path = "damaged-entity-alert",volume_modifier=0.4}
       end
    end
 end)
 
+--Alerts a force's players when their structures are destroyed. No cooldown.
 script.on_event(defines.events.on_entity_died,function(event)
    local ent = event.entity
    local causer = event.cause
-   game.print("ded1")--****
-   if ent == nil or not ent.valid or ent.name then
+   if ent == nil then
       return
    elseif ent.name == "character" then
-      local p = ent.player
-      local result = "Player "
-      if p ~= nil and p.valid and p.name ~= nil then
-         result = result .. " " .. p.name 
-      else 
-         result = result .. " "
-      end
-      if causer == nil or not causer.valid then
-         result = result .. " died at " .. ent.position.x .. "," .. ent.position.y
-      elseif causer.player ~= nil and causer.player.valid and causer.player.name ~= nil then
-         result = result .. " was killed by " .. causer.player.name .. " at " .. ent.position.x .. "," .. ent.position.y
-      else
-         result = result .. " was killed by " .. causer.name .. " at " .. ent.position.x .. "," .. ent.position.y
-      end
-      for pindex, player in pairs(players) do
-         printout(result,pindex)
-         game.get_player(pindex).print("rekt!")
-      end
       return
    end
-   game.print("ded2")--****bug: missing alert  because the ent is no longer valid or maybe cos it is nil
-   -- for pindex, player in pairs(players) do 
-      -- game.get_player(pindex).print("destroyed alert!")
-   -- end
-   
    local attacker_force = event.force
    local damaged_force = ent.force
    --Alert all players of the damaged force
@@ -10994,8 +10968,55 @@ script.on_event(defines.events.on_entity_died,function(event)
          local result = ent.name .. " destroyed by " .. attacker_force.name .. " forces at " .. dist .. " " .. dir
          printout(result,pindex)
          --game.get_player(pindex).print(result,{volume_modifier=0})--**
-         game.get_player(pindex).play_sound{path = "utility/alert_destroyed"}
+         game.get_player(pindex).play_sound{path = "utility/alert_destroyed",volume_modifier=1}
       end
+   end
+end)
+
+--Notify all players when a player character dies
+script.on_event(defines.events.on_player_died,function(event)
+   local pindex = event.player_index
+   local p = game.get_player(pindex)
+   local causer = event.cause
+   local bodies = p.surface.find_entities_filtered{name = "character-corpse"}
+   local latest_body = nil
+   local latest_death_tick = 0
+   local name = p.name
+   if name == nil then
+      name = " "
+   end
+   --Find the most recent character corpse
+   for i,body in ipairs(bodies) do
+      if body.character_corpse_player_index == pindex and body.character_corpse_tick_of_death  > latest_death_tick then
+         latest_body = body
+         latest_death_tick = latest_body.character_corpse_tick_of_death
+      end
+   end
+   --Verify the latest death
+   if event.tick - latest_death_tick > 120 then 
+      latest_body = nil
+   end
+   --Generate death message
+   local result = "Player " .. name 
+   if causer == nil or not causer.valid then
+      result = result .. " died "
+   elseif causer.name == "character" and causer.player ~= nil and causer.player.valid then
+      local other_name = causer.player.name
+      if other_name == nil then
+         other_name = ""
+      end
+      result = result .. " was killed by player " .. other_name
+   else
+      result = result .. " was killed by " .. causer.name
+   end
+   if latest_body ~= nil and latest_body.valid then
+      result = result .. " at " .. math.floor(0.5+latest_body.position.x) .. ", " .. math.floor(0.5+latest_body.position.y) .. "."
+   end
+   --Notify all players
+   for pindex, player in pairs(players) do
+      players[pindex].last_damage_alert_tick = tick
+      printout(result,pindex)
+      game.get_player(pindex).print(result)--***laterdo unique sound 
    end
 end)
 
