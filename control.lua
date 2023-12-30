@@ -11210,7 +11210,7 @@ function play_enemy_alert_sound(mode_in)
             if dist < 50 then
                p.play_sound{path = "utility/item_deleted"}
             end
-            --Additional alert if there are more than 5 enemies nearby
+            --Additional alert if there are more than 10 enemies nearby
             local enemies = p.surface.find_enemy_units(p.position, 25, p.force)
             if #enemies > 10 then
                p.play_sound{path = "enemy-presence-high", volume_modifier = 0.5}
