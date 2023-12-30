@@ -1510,7 +1510,7 @@ function teleport_to_closest(pindex, pos, muted)
          local smoke_effect = first_player.surface.create_entity{name = "iron-chest", position = first_player.position, raise_built = false, force = first_player.force}
          smoke_effect.destroy{}
          if not muted then
-            game.get_player(pindex).play_sound{path = "teleported", volume_modifier = 0.1}
+            game.get_player(pindex).play_sound{path = "teleported", volume_modifier = 0.2}
             game.get_player(pindex).play_sound{path = "utility/scenario_message"}
          end
       end
@@ -1521,7 +1521,7 @@ function teleport_to_closest(pindex, pos, muted)
             rendering.draw_circle{color = {0.3, 0.3, 0.9},radius = 0.5,width = 15,target = new_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
             rendering.draw_circle{color = {0.0, 0.0, 0.9},radius = 0.3,width = 20,target = new_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
             if not muted then
-               game.get_player(pindex).play_sound{path = "teleported", volume_modifier = 0.1}
+               game.get_player(pindex).play_sound{path = "teleported", volume_modifier = 0.2}
                game.get_player(pindex).play_sound{path = "utility/scenario_message"}
             end
             local smoke_effect = first_player.surface.create_entity{name = "iron-chest", position = first_player.position, raise_built = false, force = first_player.force}
@@ -1530,13 +1530,13 @@ function teleport_to_closest(pindex, pos, muted)
          if new_pos.x ~= pos.x or new_pos.y ~= pos.y then
             if not muted then
                printout("Teleported " .. math.ceil(distance(pos,first_player.position)) .. " " .. direction(pos, first_player.position) .. " of target", pindex)
-               game.get_player(pindex).play_sound{path = "teleported", volume_modifier = 0.1}
+               game.get_player(pindex).play_sound{path = "teleported", volume_modifier = 0.2}
                game.get_player(pindex).play_sound{path = "utility/scenario_message"}
             end
          else
             if not muted then
                printout("Teleported to target", pindex)
-               game.get_player(pindex).play_sound{path = "teleported", volume_modifier = 0.1}
+               game.get_player(pindex).play_sound{path = "teleported", volume_modifier = 0.2}
                game.get_player(pindex).play_sound{path = "utility/scenario_message"}
             end
          end
@@ -10938,18 +10938,20 @@ script.on_event(defines.events.on_entity_damaged,function(event)
       if ent.player == nil or not ent.player.valid then
          return
       end
-      local shield damaged = false
+      local shield_left = nil
       local armor_inv = ent.player.get_inventory(defines.inventory.character_armor)
-      if not armor_inv.is_empty() and not armor_inv[1].grid == nil and armor_inv[1].grid.valid  then
+      if armor_inv[1] and armor_inv[1].valid and armor_inv[1].grid and armor_inv[1].grid.valid then
          local grid = armor_inv[1].grid
-         if grid.count() > 0 and grid.shield > 0 then
-            shield_damaged = true
+         if grid.shield > 0 then
+            shield_left = grid.shield
+            --game.print(armor_inv[1].grid.shield,{volume_modifier=0})
          end
       end
-      --Play shield or character damaged sound
-      if shield_damaged then
+      --Play shield and/or character damaged sound
+      if shield_left ~= nil then
          ent.player.play_sound{path = "damaged-character-shield"}
-      else
+      end
+      if shield_left == nil or (shield_left < 1.0 and ent.get_health_ratio < 1) then
          ent.player.play_sound{path = "damaged-character-no-shield"}
       end
       return
