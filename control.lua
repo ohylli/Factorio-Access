@@ -5317,9 +5317,11 @@ function on_tick(event)
       update_menu_visuals()
    elseif event.tick % 60 == 11 then
       for pindex, player in pairs(players) do
-         if game.get_player(pindex).in_combat then
-            --Aim at enemies and play sound to notify enemies within range
-            aim_gun_at_nearest_enemy(pindex)
+         --If within 50 tiles of an enemy, try to aim at enemies and play sound to notify of enemies within shooting range
+         local p = game.get_player(pindex)
+         local enemy = p.surface.find_nearest_enemy{position = p.position, max_distance = 50, force = p.force}
+         if enemy ~= nil and enemy.valid then
+            aim_gun_at_nearest_enemy(pindex,enemy)
          end
       end
    end
@@ -5463,7 +5465,7 @@ function offset_position(oldpos,direction,distance)
    end
 end
 
-
+--Move player character (and adapt the cursor to smooth walking)
 function move(direction,pindex)
    if game.get_player(pindex).driving then
       return
@@ -5518,7 +5520,7 @@ function move(direction,pindex)
       --turn character:
       if players[pindex].walk == 0 then
          game.get_player(pindex).play_sound{path = "Face-Dir"}
-      elseif players[pindex].walk == 2 then
+      elseif players[pindex].walk == 1 then
          table.insert(players[pindex].move_queue,{direction=direction,dest=pos})
       end
       players[pindex].player_direction = direction
@@ -7467,11 +7469,17 @@ script.on_event("click-hand", function(event)
          repair_pack_used(ent,pindex)
       elseif stack.prototype ~= nil and (stack.prototype.name == "capsule" or stack.prototype.type == "capsule") then
          --If holding a capsule type, e.g. cliff explosives or robot capsules, or remotes, try to use it at the cursor position (no feedback about successful usage)
-         local range = game.get_player(pindex).reach_distance
+         local range = 20
+         if stack.name == "cliff-explosives" then
+            range = 10
+         elseif stack.name == "grenade" then
+            range = 15
+         end
          if util.distance(game.get_player(pindex).position,players[pindex].cursor_pos) < range then
             game.get_player(pindex).use_from_cursor(players[pindex].cursor_pos)
          else
-            printout("Target position is out of range",pindex)
+            game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+            printout("Target is out of range",pindex)
          end
       elseif ent ~= nil then
          --If holding an item with no special left click actions, allow entity left click actions.
@@ -10639,25 +10647,36 @@ function remove_equipment_and_armor(pindex)
    return result
 end
 
---Locks the cursor to the nearest enemy within 40 tiles. Also plays a sound if the enemy is within range of the gun in hand.
-function aim_gun_at_nearest_enemy(pindex)--todo test, does the player in fact fire at the cursor? How is the sound? ***
+--Locks the cursor to the nearest enemy within 50 tiles. Also plays a sound if the enemy is within range of the gun in hand.
+function aim_gun_at_nearest_enemy(pindex,enemy_in)
    local p = game.get_player(pindex)
    local gun_index  = p.character.selected_gun_index
    local guns_inv   = p.get_inventory(defines.inventory.character_guns)
    local ammo_inv   = game.get_player(pindex).get_inventory(defines.inventory.character_ammo)
    local gun_stack  = guns_inv[gun_index]
    local ammo_stack = ammo_inv[gun_index]
+   local enemy = enemy_in
    --Return if missing a gun or ammo
-   if gun_stack == nil or not gun_stack.valid then
-      return
+   if gun_stack == nil or not gun_stack.valid_for_read or not gun_stack.valid then
+      return false
    end
-   if ammo_stack == nil or not ammo_stack.valid then
-      return
+   if ammo_stack == nil or not ammo_stack.valid_for_read or not ammo_stack.valid then
+      return false
+   end
+   --Return if in Cursor Mode
+   if players[pindex].cursor then
+      return false
+   end
+   --Return if in a menu
+   if players[pindex].in_menu then
+      return false
    end
    --Check for nearby enemies
-   local enemy = p.surface.find_nearest_enemy{position = p.position, max_distance = 40, force = p.force}
+   if enemy_in == nil or not enemy_in.valid then
+      enemy = p.surface.find_nearest_enemy{position = p.position, max_distance = 50, force = p.force}
+   end
    if enemy == nil or not enemy.valid then
-      return
+      return false
    end
    --Play a sound when the enemy is within range of the gun 
    local range = gun_stack.prototype.attack_parameters.range
@@ -10666,17 +10685,19 @@ function aim_gun_at_nearest_enemy(pindex)--todo test, does the player in fact fi
       p.play_sound{path = "aim-locked"}
    end
    --Return if there is a gun and ammo combination that already aims by itself
-   if gun_stack.name == "pistol" or gun_stack.name == "submachine-gun" or ammo_stack.name == "rocket" or ammo_stack.name == "explosive-rocket" then
-      return 
+   if gun_stack.name == "pistol" or gun_stack.name == "submachine-gun" and dist < 10 then --or ammo_stack.name == "rocket" or ammo_stack.name == "explosive-rocket" then
+      --**Note: normal/explosive rockets only fire when they lock on a target anyway. Meanwhile the SMG auto-aims only when close enough 
+      return true
    end 
-   --Return if in Cursor Mode
-   if players[pindex].cursor then
-      return
+   --If in range, move the cursor onto the enemy to aim the gun
+   if dist < range then 
+      players[pindex].cursor_pos = enemy.position
+      move_cursor_map(enemy.position,pindex)
+      cursor_highlight(pindex,nil,nil,true)
    end
-   --Aim at the enemy
-   players[pindex].cursor_pos = enemy.position
-   move_cursor_map(enemy.position,pindex)
+   return true
 end
+
 
 --Set the input priority or the output priority or filter for a splitter
 function set_splitter_priority(splitter, is_input, is_left, filter_item_stack, clear)
@@ -10825,7 +10846,7 @@ function sync_build_arrow(pindex)
 end
 
 --Highlights the tile or the entity under the cursor
-function cursor_highlight(pindex, ent, box_type)
+function cursor_highlight(pindex, ent, box_type, skip_mouse_movement)
    local p = game.get_player(pindex)
    local c_pos = players[pindex].cursor_pos
    local h_box = players[pindex].cursor_ent_highlight_box
@@ -10865,7 +10886,7 @@ function cursor_highlight(pindex, ent, box_type)
    game.get_player(pindex).game_view_settings.update_entity_selection = true
    
    --Highlight nearby entities by default means (reposition the cursor)
-   if players[pindex].vanilla_mode then
+   if players[pindex].vanilla_mode or skip_mouse_movement == true then
       return 
    end 
    if util.distance(p.position,c_pos) <= game.get_player(pindex).reach_distance then
@@ -10951,7 +10972,7 @@ script.on_event(defines.events.on_entity_damaged,function(event)
       if shield_left ~= nil then
          ent.player.play_sound{path = "damaged-character-shield"}
       end
-      if shield_left == nil or (shield_left < 1.0 and ent.get_health_ratio < 1) then
+      if shield_left == nil or (shield_left < 1.0 and ent.get_health_ratio() < 1.0) then
          ent.player.play_sound{path = "damaged-character-no-shield"}
       end
       return
@@ -11045,7 +11066,7 @@ script.on_event(defines.events.on_player_died,function(event)
    for pindex, player in pairs(players) do
       players[pindex].last_damage_alert_tick = tick
       printout(result,pindex)
-      game.get_player(pindex).print(result)--***laterdo unique sound 
+      game.get_player(pindex).print(result)--**laterdo unique sound, for now use console sound 
    end
 end)
 
