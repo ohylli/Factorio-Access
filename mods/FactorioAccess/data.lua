@@ -142,6 +142,70 @@ data:extend({
 },
 
 {
+   type = "sound",
+   name = "train-honk-short",
+   filename = "__FactorioAccess__/Audio/train-honk-short-2x-GotLag.ogg",
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "train-honk-long",
+   filename = "__FactorioAccess__/Audio/train-honk-long-freesound.ogg",
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "damaged-character-shield",
+   filename = "__FactorioAccess__/Audio/beep_16-shield-damaged.wav",
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "damaged-character-no-shield",
+   filename = "__FactorioAccess__/Audio/beep-06-character-damaged.wav",
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "damaged-entity-alert",
+   filename = "__FactorioAccess__/Audio/alarm-siren-warning-01-structure-damaged.wav",
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "teleported",
+   filename = "__FactorioAccess__/Audio/alarm-siren-loop-09-teleported.wav",
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "aim-locked",
+   filename = "__FactorioAccess__/Audio/beep-12-aim-locked.wav", 
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "enemy-presence-high",
+   filename = "__FactorioAccess__/Audio/alarm-siren-loop-11-enemy-presence-high.wav",
+   volume = 1,
+   preload = true
+},
+
+{
     type = "custom-input",
     name = "cursor-up",
     key_sequence = "W",
@@ -239,14 +303,14 @@ data:extend({
 {
     type = "custom-input",
     name = "cursor-size-increment",
-    key_sequence = "CONTROL + I",
+    key_sequence = "SHIFT + I",
     consuming = "none"
 },
 
 {
     type = "custom-input",
     name = "cursor-size-decrement",
-    key_sequence = "CONTROL + SHIFT + I",
+    key_sequence = "CONTROL + I",
     consuming = "none"
 },
 
@@ -344,6 +408,20 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "a-scan-list-main-up-key",
+    key_sequence = "PAGEUP",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "a-scan-list-main-down-key",
+    key_sequence = "PAGEDOWN",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "scan-list-up",
     key_sequence = "PAGEUP",
     alternative_key_sequence = "UP",
@@ -429,6 +507,13 @@ data:extend({
 {
     type = "custom-input",
     name = "tile-cycle",
+    key_sequence = "SHIFT + F",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "pickup-items",
     key_sequence = "F",
     consuming = "none"
 },
@@ -654,6 +739,13 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "repair-area",
+    key_sequence = "CONTROL + SHIFT + LEFTBRACKET",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "crafting-all",
     key_sequence = "SHIFT + LEFTBRACKET",
     consuming = "none"
@@ -668,7 +760,7 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "inventory-equip-item-in-hand",
+    name = "equip-item",
     key_sequence = "SHIFT + LEFTBRACKET",
     consuming = "none"
 },
@@ -768,7 +860,14 @@ data:extend({
 {
     type = "custom-input",
     name = "item-info",
-    key_sequence = "L",
+    key_sequence = "Y",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "item-info-last-indexed",
+    key_sequence = "SHIFT + Y",
     consuming = "none"
 },
 
@@ -809,6 +908,20 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "toggle-cursor-hiding",
+    key_sequence = "CONTROL + ALT + C",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "clear-renders",
+    key_sequence = "CONTROL + ALT + R",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "recalibrate-zoom",
     key_sequence = "CONTROL + END",
     alternative_key_sequence = "CONTROL + RCTRL",
@@ -819,6 +932,13 @@ data:extend({
     type = "custom-input",
     name = "read-hand",
     key_sequence = "Q",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "open-hand-from-inventory",
+    key_sequence = "CONTROL + Q",
     consuming = "none"
 },
 
@@ -854,6 +974,20 @@ data:extend({
     type = "custom-input",
     name = "train-menu-down",
     key_sequence = "DOWN",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "train-menu-left",
+    key_sequence = "LEFT",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "train-menu-right",
+    key_sequence = "RIGHT",
     consuming = "none"
 },
 
@@ -1016,12 +1150,42 @@ data:extend({
     linked_game_control = "debug-reset-zoom",
     consuming = "none"
 },
+
+{
+    type = "custom-input",
+    name = "logistic-request-read",
+    key_sequence = "L",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "logistic-request-increment",
+    key_sequence = "SHIFT + L",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "logistic-request-decrement",
+    key_sequence = "CONTROL + L",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "logistic-request-toggle-personal-logistics",
+    key_sequence = "CONTROL + SHIFT + L",
+    consuming = "none"
+},
+
 {
     type = "custom-input",
     name = "access-config-version1-DO-NOT-EDIT",
     key_sequence = "A",
     consuming = "none"
 },
+
 {
     type = "custom-input",
     name = "access-config-version2-DO-NOT-EDIT",
@@ -1030,3 +1194,125 @@ data:extend({
 }
 
 })
+
+--Additions below for removing tips and tricks
+vanilla_tip_and_tricks_item_table=
+{
+   "introduction",
+      "game-interaction",
+      "show-info",
+      --"e-confirm",
+      "clear-cursor",
+      "pipette",
+      "stack-transfers",
+      
+      "entity-transfers",
+      "z-dropping",
+      "shoot-targeting",
+      "bulk-crafting",
+   
+   
+   "inserters",
+      "burner-inserter-refueling",
+      "long-handed-inserters",
+      "move-between-labs",
+      "insertion-limits",
+      "limit-chests",
+   
+   
+   "transport-belts",--in category "belt"
+      "belt-lanes",
+      "splitters",
+      "splitter-filters",
+      "underground-belts",
+   
+   
+   "electric-network",
+      "steam-power",
+      "low-power",
+      "electric-pole-connections",
+      "connect-switch",
+   
+   
+   "copy-entity-settings",--in category "copy-paste"
+      "copy-paste-trains",
+      "copy-paste-filters",
+      "copy-paste-requester-chest",
+      "copy-paste-spidertron",
+   
+   
+   "drag-building",
+      "drag-building-poles",
+      "pole-dragging-coverage",
+      "drag-building-underground-belts",
+      "fast-belt-bending",
+      "fast-obstacle-traversing",
+   
+   
+   "trains",
+      "rail-building",
+      "train-stops",
+      "rail-signals-basic",
+      "rail-signals-advanced",
+      "gate-over-rail",
+      
+      "pump-connection",
+      "train-stop-same-name",
+   
+   
+   "logistic-network",
+      "personal-logistics",
+      "construction-robots",
+      "passive-provider-chest",
+      "storage-chest",
+      "requester-chest",
+   
+      "active-provider-chest",
+      "buffer-chest",
+   
+   
+   "ghost-building",
+      "ghost-rail-planner",
+      "copy-paste",
+   
+   
+   "fast-replace",
+      "fast-replace-direction",
+      "fast-replace-belt-splitter",
+      "fast-replace-belt-underground",
+   
+   --no category
+      "rotating-assemblers",
+      "circuit-network",
+   
+};
+
+function remove_tip_and_tricks_item(inname)
+   data.raw["tips-and-tricks-item"][inname]=nil;
+   for _,item in pairs(data.raw["tips-and-tricks-item"]) do
+      if(item.dependencies) then
+         local backup=table.deepcopy(item.dependencies);
+         item.dependencies={"e-confirm"};
+         for _,str in pairs(backup) do
+            if(str~=inname) then table.insert(item.dependencies,str); end
+         end
+      end
+   end
+end
+
+   data.raw["tips-and-tricks-item"]["introduction"].category="game-interaction";
+   data.raw["tips-and-tricks-item"]["introduction"].trigger=nil;
+
+   data.raw["tips-and-tricks-item"]["show-info"].starting_status="unlocked";
+   data.raw["tips-and-tricks-item"]["show-info"].dependencies=nil;
+
+   data.raw["tips-and-tricks-item"]["e-confirm"].starting_status="unlocked";
+   data.raw["tips-and-tricks-item"]["e-confirm"].trigger=nil;
+   data.raw["tips-and-tricks-item"]["e-confirm"].skip_trigger={type="use-confirm"};--**nil
+   data.raw["tips-and-tricks-item"]["e-confirm"].dependencies=nil;
+
+
+for _,item in pairs(vanilla_tip_and_tricks_item_table) do
+   remove_tip_and_tricks_item(item);
+end
+--Additions above for removing tips and tricks

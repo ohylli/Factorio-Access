@@ -20,3 +20,7 @@ for name, proto in pairs(data.raw.container) do
 end
 
 data.raw.character.character.has_belt_immunity = true
+
+for _,item in pairs(vanilla_tip_and_tricks_item_table) do
+   remove_tip_and_tricks_item(item);
+end
