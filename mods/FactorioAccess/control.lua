@@ -6742,17 +6742,20 @@ script.on_event("switch-menu-or-gun", function(event)
    
    --Declare the selected weapon
    local gun_index = switched_index
-   local ammo_stack = ammo_inv[gun_index]
-   local gun_stack  = guns_inv[gun_index]
-   if gun_index >= 0 then
+   local ammo_stack = nil
+   local gun_stack = nil 
+   
+   if gun_index < 1 then
+      result = "No ready weapons"
+   else
+      local ammo_stack = ammo_inv[gun_index]
+      local gun_stack  = guns_inv[gun_index]
       --game.print("print " .. gun_index)--
       result = gun_stack.name .. " with " .. ammo_stack.count .. " " .. ammo_stack.name .. "s "
-   else
-      --game.print("print error " .. gun_index)--
-      result = "Weapon switching error."
    end
    
    if not players[pindex].in_menu then
+      --p.play_sound{path = "Inventory-Move"}
       printout(result,pindex)
    end
 end)
@@ -6863,21 +6866,23 @@ script.on_event("reverse-switch-menu-or-gun", function(event)
    
    --Declare the selected weapon
    local gun_index = switched_index
-   local ammo_stack = ammo_inv[gun_index]
-   local gun_stack  = guns_inv[gun_index]
-   if gun_index >= 0 then
+   local ammo_stack = nil
+   local gun_stack = nil 
+   
+   if gun_index < 1 then
+      result = "No ready weapons"
+   else
+      local ammo_stack = ammo_inv[gun_index]
+      local gun_stack  = guns_inv[gun_index]
       --game.print("print " .. gun_index)--
       result = gun_stack.name .. " with " .. ammo_stack.count .. " " .. ammo_stack.name .. "s "
-   else
-      --game.print("print error " .. gun_index)--
-      result = "Weapon switching error."
    end
    
    if not players[pindex].in_menu then
+      p.play_sound{path = "Inventory-Move"}
       printout(result,pindex)
    end
 end)
-
 function swap_weapon_forward(pindex, write_to_character)
    local p = game.get_player(pindex)
    local gun_index = p.character.selected_gun_index
