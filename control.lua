@@ -1,6 +1,6 @@
 require('zoom')
 require('rails-and-trains')
-require('flying-robots')
+require('worker-robots')
 groups = {}
 entity_types = {}
 production_types = {}
@@ -9894,6 +9894,47 @@ script.on_event("launch-rocket", function(event)
 	     printout("Not ready to launch!",pindex)
       end
    end
+end)
+
+
+script.on_event("logistic-request-read", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   logistics_info_key_handler(pindex)
+end)
+
+script.on_event("logistic-request-increment-min", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   logistics_request_increment_min_handler(pindex)
+end)
+
+script.on_event("logistic-request-decrement-min", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   logistics_request_decrement_min_handler(pindex)
+end)
+
+script.on_event("logistic-request-increment-max", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   logistics_request_increment_max_handler(pindex)
+end)
+
+script.on_event("logistic-request-decrement-max", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   logistics_request_decrement_max_handler(pindex)
 end)
 
 --This event handler patches the unwanted opening of the inventory screen when closing a factorio access menu
