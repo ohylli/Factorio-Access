@@ -110,6 +110,14 @@ function toggle_player_logistic_requests_enabled(pindex)
    end   
 end
 
+--Checks if the request for the given item is fulfilled. You can pass the personal logistics request slot index if you have it already
+function is_this_player_logistic_request_fulfilled(item_stack,pindex,slot_index_in)
+   local result = false
+   local slot_index = slot_index_in or nil
+   --todo ****
+   return result
+end
+
 --Returns info string on the current logistics network, or the nearest one, for the current position
 function logistics_networks_info(ent,pos_in)
    local result = ""
