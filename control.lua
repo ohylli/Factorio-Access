@@ -7711,7 +7711,8 @@ function open_operable_building(ent,pindex)--open_building
          players[pindex].belt.index = 1
          players[pindex].belt.side = 1
          players[pindex].belt.direction = ent.direction 
-         printout("Analyzing transport belt " .. #players[pindex].belt.line1 .. " " .. #players[pindex].belt.line2 .. " " .. players[pindex].belt.ent.get_max_transport_line_index(), pindex)
+         printout("Analyzing transport belt", pindex)
+         --printout("Analyzing transport belt " .. #players[pindex].belt.line1 .. " " .. #players[pindex].belt.line2 .. " " .. players[pindex].belt.ent.get_max_transport_line_index(), pindex)
          return
       end
       if ent.prototype.ingredient_count ~= nil then
