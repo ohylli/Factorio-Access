@@ -3277,6 +3277,9 @@ function scan_index(pindex)
          printout("Error: Invalid object, maybe try rescanning.", pindex)
          return
       end
+      
+      refresh_player_tile(pindex)
+      
       local dir_dist = dir_dist_locale(players[pindex].position, ent.position)
       if players[pindex].nearby.count == false then
          --Read the entity in terms of distance and direction
@@ -3566,14 +3569,14 @@ function jump_to_player(pindex)
    end
 end
 
-local function refresh_player_tile(pindex)
+function refresh_player_tile(pindex)
    local surf = game.get_player(pindex).surface
    local search_area = {{x=-0.5,y=-.5},{x=0.29,y=0.29}}
    local search_center = players[pindex].cursor_pos
    search_area[1]=add_position(search_area[1],search_center)
    search_area[2]=add_position(search_area[2],search_center)
    
-   players[pindex].tile.ents = surf.find_entities_filtered{area = search_area, name={"highlight-box"},invert = true}
+   players[pindex].tile.ents = surf.find_entities_filtered{area = search_area, name={"highlight-box","flying-text"},invert = true}
    players[pindex].tile.index = #players[pindex].tile.ents == 0 and 0 or 1
    if not(pcall(function()
       players[pindex].tile.tile =  surf.get_tile(players[pindex].cursor_pos.x, players[pindex].cursor_pos.y).name
