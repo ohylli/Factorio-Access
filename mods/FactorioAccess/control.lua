@@ -402,18 +402,18 @@ function extra_info_for_scan_list(ent,pindex,info_comes_after_indexing)
          end
       end
       if table_size(dict) > 0 then
-         result = result .. ", Mining From "
+         result = result .. " mining From "
          for i, amount in pairs(dict) do
             result = result .. " " .. i .. " "
          end
       else
-         result = result .. ", Out of minable resources"
+         result = result .. " out of minable resources"
       end
    end
    --Assemblers and furnaces
    pcall(function()
       if ent.get_recipe() ~= nil then
-         result = result .. ", Producing " .. ent.get_recipe().name
+         result = result .. " producing " .. ent.get_recipe().name
       end
    end)
    
@@ -2282,6 +2282,15 @@ function get_iterable_array(dict)
    return result
 end
 
+function get_substring_before_space(str)
+   local first, final = string.find(str," ")
+   if first == nil or first == 1 then
+      return str
+   else
+      return string.sub(str,1,first-1)
+   end
+end
+
 function get_substring_before_comma(str)
    local first, final = string.find(str,",")
    if first == nil or first == 1 then
@@ -2294,7 +2303,7 @@ end
 function get_ent_area_from_name(ent_name,pindex)
    local ents = game.get_player(pindex).surface.find_entities_filtered{name = ent_name, limit = 1}
    if #ents == 0 then
-      return 0
+      return -1
    else
       return ents[1].tile_height * ents[1].tile_width
    end
@@ -2334,56 +2343,56 @@ function get_scan_summary(scan_left_top, scan_right_bottom, pindex)
    local res_count = surf.count_tiles_filtered{ name = {"water", "deepwater", "water-green", "deepwater-green", "water-shallow", "water-mud", "water-wube"}, area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
    if percent > 0 then
-      table.insert(percentages, {name = "water", percent = percent, count = ""})
+      table.insert(percentages, {name = "water", percent = percent, count = "resource"})
    end
    percent_total = percent_total + percent--water counts as filling a space
    
    res_count = surf.count_tiles_filtered{ name = "stone-path", area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
    if percent > 0 then
-      table.insert(percentages, {name = "stone-brick-path", percent = percent, count = ""})
+      table.insert(percentages, {name = "stone-brick-path", percent = percent, count = "flooring"})
    end
    
    res_count = surf.count_tiles_filtered{ name = {"concrete","hazard-concrete-left","hazard-concrete-right"}, area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
    if percent > 0 then
-      table.insert(percentages, {name = "concrete", percent = percent, count = ""})
+      table.insert(percentages, {name = "concrete", percent = percent, count = "flooring"})
    end
    
    res_count = surf.count_tiles_filtered{ name = {"refined-concrete","refined-hazard-concrete-left","refined-hazard-concrete-right"}, area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
    if percent > 0 then
-      table.insert(percentages, {name = "refined-concrete", percent = percent, count = ""})
+      table.insert(percentages, {name = "refined-concrete", percent = percent, count = "flooring"})
    end
    
    res_count = surf.count_entities_filtered{ name = "coal", area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
    if percent > 0 then
-      table.insert(percentages, {name = "coal", percent = percent, count = ""})
+      table.insert(percentages, {name = "coal", percent = percent, count = "resource"})
    end
    
    res_count = surf.count_entities_filtered{ name = "stone", area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
    if percent > 0 then
-      table.insert(percentages, {name = "stone", percent = percent, count = ""})
+      table.insert(percentages, {name = "stone", percent = percent, count = "resource"})
    end
    
    res_count = surf.count_entities_filtered{ name = "iron-ore", area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
    if percent > 0 then
-      table.insert(percentages, {name = "iron-ore", percent = percent, count = ""})
+      table.insert(percentages, {name = "iron-ore", percent = percent, count = "resource"})
    end
    
    res_count = surf.count_entities_filtered{ name = "copper-ore", area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
    if percent > 0 then
-      table.insert(percentages, {name = "copper-ore", percent = percent, count = ""})
+      table.insert(percentages, {name = "copper-ore", percent = percent, count = "resource"})
    end
    
    res_count = surf.count_entities_filtered{ name = "uranium-ore", area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
    if percent > 0 then
-      table.insert(percentages, {name = "uranium-ore", percent = percent, count = ""})
+      table.insert(percentages, {name = "uranium-ore", percent = percent, count = "resource"})
    end
    
    res_count = surf.count_entities_filtered{ type = "tree", area = {scan_left_top,scan_right_bottom} }
@@ -2397,11 +2406,14 @@ function get_scan_summary(scan_left_top, scan_right_bottom, pindex)
       for i, ent in ipairs(players[pindex].nearby.ents) do
          local area = 0
          --this confirmation is necessary because all we have is the ent name, and some distant resources show up on the list.
-         if confirm_ent_is_in_area( get_substring_before_comma(ent.name) , scan_left_top , scan_right_bottom, pindex) then 
+         if confirm_ent_is_in_area( get_substring_before_space(get_substring_before_comma(ent.name)) , scan_left_top , scan_right_bottom, pindex) then
             area = get_ent_area_from_name(get_substring_before_comma(ent.name),pindex)
-            --game.get_player(pindex).print(get_substring_before_comma(ent.name) .. " " .. area)--
+            if area == -1 then
+               area = 1
+               game.get_player(pindex).print(get_substring_before_space(get_substring_before_comma(ent.name)) .. " could not be found for the area check ",{volume_modifier = 0})--***bug: unable to get area from name
+            end
          end 
-         local percentage = math.floor((area * players[pindex].nearby.ents[i].count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
+         local percentage = math.floor((area * players[pindex].nearby.ents[i].count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .95)--Tolerate up to 0.05%
          if not ent.aggregate and percentage > 0 then
             table.insert(percentages, {name = ent.name, percent = percentage, count = players[pindex].nearby.ents[i].count})
          end
@@ -3425,7 +3437,7 @@ function index_of_entity(array, value)
    return nil
 end
 
-function scan_area (x,y,w,h, pindex)
+function scan_area(x,y,w,h, pindex)
    local first_player = game.get_player(pindex)
    local surf = first_player.surface
    local ents = surf.find_entities_filtered{area = {{x, y},{x+w, y+h}}, type = {"resource", "tree"}, invert = true}
