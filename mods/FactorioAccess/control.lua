@@ -1486,6 +1486,8 @@ function read_travel_slot(pindex)
    else
       local entry = global.players[pindex].travel[players[pindex].travel.index.y]
       printout(entry.name .. " at " .. math.floor(entry.position.x) .. ", " .. math.floor(entry.position.y), pindex)
+      players[pindex].cursor_pos = center_of_tile(entry.position)
+      cursor_highlight(pindex, nil, "train-visualization")
    end
 end
 
@@ -4114,7 +4116,7 @@ function read_coords(pindex, start_phrase)
    if players[pindex].menu == "building" and players[pindex].building.recipe_list ~= nil then
       offset = 1
    end
-   if not(players[pindex].in_menu) or players[pindex].menu == "structure-travel" then
+   if not(players[pindex].in_menu) or players[pindex].menu == "structure-travel" or players[pindex].menu == "travel" then
       if players[pindex].vanilla_mode then
          players[pindex].cursor_pos = game.get_player(pindex).position
       end
