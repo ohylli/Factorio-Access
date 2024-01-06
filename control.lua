@@ -2826,11 +2826,20 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
    
    elseif #building_sector.inventory > 0 then
       local inventory=building_sector.inventory
-      local len = inventory.supports_bar() and inventory.get_bar() - 1 or #inventory
-      local start_phrase = len .. " " .. building_sector.name .. ", "
+      local start_phrase = #inventory .. " " .. building_sector.name .. ", "
+      if inventory.supports_bar() and #inventory > inventory.get_bar() - 1 then
+         --local unlocked = inventory.supports_bar() and inventory.get_bar() - 1 or nil
+         local unlocked = inventory.get_bar() - 1
+         start_phrase = start_phrase .. ", " .. unlocked .. " unlocked, "
+      end
       if not prefix_inventory_size_and_name then
          start_phrase = ""
       end
+      --Mention if a slot is locked
+      if inventory.supports_bar() and players[pindex].building.index > inventory.get_bar() - 1 then
+         start_phrase = start_phrase .. " locked "
+      end
+      --Read the slot stack
       stack = building_sector.inventory[players[pindex].building.index]
       if stack and stack.valid_for_read and stack.valid then
          printout(start_phrase .. stack.name .. " x " .. stack.count, pindex)
@@ -2971,11 +2980,12 @@ function read_crafting_slot(pindex, start_phrase)
    end
 end
 
-function read_inventory_slot(pindex, start_phrase)
-   start_phrase = start_phrase or ""
+--Reads a player inventory slot
+function read_inventory_slot(pindex, start_phrase_in)
+   local start_phrase = start_phrase_in or ""
    local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
    if stack and stack.valid_for_read and stack.valid == true then
-	  printout(start_phrase .. stack.name .. " x " .. stack.count .. " " .. stack.prototype.subgroup.name , pindex)
+      printout(start_phrase .. stack.name .. " x " .. stack.count .. " " .. stack.prototype.subgroup.name , pindex)
    else
       printout(start_phrase .. "Empty Slot",pindex)
    end
@@ -7701,7 +7711,7 @@ function open_operable_building(ent,pindex)--open_building
          players[pindex].belt.index = 1
          players[pindex].belt.side = 1
          players[pindex].belt.direction = ent.direction 
-         printout(#players[pindex].belt.line1 .. " " .. #players[pindex].belt.line2 .. " " .. players[pindex].belt.ent.get_max_transport_line_index(), pindex)
+         printout("Analyzing transport belt " .. #players[pindex].belt.line1 .. " " .. #players[pindex].belt.line2 .. " " .. players[pindex].belt.ent.get_max_transport_line_index(), pindex)
          return
       end
       if ent.prototype.ingredient_count ~= nil then
@@ -8451,7 +8461,7 @@ function do_multi_stack_transfer(ratio,pindex)
          local moved, full = transfer_inventory{from=game.players[pindex].get_main_inventory(),to=players[pindex].building.ent,name=item_name,ratio=ratio}
          
          if full then
-            table.insert(result,"Inventory full or not applicable. ")
+            table.insert(result,"Inventory full or not applicable, ")
          end
          if table_size(moved) == 0 then
             table.insert(result,{"access.placed-nothing"})
