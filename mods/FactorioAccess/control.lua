@@ -11161,10 +11161,10 @@ script.on_event(defines.events.on_entity_damaged,function(event)
       end
       --Play shield and/or character damaged sound
       if shield_left ~= nil then
-         ent.player.play_sound{path = "damaged-character-shield"}
+         ent.player.play_sound{path = "damaged-character-shield",volume_modifier=0.3}
       end
       if shield_left == nil or (shield_left < 1.0 and ent.get_health_ratio() < 1.0) then
-         ent.player.play_sound{path = "damaged-character-no-shield"}
+         ent.player.play_sound{path = "damaged-character-no-shield",volume_modifier=0.3}
       end
       return
    elseif tick < 3600 and tick > 300 then
@@ -11184,7 +11184,7 @@ script.on_event(defines.events.on_entity_damaged,function(event)
          local result = ent.name .. " damaged by " .. attacker_force.name .. " forces at " .. dist .. " " .. dir
          printout(result,pindex)
          --game.get_player(pindex).print(result,{volume_modifier=0})--**
-         game.get_player(pindex).play_sound{path = "damaged-entity-alert",volume_modifier=0.4}
+         game.get_player(pindex).play_sound{path = "damaged-entity-alert",volume_modifier=0.3}
       end
    end
 end)
@@ -11209,7 +11209,7 @@ script.on_event(defines.events.on_entity_died,function(event)
          local result = ent.name .. " destroyed by " .. attacker_force.name .. " forces at " .. dist .. " " .. dir
          printout(result,pindex)
          --game.get_player(pindex).print(result,{volume_modifier=0})--**
-         game.get_player(pindex).play_sound{path = "utility/alert_destroyed",volume_modifier=1}
+         game.get_player(pindex).play_sound{path = "utility/alert_destroyed",volume_modifier=0.5}
       end
    end
 end)
