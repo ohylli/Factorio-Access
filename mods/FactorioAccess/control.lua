@@ -6513,6 +6513,8 @@ script.on_event("close-menu", function(event)--close_menu
       end
       if players[pindex].menu == "travel" then
          game.get_player(pindex).gui.screen["travel"].destroy()
+         players[pindex].cursor_pos = center_of_tile(players[pindex].position)
+         cursor_highlight(pindex, nil, "train-visualization")
       end
       if players[pindex].menu == "structure-travel" then
          game.get_player(pindex).gui.screen["structure-travel"].destroy()
