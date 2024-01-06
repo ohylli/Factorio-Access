@@ -1160,15 +1160,29 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "logistic-request-increment",
+    name = "logistic-request-increment-min",
     key_sequence = "SHIFT + L",
     consuming = "none"
 },
 
 {
     type = "custom-input",
-    name = "logistic-request-decrement",
+    name = "logistic-request-decrement-min",
     key_sequence = "CONTROL + L",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "logistic-request-increment-max",
+    key_sequence = "ALT + SHIFT + L",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "logistic-request-decrement-max",
+    key_sequence = "ALT + CONTROL + L",
     consuming = "none"
 },
 

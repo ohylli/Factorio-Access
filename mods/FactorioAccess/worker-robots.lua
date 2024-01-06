@@ -184,6 +184,108 @@ function get_personal_logistic_slot_index(item_stack,pindex)
    return correct_slot_id
 end
 
+function logistics_info_key_handler(pindex)
+   if not players[pindex].in_menu or players[pindex].menu == "inventory" then
+      --Personal logistics
+      local stack = game.get_player(pindex).cursor_stack
+      local stack_inv = game.get_player(pindex).get_main_inventory()[players[pindex].inventory.index]
+      --Check item in hand or item in inventory
+      if stack and stack.valid_for_read and stack.valid then
+         --Item in hand
+         player_logistic_request_read(stack,pindex,true)
+      elseif players[pindex].menu == "inventory" and stack_inv and stack_inv.valid_for_read and stack_inv.valid then
+         --Item in inv
+         player_logistic_request_read(stack_inv,pindex,true)
+      else
+         --Empty hand, empty inventory slot
+         local result = player_logistic_requests_summary_info(pindex)
+         printout(result,pindex)
+      end
+   else
+      printout("No logistics summary available in this menu",prindex)
+   end
+end
+
+function logistics_request_increment_min_handler(pindex)
+   if not players[pindex].in_menu or players[pindex].menu == "inventory" then
+      --Personal logistics
+      local stack = game.get_player(pindex).cursor_stack
+      local stack_inv = game.get_player(pindex).get_main_inventory()[players[pindex].inventory.index]
+      --Check item in hand or item in inventory
+      if stack and stack.valid_for_read and stack.valid then
+         --Item in hand***
+      elseif players[pindex].menu == "inventory" and stack_inv and stack_inv.valid_for_read and stack_inv.valid then
+         --Item in inv***
+      else
+         --Empty hand, empty inventory slot
+         --(do nothing)
+      end
+   else
+      --Other menu
+      --(do nothing)
+   end
+end
+
+function logistics_request_decrement_min_handler(pindex)
+   if not players[pindex].in_menu or players[pindex].menu == "inventory" then
+      --Personal logistics
+      local stack = game.get_player(pindex).cursor_stack
+      local stack_inv = game.get_player(pindex).get_main_inventory()[players[pindex].inventory.index]
+      --Check item in hand or item in inventory
+      if stack and stack.valid_for_read and stack.valid then
+         --Item in hand***
+      elseif players[pindex].menu == "inventory" and stack_inv and stack_inv.valid_for_read and stack_inv.valid then
+         --Item in inv***
+      else
+         --Empty hand, empty inventory slot
+         --(do nothing)
+      end
+   else
+      --Other menu
+      --(do nothing)
+   end
+end
+
+function logistics_request_increment_max_handler(pindex)
+   if not players[pindex].in_menu or players[pindex].menu == "inventory" then
+      --Personal logistics
+      local stack = game.get_player(pindex).cursor_stack
+      local stack_inv = game.get_player(pindex).get_main_inventory()[players[pindex].inventory.index]
+      --Check item in hand or item in inventory
+      if stack and stack.valid_for_read and stack.valid then
+         --Item in hand***
+      elseif players[pindex].menu == "inventory" and stack_inv and stack_inv.valid_for_read and stack_inv.valid then
+         --Item in inv***
+      else
+         --Empty hand, empty inventory slot
+         --(do nothing)
+      end
+   else
+      --Other menu
+      --(do nothing)
+   end
+end
+
+function logistics_request_decrement_max_handler(pindex)
+   if not players[pindex].in_menu or players[pindex].menu == "inventory" then
+      --Personal logistics
+      local stack = game.get_player(pindex).cursor_stack
+      local stack_inv = game.get_player(pindex).get_main_inventory()[players[pindex].inventory.index]
+      --Check item in hand or item in inventory
+      if stack and stack.valid_for_read and stack.valid then
+         --Item in hand***
+      elseif players[pindex].menu == "inventory" and stack_inv and stack_inv.valid_for_read and stack_inv.valid then
+         --Item in inv***
+      else
+         --Empty hand, empty inventory slot
+         --(do nothing)
+      end
+   else
+      --Other menu
+      --(do nothing)
+   end
+end
+
 --Returns summary info string
 function player_logistic_requests_summary_info(pindex)
    --***todo
@@ -268,8 +370,52 @@ function player_logistic_request_read(item_stack,pindex,additional_checks)
    end
 end
 
---Increments min value, but if its nil, decrements MAX value
-function player_logistic_request_increment(item_stack,pindex)
+function player_logistic_request_increment_min(item_stack,pindex)
+   local p = game.get_player(pindex)
+   local current_slot = nil
+   local correct_slot_id = nil
+   
+   --Check if logistics have been researched
+   for i, tech in pairs(game.get_player(pindex).force.technologies) do
+      if tech.name == "logistic-robotics" and not tech.researched then
+         printout("Error: You need to research logistic robotics to use this feature.",pindex)
+         return
+      end
+   end
+   
+   --Find the correct request slot for this item
+   local correct_slot_id = get_personal_logistic_slot_index(item_stack,pindex)
+   
+   if correct_slot_id == -1 then
+      printout("Error: No empty slots available for this request",pindex)
+      return false
+   elseif correct_slot_id == nil or correct_slot_id < 1 then
+      printout("Error: Invalid slot ID",pindex)
+      return false
+   end
+   
+   --Read the correct slot id value, increment it, set it
+   current_slot = p.get_personal_logistic_slot(correct_slot_id)
+   if current_slot == nil or current_slot.name == nil then
+      --Create a fresh request
+      local new_slot = {name = item_stack.name, min = 1, max = nil}
+      p.set_personal_logistic_slot(correct_slot_id,new_slot)
+      return true
+   else
+      --Update existing request
+      if current_slot.min ~= nil then
+         current_slot.min = increment_logistic_request_min_amount(item_stack,current_slot.min)
+      else
+         current_slot.min = 1
+      end
+      p.set_personal_logistic_slot(correct_slot_id,current_slot)
+   end
+   
+   --Read new status
+   player_logistic_request_read(item_stack,pindex,false)
+end
+
+function player_logistic_request_decrement_max(item_stack,pindex)
    local p = game.get_player(pindex)
    local current_slot = nil
    local correct_slot_id = nil
@@ -304,10 +450,7 @@ function player_logistic_request_increment(item_stack,pindex)
       --Update existing request
       if current_slot.max ~= nil then
          current_slot.max = decrement_logistic_request_max_amount(item_stack,current_slot.max)
-      elseif current_slot.min ~= nil then
-         current_slot.min = increment_logistic_request_min_amount(item_stack,current_slot.min)
-      else--Both are nil
-         current_slot.min = 1
+      else
          current_slot.max = nil
       end
       p.set_personal_logistic_slot(correct_slot_id,current_slot)
@@ -317,8 +460,52 @@ function player_logistic_request_increment(item_stack,pindex)
    player_logistic_request_read(item_stack,pindex,false)
 end
 
---Decrements min value, but if its nil, increments MAX value
-function player_logistic_request_decrement(item_stack,pindex)
+function player_logistic_request_decrement_min(item_stack,pindex)
+   local p = game.get_player(pindex)
+   local current_slot = nil
+   local correct_slot_id = nil
+   
+   --Check if logistics have been researched
+   for i, tech in pairs(game.get_player(pindex).force.technologies) do
+      if tech.name == "logistic-robotics" and not tech.researched then
+         printout("Error: You need to research logistic robotics to use this feature.",pindex)
+         return
+      end
+   end
+   
+   --Find the correct request slot for this item
+   local correct_slot_id = get_personal_logistic_slot_index(item_stack,pindex)
+   
+   if correct_slot_id == -1 then
+      printout("Error: No empty slots available for this request",pindex)
+      return false
+   elseif correct_slot_id == nil or correct_slot_id < 1 then
+      printout("Error: Invalid slot ID",pindex)
+      return false
+   end
+   
+   --Read the correct slot id value, decrement it, set it
+   current_slot = p.get_personal_logistic_slot(correct_slot_id)
+   if current_slot == nil or current_slot.name == nil then
+      --Create a fresh request
+      local new_slot = {name = item_stack.name, min = nil, max = 1}
+      p.set_personal_logistic_slot(correct_slot_id,new_slot)
+      return true
+   else
+      --Update existing request
+      if current_slot.min ~= nil then
+         current_slot.min = decrement_logistic_request_min_amount(item_stack,current_slot.min)
+      else
+         current_slot.min = nil
+      end
+      p.set_personal_logistic_slot(correct_slot_id,current_slot,false)
+   end
+   
+   --Read new status
+   player_logistic_request_read(item_stack,pindex)
+end
+
+function player_logistic_request_increment_max(item_stack,pindex)
    local p = game.get_player(pindex)
    local current_slot = nil
    local correct_slot_id = nil
@@ -353,10 +540,7 @@ function player_logistic_request_decrement(item_stack,pindex)
       --Update existing request
       if current_slot.max ~= nil then
          current_slot.max = increment_logistic_request_max_amount(item_stack,current_slot.max)
-      elseif current_slot.min ~= nil then
-         current_slot.min = decrement_logistic_request_min_amount(item_stack,current_slot.min)
-      else--Both are nil
-         current_slot.min = nil
+      else
          current_slot.max = 1
       end
       p.set_personal_logistic_slot(correct_slot_id,current_slot,false)
