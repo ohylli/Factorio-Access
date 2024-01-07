@@ -1491,7 +1491,8 @@ function read_travel_slot(pindex)
    end
 end
 
-function teleport_to_closest(pindex, pos, muted)
+--Makes the player teleport to the closest valid position to a target position. Uses game's teleport function. Muted makes silent and effectless teleporting
+function teleport_to_closest(pindex, pos, muted, ignore_enemies)
    local pos = table.deepcopy(pos)
    local muted = muted or false
    local first_player = game.get_player(pindex)
@@ -1502,54 +1503,57 @@ function teleport_to_closest(pindex, pos, muted)
       radius = radius + 1 
       new_pos = surf.find_non_colliding_position("character", pos, radius, .1, true)
    end
-   
-   if game.get_player(pindex).driving then
+   --Do not teleport if in a vehicle, in a menu, or already at the desitination
+   if game.get_player(pindex).vehicle ~= nil or game.get_player(pindex).vehicle.valid then
       printout("Cannot teleport while in a vehicle.", pindex)
       return
-   elseif util.distance(game.get_player(pindex).position, pos) <= 1.1 then 
+   elseif util.distance(game.get_player(pindex).position, pos) <= 1.5 then 
       printout("Already at target", pindex)
       return
+   elseif players[pindex].in_menu then
+      printout("Cannot teleport while in a menu.", pindex)
+      return
    end
-   
+   --Do not teleport near enemies unless instructed to ignore them
+   if not ignore_enemies then
+      local enemy = p.surface.find_nearest_enemy{position = new_pos, max_distance = 30, force =  first_player.force}
+      if enemy and enemy.valid then
+         printout("Warning: There are enemies at this location, but you can force teleporting if you press CONTROL + SHIFT + T", pindex)
+         return
+      end
+   end
+   --Attempt teleport
    local can_port = first_player.surface.can_place_entity{name = "character", position = new_pos} 
    if can_port then
       local old_pos = table.deepcopy(first_player.position)
       if not muted then
+         --Teleporting visuals at origin
          rendering.draw_circle{color = {0.8, 0.2, 0.0},radius = 0.5,width = 15,target = old_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
          rendering.draw_circle{color = {0.6, 0.1, 0.1},radius = 0.3,width = 20,target = old_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
          local smoke_effect = first_player.surface.create_entity{name = "iron-chest", position = first_player.position, raise_built = false, force = first_player.force}
          smoke_effect.destroy{}
-         if not muted then
-            game.get_player(pindex).play_sound{path = "teleported", volume_modifier = 0.2}
-            game.get_player(pindex).play_sound{path = "utility/scenario_message"}
-         end
+         --Teleport sound at origin
+         game.get_player(pindex).play_sound{path = "teleported", volume_modifier = 0.2, position = old_pos}
+         game.get_player(pindex).play_sound{path = "utility/scenario_message", volume_modifier = 0.8, position = old_pos}
       end
       local teleported = first_player.teleport(new_pos)
       if teleported then
          players[pindex].position = table.deepcopy(new_pos)
          if not muted then
+            --Teleporting visuals at target
             rendering.draw_circle{color = {0.3, 0.3, 0.9},radius = 0.5,width = 15,target = new_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
             rendering.draw_circle{color = {0.0, 0.0, 0.9},radius = 0.3,width = 20,target = new_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
-            if not muted then
-               game.get_player(pindex).play_sound{path = "teleported", volume_modifier = 0.2}
-               game.get_player(pindex).play_sound{path = "utility/scenario_message"}
-            end
             local smoke_effect = first_player.surface.create_entity{name = "iron-chest", position = first_player.position, raise_built = false, force = first_player.force}
             smoke_effect.destroy{}
+            --Teleport sound at target
+            game.get_player(pindex).play_sound{path = "teleported", volume_modifier = 0.2, position = new_pos}
+            game.get_player(pindex).play_sound{path = "utility/scenario_message", volume_modifier = 0.8, position = new_pos}
          end
          if new_pos.x ~= pos.x or new_pos.y ~= pos.y then
             if not muted then
                printout("Teleported " .. math.ceil(distance(pos,first_player.position)) .. " " .. direction(pos, first_player.position) .. " of target", pindex)
-               game.get_player(pindex).play_sound{path = "teleported", volume_modifier = 0.2}
-               game.get_player(pindex).play_sound{path = "utility/scenario_message"}
             end
-         else
-            if not muted then
-               printout("Teleported to target", pindex)
-               game.get_player(pindex).play_sound{path = "teleported", volume_modifier = 0.2}
-               game.get_player(pindex).play_sound{path = "utility/scenario_message"}
-            end
-         end
+         end        
          --Update cursor after teleport
          players[pindex].cursor_pos = table.deepcopy(new_pos)
          move_cursor_map(center_of_tile(players[pindex].cursor_pos),pindex)
@@ -1558,7 +1562,7 @@ function teleport_to_closest(pindex, pos, muted)
          printout("Teleport Failed", pindex)
       end
    else
-      printout("Tile Occupied", pindex)
+      printout("Tile Occupied", pindex)--this is unlikely to be reached because we find the first non-colliding position
    end
 
 
@@ -3562,8 +3566,8 @@ function toggle_cursor(pindex)
    end
 end
 
-function teleport_to_cursor(pindex)
-   teleport_to_closest(pindex, players[pindex].cursor_pos)
+function teleport_to_cursor(pindex, muted, ignore_enemies)
+   teleport_to_closest(pindex, players[pindex].cursor_pos, muted, ignore_enemies)
    players[pindex].cursor_pos = game.get_player(pindex).position--Fixes a repeated teleport bug
 end
 
@@ -4322,6 +4326,7 @@ function initialize(player)
    faplayer.last_menu_toggle_tick = faplayer.last_menu_toggle_tick or 1
    faplayer.last_click_tick = faplayer.last_click_tick or 1
    faplayer.last_damage_alert_tick = faplayer.last_damage_alert_tick or 1
+   faplayer.last_damage_alert_pos = faplayer.last_damage_alert_pos or nil
    faplayer.last_pg_key_tick = faplayer.last_pg_key_tick or 1
    faplayer.last_honk_tick = faplayer.last_honk_tick or 1
    faplayer.last_pickup_tick = faplayer.last_pickup_tick or 1
@@ -5666,7 +5671,7 @@ script.on_event(defines.events.on_player_driving_changed_state, function(event)
       if players[pindex].last_vehicle.train ~= nil and players[pindex].last_vehicle.train.schedule == nil then
          players[pindex].last_vehicle.train.manual_mode = true
       end
-      teleport_to_closest(pindex, players[pindex].last_vehicle.position, true)
+      teleport_to_closest(pindex, players[pindex].last_vehicle.position, true, true)
       if players[pindex].menu == "train_menu" then
          train_menu_close(pindex, false)
       end
@@ -5749,15 +5754,29 @@ script.on_event("teleport-to-cursor", function(event)
    if not check_for_player(pindex) then
       return
    end
-   if game.get_player(pindex).driving then
-      printout("Cannot teleport while in a vehicle.", pindex)
+   teleport_to_cursor(pindex, false, false)
+end)
+
+script.on_event("teleport-to-cursor-forced", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
       return
    end
-   if not (players[pindex].in_menu) then
-      teleport_to_cursor(pindex)
-   else
-      printout("Cannot teleport while in a menu.", pindex)
+   teleport_to_cursor(pindex, false, true)
+end)
+
+script.on_event("teleport-to-alert-forced", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
    end
+   local alert_pos = players[pindex].last_damage_alert_pos
+   if alert_pos == nil then
+      printout("No target",pindex)
+      return
+   end
+   players[pindex].cursor_pos = alert_pos
+   teleport_to_cursor(pindex, false, true)
 end)
 
 script.on_event("toggle-cursor", function(event)
@@ -6152,7 +6171,7 @@ script.on_event("jump-to-scan", function(event)--NOTE: This might be deprecated 
             sync_build_arrow(pindex)
             printout("Cursor has jumped to " .. ent.name .. " at " .. math.floor(players[pindex].cursor_pos.x) .. " " .. math.floor(players[pindex].cursor_pos.y), pindex)
          else
-            teleport_to_closest(pindex, ent.position)
+            teleport_to_closest(pindex, ent.position, false, false)--***todo handle when it returns false...
             players[pindex].cursor_pos = offset_position(players[pindex].position, players[pindex].player_direction, 1)
             cursor_highlight(pindex, nil, nil)--laterdo check for new cursor ent here, to update the highlight?
             sync_build_arrow(pindex)
@@ -7471,7 +7490,7 @@ script.on_event("click-menu", function(event)
          elseif players[pindex].travel.index.y == 0 and players[pindex].travel.index.x < 4 then
             printout("Navigate up and down to select a fastt travel point, then press left bracket to get there quickly.", pindex)
          elseif players[pindex].travel.index.x == 1 then
-            teleport_to_closest(pindex, global.players[pindex].travel[players[pindex].travel.index.y].position)
+            teleport_to_closest(pindex, global.players[pindex].travel[players[pindex].travel.index.y].position, false, false)--***todo handle when it returns false...
             if players[pindex].cursor then
                players[pindex].cursor_pos = table.deepcopy(global.players[pindex].travel[players[pindex].travel.index.y].position)
             else
@@ -7523,7 +7542,7 @@ script.on_event("click-menu", function(event)
          elseif players[pindex].structure_travel.direction == "west" then
             tar = network[network[current].west[index].num]
          end   
-         teleport_to_closest(pindex, tar.position)
+         teleport_to_closest(pindex, tar.position, false, false)--***todo handle when it returns false...
          if players[pindex].cursor then
             players[pindex].cursor_pos = table.deepcopy(tar.position)
          else
@@ -11179,6 +11198,7 @@ script.on_event(defines.events.on_entity_damaged,function(event)
       if players[pindex] ~= nil and game.get_player(pindex).force.name == damaged_force.name 
          and (players[pindex].last_damage_alert_tick == nil or (tick - players[pindex].last_damage_alert_tick) > 300) then
          players[pindex].last_damage_alert_tick = tick
+         players[pindex].last_damage_alert_pos = ent.position
          local dist = math.ceil(util.distance(players[pindex].position,ent.position))
          local dir = direction_lookup(get_direction_of_that_from_this(ent.position,players[pindex].position))
          local result = ent.name .. " damaged by " .. attacker_force.name .. " forces at " .. dist .. " " .. dir
@@ -11204,6 +11224,7 @@ script.on_event(defines.events.on_entity_died,function(event)
    for pindex, player in pairs(players) do
       if players[pindex] ~= nil and game.get_player(pindex).force.name == damaged_force.name then
          players[pindex].last_damage_alert_tick = tick
+         players[pindex].last_damage_alert_pos = ent.position
          local dist = math.ceil(util.distance(players[pindex].position,ent.position))
          local dir = direction_lookup(get_direction_of_that_from_this(ent.position,players[pindex].position))
          local result = ent.name .. " destroyed by " .. attacker_force.name .. " forces at " .. dist .. " " .. dir

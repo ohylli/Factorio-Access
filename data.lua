@@ -295,6 +295,20 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "teleport-to-cursor-forced",
+    key_sequence = "CONTROL + SHIFT + T",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "teleport-to-alert-forced",
+    key_sequence = "CONTROL + SHIFT + P",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "toggle-cursor",
     key_sequence = "I",
     consuming = "none"
