@@ -1504,7 +1504,7 @@ function teleport_to_closest(pindex, pos, muted, ignore_enemies)
       new_pos = surf.find_non_colliding_position("character", pos, radius, .1, true)
    end
    --Do not teleport if in a vehicle, in a menu, or already at the desitination
-   if game.get_player(pindex).vehicle ~= nil or game.get_player(pindex).vehicle.valid then
+   if first_player.vehicle ~= nil and first_player.vehicle.valid then
       printout("Cannot teleport while in a vehicle.", pindex)
       return false
    elseif util.distance(game.get_player(pindex).position, pos) <= 1.5 then 
@@ -1516,7 +1516,7 @@ function teleport_to_closest(pindex, pos, muted, ignore_enemies)
    end
    --Do not teleport near enemies unless instructed to ignore them
    if not ignore_enemies then
-      local enemy = p.surface.find_nearest_enemy{position = new_pos, max_distance = 30, force =  first_player.force}
+      local enemy = first_player.surface.find_nearest_enemy{position = new_pos, max_distance = 30, force =  first_player.force}
       if enemy and enemy.valid then
          printout("Warning: There are enemies at this location, but you can force teleporting if you press CONTROL + SHIFT + T", pindex)
          return false
@@ -3569,7 +3569,6 @@ end
 
 function teleport_to_cursor(pindex, muted, ignore_enemies)
    local result = teleport_to_closest(pindex, players[pindex].cursor_pos, muted, ignore_enemies)
-   players[pindex].cursor_pos = game.get_player(pindex).position--Fixes a repeated teleport bug
    return result
 end
 
@@ -10902,7 +10901,7 @@ function aim_gun_at_nearest_enemy(pindex,enemy_in)
    local range = gun_stack.prototype.attack_parameters.range
    local dist = util.distance(p.position,enemy.position)
    if dist < range then      
-      p.play_sound{path = "aim-locked"}
+      p.play_sound{path = "aim-locked",volume_modifier=0.5}
    end
    --Return if there is a gun and ammo combination that already aims by itself
    if gun_stack.name == "pistol" or gun_stack.name == "submachine-gun" and dist < 10 then --or ammo_stack.name == "rocket" or ammo_stack.name == "explosive-rocket" then
