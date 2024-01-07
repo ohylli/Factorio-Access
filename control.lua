@@ -1,6 +1,6 @@
 require('zoom')
 require('rails-and-trains')
-require('flying-robots')
+require('worker-robots')
 groups = {}
 entity_types = {}
 production_types = {}
@@ -402,18 +402,18 @@ function extra_info_for_scan_list(ent,pindex,info_comes_after_indexing)
          end
       end
       if table_size(dict) > 0 then
-         result = result .. ", Mining From "
+         result = result .. " mining From "
          for i, amount in pairs(dict) do
             result = result .. " " .. i .. " "
          end
       else
-         result = result .. ", Out of minable resources"
+         result = result .. " out of minable resources"
       end
    end
    --Assemblers and furnaces
    pcall(function()
       if ent.get_recipe() ~= nil then
-         result = result .. ", Producing " .. ent.get_recipe().name
+         result = result .. " producing " .. ent.get_recipe().name
       end
    end)
    
@@ -429,7 +429,7 @@ function extra_info_for_scan_list(ent,pindex,info_comes_after_indexing)
       if #itemtable == 0 then
          result = result .. " empty "
       elseif #itemtable == 1 then
-         result = result .. " of " .. itemtable[1].name
+         result = result .. " with " .. itemtable[1].name
       elseif #itemtable > 1 then
          result = result .. " with various items "
       end
@@ -1486,10 +1486,13 @@ function read_travel_slot(pindex)
    else
       local entry = global.players[pindex].travel[players[pindex].travel.index.y]
       printout(entry.name .. " at " .. math.floor(entry.position.x) .. ", " .. math.floor(entry.position.y), pindex)
+      players[pindex].cursor_pos = center_of_tile(entry.position)
+      cursor_highlight(pindex, nil, "train-visualization")
    end
 end
 
-function teleport_to_closest(pindex, pos, muted)
+--Makes the player teleport to the closest valid position to a target position. Uses game's teleport function. Muted makes silent and effectless teleporting
+function teleport_to_closest(pindex, pos, muted, ignore_enemies)
    local pos = table.deepcopy(pos)
    local muted = muted or false
    local first_player = game.get_player(pindex)
@@ -1500,66 +1503,70 @@ function teleport_to_closest(pindex, pos, muted)
       radius = radius + 1 
       new_pos = surf.find_non_colliding_position("character", pos, radius, .1, true)
    end
-   
-   if game.get_player(pindex).driving then
+   --Do not teleport if in a vehicle, in a menu, or already at the desitination
+   if first_player.vehicle ~= nil and first_player.vehicle.valid then
       printout("Cannot teleport while in a vehicle.", pindex)
-      return
-   elseif util.distance(game.get_player(pindex).position, pos) <= 1.1 then 
+      return false
+   elseif util.distance(game.get_player(pindex).position, pos) <= 1.5 then 
       printout("Already at target", pindex)
-      return
+      return false
+   elseif players[pindex].in_menu then
+      printout("Cannot teleport while in a menu.", pindex)
+      return false
    end
-   
+   --Do not teleport near enemies unless instructed to ignore them
+   if not ignore_enemies then
+      local enemy = first_player.surface.find_nearest_enemy{position = new_pos, max_distance = 30, force =  first_player.force}
+      if enemy and enemy.valid then
+         printout("Warning: There are enemies at this location, but you can force teleporting if you press CONTROL + SHIFT + T", pindex)
+         return false
+      end
+   end
+   --Attempt teleport
    local can_port = first_player.surface.can_place_entity{name = "character", position = new_pos} 
    if can_port then
       local old_pos = table.deepcopy(first_player.position)
       if not muted then
+         --Teleporting visuals at origin
          rendering.draw_circle{color = {0.8, 0.2, 0.0},radius = 0.5,width = 15,target = old_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
          rendering.draw_circle{color = {0.6, 0.1, 0.1},radius = 0.3,width = 20,target = old_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
          local smoke_effect = first_player.surface.create_entity{name = "iron-chest", position = first_player.position, raise_built = false, force = first_player.force}
          smoke_effect.destroy{}
-         if not muted then
-            game.get_player(pindex).play_sound{path = "teleported", volume_modifier = 0.2}
-            game.get_player(pindex).play_sound{path = "utility/scenario_message"}
-         end
+         --Teleport sound at origin
+         game.get_player(pindex).play_sound{path = "teleported", volume_modifier = 0.2, position = old_pos}
+         game.get_player(pindex).play_sound{path = "utility/scenario_message", volume_modifier = 0.8, position = old_pos}
       end
       local teleported = first_player.teleport(new_pos)
       if teleported then
          players[pindex].position = table.deepcopy(new_pos)
          if not muted then
+            --Teleporting visuals at target
             rendering.draw_circle{color = {0.3, 0.3, 0.9},radius = 0.5,width = 15,target = new_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
             rendering.draw_circle{color = {0.0, 0.0, 0.9},radius = 0.3,width = 20,target = new_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
-            if not muted then
-               game.get_player(pindex).play_sound{path = "teleported", volume_modifier = 0.2}
-               game.get_player(pindex).play_sound{path = "utility/scenario_message"}
-            end
             local smoke_effect = first_player.surface.create_entity{name = "iron-chest", position = first_player.position, raise_built = false, force = first_player.force}
             smoke_effect.destroy{}
+            --Teleport sound at target
+            game.get_player(pindex).play_sound{path = "teleported", volume_modifier = 0.2, position = new_pos}
+            game.get_player(pindex).play_sound{path = "utility/scenario_message", volume_modifier = 0.8, position = new_pos}
          end
          if new_pos.x ~= pos.x or new_pos.y ~= pos.y then
             if not muted then
                printout("Teleported " .. math.ceil(distance(pos,first_player.position)) .. " " .. direction(pos, first_player.position) .. " of target", pindex)
-               game.get_player(pindex).play_sound{path = "teleported", volume_modifier = 0.2}
-               game.get_player(pindex).play_sound{path = "utility/scenario_message"}
             end
-         else
-            if not muted then
-               printout("Teleported to target", pindex)
-               game.get_player(pindex).play_sound{path = "teleported", volume_modifier = 0.2}
-               game.get_player(pindex).play_sound{path = "utility/scenario_message"}
-            end
-         end
+         end        
          --Update cursor after teleport
          players[pindex].cursor_pos = table.deepcopy(new_pos)
          move_cursor_map(center_of_tile(players[pindex].cursor_pos),pindex)
          cursor_highlight(pindex,nil,nil)
       else
          printout("Teleport Failed", pindex)
+         return false
       end
    else
-      printout("Tile Occupied", pindex)
+      printout("Cannot teleport", pindex)--this is unlikely to be reached because we find the first non-colliding position
+      return false
    end
-
-
+   return true
 end
 
 function read_warnings_slot(pindex)
@@ -2282,6 +2289,15 @@ function get_iterable_array(dict)
    return result
 end
 
+function get_substring_before_space(str)
+   local first, final = string.find(str," ")
+   if first == nil or first == 1 then
+      return str
+   else
+      return string.sub(str,1,first-1)
+   end
+end
+
 function get_substring_before_comma(str)
    local first, final = string.find(str,",")
    if first == nil or first == 1 then
@@ -2294,7 +2310,7 @@ end
 function get_ent_area_from_name(ent_name,pindex)
    local ents = game.get_player(pindex).surface.find_entities_filtered{name = ent_name, limit = 1}
    if #ents == 0 then
-      return 0
+      return -1
    else
       return ents[1].tile_height * ents[1].tile_width
    end
@@ -2319,11 +2335,11 @@ function get_scan_summary(scan_left_top, scan_right_bottom, pindex)
          total = total + 1
       end
    end
-   if total > 0 and count/total == 0 then
-      printout("This area is completely unexplored.  Move closer or set up radar to reveal this area of the map.", pindex)
-      return
-   elseif count ~= total then
-      result = result .. "Explored " .. math.floor((count/total) * 100) .. "% "
+   if total > 0 and count < 1 then
+      result = result .. "Charted 0%, you need to chart this area by approaching it or using a radar."
+      return result
+   elseif total > 0 and count < total then
+      result = result .. "Charted " .. math.floor((count/total) * 100) .. "%, "
    end
    
    local percentages = {}
@@ -2334,62 +2350,62 @@ function get_scan_summary(scan_left_top, scan_right_bottom, pindex)
    local res_count = surf.count_tiles_filtered{ name = {"water", "deepwater", "water-green", "deepwater-green", "water-shallow", "water-mud", "water-wube"}, area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
    if percent > 0 then
-      table.insert(percentages, {name = "water", percent = percent})
+      table.insert(percentages, {name = "water", percent = percent, count = "resource"})
    end
    percent_total = percent_total + percent--water counts as filling a space
    
    res_count = surf.count_tiles_filtered{ name = "stone-path", area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
    if percent > 0 then
-      table.insert(percentages, {name = "stone-brick-path", percent = percent})
+      table.insert(percentages, {name = "stone-brick-path", percent = percent, count = "flooring"})
    end
    
    res_count = surf.count_tiles_filtered{ name = {"concrete","hazard-concrete-left","hazard-concrete-right"}, area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
    if percent > 0 then
-      table.insert(percentages, {name = "concrete", percent = percent})
+      table.insert(percentages, {name = "concrete", percent = percent, count = "flooring"})
    end
    
    res_count = surf.count_tiles_filtered{ name = {"refined-concrete","refined-hazard-concrete-left","refined-hazard-concrete-right"}, area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
    if percent > 0 then
-      table.insert(percentages, {name = "refined-concrete", percent = percent})
+      table.insert(percentages, {name = "refined-concrete", percent = percent, count = "flooring"})
    end
    
    res_count = surf.count_entities_filtered{ name = "coal", area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
    if percent > 0 then
-      table.insert(percentages, {name = "coal", percent = percent})
+      table.insert(percentages, {name = "coal", percent = percent, count = "resource"})
    end
    
    res_count = surf.count_entities_filtered{ name = "stone", area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
    if percent > 0 then
-      table.insert(percentages, {name = "stone", percent = percent})
+      table.insert(percentages, {name = "stone", percent = percent, count = "resource"})
    end
    
    res_count = surf.count_entities_filtered{ name = "iron-ore", area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
    if percent > 0 then
-      table.insert(percentages, {name = "iron-ore", percent = percent})
+      table.insert(percentages, {name = "iron-ore", percent = percent, count = "resource"})
    end
    
    res_count = surf.count_entities_filtered{ name = "copper-ore", area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
    if percent > 0 then
-      table.insert(percentages, {name = "copper-ore", percent = percent})
+      table.insert(percentages, {name = "copper-ore", percent = percent, count = "resource"})
    end
    
    res_count = surf.count_entities_filtered{ name = "uranium-ore", area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
    if percent > 0 then
-      table.insert(percentages, {name = "uranium-ore", percent = percent})
+      table.insert(percentages, {name = "uranium-ore", percent = percent, count = "resource"})
    end
    
    res_count = surf.count_entities_filtered{ type = "tree", area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count * 8 / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)--trees are bigger than 1 tile
    if percent > 0 then
-      table.insert(percentages, {name = "trees", percent = percent})
+      table.insert(percentages, {name = "trees", percent = percent, count = res_count})
    end
    percent_total = percent_total + percent
    
@@ -2397,13 +2413,16 @@ function get_scan_summary(scan_left_top, scan_right_bottom, pindex)
       for i, ent in ipairs(players[pindex].nearby.ents) do
          local area = 0
          --this confirmation is necessary because all we have is the ent name, and some distant resources show up on the list.
-         if confirm_ent_is_in_area( get_substring_before_comma(ent.name) , scan_left_top , scan_right_bottom, pindex) then 
+         if confirm_ent_is_in_area( get_substring_before_space(get_substring_before_comma(ent.name)) , scan_left_top , scan_right_bottom, pindex) then
             area = get_ent_area_from_name(get_substring_before_comma(ent.name),pindex)
-            --game.get_player(pindex).print(get_substring_before_comma(ent.name) .. " " .. area)--
+            if area == -1 then
+               area = 1
+               game.get_player(pindex).print(get_substring_before_space(get_substring_before_comma(ent.name)) .. " could not be found for the area check ",{volume_modifier = 0})--***bug: unable to get area from name
+            end
          end 
-         local percentage = math.floor((area * players[pindex].nearby.ents[i].count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
+         local percentage = math.floor((area * players[pindex].nearby.ents[i].count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .95)--Tolerate up to 0.05%
          if not ent.aggregate and percentage > 0 then
-            table.insert(percentages, {name = ent.name, percent = percentage})
+            table.insert(percentages, {name = ent.name, percent = percentage, count = players[pindex].nearby.ents[i].count})
          end
          percent_total = percent_total + percentage
       end
@@ -2413,7 +2432,7 @@ function get_scan_summary(scan_left_top, scan_right_bottom, pindex)
       result = result .. " Area contains "
       local i = 1
       while i <= # percentages and (i <= 5 or percentages[i].percent > 1) do
-         result = result .. percentages[i].name .. " " .. percentages[i].percent .. "%, "
+         result = result .. percentages[i].count .. " " .. percentages[i].name .. " " .. percentages[i].percent .. "%, "
          i = i + 1
       end
       if percent_total == 0 then--Note there are still some entities in here, but with zero area...
@@ -2814,11 +2833,20 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
    
    elseif #building_sector.inventory > 0 then
       local inventory=building_sector.inventory
-      local len = inventory.supports_bar() and inventory.get_bar() - 1 or #inventory
-      local start_phrase = len .. " " .. building_sector.name .. ", "
+      local start_phrase = #inventory .. " " .. building_sector.name .. ", "
+      if inventory.supports_bar() and #inventory > inventory.get_bar() - 1 then
+         --local unlocked = inventory.supports_bar() and inventory.get_bar() - 1 or nil
+         local unlocked = inventory.get_bar() - 1
+         start_phrase = start_phrase .. ", " .. unlocked .. " unlocked, "
+      end
       if not prefix_inventory_size_and_name then
          start_phrase = ""
       end
+      --Mention if a slot is locked
+      if inventory.supports_bar() and players[pindex].building.index > inventory.get_bar() - 1 then
+         start_phrase = start_phrase .. " locked "
+      end
+      --Read the slot stack
       stack = building_sector.inventory[players[pindex].building.index]
       if stack and stack.valid_for_read and stack.valid then
          printout(start_phrase .. stack.name .. " x " .. stack.count, pindex)
@@ -2959,11 +2987,12 @@ function read_crafting_slot(pindex, start_phrase)
    end
 end
 
-function read_inventory_slot(pindex, start_phrase)
-   start_phrase = start_phrase or ""
+--Reads a player inventory slot
+function read_inventory_slot(pindex, start_phrase_in)
+   local start_phrase = start_phrase_in or ""
    local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
    if stack and stack.valid_for_read and stack.valid == true then
-	  printout(start_phrase .. stack.name .. " x " .. stack.count .. " " .. stack.prototype.subgroup.name , pindex)
+      printout(start_phrase .. stack.name .. " x " .. stack.count .. " " .. stack.prototype.subgroup.name , pindex)
    else
       printout(start_phrase .. "Empty Slot",pindex)
    end
@@ -3265,6 +3294,9 @@ function scan_index(pindex)
          printout("Error: Invalid object, maybe try rescanning.", pindex)
          return
       end
+      
+      refresh_player_tile(pindex)
+      
       local dir_dist = dir_dist_locale(players[pindex].position, ent.position)
       if players[pindex].nearby.count == false then
          --Read the entity in terms of distance and direction
@@ -3425,7 +3457,7 @@ function index_of_entity(array, value)
    return nil
 end
 
-function scan_area (x,y,w,h, pindex)
+function scan_area(x,y,w,h, pindex)
    local first_player = game.get_player(pindex)
    local surf = first_player.surface
    local ents = surf.find_entities_filtered{area = {{x, y},{x+w, y+h}}, type = {"resource", "tree"}, invert = true}
@@ -3535,9 +3567,9 @@ function toggle_cursor(pindex)
    end
 end
 
-function teleport_to_cursor(pindex)
-   teleport_to_closest(pindex, players[pindex].cursor_pos)
-   players[pindex].cursor_pos = game.get_player(pindex).position--Fixes a repeated teleport bug
+function teleport_to_cursor(pindex, muted, ignore_enemies)
+   local result = teleport_to_closest(pindex, players[pindex].cursor_pos, muted, ignore_enemies)
+   return result
 end
 
 function jump_to_player(pindex)
@@ -3554,14 +3586,14 @@ function jump_to_player(pindex)
    end
 end
 
-local function refresh_player_tile(pindex)
+function refresh_player_tile(pindex)
    local surf = game.get_player(pindex).surface
    local search_area = {{x=-0.5,y=-.5},{x=0.29,y=0.29}}
    local search_center = players[pindex].cursor_pos
    search_area[1]=add_position(search_area[1],search_center)
    search_area[2]=add_position(search_area[2],search_center)
    
-   players[pindex].tile.ents = surf.find_entities_filtered{area = search_area, name={"highlight-box"},invert = true}
+   players[pindex].tile.ents = surf.find_entities_filtered{area = search_area, name={"highlight-box","flying-text"},invert = true}
    players[pindex].tile.index = #players[pindex].tile.ents == 0 and 0 or 1
    if not(pcall(function()
       players[pindex].tile.tile =  surf.get_tile(players[pindex].cursor_pos.x, players[pindex].cursor_pos.y).name
@@ -4089,7 +4121,7 @@ function read_coords(pindex, start_phrase)
    if players[pindex].menu == "building" and players[pindex].building.recipe_list ~= nil then
       offset = 1
    end
-   if not(players[pindex].in_menu) or players[pindex].menu == "structure-travel" then
+   if not(players[pindex].in_menu) or players[pindex].menu == "structure-travel" or players[pindex].menu == "travel" then
       if players[pindex].vanilla_mode then
          players[pindex].cursor_pos = game.get_player(pindex).position
       end
@@ -4295,6 +4327,7 @@ function initialize(player)
    faplayer.last_menu_toggle_tick = faplayer.last_menu_toggle_tick or 1
    faplayer.last_click_tick = faplayer.last_click_tick or 1
    faplayer.last_damage_alert_tick = faplayer.last_damage_alert_tick or 1
+   faplayer.last_damage_alert_pos = faplayer.last_damage_alert_pos or nil
    faplayer.last_pg_key_tick = faplayer.last_pg_key_tick or 1
    faplayer.last_honk_tick = faplayer.last_honk_tick or 1
    faplayer.last_pickup_tick = faplayer.last_pickup_tick or 1
@@ -5639,7 +5672,7 @@ script.on_event(defines.events.on_player_driving_changed_state, function(event)
       if players[pindex].last_vehicle.train ~= nil and players[pindex].last_vehicle.train.schedule == nil then
          players[pindex].last_vehicle.train.manual_mode = true
       end
-      teleport_to_closest(pindex, players[pindex].last_vehicle.position, true)
+      teleport_to_closest(pindex, players[pindex].last_vehicle.position, true, true)
       if players[pindex].menu == "train_menu" then
          train_menu_close(pindex, false)
       end
@@ -5722,15 +5755,29 @@ script.on_event("teleport-to-cursor", function(event)
    if not check_for_player(pindex) then
       return
    end
-   if game.get_player(pindex).driving then
-      printout("Cannot teleport while in a vehicle.", pindex)
+   teleport_to_cursor(pindex, false, false)
+end)
+
+script.on_event("teleport-to-cursor-forced", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
       return
    end
-   if not (players[pindex].in_menu) then
-      teleport_to_cursor(pindex)
-   else
-      printout("Cannot teleport while in a menu.", pindex)
+   teleport_to_cursor(pindex, false, true)
+end)
+
+script.on_event("teleport-to-alert-forced", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
    end
+   local alert_pos = players[pindex].last_damage_alert_pos
+   if alert_pos == nil then
+      printout("No target",pindex)
+      return
+   end
+   players[pindex].cursor_pos = alert_pos
+   teleport_to_cursor(pindex, false, true)
 end)
 
 script.on_event("toggle-cursor", function(event)
@@ -6125,7 +6172,7 @@ script.on_event("jump-to-scan", function(event)--NOTE: This might be deprecated 
             sync_build_arrow(pindex)
             printout("Cursor has jumped to " .. ent.name .. " at " .. math.floor(players[pindex].cursor_pos.x) .. " " .. math.floor(players[pindex].cursor_pos.y), pindex)
          else
-            teleport_to_closest(pindex, ent.position)
+            teleport_to_closest(pindex, ent.position, false, false)
             players[pindex].cursor_pos = offset_position(players[pindex].position, players[pindex].player_direction, 1)
             cursor_highlight(pindex, nil, nil)--laterdo check for new cursor ent here, to update the highlight?
             sync_build_arrow(pindex)
@@ -6486,6 +6533,8 @@ script.on_event("close-menu", function(event)--close_menu
       end
       if players[pindex].menu == "travel" then
          game.get_player(pindex).gui.screen["travel"].destroy()
+         players[pindex].cursor_pos = center_of_tile(players[pindex].position)
+         cursor_highlight(pindex, nil, "train-visualization")
       end
       if players[pindex].menu == "structure-travel" then
          game.get_player(pindex).gui.screen["structure-travel"].destroy()
@@ -6742,17 +6791,20 @@ script.on_event("switch-menu-or-gun", function(event)
    
    --Declare the selected weapon
    local gun_index = switched_index
-   local ammo_stack = ammo_inv[gun_index]
-   local gun_stack  = guns_inv[gun_index]
-   if gun_index >= 0 then
+   local ammo_stack = nil
+   local gun_stack = nil 
+   
+   if gun_index < 1 then
+      result = "No ready weapons"
+   else
+      local ammo_stack = ammo_inv[gun_index]
+      local gun_stack  = guns_inv[gun_index]
       --game.print("print " .. gun_index)--
       result = gun_stack.name .. " with " .. ammo_stack.count .. " " .. ammo_stack.name .. "s "
-   else
-      --game.print("print error " .. gun_index)--
-      result = "Weapon switching error."
    end
    
    if not players[pindex].in_menu then
+      --p.play_sound{path = "Inventory-Move"}
       printout(result,pindex)
    end
 end)
@@ -6863,21 +6915,23 @@ script.on_event("reverse-switch-menu-or-gun", function(event)
    
    --Declare the selected weapon
    local gun_index = switched_index
-   local ammo_stack = ammo_inv[gun_index]
-   local gun_stack  = guns_inv[gun_index]
-   if gun_index >= 0 then
+   local ammo_stack = nil
+   local gun_stack = nil 
+   
+   if gun_index < 1 then
+      result = "No ready weapons"
+   else
+      local ammo_stack = ammo_inv[gun_index]
+      local gun_stack  = guns_inv[gun_index]
       --game.print("print " .. gun_index)--
       result = gun_stack.name .. " with " .. ammo_stack.count .. " " .. ammo_stack.name .. "s "
-   else
-      --game.print("print error " .. gun_index)--
-      result = "Weapon switching error."
    end
    
    if not players[pindex].in_menu then
+      p.play_sound{path = "Inventory-Move"}
       printout(result,pindex)
    end
 end)
-
 function swap_weapon_forward(pindex, write_to_character)
    local p = game.get_player(pindex)
    local gun_index = p.character.selected_gun_index
@@ -7437,8 +7491,8 @@ script.on_event("click-menu", function(event)
          elseif players[pindex].travel.index.y == 0 and players[pindex].travel.index.x < 4 then
             printout("Navigate up and down to select a fastt travel point, then press left bracket to get there quickly.", pindex)
          elseif players[pindex].travel.index.x == 1 then
-            teleport_to_closest(pindex, global.players[pindex].travel[players[pindex].travel.index.y].position)
-            if players[pindex].cursor then
+            local success = teleport_to_closest(pindex, global.players[pindex].travel[players[pindex].travel.index.y].position, false, false)
+            if success and players[pindex].cursor then
                players[pindex].cursor_pos = table.deepcopy(global.players[pindex].travel[players[pindex].travel.index.y].position)
             else
                players[pindex].cursor_pos = offset_position(players[pindex].position, players[pindex].player_direction, 1)
@@ -7489,8 +7543,8 @@ script.on_event("click-menu", function(event)
          elseif players[pindex].structure_travel.direction == "west" then
             tar = network[network[current].west[index].num]
          end   
-         teleport_to_closest(pindex, tar.position)
-         if players[pindex].cursor then
+         local success = teleport_to_closest(pindex, tar.position, false, false)
+         if success and players[pindex].cursor then
             players[pindex].cursor_pos = table.deepcopy(tar.position)
          else
             players[pindex].cursor_pos = offset_position(players[pindex].position, players[pindex].player_direction, 1)
@@ -7681,7 +7735,8 @@ function open_operable_building(ent,pindex)--open_building
          players[pindex].belt.index = 1
          players[pindex].belt.side = 1
          players[pindex].belt.direction = ent.direction 
-         printout(#players[pindex].belt.line1 .. " " .. #players[pindex].belt.line2 .. " " .. players[pindex].belt.ent.get_max_transport_line_index(), pindex)
+         printout("Analyzing transport belt", pindex)
+         --printout("Analyzing transport belt " .. #players[pindex].belt.line1 .. " " .. #players[pindex].belt.line2 .. " " .. players[pindex].belt.ent.get_max_transport_line_index(), pindex)
          return
       end
       if ent.prototype.ingredient_count ~= nil then
@@ -8431,7 +8486,7 @@ function do_multi_stack_transfer(ratio,pindex)
          local moved, full = transfer_inventory{from=game.players[pindex].get_main_inventory(),to=players[pindex].building.ent,name=item_name,ratio=ratio}
          
          if full then
-            table.insert(result,"Inventory full or not applicable. ")
+            table.insert(result,"Inventory full or not applicable, ")
          end
          if table_size(moved) == 0 then
             table.insert(result,{"access.placed-nothing"})
@@ -9861,6 +9916,55 @@ script.on_event("launch-rocket", function(event)
    end
 end)
 
+
+script.on_event("logistic-request-read", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   logistics_info_key_handler(pindex)
+end)
+
+script.on_event("logistic-request-increment-min", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   logistics_request_increment_min_handler(pindex)
+end)
+
+script.on_event("logistic-request-decrement-min", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   logistics_request_decrement_min_handler(pindex)
+end)
+
+script.on_event("logistic-request-increment-max", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   logistics_request_increment_max_handler(pindex)
+end)
+
+script.on_event("logistic-request-decrement-max", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   logistics_request_decrement_max_handler(pindex)
+end)
+
+script.on_event("logistic-request-toggle-personal-logistics", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   logistics_request_toggle_personal_logistics(pindex)
+end)
+
 --This event handler patches the unwanted opening of the inventory screen when closing a factorio access menu
 script.on_event(defines.events.on_gui_opened, function(event)
    local pindex = event.player_index
@@ -10797,7 +10901,7 @@ function aim_gun_at_nearest_enemy(pindex,enemy_in)
    local range = gun_stack.prototype.attack_parameters.range
    local dist = util.distance(p.position,enemy.position)
    if dist < range then      
-      p.play_sound{path = "aim-locked"}
+      p.play_sound{path = "aim-locked",volume_modifier=0.5}
    end
    --Return if there is a gun and ammo combination that already aims by itself
    if gun_stack.name == "pistol" or gun_stack.name == "submachine-gun" and dist < 10 then --or ammo_stack.name == "rocket" or ammo_stack.name == "explosive-rocket" then
@@ -11085,10 +11189,10 @@ script.on_event(defines.events.on_entity_damaged,function(event)
       end
       --Play shield and/or character damaged sound
       if shield_left ~= nil then
-         ent.player.play_sound{path = "damaged-character-shield"}
+         ent.player.play_sound{path = "damaged-character-shield",volume_modifier=0.3}
       end
       if shield_left == nil or (shield_left < 1.0 and ent.get_health_ratio() < 1.0) then
-         ent.player.play_sound{path = "damaged-character-no-shield"}
+         ent.player.play_sound{path = "damaged-character-no-shield",volume_modifier=0.3}
       end
       return
    elseif tick < 3600 and tick > 300 then
@@ -11103,12 +11207,13 @@ script.on_event(defines.events.on_entity_damaged,function(event)
       if players[pindex] ~= nil and game.get_player(pindex).force.name == damaged_force.name 
          and (players[pindex].last_damage_alert_tick == nil or (tick - players[pindex].last_damage_alert_tick) > 300) then
          players[pindex].last_damage_alert_tick = tick
+         players[pindex].last_damage_alert_pos = ent.position
          local dist = math.ceil(util.distance(players[pindex].position,ent.position))
          local dir = direction_lookup(get_direction_of_that_from_this(ent.position,players[pindex].position))
          local result = ent.name .. " damaged by " .. attacker_force.name .. " forces at " .. dist .. " " .. dir
          printout(result,pindex)
          --game.get_player(pindex).print(result,{volume_modifier=0})--**
-         game.get_player(pindex).play_sound{path = "damaged-entity-alert",volume_modifier=0.4}
+         game.get_player(pindex).play_sound{path = "damaged-entity-alert",volume_modifier=0.3}
       end
    end
 end)
@@ -11128,12 +11233,13 @@ script.on_event(defines.events.on_entity_died,function(event)
    for pindex, player in pairs(players) do
       if players[pindex] ~= nil and game.get_player(pindex).force.name == damaged_force.name then
          players[pindex].last_damage_alert_tick = tick
+         players[pindex].last_damage_alert_pos = ent.position
          local dist = math.ceil(util.distance(players[pindex].position,ent.position))
          local dir = direction_lookup(get_direction_of_that_from_this(ent.position,players[pindex].position))
          local result = ent.name .. " destroyed by " .. attacker_force.name .. " forces at " .. dist .. " " .. dir
          printout(result,pindex)
          --game.get_player(pindex).print(result,{volume_modifier=0})--**
-         game.get_player(pindex).play_sound{path = "utility/alert_destroyed",volume_modifier=1}
+         game.get_player(pindex).play_sound{path = "utility/alert_destroyed",volume_modifier=0.5}
       end
    end
 end)
