@@ -1189,14 +1189,14 @@ data:extend({
 {
     type = "custom-input",
     name = "logistic-request-increment-max",
-    key_sequence = "ALT + SHIFT + L",
+    key_sequence = "SHIFT + ALT + L",
     consuming = "none"
 },
 
 {
     type = "custom-input",
     name = "logistic-request-decrement-max",
-    key_sequence = "ALT + CONTROL + L",
+    key_sequence = "CONTROL + ALT + L",
     consuming = "none"
 },
 

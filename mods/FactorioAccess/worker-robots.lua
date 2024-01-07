@@ -1,4 +1,5 @@
 dirs = defines.direction
+MAX_STACK_COUNT = 10
 
 --https://lua-api.factorio.com/latest/classes/LuaLogisticCell.html
 --defines.inventory.character_trash
@@ -27,9 +28,9 @@ function increment_logistic_request_min_amount(stack_size, amount_min_in)
       amount_min = 1
    elseif amount_min == 1 then
       amount_min = math.floor(stack_size/2)
-   elseif amount_min == math.floor(stack_size/2) then
+   elseif amount_min <= math.floor(stack_size/2) then
       amount_min = stack_size
-   elseif amount_min == stack_size then
+   elseif amount_min <= stack_size then
       amount_min = amount_min + stack_size
    elseif amount_min > stack_size then
       amount_min = amount_min + stack_size
@@ -46,9 +47,9 @@ function decrement_logistic_request_min_amount(stack_size, amount_min_in)
       amount_min = nil
    elseif amount_min == 1 then
       amount_min = nil
-   elseif amount_min == math.floor(stack_size/2) then
+   elseif amount_min <= math.floor(stack_size/2) then
       amount_min = 1
-   elseif amount_min == stack_size then
+   elseif amount_min <= stack_size then
       amount_min = math.floor(stack_size/2)
    elseif amount_min > stack_size then
       amount_min = amount_min - stack_size
@@ -60,17 +61,18 @@ end
 --Increments: 0, 1, half-stack, 1 stack, n stacks
 function increment_logistic_request_max_amount(stack_size, amount_max_in)
    local amount_max = amount_max_in
-   
-   if amount_max ~= nil and amount_max > stack_size then
+   if amount_max >= stack_size * MAX_STACK_COUNT then
+      amount_max = nil
+   elseif amount_max > stack_size then
       amount_max = amount_max + stack_size
-   elseif amount_max ~= nil and amount_max == stack_size then
+   elseif amount_max >= stack_size then
       amount_max = amount_max + stack_size
-   elseif amount_max ~= nil and amount_max == math.floor(stack_size/2) then
+   elseif amount_max >= math.floor(stack_size/2) then
       amount_max = stack_size
-   elseif amount_max ~= nil and amount_max == 1 then
+   elseif amount_max >= 1 then
       amount_max = math.floor(stack_size/2)
    elseif amount_max == nil or amount_max == 0 then
-      amount_max = 1
+      amount_max = stack_size
    end
    
    return amount_max
@@ -78,19 +80,20 @@ end
 
 --Increments: 0, 1, half-stack, 1 stack, n stacks
 function decrement_logistic_request_max_amount(stack_size, amount_max_in)
-   local amount_min = amount_min_in
    local amount_max = amount_max_in
    
-   if amount_max ~= nil and amount_max > stack_size then
+   if amount_max > stack_size * MAX_STACK_COUNT then
+      amount_max = stack_size * MAX_STACK_COUNT 
+   elseif amount_max > stack_size then
       amount_max = amount_max - stack_size
-   elseif amount_max ~= nil and amount_max == stack_size then
+   elseif amount_max >= stack_size then
       amount_max = math.floor(stack_size/2)
-   elseif amount_max ~= nil and amount_max == math.floor(stack_size/2) then
+   elseif amount_max >= math.floor(stack_size/2) then
       amount_max = 1
-   elseif amount_max ~= nil and amount_max == 1 then
-      amount_max = nil
+   elseif amount_max >= 1 then
+      amount_max = 1
    elseif amount_max == nil or amount_max == 0 then
-      amount_max = nil
+      amount_max = stack_size
    end
    
    return amount_max
@@ -330,7 +333,7 @@ function player_logistic_requests_summary_info(pindex)
    
    --Check if logistics have been researched
    for i, tech in pairs(game.get_player(pindex).force.technologies) do
-      if tech.name == "logistic-robotics" and not tech.researched then
+      if tech.name == "logistic-robotics" and not tech.researched == true then
          printout("Logistic requests not available, research required.",pindex)
          return
       end
@@ -494,10 +497,14 @@ function player_logistic_request_increment_min(item_stack,pindex)
       --Create a fresh request
       local new_slot = {name = item_stack.name, min = 1, max = nil}
       p.set_personal_logistic_slot(correct_slot_id,new_slot)
-      return true
    else
       --Update existing request
       current_slot.min = increment_logistic_request_min_amount(item_stack.prototype.stack_size,current_slot.min)
+      --Force min <= max
+      if current_slot.min ~= nil and current_slot.max ~= nil and current_slot.min > current_slot.max then
+         printout("Error: Minimum request value cannot exceed maximum",pindex)
+         return
+      end
       p.set_personal_logistic_slot(correct_slot_id,current_slot)
    end
    
@@ -533,12 +540,16 @@ function player_logistic_request_decrement_min(item_stack,pindex)
    current_slot = p.get_personal_logistic_slot(correct_slot_id)
    if current_slot == nil or current_slot.name == nil then
       --Create a fresh request
-      local new_slot = {name = item_stack.name, min = nil, max = 1}
+      local new_slot = {name = item_stack.name, min = 0, max = nil}
       p.set_personal_logistic_slot(correct_slot_id,new_slot)
-      return true
    else
       --Update existing request
       current_slot.min = decrement_logistic_request_min_amount(item_stack.prototype.stack_size,current_slot.min)
+      --Force min <= max
+      if current_slot.min ~= nil and current_slot.max ~= nil and current_slot.min > current_slot.max then
+         printout("Error: Minimum request value cannot exceed maximum",pindex)
+         return
+      end
       p.set_personal_logistic_slot(correct_slot_id,current_slot)
    end
    
@@ -574,12 +585,16 @@ function player_logistic_request_increment_max(item_stack,pindex)
    current_slot = p.get_personal_logistic_slot(correct_slot_id)
    if current_slot == nil or current_slot.name == nil then
       --Create a fresh request
-      local new_slot = {name = item_stack.name, min = nil, max = 1}
+      local new_slot = {name = item_stack.name, min = 0, max = MAX_STACK_COUNT * item_stack.prototype.stack_size}
       p.set_personal_logistic_slot(correct_slot_id,new_slot)
-      return true
    else
       --Update existing request
       current_slot.max = increment_logistic_request_max_amount(item_stack.prototype.stack_size,current_slot.max)
+      --Force min <= max
+      if current_slot.min ~= nil and current_slot.max ~= nil and current_slot.min > current_slot.max then
+         printout("Error: Minimum request value cannot exceed maximum",pindex)
+         return
+      end
       p.set_personal_logistic_slot(correct_slot_id,current_slot)
    end
    
@@ -615,12 +630,16 @@ function player_logistic_request_decrement_max(item_stack,pindex)
    current_slot = p.get_personal_logistic_slot(correct_slot_id)
    if current_slot == nil or current_slot.name == nil then
       --Create a fresh request
-      local new_slot = {name = item_stack.name, min = 1, max = nil}
+      local new_slot = {name = item_stack.name, min = 0, max = MAX_STACK_COUNT * item_stack.prototype.stack_size}
       p.set_personal_logistic_slot(correct_slot_id,new_slot)
-      return true
    else
       --Update existing request
       current_slot.max = decrement_logistic_request_max_amount(item_stack.prototype.stack_size,current_slot.max)
+      --Force min <= max
+      if current_slot.min ~= nil and current_slot.max ~= nil and current_slot.min > current_slot.max then
+         printout("Error: Minimum request value cannot exceed maximum",pindex)
+         return
+      end
       p.set_personal_logistic_slot(correct_slot_id,current_slot)
    end
    
