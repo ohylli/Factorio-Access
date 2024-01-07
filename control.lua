@@ -1506,20 +1506,20 @@ function teleport_to_closest(pindex, pos, muted, ignore_enemies)
    --Do not teleport if in a vehicle, in a menu, or already at the desitination
    if game.get_player(pindex).vehicle ~= nil or game.get_player(pindex).vehicle.valid then
       printout("Cannot teleport while in a vehicle.", pindex)
-      return
+      return false
    elseif util.distance(game.get_player(pindex).position, pos) <= 1.5 then 
       printout("Already at target", pindex)
-      return
+      return false
    elseif players[pindex].in_menu then
       printout("Cannot teleport while in a menu.", pindex)
-      return
+      return false
    end
    --Do not teleport near enemies unless instructed to ignore them
    if not ignore_enemies then
       local enemy = p.surface.find_nearest_enemy{position = new_pos, max_distance = 30, force =  first_player.force}
       if enemy and enemy.valid then
          printout("Warning: There are enemies at this location, but you can force teleporting if you press CONTROL + SHIFT + T", pindex)
-         return
+         return false
       end
    end
    --Attempt teleport
@@ -1560,12 +1560,13 @@ function teleport_to_closest(pindex, pos, muted, ignore_enemies)
          cursor_highlight(pindex,nil,nil)
       else
          printout("Teleport Failed", pindex)
+         return false
       end
    else
-      printout("Tile Occupied", pindex)--this is unlikely to be reached because we find the first non-colliding position
+      printout("Cannot teleport", pindex)--this is unlikely to be reached because we find the first non-colliding position
+      return false
    end
-
-
+   return true
 end
 
 function read_warnings_slot(pindex)
@@ -3567,8 +3568,9 @@ function toggle_cursor(pindex)
 end
 
 function teleport_to_cursor(pindex, muted, ignore_enemies)
-   teleport_to_closest(pindex, players[pindex].cursor_pos, muted, ignore_enemies)
+   local result = teleport_to_closest(pindex, players[pindex].cursor_pos, muted, ignore_enemies)
    players[pindex].cursor_pos = game.get_player(pindex).position--Fixes a repeated teleport bug
+   return result
 end
 
 function jump_to_player(pindex)
@@ -6171,7 +6173,7 @@ script.on_event("jump-to-scan", function(event)--NOTE: This might be deprecated 
             sync_build_arrow(pindex)
             printout("Cursor has jumped to " .. ent.name .. " at " .. math.floor(players[pindex].cursor_pos.x) .. " " .. math.floor(players[pindex].cursor_pos.y), pindex)
          else
-            teleport_to_closest(pindex, ent.position, false, false)--***todo handle when it returns false...
+            teleport_to_closest(pindex, ent.position, false, false)
             players[pindex].cursor_pos = offset_position(players[pindex].position, players[pindex].player_direction, 1)
             cursor_highlight(pindex, nil, nil)--laterdo check for new cursor ent here, to update the highlight?
             sync_build_arrow(pindex)
@@ -7490,8 +7492,8 @@ script.on_event("click-menu", function(event)
          elseif players[pindex].travel.index.y == 0 and players[pindex].travel.index.x < 4 then
             printout("Navigate up and down to select a fastt travel point, then press left bracket to get there quickly.", pindex)
          elseif players[pindex].travel.index.x == 1 then
-            teleport_to_closest(pindex, global.players[pindex].travel[players[pindex].travel.index.y].position, false, false)--***todo handle when it returns false...
-            if players[pindex].cursor then
+            local success = teleport_to_closest(pindex, global.players[pindex].travel[players[pindex].travel.index.y].position, false, false)
+            if success and players[pindex].cursor then
                players[pindex].cursor_pos = table.deepcopy(global.players[pindex].travel[players[pindex].travel.index.y].position)
             else
                players[pindex].cursor_pos = offset_position(players[pindex].position, players[pindex].player_direction, 1)
@@ -7542,8 +7544,8 @@ script.on_event("click-menu", function(event)
          elseif players[pindex].structure_travel.direction == "west" then
             tar = network[network[current].west[index].num]
          end   
-         teleport_to_closest(pindex, tar.position, false, false)--***todo handle when it returns false...
-         if players[pindex].cursor then
+         local success = teleport_to_closest(pindex, tar.position, false, false)
+         if success and players[pindex].cursor then
             players[pindex].cursor_pos = table.deepcopy(tar.position)
          else
             players[pindex].cursor_pos = offset_position(players[pindex].position, players[pindex].player_direction, 1)
