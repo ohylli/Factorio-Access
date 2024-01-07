@@ -2402,6 +2402,12 @@ function get_scan_summary(scan_left_top, scan_right_bottom, pindex)
       table.insert(percentages, {name = "uranium-ore", percent = percent, count = "resource"})
    end
    
+   res_count = surf.count_entities_filtered{ name = "crude-oil", area = {scan_left_top,scan_right_bottom} }
+   percent = math.floor((9 * res_count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
+   if percent > 0 then
+      table.insert(percentages, {name = "crude-oil", percent = percent, count = "resource"})
+   end
+   
    res_count = surf.count_entities_filtered{ type = "tree", area = {scan_left_top,scan_right_bottom} }
    percent = math.floor((res_count * 8 / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)--trees are bigger than 1 tile
    if percent > 0 then
@@ -3569,6 +3575,7 @@ end
 
 function teleport_to_cursor(pindex, muted, ignore_enemies)
    local result = teleport_to_closest(pindex, players[pindex].cursor_pos, muted, ignore_enemies)
+   players[pindex].cursor_pos = players[pindex].position
    return result
 end
 
@@ -5778,6 +5785,9 @@ script.on_event("teleport-to-alert-forced", function(event)
    end
    players[pindex].cursor_pos = alert_pos
    teleport_to_cursor(pindex, false, true)
+   players[pindex].cursor_pos = alert_pos--laterdo** bug fixed here about repeated teleports with the same vector
+   players[pindex].position = alert_pos
+   refresh_player_tile(pindex)
 end)
 
 script.on_event("toggle-cursor", function(event)
