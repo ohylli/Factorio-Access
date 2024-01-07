@@ -295,6 +295,20 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "teleport-to-cursor-forced",
+    key_sequence = "CONTROL + SHIFT + T",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "teleport-to-alert-forced",
+    key_sequence = "CONTROL + SHIFT + P",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "toggle-cursor",
     key_sequence = "I",
     consuming = "none"
@@ -1160,15 +1174,29 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "logistic-request-increment",
+    name = "logistic-request-increment-min",
     key_sequence = "SHIFT + L",
     consuming = "none"
 },
 
 {
     type = "custom-input",
-    name = "logistic-request-decrement",
+    name = "logistic-request-decrement-min",
     key_sequence = "CONTROL + L",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "logistic-request-increment-max",
+    key_sequence = "SHIFT + ALT + L",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "logistic-request-decrement-max",
+    key_sequence = "CONTROL + ALT + L",
     consuming = "none"
 },
 
