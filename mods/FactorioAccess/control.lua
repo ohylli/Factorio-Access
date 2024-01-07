@@ -9958,6 +9958,14 @@ script.on_event("logistic-request-decrement-max", function(event)
    logistics_request_decrement_max_handler(pindex)
 end)
 
+script.on_event("logistic-request-toggle-personal-logistics", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   logistics_request_toggle_personal_logistics(pindex)
+end)
+
 --This event handler patches the unwanted opening of the inventory screen when closing a factorio access menu
 script.on_event(defines.events.on_gui_opened, function(event)
    local pindex = event.player_index

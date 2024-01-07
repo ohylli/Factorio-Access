@@ -100,9 +100,9 @@ function decrement_logistic_request_max_amount(item, amount_max_in)
    return amount_max
 end
 
-function toggle_player_logistic_requests_enabled(pindex)
+function logistics_request_toggle_personal_logistics(pindex)
    local p = game.get_player(pindex)
-   character_personal_logistic_requests_enabled = not character_personal_logistic_requests_enabled
+   p.character_personal_logistic_requests_enabled = not p.character_personal_logistic_requests_enabled
    if p.character_personal_logistic_requests_enabled then
       printout("Personal logistics requests enabled",pindex)
    else
@@ -221,9 +221,11 @@ function logistics_request_increment_min_handler(pindex)
       local stack_inv = game.get_player(pindex).get_main_inventory()[players[pindex].inventory.index]
       --Check item in hand or item in inventory
       if stack and stack.valid_for_read and stack.valid then
-         --Item in hand***
+         --Item in hand
+         player_logistic_request_increment_min(stack,pindex)
       elseif players[pindex].menu == "inventory" and stack_inv and stack_inv.valid_for_read and stack_inv.valid then
-         --Item in inv***
+         --Item in inv
+         player_logistic_request_increment_min(inv_stack,pindex)
       else
          --Empty hand, empty inventory slot
          --(do nothing)
@@ -241,9 +243,11 @@ function logistics_request_decrement_min_handler(pindex)
       local stack_inv = game.get_player(pindex).get_main_inventory()[players[pindex].inventory.index]
       --Check item in hand or item in inventory
       if stack and stack.valid_for_read and stack.valid then
-         --Item in hand***
+         --Item in hand
+         player_logistic_request_decrement_min(stack,pindex)
       elseif players[pindex].menu == "inventory" and stack_inv and stack_inv.valid_for_read and stack_inv.valid then
-         --Item in inv***
+         --Item in inv
+         player_logistic_request_decrement_min(inv_stack,pindex)
       else
          --Empty hand, empty inventory slot
          --(do nothing)
@@ -261,9 +265,11 @@ function logistics_request_increment_max_handler(pindex)
       local stack_inv = game.get_player(pindex).get_main_inventory()[players[pindex].inventory.index]
       --Check item in hand or item in inventory
       if stack and stack.valid_for_read and stack.valid then
-         --Item in hand***
+         --Item in hand
+         player_logistic_request_increment_max(stack,pindex)
       elseif players[pindex].menu == "inventory" and stack_inv and stack_inv.valid_for_read and stack_inv.valid then
-         --Item in inv***
+         --Item in inv
+         player_logistic_request_increment_max(inv_stack,pindex)
       else
          --Empty hand, empty inventory slot
          --(do nothing)
@@ -281,9 +287,11 @@ function logistics_request_decrement_max_handler(pindex)
       local stack_inv = game.get_player(pindex).get_main_inventory()[players[pindex].inventory.index]
       --Check item in hand or item in inventory
       if stack and stack.valid_for_read and stack.valid then
-         --Item in hand***
+         --Item in hand
+         player_logistic_request_decrement_max(stack,pindex)
       elseif players[pindex].menu == "inventory" and stack_inv and stack_inv.valid_for_read and stack_inv.valid then
-         --Item in inv***
+         --Item in inv
+         player_logistic_request_decrement_max(inv_stack,pindex)
       else
          --Empty hand, empty inventory slot
          --(do nothing)
@@ -296,8 +304,33 @@ end
 
 --Returns summary info string
 function player_logistic_requests_summary_info(pindex)
-   --***todo
-   --"y of z personal logistic requests fulfilled, x items in trash, missing items include [3], take an item in hand and press L to check its request status."
+   --***todo "y of z personal logistic requests fulfilled, x items in trash, missing items include [3], take an item in hand and press L to check its request status."
+   local p = game.get_player(pindex)
+   local current_slot = nil
+   local correct_slot_id = nil
+   local result = ""
+   
+   --Check if logistics have been researched
+   for i, tech in pairs(game.get_player(pindex).force.technologies) do
+      if tech.name == "logistic-robotics" and not tech.researched then
+         printout("Logistic requests not available, research required.",pindex)
+         return
+      end
+   end
+   
+   if additional_checks then
+      --Check if inside any logistic network or not (simpler than logistics network info)
+      local network = p.surface.find_logistic_network_by_position(p.position, p.force)
+      if network == nil or not network.valid then
+         result = result .. "Not in a network, "
+      end
+      
+      --Check if personal logistics are enabled
+      if not p.character_personal_logistic_requests_enabled then
+         result = result .. "Requests paused, "
+      end
+   end
+   printout(result,pindex)
 end
 
 --laterdo full personal logistics menu where you can go line by line along requests and edit them, iterate through trash?
@@ -316,7 +349,7 @@ function player_logistic_request_read(item_stack,pindex,additional_checks)
    --Check if logistics have been researched
    for i, tech in pairs(game.get_player(pindex).force.technologies) do
       if tech.name == "logistic-robotics" and not tech.researched then
-         printout("Error: You need to research logistic robotics to use personal logistic requests.",pindex)
+         printout("Logistic requests not available, research required.",pindex)
          return
       end
    end
@@ -345,37 +378,63 @@ function player_logistic_request_read(item_stack,pindex,additional_checks)
    --Read the correct slot id value, increment it, set it
    current_slot = p.get_personal_logistic_slot(correct_slot_id)
    if current_slot == nil or current_slot.name == nil then
-      --Read
-      printout(result .. "No personal logistic requests set for " .. item_stack.name .. ", Press SHIFT + L to increase the minimum target item count, or Press CONTROL + L to increase the maximum target item count.",pindex)
+      --No requests found
+      printout(result .. "No personal logistic requests set for " .. item_stack.name .. ", " .. inv_result .. trash_result .. " use the L key and modifier keys to set requests.",pindex)
+      return
    else
-      --Update existing request
-      if current_slot.max ~= nil and current_slot.max > 0 then
-         local count = current_slot.max
-         local units = " units "
-         if count == item_stack.stack_size then
-            units = " stack "
-            count = 1
-         elseif count > item_stack.stack_size then
-            units = " stacks "
-            count = math.floor(0.1 + count / item_stack.stack_size)--***todo read existing item count 
+      --Report request counts and inventory counts
+      if current_slot.max ~= nil or current_slot.min ~= nil then
+         local min_result = ""
+         local max_result = ""
+         local inv_result = ""
+         local trash_result = ""
+         
+         if current_slot.min ~= nil then
+            min_result = get_unit_or_stack_count(current_slot.min, item_stack.stack_size, false) .. " minimum and "
          end
-         printout(result .. "Maximum of " .. count .. units .. "requested for " .. item_stack.name .. ", Press SHIFT + L to decrease this maximum target item count, or Press CONTROL + L to increase it.",pindex)
-      elseif current_slot.min ~= nil and current_slot.min > 0 then
-         local count = current_slot.min
-         local units = " units "
-         if count == item_stack.stack_size then
-            units = " stack "
-            count = 1
-         elseif count > item_stack.stack_size then
-            units = " stacks "
-            count = math.floor(0.1 + count / item_stack.stack_size)
+         
+         if current_slot.max ~= nil then
+            max_result = get_unit_or_stack_count(current_slot.max, item_stack.stack_size, false) .. " maximum "
          end
-         printout(result .. "Minimum of " .. count .. units .. "requested for " .. item_stack.name .. ", Press SHIFT + L to increase this minimum target item count, or Press CONTROL + L to decrease it.",pindex)
-      else--Both are nil
-         printout(result .. "No personal logistic requests set for " .. item_stack.name .. ", Press SHIFT + L to increase the minimum target item count, or Press CONTROL + L to increase the maximum target item count.",pindex)
+         
+         local inv_count = p.get_main_inventory().get_item_count(item_stack.name)
+         inv_result = get_unit_or_stack_count(inv_count, item_stack.stack_size, false) .. " in inventory, "
+         
+         local trash_count = p.get_inventory(defines.inventory.character_trash).get_item_count(item_stack.name)
+         trash_result = get_unit_or_stack_count(trash_count, item_stack.stack_size, false) .. " in personal trash, "
+         
+         printout(result .. min_result .. max_result .. " requested for " .. item_stack.name .. ", " .. inv_result .. trash_result .. " use the L key and modifier keys to set requests.",pindex)
+         return
+      else
+         --All requests are nil
+         printout(result .. "No personal logistic requests set for " .. item_stack.name .. ", " .. inv_result .. trash_result .. " use the L key and modifier keys to set requests.",pindex)
+         return
       end
-      p.set_personal_logistic_slot(correct_slot_id,current_slot)
    end
+end
+
+function get_unit_or_stack_count(count,stack_size,precise)
+   local result = ""
+   local new_count = "unknown amount of"
+   local units = " units "
+   if count == 0 then 
+      units = " units "
+      new_count = 0
+   elseif count == 1 then 
+      units = " unit "
+      new_count = 1
+   elseif count == stack_size then
+      units = " stack "
+      new_count = 1
+   elseif count > stack_size then
+      units = " stacks "
+      new_count = math.floor(count / stack_size)
+   end
+   result = new_count .. units
+   if precise and count > stack_size and count % stack_size > 0 then
+      result = result .. " and " .. count % stack_size .. " units "
+   end
+   return result
 end
 
 function player_logistic_request_increment_min(item_stack,pindex)
