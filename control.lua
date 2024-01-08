@@ -1510,7 +1510,7 @@ function teleport_to_closest(pindex, pos, muted, ignore_enemies)
    elseif util.distance(game.get_player(pindex).position, pos) <= 1.5 then 
       printout("Already at target", pindex)
       return false
-   elseif players[pindex].in_menu then
+   elseif players[pindex].in_menu and players[pindex].menu ~= "travel" then
       printout("Cannot teleport while in a menu.", pindex)
       return false
    end
