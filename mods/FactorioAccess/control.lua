@@ -11313,9 +11313,25 @@ function play_enemy_alert_sound(mode_in)
          else
             return
          end
+         --Attempt to detect if west or east
+         local diffx = nearest_enemy.position.x - p.position.x
+         local diffy = nearest_enemy.position.y - p.position.y
+         local x_offset = 0
+         if math.abs(diffx) > 3 * math.abs(diffy) then
+            --Counts as east or west
+            if diffx > 0 then 
+               x_offset = 2
+            elseif diffx < 0 then
+               x_offset = -2
+            end
+         end
+         
+         --Play sounds according to mode
          if mode == 1 then     -- Nearest enemy is far (lowest freq)
             if dist < 100 then
-               p.play_sound{path = "utility/item_deleted"}
+               local pos = p.position
+               pos.x = pos.x + x_offset
+               p.play_sound{path = "utility/item_deleted", position = pos, volume_modifier = 1.0}
             end
             --Additional alert if there are more than 5 enemies nearby
             local enemies = p.surface.find_enemy_units(p.position, 25, p.force)
@@ -11324,7 +11340,9 @@ function play_enemy_alert_sound(mode_in)
             end
          elseif mode == 2 then -- Nearest enemy is closer (medium freq)
             if dist < 50 then
-               p.play_sound{path = "utility/item_deleted"}
+               local pos = p.position
+               pos.x = pos.x + x_offset
+               p.play_sound{path = "utility/item_deleted", position = pos, volume_modifier = 1.0}
             end
             --Additional alert if there are more than 10 enemies nearby
             local enemies = p.surface.find_enemy_units(p.position, 25, p.force)
@@ -11333,7 +11351,9 @@ function play_enemy_alert_sound(mode_in)
             end
          elseif mode == 3 then -- Nearest enemy is too close (highest freq)
             if dist < 25 then
-               p.play_sound{path = "utility/item_deleted"}
+               local pos = p.position
+               pos.x = pos.x + x_offset
+               p.play_sound{path = "utility/item_deleted", position = pos, volume_modifier = 1.0}
             end
          end
       end
