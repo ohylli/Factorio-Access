@@ -4300,6 +4300,8 @@ function initialize(player)
    faplayer.in_menu = faplayer.in_menu or false
    faplayer.in_item_selector = faplayer.in_item_selector or false
    faplayer.menu = faplayer.menu or "none"
+   faplayer.entering_search_term = faplayer.entering_search_term or false
+   faplayer.menu_search_index = faplayer.menu_search_index or nil
    faplayer.cursor = faplayer.cursor or false
    faplayer.cursor_size = faplayer.cursor_size or 0 
    faplayer.cursor_ent_highlight_box = faplayer.cursor_ent_highlight_box or nil
@@ -6524,7 +6526,7 @@ function open_player_inventory(tick,pindex)
    end
 end
 
-script.on_event("close-menu", function(event)--close_menu
+script.on_event("close-menu", function(event)--close_menu, menu closed
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -6559,6 +6561,8 @@ script.on_event("close-menu", function(event)--close_menu
       
       players[pindex].menu = "none"
       players[pindex].in_menu = false
+      players[pindex].entering_search_term = false
+      players[pindex].menu_search_index = nil
       players[pindex].item_selection = false
       players[pindex].item_cache = {}
       players[pindex].item_selector = {index = 0, group = 0, subgroup = 0}
@@ -7499,7 +7503,7 @@ script.on_event("click-menu", function(event)
          if #global.players[pindex].travel == 0 and players[pindex].travel.index.x < 4 then
             printout("Move towards the right and select Create to get started.", pindex)
          elseif players[pindex].travel.index.y == 0 and players[pindex].travel.index.x < 4 then
-            printout("Navigate up and down to select a fastt travel point, then press left bracket to get there quickly.", pindex)
+            printout("Navigate up and down to select a fast travel point, then press left bracket to get there quickly.", pindex)
          elseif players[pindex].travel.index.x == 1 then
             local success = teleport_to_closest(pindex, global.players[pindex].travel[players[pindex].travel.index.y].position, false, false)
             if success and players[pindex].cursor then
@@ -9478,6 +9482,9 @@ script.on_event(defines.events.on_gui_confirmed,function(event)
       printout("Train stop renamed to " .. event.element.text .. ", menu closed.", pindex)
       event.element.destroy()
       train_stop_menu_close(pindex, false)
+   elseif players[pindex].entering_search_term == true then
+      menu_search_get_next(pindex,event.element.text)
+      event.element.destroy()
    end
 end)   
 
@@ -9859,7 +9866,10 @@ script.on_event("debug-test-key", function(event)
    --Build left turns on end rails
    if ent and ent.valid then
       --build_rail_bypass_junction(ent, pindex)
-      p.opened = ent
+      --p.opened = ent
+      local name1 = get_translated_name(ent.name)
+      game.print(name1)
+      
    end
    --if ent ~= nil and ent.valid and ent.fluidbox ~= nil then
      -- p.print(#ent.fluidbox .. " fluids ")
@@ -11360,3 +11370,110 @@ function play_enemy_alert_sound(mode_in)
    end
 end
 
+--WIP inventory search
+function get_translated_name(ent.name)
+   return {"entity-name." .. name}
+end
+
+--todo*** SHIFT+ENTER event handler
+
+--Allows searching a menu that has support written for this
+function menu_search_open(pindex)
+   --Only allow "inventory" and "building" menus for now
+   if not printout(players[pindex].in_menu then
+      printout("This menu does not support searching.",pindex)
+      return
+   end
+   if printout(players[pindex].menu ~= "inventory" and printout(players[pindex].menu ~= "building" then
+      printout(players[pindex].menu .. " menu does not support searching.",pindex)
+      return
+   end
+   
+   --Open the searchbox frame
+   players[pindex].entering_search_term = true
+   local frame = game.get_player(pindex).gui.screen.add{type = "frame", name = "enter-search-term"}
+   frame.bring_to_front()
+   frame.force_auto_center()
+   frame.focus()
+   game.get_player(pindex).opened = frame
+   local input = frame.add{type="textfield", name = "input"}
+   input.focus()
+   
+   --Inform the player
+   printout(players[pindex].menu .. ", type in a search term and press ENTER to go through found items, or press SHIFT + ENTER to search a new term",pindex)
+end
+
+--Reads out the next inventory/menu item to match the search term
+function menu_search_get_next(pindex,str)
+   --Only allow "inventory" and "building" menus for now
+   if not printout(players[pindex].in_menu then
+      printout("This menu does not support searching.",pindex)
+      return
+   end
+   if printout(players[pindex].menu ~= "inventory" and printout(players[pindex].menu ~= "building" then
+      printout(players[pindex].menu .. " menu does not support searching.",pindex)
+      return
+   end
+   --Get the current search index
+   local search_index = players[pindex].menu_search_index
+   if search_index == nil then
+      players[pindex].menu_search_index = 1
+      search_index = 1
+   end
+   --Search for the new index in the appropriate menu
+   local inv = nil
+   local new_index = nil
+   if players[pindex].menu == "inventory" then
+      inv = game.get_player(pindex).get_main_inventory()
+      new_index = inventory_find_index_of_next_name_match(inv,search_index,str)
+   elseif players[pindex].menu == "building" then
+      inv = game.get_player(pindex).get_main_inventory()--****
+      new_index = inventory_find_index_of_next_name_match(inv,search_index,str)
+   end
+   --Return a menu output according to the index found 
+   if new_index < 0 then
+      printout("Could not find " .. str,pindex)
+      return
+   elseif players[pindex].menu == "inventory" then
+      players[pindex].menu_search_index = new_index
+      read_inventory_slot--****
+   elseif players[pindex].menu == "building" then
+      players[pindex].menu_search_index = new_index
+      read_inventory_slot--****
+   else
+      printout("Search error",pindex)
+      return
+   end
+end
+
+--Returns the index for the next inventory item to match the search term, for any lua inventory
+function inventory_find_index_of_next_name_match(inv,index,str)
+   --Iterate until the end of the inventory for a match
+   for i=index, #inv, 1 do
+      local stack = inv[index]
+      if stack ~= nil and stack.valid_for_read then  
+         local name = stack.name--todo here*** call a function here to get the localised name
+         local result = string.match(name, str)
+         --string.match returns str, if name contains str
+         if result == str then
+            game.get_player(pindex).play_sound{path = "Inventory-Move"}--sound for finding the next
+            return i
+         end
+      end
+   end
+   --End of inventory reached, circle back
+   for i=1, index, 1 do
+      local stack = inv[index]
+      if stack ~= nil and stack.valid_for_read then  
+         local name = stack.name--todo here*** call a function here to get the localised name
+         local result = string.match(name, str)
+         --string.match returns str, if name contains str
+         if result == str then
+            game.get_player(pindex).play_sound{path = {path = "Mine-Building"}}--sound for having cicled around 
+            return i
+         end
+      end
+   end
+   --Whole inventory searched, no match found
+   return -1 
+end
