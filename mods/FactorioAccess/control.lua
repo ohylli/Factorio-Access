@@ -2307,6 +2307,15 @@ function get_substring_before_comma(str)
    end
 end
 
+function get_substring_before_dash(str)
+   local first, final = string.find(str,"-")
+   if first == nil or first == 1 then
+      return str
+   else
+      return string.sub(str,1,first-1)
+   end
+end
+
 function get_ent_area_from_name(ent_name,pindex)
    local ents = game.get_player(pindex).surface.find_entities_filtered{name = ent_name, limit = 1}
    if #ents == 0 then
@@ -3096,7 +3105,7 @@ function locate_hand_in_player_inventory(pindex)
    end
    --If found, read it from the inventory
    if not found then
-      printout("Error: " .. item_name .. " not found",pindex)
+      printout("Error: " .. item_name .. " not found in player inventory",pindex)
       return
    else
       players[pindex].inventory.index = i
@@ -3148,13 +3157,56 @@ function locate_hand_in_building_output_inventory(pindex)
    end
    --If found, read it from the inventory
    if not found then
-      printout("Error: " .. item_name .. " not found",pindex)
+      printout("Error: " .. item_name .. " not found in building output",pindex)
       return
    else
       players[pindex].building.index = i
       read_building_slot(pindex, false)
    end
    
+end
+
+--Locate the item in hand from the crafting menu. Closes some other menus, does not run in some other menus, uses the new search fn.
+function locate_hand_in_crafting_menu(pindex)
+   local p = game.get_player(pindex)
+   local inv = p.get_main_inventory() 
+   local stack = p.cursor_stack
+   
+   --Check if stack empty and menu supported
+   if stack == nil or not stack.valid_for_read or not stack.valid then
+      --Hand is empty
+      return
+   end
+   if players[pindex].in_menu and players[pindex].menu ~= "inventory" and players[pindex].menu ~= "building" and players[pindex].menu ~= "crafting" then
+      --Unsupported menu types...
+      printout("Another menu is open.",pindex)
+      return
+   end
+   
+   --Open the crafting Menu
+   close_menu_resets(pindex)
+   players[pindex].in_menu = true
+   players[pindex].menu = "crafting"
+   p.opened = p
+   
+   --Get the name
+   local item_name = string.lower(get_substring_before_dash(get_translated_name(stack.name)))
+   players[pindex].menu_search_term = item_name
+   
+   --Empty hand stack (clear cursor stack) after getting the name 
+   players[pindex].skip_read_hand = true
+   local successful = p.clear_cursor()
+   if not successful then
+      local message = "Unable to empty hand"
+      if inv.count_empty_stacks() == 0 then
+         message = message .. ", inventory full"
+      end
+      printout(message,pindex)
+      return
+   end
+
+   --Run the search
+   menu_search_get_next(pindex,item_name,nil)
 end
 
 function read_quick_bar(index,pindex)
@@ -6596,51 +6648,50 @@ script.on_event("close-menu", function(event)--close_menu, menu closed
       return
    elseif players[pindex].in_menu and players[pindex].menu ~= "prompt" then
       printout("Menu closed.", pindex)
-      players[pindex].in_menu = false
-      players[pindex].last_menu_toggle_tick = event.tick 
-      game.get_player(pindex).game_view_settings.update_entity_selection = true
-
       if players[pindex].menu == "inventory" or players[pindex].menu == "crafting" or players[pindex].menu == "technology" or players[pindex].menu == "crafting_queue" or players[pindex].menu == "warnings" then--**laterdo open close inv sounds in other menus?
          game.get_player(pindex).play_sound{path="Close-Inventory-Sound"}
       end
-      if players[pindex].menu == "travel" then
-         game.get_player(pindex).gui.screen["travel"].destroy()
-         players[pindex].cursor_pos = center_of_tile(players[pindex].position)
-         cursor_highlight(pindex, nil, "train-visualization")
-      end
-      if players[pindex].menu == "structure-travel" then
-         game.get_player(pindex).gui.screen["structure-travel"].destroy()
-      end
-      if players[pindex].menu == "rail_builer" then
-         rail_builder_close(pindex, false)
-      elseif players[pindex].menu == "train_menu" then
-         train_menu_close(pindex, false)
-      elseif players[pindex].menu == "train_stop_menu" then
-         train_stop_menu_close(pindex, false)
-      end
-      
-      players[pindex].menu = "none"
-      players[pindex].in_menu = false
-      players[pindex].entering_search_term = false
-      players[pindex].menu_search_index = nil
-      players[pindex].menu_search_index_2 = nil
-      players[pindex].item_selection = false
-      players[pindex].item_cache = {}
-      players[pindex].item_selector = {index = 0, group = 0, subgroup = 0}
-      players[pindex].building = {
-         index = 0,
-         ent = nil,
-         sectors = nil,
-         sector = 0,
-         recipe_selection = false,
-         item_selection = false,
-         category = 0,
-         recipe = nil,
-         recipe_list = nil
-      }
-      
+      players[pindex].last_menu_toggle_tick = event.tick 
+      close_menu_resets(pindex)
    end
 end)
+
+function close_menu_resets(pindex)
+   game.get_player(pindex).game_view_settings.update_entity_selection = true
+   if players[pindex].menu == "travel" then
+      game.get_player(pindex).gui.screen["travel"].destroy()
+      players[pindex].cursor_pos = center_of_tile(players[pindex].position)
+      cursor_highlight(pindex, nil, "train-visualization")
+   elseif players[pindex].menu == "structure-travel" then
+      game.get_player(pindex).gui.screen["structure-travel"].destroy()
+   elseif players[pindex].menu == "rail_builer" then
+      rail_builder_close(pindex, false)
+   elseif players[pindex].menu == "train_menu" then
+      train_menu_close(pindex, false)
+   elseif players[pindex].menu == "train_stop_menu" then
+      train_stop_menu_close(pindex, false)
+   end
+   
+   players[pindex].in_menu = false
+   players[pindex].menu = "none"
+   players[pindex].entering_search_term = false
+   players[pindex].menu_search_index = nil
+   players[pindex].menu_search_index_2 = nil
+   players[pindex].item_selection = false
+   players[pindex].item_cache = {}
+   players[pindex].item_selector = {index = 0, group = 0, subgroup = 0}
+   players[pindex].building = {
+      index = 0,
+      ent = nil,
+      sectors = nil,
+      sector = 0,
+      recipe_selection = false,
+      item_selection = false,
+      category = 0,
+      recipe = nil,
+      recipe_list = nil
+   }
+end
 
 script.on_event("read-menu-name", function(event)--read_menu_name
    pindex = event.player_index
@@ -9460,8 +9511,8 @@ script.on_event("read-hand",function(event)
    read_hand(pindex)
 end)
 
---Empties hand and opens the item from the player inventory
-script.on_event("open-hand-from-inventory",function(event)
+--Empties hand and opens the item from the player/building inventory
+script.on_event("locate-hand-in-inventory",function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -9475,6 +9526,15 @@ script.on_event("open-hand-from-inventory",function(event)
    else
       printout("Cannot locate items in this menu", pindex)
    end
+end)
+
+--Empties hand and opens the item from the crafting menu
+script.on_event("locate-hand-in-crafting-menu",function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   locate_hand_in_crafting_menu(pindex)
 end)
 
 --ENTER KEY by default
@@ -11565,7 +11625,7 @@ function menu_search_open(pindex)
 end
 
 --Reads out the next inventory/menu item to match the search term
-function menu_search_get_next(pindex,str)
+function menu_search_get_next(pindex, str, start_phrase_in)
    --Only allow "inventory" and "building" menus for now
    if not players[pindex].in_menu then
       printout("This menu does not support searching.",pindex)
@@ -11578,6 +11638,11 @@ function menu_search_get_next(pindex,str)
    if str == nil or str == "" then
       printout("Missing search term", pindex)
       return 
+   end
+   --Start phrase
+   local start_phrase = ""
+   if start_phrase_in ~= nil then
+      start_phrase = start_phrase_in
    end
    --Get the current search index
    local search_index = players[pindex].menu_search_index
@@ -11620,11 +11685,12 @@ function menu_search_get_next(pindex,str)
    --Return a menu output according to the index found 
    if new_index <= 0 then
       printout("Could not find " .. str,pindex)
+      game.print("Could not find " .. str,{volume_modifier = 0})
       return
    elseif players[pindex].menu == "inventory" then
       players[pindex].menu_search_index = new_index
       players[pindex].inventory.index = new_index
-      read_inventory_slot(pindex, "")
+      read_inventory_slot(pindex, start_phrase)
    elseif players[pindex].menu == "building" and pb.sectors and pb.sectors[pb.sector] and pb.sectors[pb.sector].name == "Output" then
       players[pindex].menu_search_index = new_index
       players[pindex].building.index = new_index
@@ -11634,16 +11700,16 @@ function menu_search_get_next(pindex,str)
       players[pindex].menu_search_index_2 = new_index_2
       players[pindex].crafting.category = new_index
       players[pindex].crafting.index = new_index_2
-      read_crafting_slot(pindex, "")
+      read_crafting_slot(pindex, start_phrase)
    elseif players[pindex].menu == "building" and players[pindex].building.recipe_selection == true then
       players[pindex].menu_search_index = new_index
       players[pindex].menu_search_index_2 = new_index_2
       players[pindex].building.category = new_index
       players[pindex].building.index = new_index_2
-      read_building_recipe(pindex, "")
+      read_building_recipe(pindex, start_phrase)
    elseif players[pindex].menu == "technology" then
       local techs = {}
-      local note = "note "
+      local note = start_phrase
       if players[pindex].technology.category == 1 then
          techs = players[pindex].technology.lua_researchable
          note = " researchable "
@@ -11885,3 +11951,4 @@ function crafting_find_index_of_next_name_match(str,pindex,last_i, last_j, recip
    --No matches found at all
    return -1, -1 
 end
+
