@@ -11535,7 +11535,7 @@ function menu_search_open(pindex)
       printout("This menu does not support searching.",pindex)
       return
    end
-   if players[pindex].menu ~= "inventory" and players[pindex].menu ~= "building" and players[pindex].menu ~= "crafting" then
+   if players[pindex].menu ~= "inventory" and players[pindex].menu ~= "building" and players[pindex].menu ~= "crafting" and players[pindex].menu ~= "technology" then
       printout(players[pindex].menu .. " menu does not support searching.",pindex)
       return
    end
@@ -11563,7 +11563,7 @@ function menu_search_get_next(pindex,str)
       printout("This menu does not support searching.",pindex)
       return
    end
-   if players[pindex].menu ~= "inventory" and players[pindex].menu ~= "building" and players[pindex].menu ~= "crafting" then
+   if players[pindex].menu ~= "inventory" and players[pindex].menu ~= "building" and players[pindex].menu ~= "crafting" and players[pindex].menu ~= "technology"then
       printout(players[pindex].menu .. " menu does not support searching.",pindex)
       return
    end
@@ -11594,8 +11594,17 @@ function menu_search_get_next(pindex,str)
    elseif players[pindex].menu == "crafting" then
       new_index, new_index_2 = crafting_find_index_of_next_name_match(str,pindex, search_index, search_index_2, players[pindex].crafting.lua_recipes)
    elseif players[pindex].menu == "building" and pb.recipe_selection == true then
-      players[pindex].building.recipe_list = get_recipes(pindex, players[pindex].building.ent)
       new_index, new_index_2 = crafting_find_index_of_next_name_match(str,pindex, search_index, search_index_2, players[pindex].building.recipe_list)
+   elseif players[pindex].menu == "technology" then
+      local techs = {} --Reads the selected tech catagory
+      if players[pindex].technology.category == 1 then
+         techs = players[pindex].technology.lua_researchable
+      elseif players[pindex].technology.category == 2 then
+         techs = players[pindex].technology.lua_locked
+      elseif players[pindex].technology.category == 3 then
+         techs = players[pindex].technology.lua_unlocked
+      end
+      new_index = inventory_find_index_of_next_name_match(techs, search_index, str, pindex)
    else
       printout("This menu or building sector does not support searching.",pindex)
       return
@@ -11624,6 +11633,22 @@ function menu_search_get_next(pindex,str)
       players[pindex].building.category = new_index
       players[pindex].building.index = new_index_2
       read_building_recipe(pindex, "")
+   elseif players[pindex].menu == "technology" then
+      local techs = {}
+      local note = "note "
+      if players[pindex].technology.category == 1 then
+         techs = players[pindex].technology.lua_researchable
+         note = " researchable "
+      elseif players[pindex].technology.category == 2 then
+         techs = players[pindex].technology.lua_locked
+         note = " locked "
+      elseif players[pindex].technology.category == 3 then
+         techs = players[pindex].technology.lua_unlocked
+         note = " unlocked "
+      end
+      players[pindex].menu_search_index = new_index
+      players[pindex].technology.index = new_index
+      read_technology_slot(pindex, note)
    else
       printout("Search error",pindex)
       return
@@ -11692,7 +11717,7 @@ function inventory_find_index_of_next_name_match(inv,index,str,pindex)
    --Iterate until the end of the inventory for a match
    for i=index, #inv, 1 do
       local stack = inv[i]
-      if stack ~= nil and stack.valid_for_read then  
+      if stack ~= nil and (stack.object_name == "LuaTechnology" or stack.valid_for_read) then  
          local name = string.lower(get_translated_name(stack.name))
          local result = string.find(name, str)
          if result ~= nil then 
@@ -11711,7 +11736,7 @@ function inventory_find_index_of_next_name_match(inv,index,str,pindex)
    game.get_player(pindex).play_sound{path = "Mine-Building"}--sound for having cicled around 
    for i=1, index, 1 do
       local stack = inv[i]
-      if stack ~= nil and stack.valid_for_read then  
+      if stack ~= nil and (stack.object_name == "LuaTechnology" or stack.valid_for_read) then 
          local name = string.lower(get_translated_name(stack.name))
          local result = string.find(name, str)
          if result ~= nil then 
