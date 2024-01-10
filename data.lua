@@ -958,8 +958,15 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "open-hand-from-inventory",
+    name = "locate-hand-in-inventory",
     key_sequence = "CONTROL + Q",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "locate-hand-in-crafting-menu",
+    key_sequence = "CONTROL + SHIFT + Q",
     consuming = "none"
 },
 
