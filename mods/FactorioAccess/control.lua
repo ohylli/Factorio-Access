@@ -5101,7 +5101,7 @@ function menu_cursor_left(pindex)
          read_inventory_slot(pindex)
       else
          if players[pindex].building.sector == #players[pindex].building.sectors + 1 then
-            --Last building sector...
+            --Recipe selection
             if players[pindex].building.recipe_selection then
                game.get_player(pindex).play_sound{path = "Inventory-Move"}
                players[pindex].building.index = players[pindex].building.index - 1
@@ -5235,7 +5235,7 @@ function menu_cursor_right(pindex)
          read_inventory_slot(pindex)
       else
          if players[pindex].building.sector == #players[pindex].building.sectors + 1 then
-            --Last building sector...
+            --Recipe selection
             if players[pindex].building.recipe_selection then
                game.get_player(pindex).play_sound{path = "Inventory-Move"}
 
@@ -6458,10 +6458,11 @@ function read_item_pickup_state(pindex)
    rendering.draw_circle{color = {0.3, 1, 0.3},radius = 1.25,width = 1,target = p.position, surface = p.surface,time_to_live = 60, draw_on_ground = true}
    --Check if there is a belt within n tiles
    if #nearby_belts > 0 then
-      result = "Picking up items from nearby belts"
+      result = "Picking up "
       --Check contents being picked up
       local ent = nearby_belts[1]
       if ent == nil or not ent.valid then
+         result = result .. " from nearby belts"
          printout(result,pindex)
          return 
       end
@@ -6483,7 +6484,7 @@ function read_item_pickup_state(pindex)
          return k1.count > k2.count
       end)
       if #contents > 0 then
-         result = result .. " including " .. contents[1].name
+         result = result .. contents[1].name
          if #contents > 1 then
             result = result .. ", and " .. contents[2].name
             if #contents > 2 then
@@ -6491,12 +6492,14 @@ function read_item_pickup_state(pindex)
             end
          end
       end
+      result = result .. " from nearby belts"
    --Check if there are ground items within n tiles   
    elseif #nearby_ground_items > 0 then
-      result = "Picking up ground items "
+      result = "Picking up "
       if nearby_ground_items[1] and nearby_ground_items[1].valid then
-         result = result .. " including " .. nearby_ground_items[1].stack.name 
+         result = result .. nearby_ground_items[1].stack.name 
       end
+      result = result .. " from ground, and possibly more items "
    else
       result = "No items within range to pick up"
    end
@@ -11511,7 +11514,7 @@ function menu_search_open(pindex)
    --Open the searchbox frame
    players[pindex].entering_search_term = true
    players[pindex].menu_search_index = 0
-   players[pindex].menu_search_index_2 = 1
+   players[pindex].menu_search_index_2 = 0
    local frame = game.get_player(pindex).gui.screen.add{type = "frame", name = "enter-search-term"}
    frame.bring_to_front()
    frame.force_auto_center()
@@ -11552,16 +11555,21 @@ function menu_search_get_next(pindex,str)
    local inv = nil
    local new_index = nil
    local new_index_2 = nil
+   local pb = players[pindex].building
    if players[pindex].menu == "inventory" then
       inv = game.get_player(pindex).get_main_inventory()
       new_index = inventory_find_index_of_next_name_match(inv, search_index, str, pindex)
-   elseif players[pindex].menu == "building" then
+   elseif players[pindex].menu == "building" and pb.sectors and pb.sectors[pb.sector] and pb.sectors[pb.sector].name == "Output" then
       inv = game.get_player(pindex).opened.get_output_inventory()
       new_index = inventory_find_index_of_next_name_match(inv, search_index, str, pindex)
-   elseif players[pindex].menu == "crafting" then--****
-      inv = players[pindex].crafting.lua_recipes
-      --The parameter naming and table structure and everything happens to match, so we can use this fn...
-      new_index, new_index_2 = crafting_find_index_of_next_name_match(str,pindex, search_index, search_index_2)
+   elseif players[pindex].menu == "crafting" then
+      new_index, new_index_2 = crafting_find_index_of_next_name_match(str,pindex, search_index, search_index_2, players[pindex].crafting.lua_recipes)
+   elseif players[pindex].menu == "building" and pb.recipe_selection == true then
+      players[pindex].building.recipe_list = get_recipes(pindex, players[pindex].building.ent)--*****
+      new_index, new_index_2 = crafting_find_index_of_next_name_match(str,pindex, search_index, search_index_2, players[pindex].building.recipe_list)
+   else
+      printout("This menu or building sector does not support searching.",pindex)
+      return
    end
    --Return a menu output according to the index found 
    if new_index <= 0 then
@@ -11571,16 +11579,22 @@ function menu_search_get_next(pindex,str)
       players[pindex].menu_search_index = new_index
       players[pindex].inventory.index = new_index
       read_inventory_slot(pindex, "")
-   elseif players[pindex].menu == "building" then
+   elseif players[pindex].menu == "building" and pb.sectors and pb.sectors[pb.sector] and pb.sectors[pb.sector].name == "Output" then
       players[pindex].menu_search_index = new_index
       players[pindex].building.index = new_index
       read_building_slot(pindex,false)
-   elseif players[pindex].menu == "crafting" then--****
+   elseif players[pindex].menu == "crafting" then
       players[pindex].menu_search_index = new_index
       players[pindex].menu_search_index_2 = new_index_2
       players[pindex].crafting.category = new_index
       players[pindex].crafting.index = new_index_2
       read_crafting_slot(pindex, "")
+   elseif players[pindex].menu == "building" and players[pindex].building.recipe_selection == true then
+      players[pindex].menu_search_index = new_index
+      players[pindex].menu_search_index_2 = new_index_2
+      players[pindex].building.category = new_index
+      players[pindex].building.index = new_index_2--****
+      read_building_recipe(pindex, "")
    else
       printout("Search error",pindex)
       return
@@ -11591,11 +11605,11 @@ end
 function menu_search_get_last(pindex,str)
    --Only allow "inventory" and "building" menus for now
    if not players[pindex].in_menu then
-      printout("This menu does not support searching.",pindex)
+      printout("This menu does not support searching backwards.",pindex)
       return
    end
    if players[pindex].menu ~= "inventory" and players[pindex].menu ~= "building" then
-      printout(players[pindex].menu .. " menu does not support searching.",pindex)
+      printout(players[pindex].menu .. " menu does not support searching backwards.",pindex)
       return
    end
    if str == nil or str == "" then
@@ -11611,12 +11625,16 @@ function menu_search_get_last(pindex,str)
    --Search for the new index in the appropriate menu
    local inv = nil
    local new_index = nil
+   local pb = players[pindex].building
    if players[pindex].menu == "inventory" then
       inv = game.get_player(pindex).get_main_inventory()
       new_index = inventory_find_index_of_last_name_match(inv, search_index, str, pindex)
-   elseif players[pindex].menu == "building" then
+   elseif players[pindex].menu == "building" and pb.sectors and pb.sectors[pb.sector] and pb.sectors[pb.sector].name == "Output" then
       inv = game.get_player(pindex).opened.get_output_inventory()
       new_index = inventory_find_index_of_last_name_match(inv, search_index, str, pindex)
+   else
+      printout("This menu or building sector does not support searching backwards.",pindex)
+      return
    end
    --Return a menu output according to the index found 
    if new_index <= 0 then
@@ -11626,7 +11644,7 @@ function menu_search_get_last(pindex,str)
       players[pindex].menu_search_index = new_index
       players[pindex].inventory.index = new_index
       read_inventory_slot(pindex)
-   elseif players[pindex].menu == "building" then
+   elseif players[pindex].menu == "building" and pb.sectors and pb.sectors[pb.sector] and pb.sectors[pb.sector].name == "Output" then
       players[pindex].menu_search_index = new_index
       players[pindex].building.index = new_index
       read_building_slot(pindex,false)
@@ -11738,10 +11756,10 @@ function inventory_find_index_of_last_name_match(inv,index,str,pindex)
    return -1 
 end
 
---Returns the index for the next inventory item to match the search term, for any lua inventory
-function crafting_find_index_of_next_name_match(str,pindex,last_i, last_j)
-   local recipes = players[pindex].crafting.lua_recipes
-   local cata_total = #players[pindex].crafting.lua_recipes
+--Returns the index for the next inventory item to match the search term, for any lua inventory --****todo bug with search
+function crafting_find_index_of_next_name_match(str,pindex,last_i, last_j, recipe_set)
+   local recipes = recipe_set
+   local cata_total = #recipes
    local repeat_i = -1
    local repeat_j = -1
    if last_i < 1 then
@@ -11753,42 +11771,47 @@ function crafting_find_index_of_next_name_match(str,pindex,last_i, last_j)
    --Iterate until the end of the inventory for a match
    for i = last_i, cata_total, 1 do
       for j = last_j, #recipes[i], 1 do 
-         local recipe = players[pindex].crafting.lua_recipes[i][j]
+         local recipe = recipes[i][j]
          if recipe and recipe.valid then
             local name = string.lower(get_translated_name(recipe.name))
             local result = string.find(name, str)
+            --game.print(i .. "," .. j .. " : " .. name .. " vs. " .. str,{volume_modifier=0})
             if result ~= nil then 
+               --game.print(" * " .. i .. "," .. j .. " : " .. name .. " vs. " .. str .. " * ",{volume_modifier=0})
                if name ~= players[pindex].menu_search_last_name then
                   players[pindex].menu_search_last_name = name
                   game.get_player(pindex).play_sound{path = "Inventory-Move"}--sound for finding the next
+                  --game.print(" ** " .. recipes[i][j].name .. " ** ")
                   return i, j
                else
                   repeat_i = i
                   repeat_j = j
                end
-               game.print(i .. "," .. j .. " : " .. name .. " vs. " .. str,{volume_modifier=0})
             end
          end
       end
+      last_j = 1
    end
    --End of inventory reached, circle back
    game.get_player(pindex).play_sound{path = "Mine-Building"}--sound for having cicled around 
-   for i = 1, last_i, 1 do
-      for j = 1, last_j, 1 do 
-         local recipe = players[pindex].crafting.lua_recipes[i][j]
+   for i = 1, cata_total, 1 do
+      for j = 1, #recipes[i], 1 do 
+         local recipe = recipes[i][j]
          if recipe and recipe.valid then
             local name = string.lower(get_translated_name(recipe.name))
             local result = string.find(name, str)
+            --game.print(i .. "," .. j .. " : " .. name .. " vs. " .. str,{volume_modifier=0})
             if result ~= nil then 
+               --game.print(" * " .. i .. "," .. j .. " : " .. name .. " vs. " .. str .. " * ",{volume_modifier=0})
                if name ~= players[pindex].menu_search_last_name then
                   players[pindex].menu_search_last_name = name
                   game.get_player(pindex).play_sound{path = "Inventory-Move"}--sound for finding the next
+                  --game.print(" ** " .. recipes[i][j].name .. " ** ")
                   return i, j
                else
                   repeat_i = i
                   repeat_j = j
                end
-               game.print(i .. "," .. j .. " : " .. name .. " vs. " .. str,{volume_modifier=0})
             end
          end
       end
@@ -11800,6 +11823,3 @@ function crafting_find_index_of_next_name_match(str,pindex,last_i, last_j)
    --No matches found at all
    return -1, -1 
 end
-
-
---for every catag (4) for every index within catag length do 
