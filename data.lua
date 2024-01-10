@@ -958,6 +958,27 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "menu-search-open",
+    key_sequence = "ENTER",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "menu-search-get-next",
+    key_sequence = "SHIFT + ENTER",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "menu-search-get-last",
+    key_sequence = "CONTROL + ENTER",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "open-warnings-menu",
     key_sequence = "P",
     consuming = "none"
