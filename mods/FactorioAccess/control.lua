@@ -3048,8 +3048,9 @@ function read_hand(pindex)
    end
 end
 
---Stores the hand item in the player inventory and reads it from the first found slot. For now it requires having the inv already open.
-function locate_hand_in_inventory(pindex)
+--Stores the hand item in the player inventory and reads it from the first found player inventory slot, CONTROL + Q
+--NOTE: laterdo can use player.hand_location in the future if it has advantages
+function locate_hand_in_player_inventory(pindex)
    local p = game.get_player(pindex)
    local inv = p.get_main_inventory() 
    local stack = p.cursor_stack
@@ -3065,9 +3066,10 @@ function locate_hand_in_inventory(pindex)
       return
    end
    if not players[pindex].in_menu then
-      --laterdo** figure out how to open inventory with API and do that here
-      printout("You need to open the inventory to locate this item from there.",pindex)
-      return
+      --Open the inventory if nothing is open
+      players[pindex].in_menu = true
+      players[pindex].menu = "inventory"
+      p.opened = p
    end
    --Save the hand stack item name
    local item_name = stack.name
@@ -3082,12 +3084,7 @@ function locate_hand_in_inventory(pindex)
       printout(message,pindex)
       return
    end
-   
-   -- if not players[pindex].in_menu then
-      -- --Open inventory menu 
-      -- open_player_inventory(game.tick,pindex)
-   -- end
-   
+    
    --Iterate the inventory until you find the matching item name's index
    local found = false
    local i = 0
@@ -3104,6 +3101,58 @@ function locate_hand_in_inventory(pindex)
    else
       players[pindex].inventory.index = i
       read_inventory_slot(pindex, "inventory ")
+   end
+   
+end
+
+--Stores the hand item in the player inventory and reads it from the first found building output slot, CONTROL + Q
+function locate_hand_in_building_output_inventory(pindex)
+   local p = game.get_player(pindex)
+   local inv = nil
+   local stack = p.cursor_stack
+   
+   --Check if stack empty and menu supported
+   if stack == nil or not stack.valid_for_read or not stack.valid then
+      --Hand is empty
+      return
+   end
+   if players[pindex].in_menu and players[pindex].menu == "building" then
+      inv = p.opened.get_output_inventory()
+   else
+      --Unsupported menu type
+      return
+   end
+
+   --Save the hand stack item name
+   local item_name = stack.name
+   --Empty hand stack (clear cursor stack)
+   players[pindex].skip_read_hand = true
+   local successful = p.clear_cursor()
+   if not successful then
+      local message = "Unable to empty hand"
+      if inv.count_empty_stacks() == 0 then
+         message = message .. ", inventory full"
+      end
+      printout(message,pindex)
+      return
+   end
+
+   --Iterate the inventory until you find the matching item name's index
+   local found = false
+   local i = 0
+   while not found and i <= #inv do
+      i = i + 1
+      if inv[i] and inv[i].valid and inv[i].name == item_name then
+         found = true
+      end
+   end
+   --If found, read it from the inventory
+   if not found then
+      printout("Error: " .. item_name .. " not found",pindex)
+      return
+   else
+      players[pindex].inventory.index = i
+      read_inventory_slot(pindex, "output ")
    end
    
 end
@@ -9376,7 +9425,15 @@ script.on_event("open-hand-from-inventory",function(event)
    if not check_for_player(pindex) then
       return
    end
-   locate_hand_in_inventory(pindex)
+   if players[pindex].in_menu == false then
+      locate_hand_in_player_inventory(pindex)
+   elseif players[pindex].menu == "inventory" then
+      locate_hand_in_player_inventory(pindex)
+   elseif players[pindex].menu == "building" then
+      locate_hand_in_building_output_inventory(pindex)
+   else
+      printout("Cannot locate items in this menu", pindex)
+   end
 end)
 
 script.on_event("open-warnings-menu", function(event)
@@ -9863,29 +9920,13 @@ script.on_event("debug-test-key", function(event)
    if stack and stack.valid_for_read and stack.valid then
       --
    end
-   --Build left turns on end rails
    if ent and ent.valid then
       --build_rail_bypass_junction(ent, pindex)
       --p.opened = ent
-      local name1 = get_translated_name(ent.name)
-      game.print(name1)
+      --local name1 = get_translated_name(ent.name)
+      --game.print(name1)
       
    end
-   --if ent ~= nil and ent.valid and ent.fluidbox ~= nil then
-     -- p.print(#ent.fluidbox .. " fluids ")
-     -- for i = 1, #ent.fluidbox, 1 do
-        -- if ent.fluidbox[i] ~= nil then
-           -- p.print(ent.fluidbox[i].name) 
-           -- p.print(#ent.fluidbox.get_pipe_connections(i))
-        -- else
-           -- p.print("(nil) " .. i)
-           -- p.print(#ent.fluidbox.get_pipe_connections(i))
-        -- end
-     -- end     
-     --set_temporary_train_stop(ent.train,pindex)
-	  --sub_automatic_travel_to_other_stop(ent.train)
-	  --instant_schedule(ent.train)
-   --end 
    
    --open_player_inventory with API 
    -- local gui = p.gui
@@ -9901,14 +9942,26 @@ script.on_event("debug-test-key", function(event)
          -- screen.focus()
       -- end
    -- end
-   --p.gui.screen.visible = true
-   --p.opened = p.gui--achievement works
-   --p.print(defines.gui_type.controller)
-   --p.opened = p.character
-   --p.print("opened object_name : " .. p.opened.object_name)
-   --if p.opened.name then
-   --   p.print("opened name : " .. p.opened.name)
-   --end
+   -------------------------------
+   -- if p.opened ~= nil then
+   -- --0: when the inventory is opened : NIL
+      -- game.print("old opened object = " .. p.opened.object_name)
+   -- else
+      -- game.print("old opened object = NIL")
+   -- end
+   -- p.opened = p --1 : CORRECT
+   --p.opened = p.character --2 : NIL 
+   --p.opened = p.get_main_inventory() --3 : NIL 
+   --p.opened = p.gui --4 : NIL
+   --p.opened = p.name --5 : Crash
+   --p.opened = defines.gui_type.controller --6 : NIL
+   --p.opened = defines.gui_type.player_management --7 : CRASH
+   --p.opened = defines.gui_type.script_inventory --8 : CRASH
+   -- if p.opened ~= nil then
+      -- game.print("new opened object = " .. p.opened.object_name)
+   -- else
+      -- game.print("new opened object = NIL")
+   -- end
 end)
 
 --Attempt to launch a rocket
@@ -9985,18 +10038,19 @@ script.on_event("logistic-request-toggle-personal-logistics", function(event)
    logistics_request_toggle_personal_logistics(pindex)
 end)
 
---This event handler patches the unwanted opening of the inventory screen when closing a factorio access menu
 script.on_event(defines.events.on_gui_opened, function(event)
    local pindex = event.player_index
    if not check_for_player(pindex) then
       return
    end
    players[pindex].move_queue = {}
-   if event.gui_type == defines.gui_type.controller and players[event.player_index].menu == "none" then
-      game.get_player(event.player_index).opened = nil --note: we may prefer to have some GUI's stay open.
-      --printout("Banana",event.player_index)
+   if event.gui_type == defines.gui_type.controller and players[pindex].menu == "none" and event.tick - players[pindex].last_menu_toggle_tick < 5 then
+      --We close the player GUI if closing/opening another menu toggles the player GUI screen
+      game.get_player(pindex).opened = nil
+      --game.print("Closed an extra GUI",{volume_modifier = 0})--**laterdo enable these and review what doess what
    elseif game.get_player(event.player_index).opened ~= nil then
-      players[event.player_index].in_menu = true
+      players[pindex].in_menu = true
+      --game.print("Opened an extra GUI",{volume_modifier = 0})--**laterdo enable these and review what doess what
    end
 end)
 
@@ -11371,7 +11425,7 @@ function play_enemy_alert_sound(mode_in)
 end
 
 --WIP inventory search
-function get_translated_name(ent.name)
+function get_translated_name(name)
    return {"entity-name." .. name}
 end
 
@@ -11380,11 +11434,11 @@ end
 --Allows searching a menu that has support written for this
 function menu_search_open(pindex)
    --Only allow "inventory" and "building" menus for now
-   if not printout(players[pindex].in_menu then
+   if not players[pindex].in_menu then
       printout("This menu does not support searching.",pindex)
       return
    end
-   if printout(players[pindex].menu ~= "inventory" and printout(players[pindex].menu ~= "building" then
+   if players[pindex].menu ~= "inventory" and players[pindex].menu ~= "building" then
       printout(players[pindex].menu .. " menu does not support searching.",pindex)
       return
    end
@@ -11406,11 +11460,11 @@ end
 --Reads out the next inventory/menu item to match the search term
 function menu_search_get_next(pindex,str)
    --Only allow "inventory" and "building" menus for now
-   if not printout(players[pindex].in_menu then
+   if not players[pindex].in_menu then
       printout("This menu does not support searching.",pindex)
       return
    end
-   if printout(players[pindex].menu ~= "inventory" and printout(players[pindex].menu ~= "building" then
+   if players[pindex].menu ~= "inventory" and players[pindex].menu ~= "building" then
       printout(players[pindex].menu .. " menu does not support searching.",pindex)
       return
    end
@@ -11427,7 +11481,7 @@ function menu_search_get_next(pindex,str)
       inv = game.get_player(pindex).get_main_inventory()
       new_index = inventory_find_index_of_next_name_match(inv,search_index,str)
    elseif players[pindex].menu == "building" then
-      inv = game.get_player(pindex).get_main_inventory()--****
+      inv = game.get_player(pindex).opened.get_output_inventory()--****
       new_index = inventory_find_index_of_next_name_match(inv,search_index,str)
    end
    --Return a menu output according to the index found 
@@ -11436,10 +11490,12 @@ function menu_search_get_next(pindex,str)
       return
    elseif players[pindex].menu == "inventory" then
       players[pindex].menu_search_index = new_index
-      read_inventory_slot--****
+      players[pindex].inventory.index = new_index
+      read_inventory_slot(pindex)--****
    elseif players[pindex].menu == "building" then
       players[pindex].menu_search_index = new_index
-      read_inventory_slot--****
+      players[pindex].building.index = new_index
+      read_building_slot(pindex,false)--****
    else
       printout("Search error",pindex)
       return
@@ -11477,3 +11533,4 @@ function inventory_find_index_of_next_name_match(inv,index,str)
    --Whole inventory searched, no match found
    return -1 
 end
+
