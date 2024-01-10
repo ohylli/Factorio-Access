@@ -548,6 +548,13 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "read-menu-name",
+    key_sequence = "SHIFT + E",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "quickbar-1",
     key_sequence = "1",
     consuming = "none"
