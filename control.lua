@@ -11074,7 +11074,7 @@ function aim_gun_at_nearest_enemy(pindex,enemy_in)
    --Play a sound when the enemy is within range of the gun 
    local range = gun_stack.prototype.attack_parameters.range
    local dist = util.distance(p.position,enemy.position)
-   if dist < range then      
+   if dist < range and p.character.can_shoot(enemy,enemy.position) then      
       p.play_sound{path = "aim-locked",volume_modifier=0.5}
    end
    --Return if there is a gun and ammo combination that already aims by itself
@@ -11501,6 +11501,14 @@ function play_enemy_alert_sound(mode_in)
             local enemies = p.surface.find_enemy_units(p.position, 25, p.force)
             if #enemies > 5 then
                p.play_sound{path = "enemy-presence-high", volume_modifier = 0.5}
+            else
+               for i, enemy in ipairs(enemies) do 
+                  --Also check for strong enemies
+                  if enemy.prototype.max_health > 100 then
+                     p.play_sound{path = "enemy-presence-high", volume_modifier = 0.5}
+                     return
+                  end
+               end
             end
          elseif mode == 2 then -- Nearest enemy is closer (medium freq)
             if dist < 50 then
