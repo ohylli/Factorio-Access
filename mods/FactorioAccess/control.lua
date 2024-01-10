@@ -3119,13 +3119,14 @@ function locate_hand_in_building_output_inventory(pindex)
    local p = game.get_player(pindex)
    local inv = nil
    local stack = p.cursor_stack
+   local pb = players[pindex].building 
    
    --Check if stack empty and menu supported
    if stack == nil or not stack.valid_for_read or not stack.valid then
       --Hand is empty
       return
    end
-   if players[pindex].in_menu and players[pindex].menu == "building" then
+   if players[pindex].in_menu and players[pindex].menu == "building" and pb.sectors and pb.sectors[pb.sector] and pb.sectors[pb.sector].name == "Output" then
       inv = p.opened.get_output_inventory()
    else
       --Unsupported menu type
@@ -3157,7 +3158,7 @@ function locate_hand_in_building_output_inventory(pindex)
    end
    --If found, read it from the inventory
    if not found then
-      printout("Error: " .. item_name .. " not found in building output",pindex)
+      printout(item_name .. " not found in building output",pindex)
       return
    else
       players[pindex].building.index = i
