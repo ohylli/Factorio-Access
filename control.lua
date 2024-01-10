@@ -11503,8 +11503,8 @@ function play_enemy_alert_sound(mode_in)
                p.play_sound{path = "enemy-presence-high", volume_modifier = 0.5}
             else
                for i, enemy in ipairs(enemies) do 
-                  --Also check for strong enemies
-                  if enemy.prototype.max_health > 100 then
+                  --Also check for strong enemies: big/huge biters, huge spitters, medium or larger worms, not spawners
+                  if enemy.prototype.max_health > 360 then
                      p.play_sound{path = "enemy-presence-high", volume_modifier = 0.5}
                      return
                   end
