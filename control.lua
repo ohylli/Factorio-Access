@@ -6642,6 +6642,35 @@ script.on_event("close-menu", function(event)--close_menu, menu closed
    end
 end)
 
+script.on_event("read-menu-name", function(event)--read_menu_name
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local menu_name = "menu "
+   if players[pindex].in_menu == false then
+      menu_name = "no menu"
+   elseif players[pindex].menu ~= nil and players[pindex].menu ~= "" then
+      menu_name = players[pindex].menu
+      if players[pindex].menu == "building" then
+         --Name the building
+         local pb = players[pindex].building 
+         menu_name = menu_name .. " " .. pb.ent.name
+         --Name the sector
+         if pb.sectors and pb.sectors[pb.sector] and pb.sectors[pb.sector].name ~= nil then
+            menu_name = menu_name .. ", " .. pb.sectors[pb.sector].name
+         elseif players[pindex].building.recipe_selection == true then
+            menu_name = menu_name .. ", recipe selection"
+         else
+            menu_name = menu_name .. ", other section"
+         end
+      end
+   else
+      menu_name = "unknown menu"
+   end
+   printout(menu_name,pindex)
+end)
+
 script.on_event("quickbar-1", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -11555,7 +11584,7 @@ function menu_search_get_next(pindex,str)
    local inv = nil
    local new_index = nil
    local new_index_2 = nil
-   local pb = players[pindex].building
+   local pb = players[pindex].building 
    if players[pindex].menu == "inventory" then
       inv = game.get_player(pindex).get_main_inventory()
       new_index = inventory_find_index_of_next_name_match(inv, search_index, str, pindex)
@@ -11565,7 +11594,7 @@ function menu_search_get_next(pindex,str)
    elseif players[pindex].menu == "crafting" then
       new_index, new_index_2 = crafting_find_index_of_next_name_match(str,pindex, search_index, search_index_2, players[pindex].crafting.lua_recipes)
    elseif players[pindex].menu == "building" and pb.recipe_selection == true then
-      players[pindex].building.recipe_list = get_recipes(pindex, players[pindex].building.ent)--*****
+      players[pindex].building.recipe_list = get_recipes(pindex, players[pindex].building.ent)
       new_index, new_index_2 = crafting_find_index_of_next_name_match(str,pindex, search_index, search_index_2, players[pindex].building.recipe_list)
    else
       printout("This menu or building sector does not support searching.",pindex)
@@ -11593,7 +11622,7 @@ function menu_search_get_next(pindex,str)
       players[pindex].menu_search_index = new_index
       players[pindex].menu_search_index_2 = new_index_2
       players[pindex].building.category = new_index
-      players[pindex].building.index = new_index_2--****
+      players[pindex].building.index = new_index_2
       read_building_recipe(pindex, "")
    else
       printout("Search error",pindex)
@@ -11756,7 +11785,7 @@ function inventory_find_index_of_last_name_match(inv,index,str,pindex)
    return -1 
 end
 
---Returns the index for the next inventory item to match the search term, for any lua inventory --****todo bug with search
+--Returns the index for the next recipe to match the search term, designed for the way recipes are saved in players[pindex]
 function crafting_find_index_of_next_name_match(str,pindex,last_i, last_j, recipe_set)
    local recipes = recipe_set
    local cata_total = #recipes
