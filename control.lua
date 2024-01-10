@@ -4351,6 +4351,7 @@ function initialize(player)
    faplayer.menu = faplayer.menu or "none"
    faplayer.entering_search_term = faplayer.entering_search_term or false
    faplayer.menu_search_index = faplayer.menu_search_index or nil
+   faplayer.menu_search_index_2 = faplayer.menu_search_index_2 or nil
    faplayer.menu_search_term = faplayer.menu_search_term or nil
    faplayer.menu_search_frame = faplayer.menu_search_frame or nil
    faplayer.menu_search_last_name = faplayer.menu_search_last_name or nil
@@ -4611,6 +4612,7 @@ function menu_cursor_move(direction,pindex)
    end
 end 
 
+--menu_up
 function menu_cursor_up(pindex)
    if players[pindex].item_selection then
       if players[pindex].item_selector.group == 0 then
@@ -4810,6 +4812,8 @@ function menu_cursor_up(pindex)
    end
 end
 
+
+--menu_down
 function menu_cursor_down(pindex)
    if players[pindex].item_selection then
       if players[pindex].item_selector.group == 0 then
@@ -6616,6 +6620,7 @@ script.on_event("close-menu", function(event)--close_menu, menu closed
       players[pindex].in_menu = false
       players[pindex].entering_search_term = false
       players[pindex].menu_search_index = nil
+      players[pindex].menu_search_index_2 = nil
       players[pindex].item_selection = false
       players[pindex].item_cache = {}
       players[pindex].item_selector = {index = 0, group = 0, subgroup = 0}
@@ -11506,6 +11511,7 @@ function menu_search_open(pindex)
    --Open the searchbox frame
    players[pindex].entering_search_term = true
    players[pindex].menu_search_index = 0
+   players[pindex].menu_search_index_2 = 1
    local frame = game.get_player(pindex).gui.screen.add{type = "frame", name = "enter-search-term"}
    frame.bring_to_front()
    frame.force_auto_center()
@@ -11535,13 +11541,17 @@ function menu_search_get_next(pindex,str)
    end
    --Get the current search index
    local search_index = players[pindex].menu_search_index
+   local search_index_2 = players[pindex].menu_search_index_2
    if search_index == nil then
       players[pindex].menu_search_index = 0
+      players[pindex].menu_search_index_2 = 0
       search_index = 0
+      search_index_2 = 0
    end
    --Search for the new index in the appropriate menu
    local inv = nil
    local new_index = nil
+   local new_index_2 = nil
    if players[pindex].menu == "inventory" then
       inv = game.get_player(pindex).get_main_inventory()
       new_index = inventory_find_index_of_next_name_match(inv, search_index, str, pindex)
@@ -11551,7 +11561,7 @@ function menu_search_get_next(pindex,str)
    elseif players[pindex].menu == "crafting" then--****
       inv = players[pindex].crafting.lua_recipes
       --The parameter naming and table structure and everything happens to match, so we can use this fn...
-      new_index = inventory_find_index_of_next_name_match(inv, search_index, str, pindex)
+      new_index, new_index_2 = crafting_find_index_of_next_name_match(str,pindex, search_index, search_index_2)
    end
    --Return a menu output according to the index found 
    if new_index <= 0 then
@@ -11567,8 +11577,10 @@ function menu_search_get_next(pindex,str)
       read_building_slot(pindex,false)
    elseif players[pindex].menu == "crafting" then--****
       players[pindex].menu_search_index = new_index
-      players[pindex].crafting.index = new_index
-      --read_crafting_slot(pindex, "")
+      players[pindex].menu_search_index_2 = new_index_2
+      players[pindex].crafting.category = new_index
+      players[pindex].crafting.index = new_index_2
+      read_crafting_slot(pindex, "")
    else
       printout("Search error",pindex)
       return
@@ -11645,7 +11657,7 @@ function inventory_find_index_of_next_name_match(inv,index,str,pindex)
                repeat_i = i
             end
          end
-         game.print(i .. " : " .. name .. " vs. " .. str,{volume_modifier=0})
+         --game.print(i .. " : " .. name .. " vs. " .. str,{volume_modifier=0})
       end
    end
    --End of inventory reached, circle back
@@ -11664,7 +11676,7 @@ function inventory_find_index_of_next_name_match(inv,index,str,pindex)
                repeat_i = i
             end
          end
-         game.print(i .. " : " .. name .. " vs. " .. str,{volume_modifier=0})
+         --game.print(i .. " : " .. name .. " vs. " .. str,{volume_modifier=0})
       end 
    end
    --Check if any repeats found
@@ -11726,3 +11738,68 @@ function inventory_find_index_of_last_name_match(inv,index,str,pindex)
    return -1 
 end
 
+--Returns the index for the next inventory item to match the search term, for any lua inventory
+function crafting_find_index_of_next_name_match(str,pindex,last_i, last_j)
+   local recipes = players[pindex].crafting.lua_recipes
+   local cata_total = #players[pindex].crafting.lua_recipes
+   local repeat_i = -1
+   local repeat_j = -1
+   if last_i < 1 then
+      last_i = 1
+   end
+   if last_j < 1 then
+      last_j = 1
+   end
+   --Iterate until the end of the inventory for a match
+   for i = last_i, cata_total, 1 do
+      for j = last_j, #recipes[i], 1 do 
+         local recipe = players[pindex].crafting.lua_recipes[i][j]
+         if recipe and recipe.valid then
+            local name = string.lower(get_translated_name(recipe.name))
+            local result = string.find(name, str)
+            if result ~= nil then 
+               if name ~= players[pindex].menu_search_last_name then
+                  players[pindex].menu_search_last_name = name
+                  game.get_player(pindex).play_sound{path = "Inventory-Move"}--sound for finding the next
+                  return i, j
+               else
+                  repeat_i = i
+                  repeat_j = j
+               end
+               game.print(i .. "," .. j .. " : " .. name .. " vs. " .. str,{volume_modifier=0})
+            end
+         end
+      end
+   end
+   --End of inventory reached, circle back
+   game.get_player(pindex).play_sound{path = "Mine-Building"}--sound for having cicled around 
+   for i = 1, last_i, 1 do
+      for j = 1, last_j, 1 do 
+         local recipe = players[pindex].crafting.lua_recipes[i][j]
+         if recipe and recipe.valid then
+            local name = string.lower(get_translated_name(recipe.name))
+            local result = string.find(name, str)
+            if result ~= nil then 
+               if name ~= players[pindex].menu_search_last_name then
+                  players[pindex].menu_search_last_name = name
+                  game.get_player(pindex).play_sound{path = "Inventory-Move"}--sound for finding the next
+                  return i, j
+               else
+                  repeat_i = i
+                  repeat_j = j
+               end
+               game.print(i .. "," .. j .. " : " .. name .. " vs. " .. str,{volume_modifier=0})
+            end
+         end
+      end
+   end
+   --Check if any repeats found
+   if repeat_i > 0 then
+      return repeat_i, repeat_j
+   end
+   --No matches found at all
+   return -1, -1 
+end
+
+
+--for every catag (4) for every index within catag length do 
