@@ -1258,16 +1258,42 @@ function logistic_network_chests_info(port)
    local cell = port.logistic_cell
    local nw = cell.logistic_network
    
-   result = " Chests: Network has " .. (#nw.storage_points) .. " storage chests, " .. 
-             (#nw.passive_provider_points - #nw.storage_points) .. " passive provider chests, " .. 
-             (#nw.active_provider_points) .. " active provider chests, " .. 
-             (#nw.requester_points) .. " requester or buffer chests, " --(no buffer counter) --***todo cleanup , some chests have multiple roles!
+   local storage_chest_count = 0
+   for i,ent in ipairs(nw.storage_points) do 
+      if ent.owner.type == "logistic-container" then
+         storage_chest_count = storage_chest_count + 1
+      end
+   end
+   local passive_provider_chest_count = 0
+   for i,ent in ipairs(nw.passive_provider_points) do 
+      if ent.owner.type == "logistic-container" then
+         passive_provider_chest_count = passive_provider_chest_count + 1
+      end
+   end
+   local active_provider_chest_count = 0
+   for i,ent in ipairs(nw.active_provider_points) do 
+      if ent.owner.type == "logistic-container" then
+         active_provider_chest_count = active_provider_chest_count + 1
+      end
+   end
+   local requester_chest_count = 0
+   for i,ent in ipairs(nw.requester_points) do 
+      if ent.owner.type == "logistic-container" then
+         requester_chest_count = requester_chest_count + 1
+      end
+   end
+   
+   result = " Chests: Network has " .. storage_chest_count .. " storage chests, " .. 
+            passive_provider_chest_count .. " passive provider chests, " .. 
+            active_provider_chest_count .. " active provider chests, " .. 
+            requester_chest_count .. " requester chests or buffer chests, "
+   game.print(result,{volume_modifier=0})--***
    return result
 end
 
 function logistic_network_items_info(port)
    local result = "Items: Network "
-   local itemset = port.logistic_cell.network.get_contents()
+   local itemset = port.logistic_cell.logistic_network.get_contents()
    local itemtable = {}
    for name, count in pairs(itemset) do
       table.insert(itemtable, {name = name, count = count})
