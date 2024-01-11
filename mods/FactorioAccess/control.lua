@@ -7204,15 +7204,15 @@ end
 
 function play_mining_sound(pindex)
    local player= game.players[pindex]
-   game.print("1",{volume_modifier=0})--
+   --game.print("1",{volume_modifier=0})--**
    if player and player.mining_state.mining and player.selected and player.selected.valid then 
-      game.print("2",{volume_modifier=0})--
+      --game.print("2",{volume_modifier=0})--
       if player.selected.prototype.is_building then
          player.play_sound{path = "Mine-Building"}
-         game.print("3A",{volume_modifier=0})--
+         --game.print("3A",{volume_modifier=0})--
       else
          player.play_sound{path = "Mine-Building"}--Mine other things, eg. character corpses, laterdo new sound
-         game.print("3B",{volume_modifier=0})--
+         --game.print("3B",{volume_modifier=0})--
       end
       schedule(25, "play_mining_sound", pindex)
    end
@@ -10143,10 +10143,10 @@ script.on_event(defines.events.on_gui_opened, function(event)
    if event.gui_type == defines.gui_type.controller and players[pindex].menu == "none" and event.tick - players[pindex].last_menu_toggle_tick < 5 then
       --We close the player GUI if closing/opening another menu toggles the player GUI screen
       game.get_player(pindex).opened = nil
-      game.print("Closed an extra GUI",{volume_modifier = 0})--**laterdo enable these and review what doess what
+      --game.print("Closed an extra GUI",{volume_modifier = 0})--**laterdo enable these and review what doess what
    elseif game.get_player(event.player_index).opened ~= nil then
       players[pindex].in_menu = true
-      game.print("Opened an extra GUI",{volume_modifier = 0})--**laterdo enable these and review what doess what
+      --game.print("Opened an extra GUI",{volume_modifier = 0})--**laterdo enable these and review what doess what
    end
 end)
 
