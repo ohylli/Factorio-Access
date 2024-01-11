@@ -1,3 +1,6 @@
+--Here: Functions relating worker robots, roboports, logistic systems, blueprints
+--Does not include event handlers
+
 dirs = defines.direction
 MAX_STACK_COUNT = 10
 

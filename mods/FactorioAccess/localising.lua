@@ -1,3 +1,4 @@
+--Here: localisation functions, including event handlers
 
 --Returns the localised name of an object as a string
 function get_translated_name_string(object,pindex)--*** todo make this work
