@@ -2445,7 +2445,7 @@ function get_scan_summary(scan_left_top, scan_right_bottom, pindex)
          local area = 0
          --this confirmation is necessary because all we have is the ent name, and some distant resources show up on the list.
          if confirm_ent_is_in_area( get_substring_before_space(get_substring_before_comma(ent.name)) , scan_left_top , scan_right_bottom, pindex) then
-            area = get_ent_area_from_name(get_substring_before_comma(ent.name),pindex)
+            area = get_ent_area_from_name(get_substring_before_space(get_substring_before_comma(ent.name)),pindex)
             if area == -1 then
                area = 1
                game.get_player(pindex).print(get_substring_before_space(get_substring_before_comma(ent.name)) .. " could not be found for the area check ",{volume_modifier = 0})--***bug: unable to get area from name
