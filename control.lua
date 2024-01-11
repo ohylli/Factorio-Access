@@ -1136,8 +1136,12 @@ function ent_info(pindex, ent, description)
    elseif ent.name == "roboport" then
       local cell = ent.logistic_cell
       local network = ent.logistic_cell.logistic_network
-      result = result .. ", charging " .. (cell.charging_robot_count + cell.to_charge_robot_count) .. " robots, in a network with " .. 
-               (network.all_construction_robots + network.all_logistic_robots) .. " robots"
+      if network ~= nil then
+         result = result .. ", charging " .. (cell.charging_robot_count + cell.to_charge_robot_count) .. " robots, in a network with " .. 
+               (network.all_construction_robots + network.all_logistic_robots) .. " robots, "
+      else
+         result = result .. ", charging " .. (cell.charging_robot_count + cell.to_charge_robot_count) .. " robots, single, "
+      end
    end
    --Give drop position (like for inserters)
    if ent.drop_position ~= nil then
@@ -10097,13 +10101,21 @@ script.on_event("debug-test-key", function(event)
    local ent =  get_selected_ent(pindex)
    local stack = game.get_player(pindex).cursor_stack
    
-   if players[pindex].localisations == nil then
-      localise_inventory_item_names(pindex)
-   end
+   --if players[pindex].localisations == nil then
+   --   localise_inventory_item_names(pindex)
+   --end
    
-   if stack and stack.valid_for_read then
-      game.print(" * " .. get_translated_name_string(stack.prototype,pindex) .. " * ")
-   end
+   --if stack and stack.valid_for_read then
+   --   game.print(" * " .. get_translated_name_string(stack.prototype,pindex) .. " * ")
+   --end
+   
+   game.print(get_substring_before_space(get_substring_before_comma(ent.name)))
+   game.print(ent.name)
+   if ent.name == get_substring_before_space(get_substring_before_comma(ent.name)) then
+      game.print("equal")
+   else
+      game.print("not equal")
+   end   
 
 end)
 
