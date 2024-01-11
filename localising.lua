@@ -1,60 +1,80 @@
 --Here: localisation functions, including event handlers
-
+local localising = {}
 --Returns the localised name of an object as a string
-function get_translated_name_string(object,pindex)--*** todo make this work
-   if  players[pindex].localisations == nil then
-       players[pindex].localisations = {}
+function localising.get(object,pindex)--*** todo make this work
+   if string.sub(object.object_name,-9) ~= "Prototype" then
+      object = object.prototype
    end
-   local size = 0
-   for _ in pairs(players[pindex].localisations) do size = size + 1 end
-   --game.print(size .. " localisations saved ",{volume_modifier=0})
-   
-   local result = players[pindex].localisations[object.localised_name]
-   --game.print(object.localised_name)
-   --game.print("table ^ ")
-   
-   if result ~= nil and result ~= "" then
-      --game.print("succes")
-      return result
-   else
-      --game.print("fallback used")
-      return object.name
+   local result = players[pindex].localisations
+   result = result and result[object.object_name]
+   result = result and result[object.name]
+   --for debugging
+   if not result then
+      game.print("translation fallback for " .. object.object_name .. " " .. object.name )
    end
+   result = result or object.name
+   return result
 end
 
---Localisation test with inventory items
-function localise_inventory_item_names(pindex)
-   if  players[pindex].loc_inputs == nil then
-       players[pindex].loc_inputs = {}
-   end
+function localising.request_localisation(thing,pindex)
+   local id = game.players[pindex].request_translation(thing.localised_name)
+   local lookup=players[pindex].translation_id_lookup
+   lookup[id]={thing.object_name,thing.name}
+end
 
-   local inv = game.get_player(pindex).get_main_inventory()
-   for i = 1, #inv, 1 do 
-      local stack = inv[i]
-      if stack and stack.valid_for_read then
-         game.get_player(pindex).request_translation(stack.prototype.localised_name)
+function localising.request_all_the_translations(pindex)
+   for _, cat in pairs({"entity",
+      "item",
+      "fluid",
+      "tile",
+      "equipment",
+      "damage",
+      "virtual_signal",
+      "equipment_grid",
+      "recipe",
+      "technology",
+      "decorative",
+      "particle",
+      "autoplace_control",
+      "noise_layer",
+      "mod_setting",
+      "custom_input",
+      "ammo_category",
+      "item_subgroup",
+      "item_group",
+      "fuel_category",
+      "resource_category",
+      "achievement",
+      "module_category",
+      "equipment_category",
+      "trivial_smoke",
+      "shortcut",
+      "recipe_category"}) do
+      for _, proto in pairs(game[cat.."_prototypes"]) do
+         localising.request_localisation(proto,pindex)
       end
    end
 end
 
 --Populates the appropriate localised string arrays for every translation
-function translated_string_handler(event)
+function localising.handler(event)
    local pindex = event.player_index
+   local player=players[pindex]
    local successful = event.translated
-   local loc_table = event.localised_string
-   local result_string = event.result
-   
-   if not successful then
-      game.print("translation request failed",{volume_modifier=0})
+   local translated_thing=player.translation_id_lookup[event.id]
+   if not translated_thing then
       return
    end
-   
-   if  players[pindex].localisations == nil then
-       players[pindex].localisations = {}
+   player.translation_id_lookup[event.id] = nil
+   if not successful then
+      game.print("translation request ".. event.id .. " failed",{volume_modifier=0})
+      return
    end
-   
-   players[pindex].localisations[loc_table] = result_string
-   game.print("translated: " .. players[pindex].localisations[loc_table],{volume_modifier=0})--These all work
-   --game.print(loc_table)
-   --game.print("above from event")
+   local localised = players[pindex].localisations
+   localised[translated_thing[1]] = localised[translated_thing[1]] or {}
+   local translated_list = localised[translated_thing[1]]
+   translated_list[ translated_thing[2] ] = event.result
 end
+
+
+return localising
