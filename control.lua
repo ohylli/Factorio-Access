@@ -485,6 +485,8 @@ function extra_info_for_scan_list(ent,pindex,info_comes_after_indexing)
       result = result .. " " .. ent.backer_name
    elseif ent.name == "forest" then
       result = result .. classify_forest(ent.position,pindex,true)
+   elseif ent.name == "roboport" then
+      result = result .. " of network " .. get_network_name(ent)
    end
    
    return result
@@ -1137,12 +1139,7 @@ function ent_info(pindex, ent, description)
    elseif ent.name == "roboport" then
       local cell = ent.logistic_cell
       local network = ent.logistic_cell.logistic_network
-      if network ~= nil then
-         result = result .. ", charging " .. (cell.charging_robot_count + cell.to_charge_robot_count) .. " robots, in a network with " .. 
-               (network.all_construction_robots + network.all_logistic_robots) .. " robots, "
-      else
-         result = result .. ", charging " .. (cell.charging_robot_count + cell.to_charge_robot_count) .. " robots, single, "
-      end
+      result = result .. " of network " .. get_network_name(ent) .. "," .. roboport_contents_info(ent)
    end
    --Give drop position (like for inserters)
    if ent.drop_position ~= nil then

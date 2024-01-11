@@ -1102,25 +1102,25 @@ function roboport_menu(menu_index, pindex, clicked)--****
    elseif index == 2 then
       --2. This roboport: Check neighbor counts and dirs
       if clicked or (not clicked) then
-         --local result = roboport_info(port)
-         --printout(result, pindex)
+         local result = roboport_neighbours_info(port)
+         printout(result, pindex)
       end
    elseif index == 3 then
       --3. Check network roboport & robot & chest(?) counts
       if clicked or (not clicked) then
-         --local result = network_members_info(port)
-         --printout(result, pindex)
+         local result = logistic_network_members_info(port)
+         printout(result, pindex)
       end
    elseif index == 4 then
-      --4. Ongoing jobs info
+      --4. Points/chests info
       if clicked or (not clicked) then
-         --local result = network_jobs_info(port)
-         --printout(result, pindex)
+         local result = logistic_network_chests_info(port)
+         printout(result, pindex)
       end
    elseif index == 5 then
       --5. Check network item contents
       if clicked or (not clicked) then
-         --local result = network_items_info(port)
+         --local result = logistic_network_items_info(port)
          --printout(result, pindex)
       end
    end
@@ -1196,7 +1196,50 @@ function roboport_menu_down(pindex)
    roboport_menu(players[pindex].roboport_menu.index, pindex, false)
 end
 
+function roboport_contents_info(port)
+   local result = ""
+   local cell = port.logistic_cell
+   result = result .. " charging " .. cell.charging_robot_count .. " robots with " .. cell.to_charge_robots .. " in queue, " .. 
+            " stationed " .. cell.stationed_logistic_robot_count .. " logistic robots and " .. cell.stationed_construction_robot_count .. " construction robots " ..
+            " and " .. port.get_inventory(defines.inventory.roboport_material).get_item_count() .. " repair packs "
+   return result
+end
 
+function roboport_neighbours_info(port)
+   local result = ""
+   local cell = port.logistic_cell
+   local neighbour_count = #cell.neighbours
+   local neighbour_dirs = ""
+   for i, neighbour in ipairs(cell.neighbours) do 
+      local dir = direction_lookup(get_direction_of_that_from_this(neighbour.owner.position, port.position))
+      if i > 1 then
+         neighbour_dirs = neighbour_dirs .. " and "
+      end
+      neighbour_dirs = neighbour_dirs .. dir 
+   end
+   result = neighbour_count .. " neighbours for this roboport, at its " .. neighbour_dirs
+   return result
+end
+
+function logistic_network_members_info(port)
+   local result = ""
+   local cell = port.logistic_cell
+   local nw = cell.logistic_network
+   
+   result = " This network has " .. #nw.cells .. " roboports, and " .. nw.all_logistic_robots .. " logistic robots with " .. nw.available_logistic_robots " available, and " ..
+            nw.all_construction_robots .. " construction robots with " .. nw.available_construction_robots .. " available "
+   return result
+end
+
+function logistic_network_chests_info(port)
+   local result = ""
+   local cell = port.logistic_cell
+   local nw = cell.logistic_network
+   
+   result = " This network has " .. #nw.storage_points .. " storage chests, " .. #nw.passive_provider_points .. " passive provider chests, " .. 
+              #nw.active_provider_points .. " active provider chests, " .. #nw.requester_points .. " requester chests, " --(no buffer counter)
+   return result
+end
 
 --laterdo vehicle logistic requests...
 
