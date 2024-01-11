@@ -569,6 +569,9 @@ end
 
 --Sets a train's name. The idea is that every locomotive on a train has the same backer name and this is the train's name.
 function set_train_name(train,new_name)
+   if new_name == nil or new_name == "" then
+      return false
+   end
    local locos = train.locomotives
    if locos == nil then
       return false
@@ -3386,16 +3389,29 @@ function rail_builder(pindex, clicked_in)
    return
 end
 
---This menu opens when the player presses LEFT BRACKET on a locomotive that they are either riding or looking at with the cursor.
+--[[ Train menu options summary
+   0. name, id, menu instructions
+   1. Train state , destination info. Click to toggle manual mode.
+   2. Click to rename
+   3. Vehicles info
+   4. Cargo info
+   5. Read schedule
+   6. Set instant schedule + wait time info
+   7. Clear schedule
+   8. Subautomatic travel
+
+   This menu opens when the player presses LEFT BRACKET on a locomotive that they are either riding or looking at with the cursor.
+]]
 function train_menu(menu_index, pindex, clicked, other_input)
    local index = menu_index
    local other = other_input or -1
    local locomotive = nil
+   local ent = get_selected_ent(pindex)
    if game.get_player(pindex).vehicle ~= nil and game.get_player(pindex).vehicle.name == "locomotive" then
       locomotive = game.get_player(pindex).vehicle
       players[pindex].train_menu.locomotive = locomotive
-   elseif players[pindex].tile.ents[1]  ~= nil and players[pindex].tile.ents[1].name == "locomotive" then
-      locomotive = players[pindex].tile.ents[1]
+   elseif ent ~= nil and ent.valid and ent.name == "locomotive" then
+      locomotive = ent
       players[pindex].train_menu.locomotive = locomotive
    else
       players[pindex].train_menu.locomotive = nil
@@ -3541,18 +3557,8 @@ function train_menu(menu_index, pindex, clicked, other_input)
          end
       end
    end
-   --[[ Train menu options summary
-   0. name, id, menu instructions
-   1. Train state , destination info. Click to toggle manual mode.
-   2. Click to rename
-   3. Vehicles info
-   4. Cargo info
-   5. Read schedule
-   6. Set instant schedule + wait time info
-   7. Clear schedule
-   8. Subautomatic travel
-   ]]
 end
+TRAIN_MENU_LENGTH = 8
 
 function train_menu_open(pindex)
    if players[pindex].vanilla_mode then
@@ -3592,8 +3598,10 @@ function train_menu_close(pindex, mute_in)
    if game.get_player(pindex).gui.screen["train-rename"] ~= nil then
       game.get_player(pindex).gui.screen["train-rename"].destroy()
    end
+   if p.opened ~= nil then
+      p.opened = nil
+   end
 end
-
 
 function train_menu_up(pindex)
    players[pindex].train_menu.index = players[pindex].train_menu.index - 1
@@ -3610,8 +3618,8 @@ end
 
 function train_menu_down(pindex)
    players[pindex].train_menu.index = players[pindex].train_menu.index + 1
-   if players[pindex].train_menu.index > 8 then
-      players[pindex].train_menu.index = 8
+   if players[pindex].train_menu.index > TRAIN_MENU_LENGTH then
+      players[pindex].train_menu.index = TRAIN_MENU_LENGTH
       game.get_player(pindex).play_sound{path = "Mine-Building"}
    else
       --Play sound

@@ -7,22 +7,6 @@ MAX_STACK_COUNT = 10
 --https://lua-api.factorio.com/latest/classes/LuaLogisticCell.html
 --defines.inventory.character_trash
 
---Finds the nearest roboport
-function find_nearest_roboport(surf,pos,radius_in)
-   local nearest = nil
-   local min_dist = radius_in
-   local ports = surf.find_entities_filtered{name = "roboport" , position = pos , radius = radius_in}
-   for i,port in ipairs(ports) do
-      local dist = math.ceil(util.distance(pos, port.position))
-      if dist < min_dist then
-         min_dist = dist
-         nearest = port
-      end
-   end
-   rendering.draw_circle{color = {1, 1, 0}, radius = 4, width = 4, target = nearest.position, surface = surf, time_to_live = 90}
-   return nearest, min_dist
-end
-
 --Increments: 0, 1, half-stack, 1 stack, n stacks
 function increment_logistic_request_min_amount(stack_size, amount_min_in)
    local amount_min = amount_min_in
@@ -998,6 +982,221 @@ end
 function read_chest_requests_summary(ent,pindex)--***todo improve
    printout(ent.request_slot_count .. " chest logistic requests set", pindex)
 end
+
+--Finds the nearest roboport
+function find_nearest_roboport(surf,pos,radius_in)
+   local nearest = nil
+   local min_dist = radius_in
+   local ports = surf.find_entities_filtered{name = "roboport" , position = pos , radius = radius_in}
+   for i,port in ipairs(ports) do
+      local dist = math.ceil(util.distance(pos, port.position))
+      if dist < min_dist then
+         min_dist = dist
+         nearest = port
+      end
+   end
+   rendering.draw_circle{color = {1, 1, 0}, radius = 4, width = 4, target = nearest.position, surface = surf, time_to_live = 90}
+   return nearest, min_dist
+end
+
+--laterdo** maybe use surf.find_closest_logistic_network_by_position(position, force)
+
+--The idea is that every roboport of the network has the same backer name and this is the networks's name.
+function get_network_name(port)
+   resolve_network_name(port)
+   return port.backer_name
+end
+
+
+--Sets a logistic network's name. The idea is that every roboport of the network has the same backer name and this is the networks's name.
+function set_network_name(port,new_name)
+   --Rename this port
+   if new_name == nil or new_name == "" then
+      return false
+   end
+   port.backer_name = new_name
+   --Rename the rest, if any
+   local nw = port.logistic_network
+   if nw == nil then
+      return true
+   end
+   local cells = nw.cells
+   if cells == nil or cells == {} then
+      return true
+   end
+   for i,cell in ipairs(cells) do
+      if cell.owner.supports_backer_name then
+         cell.owner.backer_name = new_name
+      end
+   end
+   return true
+end
+
+--Finds the oldest roboport and applies its name across the network. Any built roboport will be newer and so the older names will be kept.
+function resolve_network_name(port_in)
+   local oldest_port = port_in
+   local nw = oldest_port.logistic_network
+   --No network means resolved
+   if nw == nil then
+      return 
+   end
+   local cells = nw.cells
+   --Check others
+   for i,cell in ipairs(cells) do
+      local port = cell.owner
+      if port ~= nil and port.valid and oldest_port.unit_number > port.unit_number then
+         oldest_port = port
+      end
+   end
+   --Rename all
+   set_network_name(oldest_port, oldest_port.backer_name)
+   return 
+end
+
+--[[--Logistic network menu options summary 
+   0. Roboport of logistic network NAME, instructions
+   1. Rename roboport network
+   2. This roboport: Check neighbor counts and dirs
+   3. Check network roboport & robot & chest(?) counts
+   4. Ongoing jobs info
+   5. Check network item contents
+
+   This menu opens when you click on a roboport.
+]]
+function roboport_menu(menu_index, pindex, clicked)--****
+   local index = menu_index
+   local port = nil
+   local ent = get_selected_ent(pindex)
+   if game.get_player(pindex).opened ~= nil and game.get_player(pindex).opened.name == "roboport" then
+      port = game.get_player(pindex).opened
+      players[pindex].roboport_menu.port = port
+   elseif ent ~= nil and ent.valid and ent.name == "roboport" then
+      port = ent
+      players[pindex].roboport_menu.port = port
+   else
+      players[pindex].roboport.port = nil
+      printout("Roboport menu requires a roboport", pindex)
+      return
+   end
+   local nw = port.logistic_network
+   
+   if index == 0 then
+      --0. Roboport of logistic network NAME, instructions
+      printout("Roboport of logistic network ".. get_network_name(port)
+      .. ", Press 'W' and 'S' to navigate options, press 'LEFT BRACKET' to select an option or press 'E' to exit this menu.", pindex)
+   elseif index == 1 then
+      --1. Rename roboport networks
+      if not clicked then
+         printout("Click here to rename this network", pindex)
+      else
+         printout("Enter a new name for this network, then press 'ENTER' to confirm.", pindex)
+         players[pindex].roboport_menu.renaming = true
+         local frame = game.get_player(pindex).gui.screen.add{type = "frame", name = "network-rename"}
+         frame.bring_to_front()
+         frame.force_auto_center()
+         frame.focus()
+         game.get_player(pindex).opened = frame
+         local input = frame.add{type="textfield", name = "input"}
+         input.focus()
+      end
+   elseif index == 2 then
+      --2. This roboport: Check neighbor counts and dirs
+      if clicked or (not clicked) then
+         --local result = roboport_info(port)
+         --printout(result, pindex)
+      end
+   elseif index == 3 then
+      --3. Check network roboport & robot & chest(?) counts
+      if clicked or (not clicked) then
+         --local result = network_members_info(port)
+         --printout(result, pindex)
+      end
+   elseif index == 4 then
+      --4. Ongoing jobs info
+      if clicked or (not clicked) then
+         --local result = network_jobs_info(port)
+         --printout(result, pindex)
+      end
+   elseif index == 5 then
+      --5. Check network item contents
+      if clicked or (not clicked) then
+         --local result = network_items_info(port)
+         --printout(result, pindex)
+      end
+   end
+end
+ROBOPORT_MENU_LENGTH = 5
+
+function roboport_menu_open(pindex)
+   if players[pindex].vanilla_mode then
+      return 
+   end
+   --Set the player menu tracker to this menu
+   players[pindex].menu = "roboport_menu"
+   players[pindex].in_menu = true
+   players[pindex].move_queue = {}
+   
+   --Set the menu line counter to 0
+   players[pindex].roboport_menu.index = 0
+   
+   --Play sound
+   game.get_player(pindex).play_sound{path = "Open-Inventory-Sound"}
+   
+   --Load menu 
+   roboport_menu(players[pindex].roboport_menu.index, pindex, false)
+end
+
+function roboport_menu_close(pindex, mute_in)
+   local mute = mute_in
+   --Set the player menu tracker to none
+   players[pindex].menu = "none"
+   players[pindex].in_menu = false
+
+   --Set the menu line counter to 0
+   players[pindex].roboport_menu.index = 0
+   players[pindex].roboport_menu.port = nil
+   
+   --play sound
+   if not mute then
+      game.get_player(pindex).play_sound{path="Close-Inventory-Sound"}
+   end
+   
+   --Destroy GUI
+   if game.get_player(pindex).gui.screen["network-rename"] ~= nil then
+      game.get_player(pindex).gui.screen["network-rename"].destroy()
+   end
+   if p.opened ~= nil then
+      p.opened = nil
+   end
+end
+
+function roboport_menu_up(pindex)
+   players[pindex].roboport_menu.index = players[pindex].roboport_menu.index - 1
+   if players[pindex].roboport_menu.index < 0 then
+      players[pindex].roboport_menu.index = 0
+      game.get_player(pindex).play_sound{path = "Mine-Building"}
+   else
+      --Play sound
+      game.get_player(pindex).play_sound{path = "Inventory-Move"}
+   end
+   --Load menu
+   roboport_menu(players[pindex].roboport_menu.index, pindex, false)
+end
+
+function roboport_menu_down(pindex)
+   players[pindex].roboport_menu.index = players[pindex].roboport_menu.index + 1
+   if players[pindex].roboport_menu.index > ROBOPORT_MENU_LENGTH then
+      players[pindex].roboport_menu.index = ROBOPORT_MENU_LENGTH
+      game.get_player(pindex).play_sound{path = "Mine-Building"}
+   else
+      --Play sound
+      game.get_player(pindex).play_sound{path = "Inventory-Move"}
+   end
+   --Load menu
+   roboport_menu(players[pindex].roboport_menu.index, pindex, false)
+end
+
+
 
 --laterdo vehicle logistic requests...
 

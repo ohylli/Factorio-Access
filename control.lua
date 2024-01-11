@@ -4137,7 +4137,7 @@ function build_preview_checks_info(stack, pindex)
             end
          end
       else
-         --Notify if no connections and state nearest roboport-**
+         --Notify if no connections and state nearest roboport
          result = result .. " not connected, "
          local nearest_port, min_dist = find_nearest_roboport(p.surface, p.position, 1000)
          if min_dist == nil or min_dist >= 1000 then
@@ -4605,6 +4605,12 @@ function initialize(player)
    }
    
    faplayer.valid_train_stop_list = faplayer.valid_train_stop_list or {}
+   
+   faplayer.roboport_menu = faplayer.roboport_menu or {
+      port = nil,
+      index = 0,
+      renaming = false
+   }
 
    if table_size(faplayer.mapped) == 0 then
       player.force.rechart()
@@ -5552,8 +5558,11 @@ function update_menu_visuals()
          elseif player.menu == "train_stop_menu" then
             update_overhead_sprite("item.train-stop",2,1.25,pindex)
             update_custom_GUI_sprite("item.train-stop", 3, pindex)
+         elseif player.menu == "roboport_menu" then
+            update_overhead_sprite("item.roboport",2,1.25,pindex)
+            update_custom_GUI_sprite("item.roboport", 3, pindex)
          elseif player.menu == "belt" then
-            update_overhead_sprite("item.transport-belt",1,1,pindex)
+            update_overhead_sprite("item.transport-belt",2,1.25,pindex)
             update_custom_GUI_sprite(nil,1,pindex)
          elseif player.menu == "building" then
             if game.get_player(pindex).opened == nil then
@@ -9613,16 +9622,34 @@ script.on_event(defines.events.on_gui_confirmed,function(event)
       event.element.destroy()
    elseif players[pindex].train_menu.renaming == true then
       players[pindex].train_menu.renaming = false
-      set_train_name(global.players[pindex].train_menu.locomotive.train,event.element.text)
-      printout("Train renamed to " .. event.element.text .. ", menu closed.", pindex)
+      local result = event.element.text
+      if result == nil or result == "" then 
+         result = "unknown"
+      end
+      set_train_name(players[pindex].train_menu.locomotive.train, result)
+      printout("Train renamed to " .. result .. ", menu closed.", pindex)
       event.element.destroy()
       train_menu_close(pindex, false)
    elseif players[pindex].train_stop_menu.renaming == true then
       players[pindex].train_stop_menu.renaming = false
-      global.players[pindex].train_stop_menu.stop.backer_name = event.element.text
-      printout("Train stop renamed to " .. event.element.text .. ", menu closed.", pindex)
+      local result = event.element.text
+      if result == nil or result == "" then 
+         result = "unknown"
+      end
+      players[pindex].train_stop_menu.stop.backer_name = result
+      printout("Train stop renamed to " .. result .. ", menu closed.", pindex)
       event.element.destroy()
       train_stop_menu_close(pindex, false)
+   elseif players[pindex].roboport_menu.renaming == true then
+      players[pindex].roboport_menu.renaming = false
+      local result = event.element.text
+      if result == nil or result == "" then 
+         result = "unknown"
+      end
+      set_network_name(players[pindex].roboport_menu.port, result)
+      printout("Network renamed to " .. result .. ", menu closed.", pindex)
+      event.element.destroy()
+      roboport_menu_close(pindex)
    elseif players[pindex].entering_search_term == true then
       local term = string.lower(event.element.text)
       players[pindex].menu_search_term = term
