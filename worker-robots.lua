@@ -1057,9 +1057,10 @@ end
    0. Roboport of logistic network NAME, instructions
    1. Rename roboport network
    2. This roboport: Check neighbor counts and dirs
-   3. Check network roboport & robot & chest(?) counts
-   4. Ongoing jobs info
-   5. Check network item contents
+   3. This roboport: Check contents
+   4. Check network roboport & robot & chest(?) counts
+   5. Ongoing jobs info
+   6. Check network item contents
 
    This menu opens when you click on a roboport.
 ]]
@@ -1095,7 +1096,7 @@ function roboport_menu(menu_index, pindex, clicked)--****
          frame.bring_to_front()
          frame.force_auto_center()
          frame.focus()
-         game.get_player(pindex).opened = frame
+         --game.get_player(pindex).opened = frame
          local input = frame.add{type="textfield", name = "input"}
          input.focus()
       end
@@ -1103,29 +1104,41 @@ function roboport_menu(menu_index, pindex, clicked)--****
       --2. This roboport: Check neighbor counts and dirs
       if clicked or (not clicked) then
          local result = roboport_neighbours_info(port)
-         printout(result, pindex)
+         printout("Roboport has " .. result, pindex)
       end
    elseif index == 3 then
-      --3. Check network roboport & robot & chest(?) counts
+      --3. This roboport: Check robot counts
       if clicked or (not clicked) then
-         local result = logistic_network_members_info(port)
-         printout(result, pindex)
+         local result = roboport_contents_info(port)
+         printout("Roboport " .. result, pindex)
       end
    elseif index == 4 then
-      --4. Points/chests info
-      if clicked or (not clicked) then
-         local result = logistic_network_chests_info(port)
+      --4. Check network roboport & robot & chest(?) counts
+      if nw ~= nil then
+         local result = logistic_network_members_info(port)
          printout(result, pindex)
+      else
+         printout("Robots: No network", pindex)
       end
    elseif index == 5 then
-      --5. Check network item contents
-      if clicked or (not clicked) then
-         --local result = logistic_network_items_info(port)
-         --printout(result, pindex)
+      --5. Points/chests info
+      if nw ~= nil then
+         local result = logistic_network_chests_info(port)
+         printout(result, pindex)
+      else
+         printout("Chests: No network", pindex)
+      end
+   elseif index == 6 then
+      --6. Check network item contents
+      if nw ~= nil then
+         local result = logistic_network_items_info(port)
+         printout(result, pindex)
+      else
+         printout("Items: No network", pindex)
       end
    end
 end
-ROBOPORT_MENU_LENGTH = 5
+ROBOPORT_MENU_LENGTH = 6
 
 function roboport_menu_open(pindex)
    if players[pindex].vanilla_mode then
@@ -1136,6 +1149,10 @@ function roboport_menu_open(pindex)
    players[pindex].in_menu = true
    players[pindex].move_queue = {}
    
+   --Initialize if needed
+   if players[pindex].roboport_menu == nil then
+      players[pindex].roboport_menu = {}
+   end
    --Set the menu line counter to 0
    players[pindex].roboport_menu.index = 0
    
@@ -1165,8 +1182,8 @@ function roboport_menu_close(pindex, mute_in)
    if game.get_player(pindex).gui.screen["network-rename"] ~= nil then
       game.get_player(pindex).gui.screen["network-rename"].destroy()
    end
-   if p.opened ~= nil then
-      p.opened = nil
+   if game.get_player(pindex).opened ~= nil then
+      game.get_player(pindex).opened = nil
    end
 end
 
@@ -1199,7 +1216,7 @@ end
 function roboport_contents_info(port)
    local result = ""
    local cell = port.logistic_cell
-   result = result .. " charging " .. cell.charging_robot_count .. " robots with " .. cell.to_charge_robots .. " in queue, " .. 
+   result = result .. " charging " .. cell.charging_robot_count .. " robots with " .. cell.to_charge_robot_count .. " in queue, " .. 
             " stationed " .. cell.stationed_logistic_robot_count .. " logistic robots and " .. cell.stationed_construction_robot_count .. " construction robots " ..
             " and " .. port.get_inventory(defines.inventory.roboport_material).get_item_count() .. " repair packs "
    return result
@@ -1217,7 +1234,12 @@ function roboport_neighbours_info(port)
       end
       neighbour_dirs = neighbour_dirs .. dir 
    end
-   result = neighbour_count .. " neighbours for this roboport, at its " .. neighbour_dirs
+   if neighbour_count > 0 then 
+      result = neighbour_count .. " neighbours" .. ", at the " .. neighbour_dirs
+   else
+      result = neighbour_count .. " neighbours"
+   end
+   
    return result
 end
 
@@ -1226,7 +1248,7 @@ function logistic_network_members_info(port)
    local cell = port.logistic_cell
    local nw = cell.logistic_network
    
-   result = " This network has " .. #nw.cells .. " roboports, and " .. nw.all_logistic_robots .. " logistic robots with " .. nw.available_logistic_robots " available, and " ..
+   result = " Robots: Network has " .. #nw.cells .. " roboports, and " .. nw.all_logistic_robots .. " logistic robots with " .. nw.available_logistic_robots .. " available, and " ..
             nw.all_construction_robots .. " construction robots with " .. nw.available_construction_robots .. " available "
    return result
 end
@@ -1236,8 +1258,43 @@ function logistic_network_chests_info(port)
    local cell = port.logistic_cell
    local nw = cell.logistic_network
    
-   result = " This network has " .. #nw.storage_points .. " storage chests, " .. #nw.passive_provider_points .. " passive provider chests, " .. 
-              #nw.active_provider_points .. " active provider chests, " .. #nw.requester_points .. " requester chests, " --(no buffer counter)
+   result = " Chests: Network has " .. (#nw.storage_points) .. " storage chests, " .. 
+             (#nw.passive_provider_points - #nw.storage_points) .. " passive provider chests, " .. 
+             (#nw.active_provider_points) .. " active provider chests, " .. 
+             (#nw.requester_points) .. " requester or buffer chests, " --(no buffer counter) --***todo cleanup , some chests have multiple roles!
+   return result
+end
+
+function logistic_network_items_info(port)
+   local result = "Items: Network "
+   local itemset = port.logistic_cell.network.get_contents()
+   local itemtable = {}
+   for name, count in pairs(itemset) do
+      table.insert(itemtable, {name = name, count = count})
+   end
+   table.sort(itemtable, function(k1, k2)
+      return k1.count > k2.count
+   end)
+   if #itemtable == 0 then
+      result = result .. " contains no items. "
+   else
+      result = result .. " contains " .. itemtable[1].name .. " times " .. itemtable[1].count .. ", "
+      if #itemtable > 1 then
+         result = result .. " and " .. itemtable[2].name .. " times " .. itemtable[2].count .. ", "
+      end
+      if #itemtable > 2 then
+         result = result .. " and " .. itemtable[3].name .. " times " .. itemtable[3].count .. ", "
+      end
+      if #itemtable > 3 then
+         result = result .. " and " .. itemtable[4].name .. " times " .. itemtable[4].count .. ", "
+      end
+      if #itemtable > 4 then
+         result = result .. " and " .. itemtable[5].name .. " times " .. itemtable[5].count .. ", "
+      end
+      if #itemtable > 5 then
+         result = result .. " and other items "
+      end
+   end
    return result
 end
 

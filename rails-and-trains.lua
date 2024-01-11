@@ -3598,8 +3598,8 @@ function train_menu_close(pindex, mute_in)
    if game.get_player(pindex).gui.screen["train-rename"] ~= nil then
       game.get_player(pindex).gui.screen["train-rename"].destroy()
    end
-   if p.opened ~= nil then
-      p.opened = nil
+   if game.get_player(pindex).opened ~= nil then
+      game.get_player(pindex).opened = nil
    end
 end
 

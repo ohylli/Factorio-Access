@@ -2647,7 +2647,7 @@ function populate_categories(pindex)
             table.insert(players[pindex].nearby.resources, ent)      
          elseif ent.ents[1].type == "resource" or ent.ents[1].type == "tree" or ent.ents[1].name == "sand-rock-big" or ent.ents[1].name == "rock-big" or ent.ents[1].name == "rock-huge" then --Note: There is no rock type, so they are specified by name.
             table.insert(players[pindex].nearby.resources, ent)
-         elseif ent.ents[1].type == "container" then
+         elseif ent.ents[1].type == "container" or ent.ents[1].type == "logistic-container" then
             table.insert(players[pindex].nearby.containers, ent)
          elseif ent.ents[1].prototype.is_building and ent.ents[1].type ~= "unit-spawner" and ent.ents[1].type ~= "turret" and ent.ents[1].name ~= "train-stop" then
             table.insert(players[pindex].nearby.buildings, ent)
@@ -4887,6 +4887,8 @@ function menu_cursor_up(pindex)
       rail_builder_up(pindex)
    elseif players[pindex].menu == "train_stop_menu" then
       train_stop_menu_up(pindex)
+   elseif players[pindex].menu == "roboport_menu" then
+      roboport_menu_up(pindex)
    end
 end
 
@@ -5104,6 +5106,8 @@ function menu_cursor_down(pindex)
       rail_builder_down(pindex)
    elseif players[pindex].menu == "train_stop_menu" then
       train_stop_menu_down(pindex)
+   elseif players[pindex].menu == "roboport_menu" then
+      roboport_menu_down(pindex)
    end
 end
 
@@ -6701,6 +6705,8 @@ function close_menu_resets(pindex)
       train_menu_close(pindex, false)
    elseif players[pindex].menu == "train_stop_menu" then
       train_stop_menu_close(pindex, false)
+   elseif players[pindex].menu == "roboport_menu" then
+      roboport_menu_close(pindex)
    end
    
    players[pindex].in_menu = false
@@ -7416,7 +7422,7 @@ function clear_obstacles_in_circle(position, radius, pindex)
    return (trees_cleared + rocks_cleared + remnants_cleared + ground_items_cleared), comment
 end
 
---Left click actions in menus
+--Left click actions in menus (click_menu)
 script.on_event("click-menu", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -7752,6 +7758,8 @@ script.on_event("click-menu", function(event)
          train_menu(players[pindex].train_menu.index, pindex, true)
       elseif players[pindex].menu == "train_stop_menu" then
          train_stop_menu(players[pindex].train_stop_menu.index, pindex, true)
+      elseif players[pindex].menu == "roboport_menu" then
+         roboport_menu(players[pindex].roboport_menu.index, pindex, true)
       end      
    end
 end)
@@ -7850,11 +7858,14 @@ function clicked_on_entity(ent,pindex)
       --Invalid entity clicked
       game.get_player(pindex).print("Invalid entity clicked",{volume_modifier=0})
    elseif ent.train ~= nil then
-      --If checking a rail vehicle, open its train
+      --For a rail vehicle, open train menu
       train_menu_open(pindex)
    elseif ent.name == "train-stop" then
-      --If checking a train stop, open its menu
+      --For a train stop, open train stop menu
       train_stop_menu_open(pindex)
+   elseif ent.name == "roboport" then
+      --For a roboport, open roboport menu 
+      roboport_menu_open(pindex)
    elseif ent.operable and ent.prototype.is_building then
       --If checking an operable building, open its menu
       open_operable_building(ent,pindex)
