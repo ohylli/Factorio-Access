@@ -1538,7 +1538,12 @@ function teleport_to_closest(pindex, pos, muted, ignore_enemies)
          game.get_player(pindex).play_sound{path = "teleported", volume_modifier = 0.2, position = old_pos}
          game.get_player(pindex).play_sound{path = "utility/scenario_message", volume_modifier = 0.8, position = old_pos}
       end
-      local teleported = first_player.teleport(new_pos)
+      local teleported = false 
+      if muted then 
+         teleported = first_player.teleport(new_pos)
+      else
+         teleported = first_player.teleport(new_pos, first_player.surface, true)
+      end
       if teleported then
          players[pindex].position = table.deepcopy(new_pos)
          if not muted then
@@ -1570,6 +1575,11 @@ function teleport_to_closest(pindex, pos, muted, ignore_enemies)
    end
    return true
 end
+
+script.on_event(defines.events.script_raised_teleported, function(event)
+   game.play_sound{path = "teleported", volume_modifier = 0.2, position = event.entity.position}
+   game.play_sound{path = "utility/scenario_message", volume_modifier = 0.8, position = event.entity.position}
+end)
 
 function read_warnings_slot(pindex)
    local warnings = {}
@@ -3677,9 +3687,11 @@ function toggle_cursor(pindex)
    end
 end
 
-function teleport_to_cursor(pindex, muted, ignore_enemies)
+function teleport_to_cursor(pindex, muted, ignore_enemies, return_cursor)
    local result = teleport_to_closest(pindex, players[pindex].cursor_pos, muted, ignore_enemies)
-   players[pindex].cursor_pos = players[pindex].position
+   if return_cursor then
+      players[pindex].cursor_pos = players[pindex].position
+   end
    return result
 end
 
@@ -5728,7 +5740,6 @@ function move(direction,pindex)
    end
 end
 
-
 function move_key(direction,event, force_single_tile)
    local pindex = event.player_index
    if not check_for_player(pindex) or players[pindex].menu == "prompt" then
@@ -5878,7 +5889,7 @@ script.on_event("teleport-to-cursor", function(event)
    if not check_for_player(pindex) then
       return
    end
-   teleport_to_cursor(pindex, false, false)
+   teleport_to_cursor(pindex, false, false, false)
 end)
 
 script.on_event("teleport-to-cursor-forced", function(event)
@@ -5886,7 +5897,7 @@ script.on_event("teleport-to-cursor-forced", function(event)
    if not check_for_player(pindex) then
       return
    end
-   teleport_to_cursor(pindex, false, true)
+   teleport_to_cursor(pindex, false, true, false)
 end)
 
 script.on_event("teleport-to-alert-forced", function(event)
@@ -5900,9 +5911,12 @@ script.on_event("teleport-to-alert-forced", function(event)
       return
    end
    players[pindex].cursor_pos = alert_pos
-   teleport_to_cursor(pindex, false, true)
-   players[pindex].cursor_pos = alert_pos--laterdo** bug fixed here about repeated teleports with the same vector
-   players[pindex].position = alert_pos
+   teleport_to_cursor(pindex, false, true, true)
+   players[pindex].cursor_pos = game.get_player(pindex).position
+   players[pindex].position = game.get_player(pindex).position
+   players[pindex].last_damage_alert_pos = game.get_player(pindex).position
+   cursor_highlight(pindex, nil, nil)
+   sync_build_arrow(pindex)
    refresh_player_tile(pindex)
 end)
 
