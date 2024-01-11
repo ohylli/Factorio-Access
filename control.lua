@@ -1546,9 +1546,10 @@ function teleport_to_closest(pindex, pos, muted, ignore_enemies)
       if muted then 
          teleported = first_player.teleport(new_pos)
       else
-         teleported = first_player.teleport(new_pos, first_player.surface, true)
+         teleported = first_player.teleport(new_pos)
       end
       if teleported then
+         first_player.force.chart(first_player.surface, {{new_pos.x-15,new_pos.y-15},{new_pos.x+15,new_pos.y+15}})
          players[pindex].position = table.deepcopy(new_pos)
          if not muted then
             --Teleporting visuals at target
@@ -1579,11 +1580,6 @@ function teleport_to_closest(pindex, pos, muted, ignore_enemies)
    end
    return true
 end
-
-script.on_event(defines.events.script_raised_teleported, function(event)
-   game.play_sound{path = "teleported", volume_modifier = 0.2, position = event.entity.position}
-   game.play_sound{path = "utility/scenario_message", volume_modifier = 0.8, position = event.entity.position}
-end)
 
 function read_warnings_slot(pindex)
    local warnings = {}
