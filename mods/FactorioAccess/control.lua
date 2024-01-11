@@ -174,7 +174,7 @@ function str2pos(str)
       return {x = t[1], y = t[2]}
 end
 
-local function get_selected_ent(pindex)
+function get_selected_ent(pindex)
    local tile=players[pindex].tile
    local ent
    while true do
@@ -10164,7 +10164,7 @@ script.on_event("logistic-request-toggle-personal-logistics", function(event)
    if not check_for_player(pindex) then
       return
    end
-   logistics_request_toggle_personal_logistics(pindex)
+   logistics_request_toggle_handler(pindex)
 end)
 
 script.on_event(defines.events.on_gui_opened, function(event)
