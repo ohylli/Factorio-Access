@@ -1,3 +1,6 @@
+--Here: Functions relating to rails, trains, signals, other vehicles
+--Does not include event handlers
+
 dirs = defines.direction
 
 --Key information about rail units. 
