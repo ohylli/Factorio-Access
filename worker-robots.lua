@@ -103,9 +103,9 @@ function logistics_request_toggle_personal_logistics(pindex)
    local p = game.get_player(pindex)
    p.character_personal_logistic_requests_enabled = not p.character_personal_logistic_requests_enabled
    if p.character_personal_logistic_requests_enabled then
-      printout("Personal logistics requests enabled",pindex)
+      printout("Resumed personal logistics requests",pindex)
    else
-      printout("Personal logistics requests paused",pindex)
+      printout("Paused personal logistics requests",pindex)
    end   
 end
 
@@ -226,10 +226,49 @@ function logistics_info_key_handler(pindex)
          --Item in inv
          player_logistic_request_read(stack_inv,pindex,true)
       else
+         --Logistic chest in front
+         local ent = get_selected_ent(pindex)
+         if can_make_logistic_requests(ent) then
+            read_chest_requests_summary(ent,pindex)
+            return
+         elseif can_set_logistic_filter(ent) then
+            local filter = ent.storage_filter
+            local result = "Nothing"
+            if filter ~= nil then
+               result = filter.name
+            end
+            printout(result .. " set as logistic storage filter",pindex)
+            return
+         end
          --Empty hand and empty inventory slot
          local result = player_logistic_requests_summary_info(pindex)
          printout(result,pindex)
       end
+   elseif players[pindex].menu == "building" and can_make_logistic_requests(game.get_player(pindex).opened) then
+      --Chest logistics
+      local stack = game.get_player(pindex).cursor_stack
+      local stack_inv = game.get_player(pindex).opened.get_output_inventory()[players[pindex].building.index]
+      local chest = game.get_player(pindex).opened
+      --Check item in hand or item in inventory
+      if stack ~= nil and stack.valid_for_read and stack.valid then
+         --Item in hand
+         chest_logistic_request_read(stack, chest, pindex)
+      elseif stack_inv ~= nil and stack_inv.valid_for_read and stack_inv.valid then
+         --Item in output inv
+         chest_logistic_request_read(stack_inv, chest, pindex)
+      else
+         --Empty hand, empty inventory slot
+         read_chest_requests_summary(chest,pindex)
+      end
+   elseif players[pindex].menu == "building" and can_set_logistic_filter(game.get_player(pindex).opened) then
+      local filter = game.get_player(pindex).opened.storage_filter
+      local result = "Nothing"
+      if filter ~= nil then
+         result = filter.name
+      end
+      printout(result .. " set as logistic storage filter",pindex)
+   elseif players[pindex].menu == "building" then
+      printout("Logistic requests not supported for this building",pindex)
    else
       printout("No logistics summary available in this menu",pindex)
    end
@@ -251,10 +290,11 @@ function logistics_request_increment_min_handler(pindex)
          --Empty hand, empty inventory slot
          --(do nothing)
       end
-   elseif players[pindex].menu == "building" and game.get_player(pindex).opened.get_output_inventory() ~= nil and is_logistic_container(game.get_player(pindex).opened) then
+   elseif players[pindex].menu == "building" and can_make_logistic_requests(game.get_player(pindex).opened) then
       --Chest logistics
       local stack = game.get_player(pindex).cursor_stack
       local stack_inv = game.get_player(pindex).opened.get_output_inventory()[players[pindex].building.index]
+      local chest = game.get_player(pindex).opened
       --Check item in hand or item in inventory
       if stack ~= nil and stack.valid_for_read and stack.valid then
          --Item in hand
@@ -264,11 +304,29 @@ function logistics_request_increment_min_handler(pindex)
          chest_logistic_request_increment_min(stack_inv, chest, pindex)
       else
          --Empty hand, empty inventory slot
-         --(do nothing)
+         printout("No actions",pindex)
       end
+   elseif players[pindex].menu == "building" and can_set_logistic_filter(game.get_player(pindex).opened) then
+      --Chest logistics
+      local stack = game.get_player(pindex).cursor_stack
+      local stack_inv = game.get_player(pindex).opened.get_output_inventory()[players[pindex].building.index]
+      local chest = game.get_player(pindex).opened
+      --Check item in hand or item in inventory
+      if stack ~= nil and stack.valid_for_read and stack.valid then
+         --Item in hand
+         set_logistic_filter(stack, chest, pindex)
+      elseif stack_inv ~= nil and stack_inv.valid_for_read and stack_inv.valid then
+         --Item in output inv
+         set_logistic_filter(stack_inv, chest, pindex)
+      else
+         --Empty hand, empty inventory slot
+         set_logistic_filter(nil, chest, pindex)
+      end
+   elseif players[pindex].menu == "building" then
+      printout("Logistic requests not supported for this building",pindex)
    else
       --Other menu
-      --(do nothing)
+      printout("No actions",pindex)
    end
 end
 
@@ -288,10 +346,11 @@ function logistics_request_decrement_min_handler(pindex)
          --Empty hand, empty inventory slot
          --(do nothing)
       end
-   elseif players[pindex].menu == "building" and game.get_player(pindex).opened.get_output_inventory() ~= nil and is_logistic_container(game.get_player(pindex).opened) then
+   elseif players[pindex].menu == "building" and can_make_logistic_requests(game.get_player(pindex).opened) then
       --Chest logistics
       local stack = game.get_player(pindex).cursor_stack
       local stack_inv = game.get_player(pindex).opened.get_output_inventory()[players[pindex].building.index]
+      local chest = game.get_player(pindex).opened
       --Check item in hand or item in inventory
       if stack ~= nil and stack.valid_for_read and stack.valid then
          --Item in hand
@@ -301,11 +360,29 @@ function logistics_request_decrement_min_handler(pindex)
          chest_logistic_request_decrement_min(stack_inv, chest, pindex)
       else
          --Empty hand, empty inventory slot
-         --(do nothing)
+         printout("No actions",pindex)
       end
+   elseif players[pindex].menu == "building" and can_set_logistic_filter(game.get_player(pindex).opened) then
+      --Chest logistics
+      local stack = game.get_player(pindex).cursor_stack
+      local stack_inv = game.get_player(pindex).opened.get_output_inventory()[players[pindex].building.index]
+      local chest = game.get_player(pindex).opened
+      --Check item in hand or item in inventory
+      if stack ~= nil and stack.valid_for_read and stack.valid then
+         --Item in hand
+         set_logistic_filter(stack, chest, pindex)
+      elseif stack_inv ~= nil and stack_inv.valid_for_read and stack_inv.valid then
+         --Item in output inv
+         set_logistic_filter(stack, chest, pindex)
+      else
+         --Empty hand, empty inventory slot
+         set_logistic_filter(nil, chest, pindex)
+      end
+   elseif players[pindex].menu == "building" then
+      printout("Logistic requests not supported for this building",pindex)
    else
       --Other menu
-      --(do nothing)
+      printout("No actions",pindex)
    end
 end
 
@@ -353,6 +430,24 @@ function logistics_request_decrement_max_handler(pindex)
    end
 end
 
+function logistics_request_toggle_handler(pindex)
+   if not players[pindex].in_menu or players[pindex].menu == "inventory" then
+      logistics_request_toggle_personal_logistics(pindex)
+   else
+      local ent = game.get_player(pindex).opened
+      if can_make_logistic_requests(ent) then
+         ent.request_from_buffers = not ent.request_from_buffers
+      else
+         return 
+      end
+      if ent.request_from_buffers then
+         printout("Enabled requesting from buffers", pindex)
+      else
+         printout("Disabled requesting from buffers", pindex)
+      end
+   end
+end
+
 --Returns summary info string
 function player_logistic_requests_summary_info(pindex)
    --***maybe use logistics_networks_info(ent,pos_in)
@@ -382,7 +477,7 @@ function player_logistic_requests_summary_info(pindex)
    end
    
    --Count logistics requests
-   result = result .. count_active_personal_logistic_slots(pindex) .. " logistic requests set, "
+   result = result .. count_active_personal_logistic_slots(pindex) .. " personal logistic requests set, "
    return result
 end
 
@@ -761,7 +856,7 @@ function chest_logistic_request_read(item_stack,chest,pindex)
       local inv_count = chest.get_output_inventory().get_item_count(item_stack.name)
       inv_result = get_unit_or_stack_count(inv_count, item_stack.prototype.stack_size, false) 
       
-      printout(inv_result .. " supplied and " .. req_result .. "requested for " .. item_stack.name .. ", use the 'L' key and modifier keys to set requests.",pindex)
+      printout(req_result .. " requested and " .. inv_result .. " supplied for " .. item_stack.name .. ", use the 'L' key and modifier keys to set requests.",pindex)
       return
    end
 end
@@ -799,7 +894,7 @@ function chest_logistic_request_increment_min(item_stack,chest,pindex)
    else
       --Update existing request
       current_slot.count = increment_logistic_request_min_amount(item_stack.prototype.stack_size,current_slot.count)
-      chest.set_reqeust_slot(current_slot,correct_slot_id)
+      chest.set_request_slot(current_slot,correct_slot_id)
    end
    
    --Read new status
@@ -839,21 +934,70 @@ function chest_logistic_request_decrement_min(item_stack,chest, pindex)
    else
       --Update existing request
       current_slot.count = decrement_logistic_request_min_amount(item_stack.prototype.stack_size,current_slot.count)
-      chest.set_reqeust_slot(current_slot,correct_slot_id)
+      if current_slot.count == nil or current_slot.count == 0 then 
+         chest.clear_request_slot(correct_slot_id)
+      else
+         chest.set_request_slot(current_slot,correct_slot_id)
+      end
    end
    
    --Read new status
    chest_logistic_request_read(item_stack,chest,pindex,false)
 end
 
---checks if an ent has the logistic point properties of a logistic container
-function is_logistic_container(ent)
-   return ent.get_logistic_point(defines.logistic_member_index.logistic_container) ~= nil --****might need to check whether the "type" inside is "none"
+--Checks logistic roles
+function can_make_logistic_requests(ent)
+   if ent == nil or ent.valid == false then
+      return false
+   end
+   local point = ent.get_logistic_point(defines.logistic_member_index.logistic_container)
+   if point == nil or point.valid == false then 
+      return false
+   end
+   if point.mode == defines.logistic_mode.requester or point.mode == defines.logistic_mode.buffer then
+      return true
+   else
+      return false 
+   end
 end
+
+function can_set_logistic_filter(ent)
+   if ent == nil or ent.valid == false then
+      return false
+   end
+   local point = ent.get_logistic_point(defines.logistic_member_index.logistic_container)
+   if point == nil or point.valid == false then 
+      return false
+   end
+   if point.mode == defines.logistic_mode.storage then
+      return true
+   else
+      return false 
+   end
+end
+
+function set_logistic_filter(stack, ent, pindex)
+   if stack == nil or stack.valid_for_read == false then
+      ent.storage_filter = nil
+      printout("logistic storage filter cleared",pindex)
+      return
+   end
+   
+   if ent.storage_filter == stack.prototype then
+      ent.storage_filter = nil
+      printout("logistic storage filter cleared",pindex)
+   else
+      ent.storage_filter = stack.prototype
+      printout(stack.name .. " set as logistic storage filter ",pindex)
+   end
+end
+
+function read_chest_requests_summary(ent,pindex)--***todo improve
+   printout(ent.request_slot_count .. " chest logistic requests set", pindex)
+end
+
 --laterdo vehicle logistic requests...
 
 --laterdo add or remove stacks from player trash
 
 --laterdo full personal logistics menu where you can go line by line along requests and edit them, iterate through trash?
-
---laterdo storage chest filter setting
