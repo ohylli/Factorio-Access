@@ -1,7 +1,7 @@
 require('zoom')
 require('rails-and-trains')
 require('worker-robots')
-require('localising')
+local localising=require('localising')
 require('equipment-and-combat')
 
 groups = {}
@@ -3203,7 +3203,7 @@ function locate_hand_in_crafting_menu(pindex)
    p.opened = p
    
    --Get the name
-   local item_name = string.lower(get_substring_before_dash(get_translated_name_string(stack.prototype,pindex)))
+   local item_name = string.lower(get_substring_before_dash(localising.get(stack.prototype,pindex)))
    players[pindex].menu_search_term = item_name
    
    --Empty hand stack (clear cursor stack) after getting the name 
@@ -4613,7 +4613,9 @@ function initialize(player)
       player.force.rechart()
    end
    
-   faplayer.localisations = faplayer.localisations or nil 
+   faplayer.localisations = faplayer.localisations or {} 
+   faplayer.translation_id_lookup = faplayer.translation_id_lookup or {}
+   localising.request_all_the_translations(player.index)
    
 end
 
@@ -10043,12 +10045,9 @@ script.on_event("debug-test-key", function(event)
    local ent =  get_selected_ent(pindex)
    local stack = game.get_player(pindex).cursor_stack
    
-   --if players[pindex].localisations == nil then
-   --   localise_inventory_item_names(pindex)
-   --end
    
    --if stack and stack.valid_for_read then
-   --   game.print(" * " .. get_translated_name_string(stack.prototype,pindex) .. " * ")
+   --   game.print(" * " .. localising.get(stack.prototype,pindex) .. " * ")
    --end
    
    game.print(get_substring_before_space(get_substring_before_comma(ent.name)))
@@ -11285,7 +11284,7 @@ function inventory_find_index_of_next_name_match(inv,index,str,pindex)
    for i=index, #inv, 1 do
       local stack = inv[i]
       if stack ~= nil and (stack.object_name == "LuaTechnology" or stack.valid_for_read) then  
-         local name = string.lower(get_translated_name_string(stack.prototype,pindex))
+         local name = string.lower(localising.get(stack.prototype,pindex))
          local result = string.find(name, str)
          if result ~= nil then 
             if name ~= players[pindex].menu_search_last_name then
@@ -11304,7 +11303,7 @@ function inventory_find_index_of_next_name_match(inv,index,str,pindex)
    for i=1, index, 1 do
       local stack = inv[i]
       if stack ~= nil and (stack.object_name == "LuaTechnology" or stack.valid_for_read) then 
-         local name = string.lower(get_translated_name_string(stack.prototype,pindex))
+         local name = string.lower(localising.get(stack.prototype,pindex))
          local result = string.find(name, str)
          if result ~= nil then 
             if name ~= players[pindex].menu_search_last_name then
@@ -11336,7 +11335,7 @@ function inventory_find_index_of_last_name_match(inv,index,str,pindex)
    for i=index, 1, -1 do 
       local stack = inv[i]
       if stack ~= nil and stack.valid_for_read then  
-         local name = string.lower(get_translated_name_string(stack.prototype,pindex))
+         local name = string.lower(localising.get(stack.prototype,pindex))
          local result = string.find(name, str)
          if result ~= nil then 
             if name ~= players[pindex].menu_search_last_name then
@@ -11355,7 +11354,7 @@ function inventory_find_index_of_last_name_match(inv,index,str,pindex)
    for i=#inv, index, -1 do
       local stack = inv[i]
       if stack ~= nil and stack.valid_for_read then  
-         local name = string.lower(get_translated_name_string(stack.prototype,pindex))
+         local name = string.lower(localising.get(stack.prototype,pindex))
          local result = string.find(name, str)
          if result ~= nil then 
             if name ~= players[pindex].menu_search_last_name then
@@ -11394,7 +11393,7 @@ function crafting_find_index_of_next_name_match(str,pindex,last_i, last_j, recip
       for j = last_j, #recipes[i], 1 do 
          local recipe = recipes[i][j]
          if recipe and recipe.valid then
-            local name = string.lower(get_translated_name_string(recipe,pindex))
+            local name = string.lower(localising.get(recipe,pindex))
             local result = string.find(name, str)
             --game.print(i .. "," .. j .. " : " .. name .. " vs. " .. str,{volume_modifier=0})
             if result ~= nil then 
@@ -11419,7 +11418,7 @@ function crafting_find_index_of_next_name_match(str,pindex,last_i, last_j, recip
       for j = 1, #recipes[i], 1 do 
          local recipe = recipes[i][j]
          if recipe and recipe.valid then
-            local name = string.lower(get_translated_name_string(recipe,pindex))
+            local name = string.lower(localising.get(recipe,pindex))
             local result = string.find(name, str)
             --game.print(i .. "," .. j .. " : " .. name .. " vs. " .. str,{volume_modifier=0})
             if result ~= nil then 
@@ -11446,6 +11445,4 @@ function crafting_find_index_of_next_name_match(str,pindex,last_i, last_j, recip
 end
 
 
-script.on_event(defines.events.on_string_translated,function(event)
-   translated_string_handler(event)
-end)
+script.on_event(defines.events.on_string_translated,localising.handler)
