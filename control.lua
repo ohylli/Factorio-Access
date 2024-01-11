@@ -2908,6 +2908,8 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
          elseif players[pindex].building.ent ~= nil and players[pindex].building.ent.valid and players[pindex].building.ent.type == "lab" then
             --laterdo switch to {"item-name.".. ent.prototype.lab_inputs[players[pindex].building.index] }
             result = result .. " reserved for science pack type " .. players[pindex].building.index
+         elseif players[pindex].building.ent ~= nil and players[pindex].building.ent.valid and players[pindex].building.ent.type == "roboport" then
+            result = result .. " reserved for worker robots " 
          end
          printout(start_phrase .. result, pindex)
       end
@@ -4116,7 +4118,7 @@ function build_preview_checks_info(stack, pindex)
    
    --For roboports, like electric poles, list possible neighbors (anything within 100 distx or 100 disty will be a neighbor
    if ent_p.name == "roboport" then
-      local reach = 100
+      local reach = 48.5
       local top_left = {x = math.floor(pos.x - reach), y = math.floor(pos.y - reach)}
       local bottom_right = {x = math.ceil(pos.x + reach), y = math.ceil(pos.y + reach)}
       local port_dict = surf.find_entities_filtered{type = "roboport", area = {top_left, bottom_right}}
@@ -4137,7 +4139,7 @@ function build_preview_checks_info(stack, pindex)
       else
          --Notify if no connections and state nearest roboport-**
          result = result .. " not connected, "
-         local nearest_port, min_dist = find_nearest_roboport(ent.surface, ent.position, 1000)
+         local nearest_port, min_dist = find_nearest_roboport(p.surface, p.position, 1000)
          if min_dist == nil or min_dist >= 1000 then
             result = result .. " no other roboports poles within 1000 tiles, "
          else
@@ -4200,7 +4202,7 @@ function build_preview_checks_info(stack, pindex)
                left_top = {(position.x + math.ceil(ent_p.selection_box.left_top.x) - supply_dist), (position.y + math.ceil(ent_p.selection_box.left_top.y) - supply_dist)},
                right_bottom = {(position.x + math.floor(ent_p.selection_box.right_bottom.x) + supply_dist), (position.y + math.floor(ent_p.selection_box.right_bottom.y) + supply_dist)},
                orientation = players[pindex].building_direction/4
-           }--**laterdo "connected" check is a little buggy at the supply area edges, need to trim and tune, maybe re-enable direction based offset? The offset could be due to the pole width: 1 vs 2
+           }--**laterdo "connected" check is a little buggy at the supply area edges, need to trim and tune, maybe re-enable direction based offset? The offset could be due to the pole width: 1 vs 2, maybe just make it more conservative? 
             local T = {
                area = area,
                name = names
@@ -4232,6 +4234,9 @@ function build_preview_checks_info(stack, pindex)
          end
    end
    
+   if players[pindex].cursor and util.distance(players[pindex].cursor_pos , players[pindex].position) > p.reach_distance + 2 then
+      result = result .. ", cursor out of reach "
+   end
    return result
 end
 
