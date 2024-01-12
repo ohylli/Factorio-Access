@@ -67,7 +67,13 @@ function localising.handler(event)
    end
    player.translation_id_lookup[event.id] = nil
    if not successful then
-      game.print("translation request ".. event.id .. " failed",{volume_modifier=0})
+      if players[pindex].translation_issue_counter == nil then 
+         players[pindex].translation_issue_counter = 1
+      else
+         players[pindex].translation_issue_counter = players[pindex].translation_issue_counter + 1
+      end
+      print("translation request ".. event.id .. " failed, result: " .. event.result ..  ", total issues: " .. players[pindex].translation_issue_counter .. ", string was: ",{volume_modifier=0})
+      print(event.localised_string)
       return
    end
    local localised = players[pindex].localisations

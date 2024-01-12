@@ -5524,13 +5524,13 @@ function on_tick(event)
             aim_gun_at_nearest_enemy(pindex,enemy)
          end
       end
-   elseif tick % 300 == 14 then
+   elseif event.tick % 300 == 14 then
       for pindex, player in pairs(players) do
          --Fix running speed bug (toggle walk aldo fixes it)
          local p = game.get_player(pindex)
-         if players[pindex] and players[pindex].walk == 0 then
+         if p.character and p.character.valid and players[pindex] and players[pindex].walk == 0 then
             p.character_running_speed_modifier = -1 --Freeze in place for telestep
-         else
+         elseif p.character and p.character.valid then
             p.character_running_speed_modifier = 0  --Default speed for smooth walking
          end
       end
