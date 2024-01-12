@@ -2616,7 +2616,7 @@ function read_technology_slot(pindex, start_phrase)
    if next(techs) ~= nil and players[pindex].technology.index > 0 and players[pindex].technology.index <= #techs then
       local tech = techs[players[pindex].technology.index]
       if tech.valid then
-         printout(start_phrase .. tech.name, pindex)
+         printout(start_phrase .. localising.get(tech,pindex), pindex)
       else
          printout("Error loading technology", pindex)
       end
@@ -2739,7 +2739,7 @@ function read_belt_slot(pindex, start_phrase)
    end)
 
    if stack ~= nil and stack.valid_for_read and stack.valid then
-      result = result .. stack.name .. " x " .. stack.count
+      result = result .. localising.get(stack,pindex) .. " x " .. stack.count
       if players[pindex].belt.sector > 1 then
          result = result .. ", " .. stack.percent .. "%"
       end
@@ -2759,7 +2759,7 @@ function read_building_recipe(pindex, start_phrase)
    if players[pindex].building.recipe_selection then --inside the selector
       local recipe = players[pindex].building.recipe_list[players[pindex].building.category][players[pindex].building.index]
       if recipe and recipe.valid then
-         printout(start_phrase .. recipe.name .. " " .. recipe.category .. " " .. recipe.group.name .. " " .. recipe.subgroup.name, pindex)
+         printout(start_phrase .. localising.get(recipe,pindex) .. " " .. recipe.category .. " " .. recipe.group.name .. " " .. recipe.subgroup.name, pindex)
       else
          printout(start_phrase .. "blank",pindex)
       end
@@ -2798,7 +2798,7 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
       local amount = 0
       if fluid ~= nil then
          amount = fluid.amount
-         name = fluid.name
+         name = fluid.name--does not locallise..?**
       end --laterdo use fluidbox.get_locked_fluid(i) if needed.
       --Read the fluid ingredients & products
       --Note: We could have separated by input/output but right now the "type" is "input" for all fluids it seeems?
@@ -2874,7 +2874,7 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
       --Read the slot stack
       stack = building_sector.inventory[players[pindex].building.index]
       if stack and stack.valid_for_read and stack.valid then
-         printout(start_phrase .. stack.name .. " x " .. stack.count, pindex)
+         printout(start_phrase .. localising.get(stack,pindex) .. " x " .. stack.count, pindex)
       else
          --Read the "empty slot"
          local result = "Empty slot" 
@@ -2897,7 +2897,7 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
                result = result .. " reserved for "
                for i, v in pairs(recipe.products) do
                   if v.type == "item" and i == players[pindex].building.index then
-                     result = result .. v.name --.. " or "
+                     result = result .. v.name --does not localise?**
                   end
                end
                --result = result .. "nothing"
@@ -3005,9 +3005,9 @@ function read_crafting_slot(pindex, start_phrase)
    recipe = players[pindex].crafting.lua_recipes[players[pindex].crafting.category][players[pindex].crafting.index]
    if recipe.valid == true then
       if recipe.category == "smelting" then
-         printout(start_phrase .. recipe.name .. " can only be crafted by a furnace.", pindex)
+         printout(start_phrase .. localising.get(recipe,pindex) .. " can only be crafted by a furnace.", pindex)
       else
-         printout(start_phrase .. recipe.name .. " " .. recipe.category .. " " .. recipe.group.name .. " " .. game.get_player(pindex).get_craftable_count(recipe.name), pindex)
+         printout(start_phrase .. localising.get(recipe,pindex) .. " " .. recipe.category .. " " .. recipe.group.name .. " " .. game.get_player(pindex).get_craftable_count(recipe.name), pindex)
       end
       else
       printout("Blank",pindex)
@@ -3019,7 +3019,7 @@ function read_inventory_slot(pindex, start_phrase_in)
    local start_phrase = start_phrase_in or ""
    local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
    if stack and stack.valid_for_read and stack.valid == true then
-      printout(start_phrase .. stack.name .. " x " .. stack.count .. " " .. stack.prototype.subgroup.name , pindex)
+      printout(start_phrase .. localising.get(stack,pindex) .. " x " .. stack.count .. " " .. stack.prototype.subgroup.name , pindex)
    else
       printout(start_phrase .. "Empty Slot",pindex)
    end
@@ -3117,7 +3117,7 @@ function locate_hand_in_player_inventory(pindex)
    end
    --If found, read it from the inventory
    if not found then
-      printout("Error: " .. item_name .. " not found in player inventory",pindex)
+      printout("Error: " .. localising.get(stack,pindex) .. " not found in player inventory",pindex)
       return
    else
       players[pindex].inventory.index = i
@@ -3170,7 +3170,7 @@ function locate_hand_in_building_output_inventory(pindex)
    end
    --If found, read it from the inventory
    if not found then
-      printout(item_name .. " not found in building output",pindex)
+      printout(localising.get(stack,pindex) .. " not found in building output",pindex)
       return
    else
       players[pindex].building.index = i

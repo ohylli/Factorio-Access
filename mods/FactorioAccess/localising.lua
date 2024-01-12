@@ -10,7 +10,7 @@ function localising.get(object,pindex)--*** todo make this work
    result = result and result[object.name]
    --for debugging
    if not result then
-      game.print("translation fallback for " .. object.object_name .. " " .. object.name )
+      --game.print("translation fallback for " .. object.object_name .. " " .. object.name )
    end
    result = result or object.name
    return result
