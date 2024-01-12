@@ -30,26 +30,18 @@ function localising.request_all_the_translations(pindex)
       "equipment",
       "damage",
       "virtual_signal",
-      "equipment_grid",
       "recipe",
       "technology",
       "decorative",
-      "particle",
       "autoplace_control",
-      "noise_layer",
       "mod_setting",
       "custom_input",
       "ammo_category",
-      "item_subgroup",
       "item_group",
       "fuel_category",
-      "resource_category",
       "achievement",
-      "module_category",
       "equipment_category",
-      "trivial_smoke",
-      "shortcut",
-      "recipe_category"}) do
+      "shortcut"}) do
       for _, proto in pairs(game[cat.."_prototypes"]) do
          localising.request_localisation(proto,pindex)
       end
@@ -72,8 +64,7 @@ function localising.handler(event)
       else
          players[pindex].translation_issue_counter = players[pindex].translation_issue_counter + 1
       end
-      print("translation request ".. event.id .. " failed, result: " .. event.result ..  ", total issues: " .. players[pindex].translation_issue_counter .. ", string was: ",{volume_modifier=0})
-      print(event.localised_string)
+      print("translation request ".. event.id .. " failed, request: [" .. serpent.line(event.localised_string) ..  "] for:" .. translated_thing[1] .. ":" .. translated_thing[2] .. ", total issues: " .. players[pindex].translation_issue_counter)
       return
    end
    local localised = players[pindex].localisations
