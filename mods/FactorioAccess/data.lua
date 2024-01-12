@@ -548,6 +548,13 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "read-menu-name",
+    key_sequence = "SHIFT + E",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "quickbar-1",
     key_sequence = "1",
     consuming = "none"
@@ -951,8 +958,36 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "open-hand-from-inventory",
+    name = "locate-hand-in-inventory",
     key_sequence = "CONTROL + Q",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "locate-hand-in-crafting-menu",
+    key_sequence = "CONTROL + SHIFT + Q",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "menu-search-open",
+    key_sequence = "ENTER",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "menu-search-get-next",
+    key_sequence = "SHIFT + ENTER",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "menu-search-get-last",
+    key_sequence = "CONTROL + ENTER",
     consuming = "none"
 },
 
