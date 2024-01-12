@@ -5524,6 +5524,16 @@ function on_tick(event)
             aim_gun_at_nearest_enemy(pindex,enemy)
          end
       end
+   elseif tick % 300 == 14 then
+      for pindex, player in pairs(players) do
+         --Fix running speed bug (toggle walk aldo fixes it)
+         local p = game.get_player(pindex)
+         if players[pindex] and players[pindex].walk == 0 then
+            p.character_running_speed_modifier = -1 --Freeze in place for telestep
+         else
+            p.character_running_speed_modifier = 0  --Default speed for smooth walking
+         end
+      end
    end
 end
 
@@ -9362,10 +9372,10 @@ script.on_event("toggle-walk",function(event)
    players[pindex].move_queue = {}
    if players[pindex].walk == 0 then --Mode 1 (walk-by-step) is temporarily disabled until it comes back as an in game setting.
       players[pindex].walk = 2
-      players[pindex].character_running_speed_modifier = 0  -- default 100%
+      players[pindex].character_running_speed_modifier = 0  -- 100% + 0 = 100%
    else
       players[pindex].walk = 0
-      players[pindex].character_running_speed_modifier = -0.99 -- 100% - 100% = 0%--***test in multiplayer
+      players[pindex].character_running_speed_modifier = -1 -- 100% - 100% = 0%
    end
    --players[pindex].walk = (players[pindex].walk + 1) % 3
    printout(walk_type_speech[players[pindex].walk +1], pindex)
