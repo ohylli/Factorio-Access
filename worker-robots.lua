@@ -1287,7 +1287,7 @@ function logistic_network_chests_info(port)
             passive_provider_chest_count .. " passive provider chests, " .. 
             active_provider_chest_count .. " active provider chests, " .. 
             requester_chest_count .. " requester chests or buffer chests, "
-   game.print(result,{volume_modifier=0})--***
+   --game.print(result,{volume_modifier=0})--***
    return result
 end
 
