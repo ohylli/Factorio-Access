@@ -1,6 +1,9 @@
 require('zoom')
 require('rails-and-trains')
 require('worker-robots')
+local localising=require('localising')
+require('equipment-and-combat')
+
 groups = {}
 entity_types = {}
 production_types = {}
@@ -172,7 +175,7 @@ function str2pos(str)
       return {x = t[1], y = t[2]}
 end
 
-local function get_selected_ent(pindex)
+function get_selected_ent(pindex)
    local tile=players[pindex].tile
    local ent
    while true do
@@ -482,6 +485,8 @@ function extra_info_for_scan_list(ent,pindex,info_comes_after_indexing)
       result = result .. " " .. ent.backer_name
    elseif ent.name == "forest" then
       result = result .. classify_forest(ent.position,pindex,true)
+   elseif ent.name == "roboport" then
+      result = result .. " of network " .. get_network_name(ent)
    end
    
    return result
@@ -1134,8 +1139,7 @@ function ent_info(pindex, ent, description)
    elseif ent.name == "roboport" then
       local cell = ent.logistic_cell
       local network = ent.logistic_cell.logistic_network
-      result = result .. ", charging " .. (cell.charging_robot_count + cell.to_charge_robot_count) .. " robots, in a network with " .. 
-               (network.all_construction_robots + network.all_logistic_robots) .. " robots"
+      result = result .. " of network " .. get_network_name(ent) .. "," .. roboport_contents_info(ent)
    end
    --Give drop position (like for inserters)
    if ent.drop_position ~= nil then
@@ -1536,8 +1540,14 @@ function teleport_to_closest(pindex, pos, muted, ignore_enemies)
          game.get_player(pindex).play_sound{path = "teleported", volume_modifier = 0.2, position = old_pos}
          game.get_player(pindex).play_sound{path = "utility/scenario_message", volume_modifier = 0.8, position = old_pos}
       end
-      local teleported = first_player.teleport(new_pos)
+      local teleported = false 
+      if muted then 
+         teleported = first_player.teleport(new_pos)
+      else
+         teleported = first_player.teleport(new_pos)
+      end
       if teleported then
+         first_player.force.chart(first_player.surface, {{new_pos.x-15,new_pos.y-15},{new_pos.x+15,new_pos.y+15}})
          players[pindex].position = table.deepcopy(new_pos)
          if not muted then
             --Teleporting visuals at target
@@ -2307,6 +2317,15 @@ function get_substring_before_comma(str)
    end
 end
 
+function get_substring_before_dash(str)
+   local first, final = string.find(str,"-")
+   if first == nil or first == 1 then
+      return str
+   else
+      return string.sub(str,1,first-1)
+   end
+end
+
 function get_ent_area_from_name(ent_name,pindex)
    local ents = game.get_player(pindex).surface.find_entities_filtered{name = ent_name, limit = 1}
    if #ents == 0 then
@@ -2420,7 +2439,7 @@ function get_scan_summary(scan_left_top, scan_right_bottom, pindex)
          local area = 0
          --this confirmation is necessary because all we have is the ent name, and some distant resources show up on the list.
          if confirm_ent_is_in_area( get_substring_before_space(get_substring_before_comma(ent.name)) , scan_left_top , scan_right_bottom, pindex) then
-            area = get_ent_area_from_name(get_substring_before_comma(ent.name),pindex)
+            area = get_ent_area_from_name(get_substring_before_space(get_substring_before_comma(ent.name)),pindex)
             if area == -1 then
                area = 1
                game.get_player(pindex).print(get_substring_before_space(get_substring_before_comma(ent.name)) .. " could not be found for the area check ",{volume_modifier = 0})--***bug: unable to get area from name
@@ -2597,7 +2616,7 @@ function read_technology_slot(pindex, start_phrase)
    if next(techs) ~= nil and players[pindex].technology.index > 0 and players[pindex].technology.index <= #techs then
       local tech = techs[players[pindex].technology.index]
       if tech.valid then
-         printout(start_phrase .. tech.name, pindex)
+         printout(start_phrase .. localising.get(tech,pindex), pindex)
       else
          printout("Error loading technology", pindex)
       end
@@ -2628,7 +2647,7 @@ function populate_categories(pindex)
             table.insert(players[pindex].nearby.resources, ent)      
          elseif ent.ents[1].type == "resource" or ent.ents[1].type == "tree" or ent.ents[1].name == "sand-rock-big" or ent.ents[1].name == "rock-big" or ent.ents[1].name == "rock-huge" then --Note: There is no rock type, so they are specified by name.
             table.insert(players[pindex].nearby.resources, ent)
-         elseif ent.ents[1].type == "container" then
+         elseif ent.ents[1].type == "container" or ent.ents[1].type == "logistic-container" then
             table.insert(players[pindex].nearby.containers, ent)
          elseif ent.ents[1].prototype.is_building and ent.ents[1].type ~= "unit-spawner" and ent.ents[1].type ~= "turret" and ent.ents[1].name ~= "train-stop" then
             table.insert(players[pindex].nearby.buildings, ent)
@@ -2720,7 +2739,7 @@ function read_belt_slot(pindex, start_phrase)
    end)
 
    if stack ~= nil and stack.valid_for_read and stack.valid then
-      result = result .. stack.name .. " x " .. stack.count
+      result = result .. localising.get(stack,pindex) .. " x " .. stack.count
       if players[pindex].belt.sector > 1 then
          result = result .. ", " .. stack.percent .. "%"
       end
@@ -2740,7 +2759,7 @@ function read_building_recipe(pindex, start_phrase)
    if players[pindex].building.recipe_selection then --inside the selector
       local recipe = players[pindex].building.recipe_list[players[pindex].building.category][players[pindex].building.index]
       if recipe and recipe.valid then
-         printout(start_phrase .. recipe.name .. " " .. recipe.category .. " " .. recipe.group.name .. " " .. recipe.subgroup.name, pindex)
+         printout(start_phrase .. localising.get(recipe,pindex) .. " " .. recipe.category .. " " .. recipe.group.name .. " " .. recipe.subgroup.name, pindex)
       else
          printout(start_phrase .. "blank",pindex)
       end
@@ -2779,7 +2798,7 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
       local amount = 0
       if fluid ~= nil then
          amount = fluid.amount
-         name = fluid.name
+         name = fluid.name--does not locallise..?**
       end --laterdo use fluidbox.get_locked_fluid(i) if needed.
       --Read the fluid ingredients & products
       --Note: We could have separated by input/output but right now the "type" is "input" for all fluids it seeems?
@@ -2855,7 +2874,7 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
       --Read the slot stack
       stack = building_sector.inventory[players[pindex].building.index]
       if stack and stack.valid_for_read and stack.valid then
-         printout(start_phrase .. stack.name .. " x " .. stack.count, pindex)
+         printout(start_phrase .. localising.get(stack,pindex) .. " x " .. stack.count, pindex)
       else
          --Read the "empty slot"
          local result = "Empty slot" 
@@ -2878,7 +2897,7 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
                result = result .. " reserved for "
                for i, v in pairs(recipe.products) do
                   if v.type == "item" and i == players[pindex].building.index then
-                     result = result .. v.name --.. " or "
+                     result = result .. v.name --does not localise?**
                   end
                end
                --result = result .. "nothing"
@@ -2886,6 +2905,8 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
          elseif players[pindex].building.ent ~= nil and players[pindex].building.ent.valid and players[pindex].building.ent.type == "lab" then
             --laterdo switch to {"item-name.".. ent.prototype.lab_inputs[players[pindex].building.index] }
             result = result .. " reserved for science pack type " .. players[pindex].building.index
+         elseif players[pindex].building.ent ~= nil and players[pindex].building.ent.valid and players[pindex].building.ent.type == "roboport" then
+            result = result .. " reserved for worker robots " 
          end
          printout(start_phrase .. result, pindex)
       end
@@ -2984,9 +3005,9 @@ function read_crafting_slot(pindex, start_phrase)
    recipe = players[pindex].crafting.lua_recipes[players[pindex].crafting.category][players[pindex].crafting.index]
    if recipe.valid == true then
       if recipe.category == "smelting" then
-         printout(start_phrase .. recipe.name .. " can only be crafted by a furnace.", pindex)
+         printout(start_phrase .. localising.get(recipe,pindex) .. " can only be crafted by a furnace.", pindex)
       else
-         printout(start_phrase .. recipe.name .. " " .. recipe.category .. " " .. recipe.group.name .. " " .. game.get_player(pindex).get_craftable_count(recipe.name), pindex)
+         printout(start_phrase .. localising.get(recipe,pindex) .. " " .. recipe.category .. " " .. recipe.group.name .. " " .. game.get_player(pindex).get_craftable_count(recipe.name), pindex)
       end
       else
       printout("Blank",pindex)
@@ -2998,7 +3019,7 @@ function read_inventory_slot(pindex, start_phrase_in)
    local start_phrase = start_phrase_in or ""
    local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
    if stack and stack.valid_for_read and stack.valid == true then
-      printout(start_phrase .. stack.name .. " x " .. stack.count .. " " .. stack.prototype.subgroup.name , pindex)
+      printout(start_phrase .. localising.get(stack,pindex) .. " x " .. stack.count .. " " .. stack.prototype.subgroup.name , pindex)
    else
       printout(start_phrase .. "Empty Slot",pindex)
    end
@@ -3048,8 +3069,9 @@ function read_hand(pindex)
    end
 end
 
---Stores the hand item in the player inventory and reads it from the first found slot. For now it requires having the inv already open.
-function locate_hand_in_inventory(pindex)
+--Stores the hand item in the player inventory and reads it from the first found player inventory slot, CONTROL + Q
+--NOTE: laterdo can use player.hand_location in the future if it has advantages
+function locate_hand_in_player_inventory(pindex)
    local p = game.get_player(pindex)
    local inv = p.get_main_inventory() 
    local stack = p.cursor_stack
@@ -3065,9 +3087,10 @@ function locate_hand_in_inventory(pindex)
       return
    end
    if not players[pindex].in_menu then
-      --laterdo** figure out how to open inventory with API and do that here
-      printout("You need to open the inventory to locate this item from there.",pindex)
-      return
+      --Open the inventory if nothing is open
+      players[pindex].in_menu = true
+      players[pindex].menu = "inventory"
+      p.opened = p
    end
    --Save the hand stack item name
    local item_name = stack.name
@@ -3082,30 +3105,121 @@ function locate_hand_in_inventory(pindex)
       printout(message,pindex)
       return
    end
-   
-   -- if not players[pindex].in_menu then
-      -- --Open inventory menu 
-      -- open_player_inventory(game.tick,pindex)
-   -- end
-   
+    
    --Iterate the inventory until you find the matching item name's index
    local found = false
    local i = 0
-   while not found and i <= #inv do
+   while not found and i < #inv do
       i = i + 1
-      if inv[i] and inv[i].valid and inv[i].name == item_name then
+      if inv[i] and inv[i].valid_for_read and inv[i].name == item_name then
          found = true
       end
    end
    --If found, read it from the inventory
    if not found then
-      printout("Error: " .. item_name .. " not found",pindex)
+      printout("Error: " .. localising.get(stack,pindex) .. " not found in player inventory",pindex)
       return
    else
       players[pindex].inventory.index = i
       read_inventory_slot(pindex, "inventory ")
    end
    
+end
+
+--Stores the hand item in the player inventory and reads it from the first found building output slot, CONTROL + Q
+function locate_hand_in_building_output_inventory(pindex)
+   local p = game.get_player(pindex)
+   local inv = nil
+   local stack = p.cursor_stack
+   local pb = players[pindex].building 
+   
+   --Check if stack empty and menu supported
+   if stack == nil or not stack.valid_for_read or not stack.valid then
+      --Hand is empty
+      return
+   end
+   if players[pindex].in_menu and players[pindex].menu == "building" and pb.sectors and pb.sectors[pb.sector] and pb.sectors[pb.sector].name == "Output" then
+      inv = p.opened.get_output_inventory()
+   else
+      --Unsupported menu type
+      return
+   end
+
+   --Save the hand stack item name
+   local item_name = stack.name
+   --Empty hand stack (clear cursor stack)
+   players[pindex].skip_read_hand = true
+   local successful = p.clear_cursor()
+   if not successful then
+      local message = "Unable to empty hand"
+      if inv.count_empty_stacks() == 0 then
+         message = message .. ", inventory full"
+      end
+      printout(message,pindex)
+      return
+   end
+
+   --Iterate the inventory until you find the matching item name's index
+   local found = false
+   local i = 0
+   while not found and i < #inv do
+      i = i + 1
+      if inv[i] and inv[i].valid_for_read and inv[i].name == item_name then
+         found = true
+      end
+   end
+   --If found, read it from the inventory
+   if not found then
+      printout(localising.get(stack,pindex) .. " not found in building output",pindex)
+      return
+   else
+      players[pindex].building.index = i
+      read_building_slot(pindex, false)
+   end
+   
+end
+
+--Locate the item in hand from the crafting menu. Closes some other menus, does not run in some other menus, uses the new search fn.
+function locate_hand_in_crafting_menu(pindex)
+   local p = game.get_player(pindex)
+   local inv = p.get_main_inventory() 
+   local stack = p.cursor_stack
+   
+   --Check if stack empty and menu supported
+   if stack == nil or not stack.valid_for_read or not stack.valid then
+      --Hand is empty
+      return
+   end
+   if players[pindex].in_menu and players[pindex].menu ~= "inventory" and players[pindex].menu ~= "building" and players[pindex].menu ~= "crafting" then
+      --Unsupported menu types...
+      printout("Another menu is open.",pindex)
+      return
+   end
+   
+   --Open the crafting Menu
+   close_menu_resets(pindex)
+   players[pindex].in_menu = true
+   players[pindex].menu = "crafting"
+   p.opened = p
+   
+   --Get the name
+   local item_name = string.lower(get_substring_before_dash(localising.get(stack.prototype,pindex)))
+   players[pindex].menu_search_term = item_name
+   
+   --Empty hand stack (clear cursor stack) after getting the name 
+   players[pindex].skip_read_hand = true
+   local successful = p.clear_cursor()
+   if not successful then
+      local message = "Unable to empty hand"
+      if inv.count_empty_stacks() == 0 then
+         message = message .. ", inventory full"
+      end
+      printout(message,pindex)
+      return
+   end
+
+   --Run the search
+   menu_search_get_next(pindex,item_name,nil)
 end
 
 function read_quick_bar(index,pindex)
@@ -3573,9 +3687,11 @@ function toggle_cursor(pindex)
    end
 end
 
-function teleport_to_cursor(pindex, muted, ignore_enemies)
+function teleport_to_cursor(pindex, muted, ignore_enemies, return_cursor)
    local result = teleport_to_closest(pindex, players[pindex].cursor_pos, muted, ignore_enemies)
-   players[pindex].cursor_pos = players[pindex].position
+   if return_cursor then
+      players[pindex].cursor_pos = players[pindex].position
+   end
    return result
 end
 
@@ -3999,7 +4115,7 @@ function build_preview_checks_info(stack, pindex)
    
    --For roboports, like electric poles, list possible neighbors (anything within 100 distx or 100 disty will be a neighbor
    if ent_p.name == "roboport" then
-      local reach = 100
+      local reach = 48.5
       local top_left = {x = math.floor(pos.x - reach), y = math.floor(pos.y - reach)}
       local bottom_right = {x = math.ceil(pos.x + reach), y = math.ceil(pos.y + reach)}
       local port_dict = surf.find_entities_filtered{type = "roboport", area = {top_left, bottom_right}}
@@ -4018,9 +4134,9 @@ function build_preview_checks_info(stack, pindex)
             end
          end
       else
-         --Notify if no connections and state nearest roboport-**
+         --Notify if no connections and state nearest roboport
          result = result .. " not connected, "
-         local nearest_port, min_dist = find_nearest_roboport(ent.surface, ent.position, 1000)
+         local nearest_port, min_dist = find_nearest_roboport(p.surface, p.position, 1000)
          if min_dist == nil or min_dist >= 1000 then
             result = result .. " no other roboports poles within 1000 tiles, "
          else
@@ -4083,7 +4199,7 @@ function build_preview_checks_info(stack, pindex)
                left_top = {(position.x + math.ceil(ent_p.selection_box.left_top.x) - supply_dist), (position.y + math.ceil(ent_p.selection_box.left_top.y) - supply_dist)},
                right_bottom = {(position.x + math.floor(ent_p.selection_box.right_bottom.x) + supply_dist), (position.y + math.floor(ent_p.selection_box.right_bottom.y) + supply_dist)},
                orientation = players[pindex].building_direction/4
-           }--**laterdo "connected" check is a little buggy at the supply area edges, need to trim and tune, maybe re-enable direction based offset? The offset could be due to the pole width: 1 vs 2
+           }--**laterdo "connected" check is a little buggy at the supply area edges, need to trim and tune, maybe re-enable direction based offset? The offset could be due to the pole width: 1 vs 2, maybe just make it more conservative? 
             local T = {
                area = area,
                name = names
@@ -4115,6 +4231,9 @@ function build_preview_checks_info(stack, pindex)
          end
    end
    
+   if players[pindex].cursor and util.distance(players[pindex].cursor_pos , players[pindex].position) > p.reach_distance + 2 then
+      result = result .. ", cursor out of reach "
+   end
    return result
 end
 
@@ -4300,6 +4419,12 @@ function initialize(player)
    faplayer.in_menu = faplayer.in_menu or false
    faplayer.in_item_selector = faplayer.in_item_selector or false
    faplayer.menu = faplayer.menu or "none"
+   faplayer.entering_search_term = faplayer.entering_search_term or false
+   faplayer.menu_search_index = faplayer.menu_search_index or nil
+   faplayer.menu_search_index_2 = faplayer.menu_search_index_2 or nil
+   faplayer.menu_search_term = faplayer.menu_search_term or nil
+   faplayer.menu_search_frame = faplayer.menu_search_frame or nil
+   faplayer.menu_search_last_name = faplayer.menu_search_last_name or nil
    faplayer.cursor = faplayer.cursor or false
    faplayer.cursor_size = faplayer.cursor_size or 0 
    faplayer.cursor_ent_highlight_box = faplayer.cursor_ent_highlight_box or nil
@@ -4332,6 +4457,7 @@ function initialize(player)
    faplayer.mapped = fa_force.mapped
    faplayer.destroyed = faplayer.destroyed or {}
    faplayer.last_menu_toggle_tick = faplayer.last_menu_toggle_tick or 1
+   faplayer.last_menu_search_tick = faplayer.last_menu_search_tick or 1
    faplayer.last_click_tick = faplayer.last_click_tick or 1
    faplayer.last_damage_alert_tick = faplayer.last_damage_alert_tick or 1
    faplayer.last_damage_alert_pos = faplayer.last_damage_alert_pos or nil
@@ -4476,11 +4602,21 @@ function initialize(player)
    }
    
    faplayer.valid_train_stop_list = faplayer.valid_train_stop_list or {}
+   
+   faplayer.roboport_menu = faplayer.roboport_menu or {
+      port = nil,
+      index = 0,
+      renaming = false
+   }
 
    if table_size(faplayer.mapped) == 0 then
       player.force.rechart()
    end
-
+   
+   faplayer.localisations = faplayer.localisations or {} 
+   faplayer.translation_id_lookup = faplayer.translation_id_lookup or {}
+   localising.request_all_the_translations(player.index)
+   
 end
 
 
@@ -4556,6 +4692,7 @@ function menu_cursor_move(direction,pindex)
    end
 end 
 
+--menu_up
 function menu_cursor_up(pindex)
    if players[pindex].item_selection then
       if players[pindex].item_selector.group == 0 then
@@ -4752,9 +4889,13 @@ function menu_cursor_up(pindex)
       rail_builder_up(pindex)
    elseif players[pindex].menu == "train_stop_menu" then
       train_stop_menu_up(pindex)
+   elseif players[pindex].menu == "roboport_menu" then
+      roboport_menu_up(pindex)
    end
 end
 
+
+--menu_down
 function menu_cursor_down(pindex)
    if players[pindex].item_selection then
       if players[pindex].item_selector.group == 0 then
@@ -4967,6 +5108,8 @@ function menu_cursor_down(pindex)
       rail_builder_down(pindex)
    elseif players[pindex].menu == "train_stop_menu" then
       train_stop_menu_down(pindex)
+   elseif players[pindex].menu == "roboport_menu" then
+      roboport_menu_down(pindex)
    end
 end
 
@@ -5042,7 +5185,7 @@ function menu_cursor_left(pindex)
          read_inventory_slot(pindex)
       else
          if players[pindex].building.sector == #players[pindex].building.sectors + 1 then
-            --Last building sector...
+            --Recipe selection
             if players[pindex].building.recipe_selection then
                game.get_player(pindex).play_sound{path = "Inventory-Move"}
                players[pindex].building.index = players[pindex].building.index - 1
@@ -5176,7 +5319,7 @@ function menu_cursor_right(pindex)
          read_inventory_slot(pindex)
       else
          if players[pindex].building.sector == #players[pindex].building.sectors + 1 then
-            --Last building sector...
+            --Recipe selection
             if players[pindex].building.recipe_selection then
                game.get_player(pindex).play_sound{path = "Inventory-Move"}
 
@@ -5381,6 +5524,16 @@ function on_tick(event)
             aim_gun_at_nearest_enemy(pindex,enemy)
          end
       end
+   elseif event.tick % 300 == 14 then
+      for pindex, player in pairs(players) do
+         --Fix running speed bug (toggle walk aldo fixes it)
+         local p = game.get_player(pindex)
+         if p.character and p.character.valid and players[pindex] and players[pindex].walk == 0 then
+            p.character_running_speed_modifier = -1 --Freeze in place for telestep
+         elseif p.character and p.character.valid then
+            p.character_running_speed_modifier = 0  --Default speed for smooth walking
+         end
+      end
    end
 end
 
@@ -5418,8 +5571,11 @@ function update_menu_visuals()
          elseif player.menu == "train_stop_menu" then
             update_overhead_sprite("item.train-stop",2,1.25,pindex)
             update_custom_GUI_sprite("item.train-stop", 3, pindex)
+         elseif player.menu == "roboport_menu" then
+            update_overhead_sprite("item.roboport",2,1.25,pindex)
+            update_custom_GUI_sprite("item.roboport", 3, pindex)
          elseif player.menu == "belt" then
-            update_overhead_sprite("item.transport-belt",1,1,pindex)
+            update_overhead_sprite("item.transport-belt",2,1.25,pindex)
             update_custom_GUI_sprite(nil,1,pindex)
          elseif player.menu == "building" then
             if game.get_player(pindex).opened == nil then
@@ -5612,7 +5768,6 @@ function move(direction,pindex)
    end
 end
 
-
 function move_key(direction,event, force_single_tile)
    local pindex = event.player_index
    if not check_for_player(pindex) or players[pindex].menu == "prompt" then
@@ -5762,7 +5917,7 @@ script.on_event("teleport-to-cursor", function(event)
    if not check_for_player(pindex) then
       return
    end
-   teleport_to_cursor(pindex, false, false)
+   teleport_to_cursor(pindex, false, false, false)
 end)
 
 script.on_event("teleport-to-cursor-forced", function(event)
@@ -5770,7 +5925,7 @@ script.on_event("teleport-to-cursor-forced", function(event)
    if not check_for_player(pindex) then
       return
    end
-   teleport_to_cursor(pindex, false, true)
+   teleport_to_cursor(pindex, false, true, false)
 end)
 
 script.on_event("teleport-to-alert-forced", function(event)
@@ -5784,9 +5939,12 @@ script.on_event("teleport-to-alert-forced", function(event)
       return
    end
    players[pindex].cursor_pos = alert_pos
-   teleport_to_cursor(pindex, false, true)
-   players[pindex].cursor_pos = alert_pos--laterdo** bug fixed here about repeated teleports with the same vector
-   players[pindex].position = alert_pos
+   teleport_to_cursor(pindex, false, true, true)
+   players[pindex].cursor_pos = game.get_player(pindex).position
+   players[pindex].position = game.get_player(pindex).position
+   players[pindex].last_damage_alert_pos = game.get_player(pindex).position
+   cursor_highlight(pindex, nil, nil)
+   sync_build_arrow(pindex)
    refresh_player_tile(pindex)
 end)
 
@@ -6399,10 +6557,11 @@ function read_item_pickup_state(pindex)
    rendering.draw_circle{color = {0.3, 1, 0.3},radius = 1.25,width = 1,target = p.position, surface = p.surface,time_to_live = 60, draw_on_ground = true}
    --Check if there is a belt within n tiles
    if #nearby_belts > 0 then
-      result = "Picking up items from nearby belts"
+      result = "Picking up "
       --Check contents being picked up
       local ent = nearby_belts[1]
       if ent == nil or not ent.valid then
+         result = result .. " from nearby belts"
          printout(result,pindex)
          return 
       end
@@ -6424,7 +6583,7 @@ function read_item_pickup_state(pindex)
          return k1.count > k2.count
       end)
       if #contents > 0 then
-         result = result .. " including " .. contents[1].name
+         result = result .. contents[1].name
          if #contents > 1 then
             result = result .. ", and " .. contents[2].name
             if #contents > 2 then
@@ -6432,12 +6591,14 @@ function read_item_pickup_state(pindex)
             end
          end
       end
+      result = result .. " from nearby belts"
    --Check if there are ground items within n tiles   
    elseif #nearby_ground_items > 0 then
-      result = "Picking up ground items "
+      result = "Picking up "
       if nearby_ground_items[1] and nearby_ground_items[1].valid then
-         result = result .. " including " .. nearby_ground_items[1].stack.name 
+         result = result .. nearby_ground_items[1].stack.name 
       end
+      result = result .. " from ground, and possibly more items "
    else
       result = "No items within range to pick up"
    end
@@ -6524,7 +6685,7 @@ function open_player_inventory(tick,pindex)
    end
 end
 
-script.on_event("close-menu", function(event)--close_menu
+script.on_event("close-menu", function(event)--close_menu, menu closed
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -6534,47 +6695,80 @@ script.on_event("close-menu", function(event)--close_menu
       return
    elseif players[pindex].in_menu and players[pindex].menu ~= "prompt" then
       printout("Menu closed.", pindex)
-      players[pindex].in_menu = false
-      players[pindex].last_menu_toggle_tick = event.tick 
-      game.get_player(pindex).game_view_settings.update_entity_selection = true
-
       if players[pindex].menu == "inventory" or players[pindex].menu == "crafting" or players[pindex].menu == "technology" or players[pindex].menu == "crafting_queue" or players[pindex].menu == "warnings" then--**laterdo open close inv sounds in other menus?
          game.get_player(pindex).play_sound{path="Close-Inventory-Sound"}
       end
-      if players[pindex].menu == "travel" then
-         game.get_player(pindex).gui.screen["travel"].destroy()
-         players[pindex].cursor_pos = center_of_tile(players[pindex].position)
-         cursor_highlight(pindex, nil, "train-visualization")
-      end
-      if players[pindex].menu == "structure-travel" then
-         game.get_player(pindex).gui.screen["structure-travel"].destroy()
-      end
-      if players[pindex].menu == "rail_builer" then
-         rail_builder_close(pindex, false)
-      elseif players[pindex].menu == "train_menu" then
-         train_menu_close(pindex, false)
-      elseif players[pindex].menu == "train_stop_menu" then
-         train_stop_menu_close(pindex, false)
-      end
-      
-      players[pindex].menu = "none"
-      players[pindex].in_menu = false
-      players[pindex].item_selection = false
-      players[pindex].item_cache = {}
-      players[pindex].item_selector = {index = 0, group = 0, subgroup = 0}
-      players[pindex].building = {
-         index = 0,
-         ent = nil,
-         sectors = nil,
-         sector = 0,
-         recipe_selection = false,
-         item_selection = false,
-         category = 0,
-         recipe = nil,
-         recipe_list = nil
-      }
-      
+      players[pindex].last_menu_toggle_tick = event.tick 
+      close_menu_resets(pindex)
    end
+end)
+
+function close_menu_resets(pindex)
+   game.get_player(pindex).game_view_settings.update_entity_selection = true
+   if players[pindex].menu == "travel" then
+      game.get_player(pindex).gui.screen["travel"].destroy()
+      players[pindex].cursor_pos = center_of_tile(players[pindex].position)
+      cursor_highlight(pindex, nil, "train-visualization")
+   elseif players[pindex].menu == "structure-travel" then
+      game.get_player(pindex).gui.screen["structure-travel"].destroy()
+   elseif players[pindex].menu == "rail_builer" then
+      rail_builder_close(pindex, false)
+   elseif players[pindex].menu == "train_menu" then
+      train_menu_close(pindex, false)
+   elseif players[pindex].menu == "train_stop_menu" then
+      train_stop_menu_close(pindex, false)
+   elseif players[pindex].menu == "roboport_menu" then
+      roboport_menu_close(pindex)
+   end
+   
+   players[pindex].in_menu = false
+   players[pindex].menu = "none"
+   players[pindex].entering_search_term = false
+   players[pindex].menu_search_index = nil
+   players[pindex].menu_search_index_2 = nil
+   players[pindex].item_selection = false
+   players[pindex].item_cache = {}
+   players[pindex].item_selector = {index = 0, group = 0, subgroup = 0}
+   players[pindex].building = {
+      index = 0,
+      ent = nil,
+      sectors = nil,
+      sector = 0,
+      recipe_selection = false,
+      item_selection = false,
+      category = 0,
+      recipe = nil,
+      recipe_list = nil
+   }
+end
+
+script.on_event("read-menu-name", function(event)--read_menu_name
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local menu_name = "menu "
+   if players[pindex].in_menu == false then
+      menu_name = "no menu"
+   elseif players[pindex].menu ~= nil and players[pindex].menu ~= "" then
+      menu_name = players[pindex].menu
+      if players[pindex].menu == "building" then
+         --Name the building
+         local pb = players[pindex].building 
+         menu_name = menu_name .. " " .. pb.ent.name
+         --Name the sector
+         if pb.sectors and pb.sectors[pb.sector] and pb.sectors[pb.sector].name ~= nil then
+            menu_name = menu_name .. ", " .. pb.sectors[pb.sector].name
+         elseif players[pindex].building.recipe_selection == true then
+            menu_name = menu_name .. ", recipe selection"
+         else
+            menu_name = menu_name .. ", other section"
+         end
+      end
+   else
+      menu_name = "unknown menu"
+   end
+   printout(menu_name,pindex)
 end)
 
 script.on_event("quickbar-1", function(event)
@@ -6942,6 +7136,7 @@ script.on_event("reverse-switch-menu-or-gun", function(event)
       printout(result,pindex)
    end
 end)
+
 function swap_weapon_forward(pindex, write_to_character)
    local p = game.get_player(pindex)
    local gun_index = p.character.selected_gun_index
@@ -7019,15 +7214,15 @@ end
 
 function play_mining_sound(pindex)
    local player= game.players[pindex]
-   game.print("1",{volume_modifier=0})--
+   --game.print("1",{volume_modifier=0})--**
    if player and player.mining_state.mining and player.selected and player.selected.valid then 
-      game.print("2",{volume_modifier=0})--
+      --game.print("2",{volume_modifier=0})--
       if player.selected.prototype.is_building then
          player.play_sound{path = "Mine-Building"}
-         game.print("3A",{volume_modifier=0})--
+         --game.print("3A",{volume_modifier=0})--
       else
          player.play_sound{path = "Mine-Building"}--Mine other things, eg. character corpses, laterdo new sound
-         game.print("3B",{volume_modifier=0})--
+         --game.print("3B",{volume_modifier=0})--
       end
       schedule(25, "play_mining_sound", pindex)
    end
@@ -7239,7 +7434,7 @@ function clear_obstacles_in_circle(position, radius, pindex)
    return (trees_cleared + rocks_cleared + remnants_cleared + ground_items_cleared), comment
 end
 
---Left click actions in menus
+--Left click actions in menus (click_menu)
 script.on_event("click-menu", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -7499,7 +7694,7 @@ script.on_event("click-menu", function(event)
          if #global.players[pindex].travel == 0 and players[pindex].travel.index.x < 4 then
             printout("Move towards the right and select Create to get started.", pindex)
          elseif players[pindex].travel.index.y == 0 and players[pindex].travel.index.x < 4 then
-            printout("Navigate up and down to select a fastt travel point, then press left bracket to get there quickly.", pindex)
+            printout("Navigate up and down to select a fast travel point, then press left bracket to get there quickly.", pindex)
          elseif players[pindex].travel.index.x == 1 then
             local success = teleport_to_closest(pindex, global.players[pindex].travel[players[pindex].travel.index.y].position, false, false)
             if success and players[pindex].cursor then
@@ -7575,6 +7770,8 @@ script.on_event("click-menu", function(event)
          train_menu(players[pindex].train_menu.index, pindex, true)
       elseif players[pindex].menu == "train_stop_menu" then
          train_stop_menu(players[pindex].train_stop_menu.index, pindex, true)
+      elseif players[pindex].menu == "roboport_menu" then
+         roboport_menu(players[pindex].roboport_menu.index, pindex, true)
       end      
    end
 end)
@@ -7673,11 +7870,14 @@ function clicked_on_entity(ent,pindex)
       --Invalid entity clicked
       game.get_player(pindex).print("Invalid entity clicked",{volume_modifier=0})
    elseif ent.train ~= nil then
-      --If checking a rail vehicle, open its train
+      --For a rail vehicle, open train menu
       train_menu_open(pindex)
    elseif ent.name == "train-stop" then
-      --If checking a train stop, open its menu
+      --For a train stop, open train stop menu
       train_stop_menu_open(pindex)
+   elseif ent.name == "roboport" then
+      --For a roboport, open roboport menu 
+      roboport_menu_open(pindex)
    elseif ent.operable and ent.prototype.is_building then
       --If checking an operable building, open its menu
       open_operable_building(ent,pindex)
@@ -7861,102 +8061,6 @@ function open_operable_building(ent,pindex)--open_building
    else
       printout("Not an operable building.", pindex)
    end
-end
-
---One-click repair pack usage.
-function repair_pack_used(ent,pindex)
-   local p = game.get_player(pindex)
-   local stack = p.cursor_stack
-   --Repair the entity found
-   if ent and ent.valid and ent.is_entity_with_health and ent.get_health_ratio() < 1 
-   and ent.type ~= "resource" and not ent.force.is_enemy(p.force) and ent.name ~= "character" then
-      p.play_sound{path = "utility/default_manual_repair"}
-      local health_diff = ent.prototype.max_health - ent.health
-      local dura = stack.durability
-      if health_diff < 10 then --free repair for tiny damages
-         ent.health = ent.prototype.max_health 
-         printout("Fully repaired " .. ent.name, pindex)
-      elseif health_diff < dura then
-         ent.health = ent.prototype.max_health 
-         stack.drain_durability(health_diff)
-         printout("Fully repaired " .. ent.name, pindex)
-      else--if health_diff >= dura then
-         stack.drain_durability(dura)
-         ent.health = ent.health + dura
-         printout("Partially repaired " .. ent.name .. " and consumed a repair pack", pindex)
-         --Note: This automatically subtracts correctly and decerements the pack in hand.
-      end
-   end
-   --Note: game.get_player(pindex).use_from_cursor{players[pindex].cursor_pos.x,players[pindex].cursor_pos.y}--This does not work.
-end
-
---Tries to repair all relevant entities within a certain distance from the player
-function repair_area(radius_in,pindex)
-   local p = game.get_player(pindex)
-   local stack = p.cursor_stack
-   local repaired_count = 0
-   local packs_used = 0
-   local radius = math.min(radius_in,25)
-   if stack.count < 2 then
-      --If you are low on repair packs, stop
-      printout("You need at least 2 repair packs to repair the area.",pindex)
-      return 
-   end
-   local ents = p.surface.find_entities_filtered{position = p.position, radius = radius}
-   for i,ent in ipairs(ents) do 
-      --Repair the entity found
-      if ent and ent.valid and ent.is_entity_with_health and ent.get_health_ratio() < 1 
-      and ent.type ~= "resource" and not ent.force.is_enemy(p.force) and ent.name ~= "character" then
-         p.play_sound{path = "utility/default_manual_repair"}
-         local health_diff = ent.prototype.max_health - ent.health
-         local dura = stack.durability
-         if health_diff < 10 then --free repair for tiny damages
-            ent.health = ent.prototype.max_health 
-            repaired_count = repaired_count + 1
-         elseif health_diff < dura then
-            ent.health = ent.prototype.max_health 
-            stack.drain_durability(health_diff)
-            repaired_count = repaired_count + 1
-         elseif stack.count < 2 then
-            --If you are low on repair packs, stop
-            printout("Repaired " .. repaired_count .. " structures using " .. packs_used .. " repair packs, stopped because you are low on repair packs.",pindex)
-            return 
-         else
-            --Finish the current repair pack
-            stack.drain_durability(dura)
-            packs_used = packs_used + 1
-            ent.health = ent.health + dura
-            
-            --Repeat unhtil fully repaired or out of packs
-            while ent.get_health_ratio() < 1 do
-               health_diff = ent.prototype.max_health - ent.health
-               dura = stack.durability
-               if health_diff < 10 then --free repair for tiny damages
-                  ent.health = ent.prototype.max_health 
-                  repaired_count = repaired_count + 1
-               elseif health_diff < dura then
-                  ent.health = ent.prototype.max_health 
-                  stack.drain_durability(health_diff)
-                  repaired_count = repaired_count + 1
-               elseif stack.count < 2 then
-                  --If you are low on repair packs, stop
-                  printout("Repaired " .. repaired_count .. " structures using " .. packs_used .. " repair packs, stopped because you are low on repair packs.",pindex)
-                  return 
-               else
-                  --Finish the current repair pack
-                  stack.drain_durability(dura)
-                  packs_used = packs_used + 1
-                  ent.health = ent.health + dura
-               end
-            end 
-         end
-      end
-   end
-   if repaired_count == 0 then
-      printout("Nothing to repair within " .. radius .. " tiles of you.",pindex)
-      return
-   end
-   printout("Repaired all " .. repaired_count .. " structures within " .. radius .. " tiles of you, using " .. packs_used .. " repair packs.",pindex)
 end
 
 --[[Attempts to build the item in hand.
@@ -9268,10 +9372,10 @@ script.on_event("toggle-walk",function(event)
    players[pindex].move_queue = {}
    if players[pindex].walk == 0 then --Mode 1 (walk-by-step) is temporarily disabled until it comes back as an in game setting.
       players[pindex].walk = 2
-      players[pindex].character_running_speed_modifier = 0  -- default 100%
+      players[pindex].character_running_speed_modifier = 0  -- 100% + 0 = 100%
    else
       players[pindex].walk = 0
-      players[pindex].character_running_speed_modifier = -0.99 -- 100% - 100% = 0%--***test in multiplayer
+      players[pindex].character_running_speed_modifier = -1 -- 100% - 100% = 0%
    end
    --players[pindex].walk = (players[pindex].walk + 1) % 3
    printout(walk_type_speech[players[pindex].walk +1], pindex)
@@ -9366,13 +9470,83 @@ script.on_event("read-hand",function(event)
    read_hand(pindex)
 end)
 
---Empties hand and opens the item from the player inventory
-script.on_event("open-hand-from-inventory",function(event)
+--Empties hand and opens the item from the player/building inventory
+script.on_event("locate-hand-in-inventory",function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
    end
-   locate_hand_in_inventory(pindex)
+   if players[pindex].in_menu == false then
+      locate_hand_in_player_inventory(pindex)
+   elseif players[pindex].menu == "inventory" then
+      locate_hand_in_player_inventory(pindex)
+   elseif players[pindex].menu == "building" then
+      locate_hand_in_building_output_inventory(pindex)
+   else
+      printout("Cannot locate items in this menu", pindex)
+   end
+end)
+
+--Empties hand and opens the item from the crafting menu
+script.on_event("locate-hand-in-crafting-menu",function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   locate_hand_in_crafting_menu(pindex)
+end)
+
+--ENTER KEY by default
+script.on_event("menu-search-open",function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].in_menu == false then
+      return
+   end
+   if players[pindex].menu == "train_menu" then
+      return
+   end
+   if game.get_player(pindex).vehicle ~= nil then
+      return
+   end
+   if event.tick - players[pindex].last_menu_search_tick < 5 then
+      return
+   end
+   menu_search_open(pindex)
+end)
+
+script.on_event("menu-search-get-next",function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].in_menu == false then
+      return
+   end
+   local str = players[pindex].menu_search_term
+   if str == nil or str == "" then
+      printout("Press ENTER to start typing in a search term",pindex)
+      return
+   end
+   menu_search_get_next(pindex,str)
+end)
+
+script.on_event("menu-search-get-last",function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].in_menu == false then
+      return
+   end
+   local str = players[pindex].menu_search_term
+   if str == nil or str == "" then
+      printout("Press ENTER to start typing in a search term",pindex)
+      return
+   end
+   menu_search_get_last(pindex,str)
 end)
 
 script.on_event("open-warnings-menu", function(event)
@@ -9468,17 +9642,44 @@ script.on_event(defines.events.on_gui_confirmed,function(event)
       event.element.destroy()
    elseif players[pindex].train_menu.renaming == true then
       players[pindex].train_menu.renaming = false
-      set_train_name(global.players[pindex].train_menu.locomotive.train,event.element.text)
-      printout("Train renamed to " .. event.element.text .. ", menu closed.", pindex)
+      local result = event.element.text
+      if result == nil or result == "" then 
+         result = "unknown"
+      end
+      set_train_name(players[pindex].train_menu.locomotive.train, result)
+      printout("Train renamed to " .. result .. ", menu closed.", pindex)
       event.element.destroy()
       train_menu_close(pindex, false)
    elseif players[pindex].train_stop_menu.renaming == true then
       players[pindex].train_stop_menu.renaming = false
-      global.players[pindex].train_stop_menu.stop.backer_name = event.element.text
-      printout("Train stop renamed to " .. event.element.text .. ", menu closed.", pindex)
+      local result = event.element.text
+      if result == nil or result == "" then 
+         result = "unknown"
+      end
+      players[pindex].train_stop_menu.stop.backer_name = result
+      printout("Train stop renamed to " .. result .. ", menu closed.", pindex)
       event.element.destroy()
       train_stop_menu_close(pindex, false)
+   elseif players[pindex].roboport_menu.renaming == true then
+      players[pindex].roboport_menu.renaming = false
+      local result = event.element.text
+      if result == nil or result == "" then 
+         result = "unknown"
+      end
+      set_network_name(players[pindex].roboport_menu.port, result)
+      printout("Network renamed to " .. result .. ", menu closed.", pindex)
+      event.element.destroy()
+      roboport_menu_close(pindex)
+   elseif players[pindex].entering_search_term == true then
+      local term = string.lower(event.element.text)
+      players[pindex].menu_search_term = term
+      if term ~= "" then 
+         printout("Searching for " .. term .. ", go through results with 'SHIFT + ENTER' or 'CONTROL + ENTER' ",pindex)
+      end
+      event.element.destroy()
+      players[pindex].menu_search_frame.destroy()
    end
+   players[pindex].last_menu_search_tick = event.tick
 end)   
 
 script.on_event("open-structure-travel-menu", function(event)
@@ -9847,58 +10048,26 @@ end)
 --**Use this key to test stuff (ALT-G)
 script.on_event("debug-test-key", function(event)
    local pindex = event.player_index
-   local p = game.get_player(pindex)
-   local ent =  get_selected_ent(pindex)
    if not check_for_player(pindex) then
       return
    end
+   local p = game.get_player(pindex)
+   local ent =  get_selected_ent(pindex)
    local stack = game.get_player(pindex).cursor_stack
-   if stack and stack.valid_for_read and stack.valid then
-      --
-   end
-   --Build left turns on end rails
-   if ent and ent.valid then
-      --build_rail_bypass_junction(ent, pindex)
-      p.opened = ent
-   end
-   --if ent ~= nil and ent.valid and ent.fluidbox ~= nil then
-     -- p.print(#ent.fluidbox .. " fluids ")
-     -- for i = 1, #ent.fluidbox, 1 do
-        -- if ent.fluidbox[i] ~= nil then
-           -- p.print(ent.fluidbox[i].name) 
-           -- p.print(#ent.fluidbox.get_pipe_connections(i))
-        -- else
-           -- p.print("(nil) " .. i)
-           -- p.print(#ent.fluidbox.get_pipe_connections(i))
-        -- end
-     -- end     
-     --set_temporary_train_stop(ent.train,pindex)
-	  --sub_automatic_travel_to_other_stop(ent.train)
-	  --instant_schedule(ent.train)
-   --end 
    
-   --open_player_inventory with API 
-   -- local gui = p.gui
-   -- if gui and gui.valid then
-      -- game.print("gui valid")
-      -- local screen = gui.screen
-      -- if screen and screen.valid then
-         -- game.print("screen valid")
-         -- local visible = screen.visible
-         -- screen.visible = true
-         -- game.print(visible)
-         -- --screen.bring_to_front()
-         -- screen.focus()
-      -- end
-   -- end
-   --p.gui.screen.visible = true
-   --p.opened = p.gui--achievement works
-   --p.print(defines.gui_type.controller)
-   --p.opened = p.character
-   --p.print("opened object_name : " .. p.opened.object_name)
-   --if p.opened.name then
-   --   p.print("opened name : " .. p.opened.name)
+   
+   --if stack and stack.valid_for_read then
+   --   game.print(" * " .. localising.get(stack.prototype,pindex) .. " * ")
    --end
+   
+   game.print(get_substring_before_space(get_substring_before_comma(ent.name)))
+   game.print(ent.name)
+   if ent.name == get_substring_before_space(get_substring_before_comma(ent.name)) then
+      game.print("equal")
+   else
+      game.print("not equal")
+   end   
+
 end)
 
 --Attempt to launch a rocket
@@ -9972,21 +10141,22 @@ script.on_event("logistic-request-toggle-personal-logistics", function(event)
    if not check_for_player(pindex) then
       return
    end
-   logistics_request_toggle_personal_logistics(pindex)
+   logistics_request_toggle_handler(pindex)
 end)
 
---This event handler patches the unwanted opening of the inventory screen when closing a factorio access menu
 script.on_event(defines.events.on_gui_opened, function(event)
    local pindex = event.player_index
    if not check_for_player(pindex) then
       return
    end
    players[pindex].move_queue = {}
-   if event.gui_type == defines.gui_type.controller and players[event.player_index].menu == "none" then
-      game.get_player(event.player_index).opened = nil --note: we may prefer to have some GUI's stay open.
-      --printout("Banana",event.player_index)
+   if event.gui_type == defines.gui_type.controller and players[pindex].menu == "none" and event.tick - players[pindex].last_menu_toggle_tick < 5 then
+      --We close the player GUI if closing/opening another menu toggles the player GUI screen
+      game.get_player(pindex).opened = nil
+      --game.print("Closed an extra GUI",{volume_modifier = 0})--**laterdo enable these and review what doess what
    elseif game.get_player(event.player_index).opened ~= nil then
-      players[event.player_index].in_menu = true
+      players[pindex].in_menu = true
+      --game.print("Opened an extra GUI",{volume_modifier = 0})--**laterdo enable these and review what doess what
    end
 end)
 
@@ -10555,379 +10725,6 @@ function get_entity_part_at_cursor(pindex)
 	 return location
 end
 
---Tries to equip a stack. For now called only for a stack in hand when the only the inventory is open.
-function equip_it(stack,pindex)
-   local message = "no message"
-   
-   if stack == nil or not stack.valid_for_read or not stack.valid then
-      return "Nothing found to equip."
-   end
-   
-   if stack.is_armor then
-      local armor = game.get_player(pindex).get_inventory(defines.inventory.character_armor)
-      if armor.is_empty() then
-         message = " Equipped " .. stack.name
-      else
-         message = " Equipped " .. stack.name .. " and took in hand " .. armor[1].name
-      end
-      stack.swap_stack(armor[1])
-      players[pindex].skip_read_hand = true
-   elseif stack.type == "gun" then
-      --Equip gun ("arms")
-	  local gun_inv = game.get_player(pindex).get_inventory(defines.inventory.character_guns)
-	  if gun_inv.can_insert(stack) then
-	     local inserted = gun_inv.insert(stack)
-		 message = " Equipped " .. stack.name
-		 stack.count = stack.count - inserted
-       players[pindex].skip_read_hand = true
-	  else
-	    if gun_inv.count_empty_stacks() == 0 then 
-		    message = "All gun slots full."
-		 else
-		    message = "Cannot insert " .. stack.name
-		 end
-	  end
-   elseif stack.type == "ammo" then
-      --Equip ammo
-	  local ammo_inv = game.get_player(pindex).get_inventory(defines.inventory.character_ammo)
-	  if ammo_inv.can_insert(stack) then
-	     local inserted = ammo_inv.insert(stack)
-		 message = "Reloaded with " .. stack.name
-		 stack.count = stack.count - inserted
-       players[pindex].skip_read_hand = true
-	  else
-	    if ammo_inv.count_empty_stacks() == 0 then 
-		    message = "All ammo slots full."
-		 else
-		    message = "Cannot insert " .. stack.name
-		 end
-	  end
-   elseif stack.prototype.place_as_equipment_result ~= nil then
-      --Equip equipment ("gear")
-      local armor_inv = game.get_player(pindex).get_inventory(defines.inventory.character_armor)
-	  if armor_inv.is_empty() then
-	     return "Equipment requires armor with an equipment grid."
-	  end
-	  if armor_inv[1].grid == nil or not armor_inv[1].grid.valid  then
-	     return "Equipment requires armor with an equipment grid."
-	  end
-	  local grid = armor_inv[1].grid
-	  --Iterate across the whole grid, trying to place the item. 
-	  local placed = nil
-	  for i = 0, grid.width-1, 1 do
-	     for j = 0, grid.height-1, 1 do
-		    placed = grid.put{name = stack.name, position = {i,j}, by_player = pindex}
-			if placed ~= nil then
-			   break
-			end
-		 end
-		 if placed ~= nil then
-		   break
-		 end
-	  end    
-     local slots_left = count_empty_equipment_slots(grid)
-	  if placed ~= nil then
-	     message = "Equipped " .. stack.name .. ", " .. slots_left .. " empty slots remaining."
-		 stack.count = stack.count - 1
-       players[pindex].skip_read_hand = true
-	  else
-	     --Check if the grid is full 
-		 if slots_left == 0 then
-		    message = "All armor equipment slots are full."
-		 else
-		    message = "This equipment does not fit in the remaining ".. slots_left .. " slots."
-		 end
-	  end
-   else
-      message = " Cannot equip " .. stack.name
-   end
-   
-   return message
-end
-
-
-function count_empty_equipment_slots(grid)
-    local slots_left = 0
-	for i = 0, grid.width-1, 1 do
-	   for j = 0, grid.height-1, 1 do
-		  local check = grid.get({i,j})
-		  if check == nil then
-			 slots_left = slots_left + 1
-	      end
-	   end
-    end
-    return slots_left
-end
-
---Returns info on weapons and ammo
-function read_weapons_and_ammo(pindex)
-   local guns_inv = game.get_player(pindex).get_inventory(defines.inventory.character_guns)
-   local ammo_inv = game.get_player(pindex).get_inventory(defines.inventory.character_ammo)
-   local guns_count  = #guns_inv - guns_inv.count_empty_stacks()
-   local ammos_count = #ammo_inv - ammo_inv.count_empty_stacks()
-   local result = "Weapons, "
-   
-   for i = 1, 3, 1 do
-      if i > 1 then
-	    result = result .. " and "
-	  end
-     if guns_inv[i] and guns_inv[i].valid and guns_inv[i].valid_for_read then
-        result = result .. guns_inv[i].name
-     else
-        result = result .. "empty weapon slot"
-     end
-	  if ammo_inv[i] ~= nil and ammo_inv[i].valid and ammo_inv[i].valid_for_read then
-	     result = result .. " with " .. ammo_inv[i].count .. " " .. ammo_inv[i].name .. "s, "
-	  else
-	     result = result .. " with no ammunition, "
-	  end
-   end
-   if guns_count == 0 then
-      result = " No weapons equipped."
-   end
-   
-   return result
-end
-
---Reload all ammo possible from the inventory. Existing stacks have priority over fuller stacks.
-function reload_weapons(pindex)
-   local ammo_inv = game.get_player(pindex).get_inventory(defines.inventory.character_ammo)
-   local main_inv = game.get_player(pindex).get_inventory(defines.inventory.character_main)
-   local result = ""
-   if ammo_inv.is_full() then
-      result = "All ammo slots are already full."
-      return result
-   end
-   --Apply an inventory transfer to the ammo inventory.
-   local res, full = transfer_inventory{from = main_inv, to = ammo_inv}
-   --**laterdo fail conditions messages, and maybe add reload sound?
-   --Check fullness
-   if ammo_inv.is_full() then
-      result = "Fully reloaded all three weapons"
-   else
-      result = "Reloaded weapons with any available ammunition, "
-   end
-   return result
-end
-
---Move all weapons and ammo back to inventory
-function remove_weapons_and_ammo(pindex)
-   local guns_inv = game.get_player(pindex).get_inventory(defines.inventory.character_guns)
-   local ammo_inv = game.get_player(pindex).get_inventory(defines.inventory.character_ammo)
-   local main_inv = game.get_player(pindex).get_inventory(defines.inventory.character_main)
-   local guns_count  = #guns_inv - guns_inv.count_empty_stacks()
-   local ammos_count = #ammo_inv - ammo_inv.count_empty_stacks()
-   local expected_remove_count = guns_count + ammos_count
-   local resulted_remove_count = 0
-   local message = ""
-   
-   --Remove all ammo
-   for i = 1, ammos_count, 1 do
-      if main_inv.can_insert(ammo_inv[i]) then
-	     local inserted = main_inv.insert(ammo_inv[i])--laterdo recover the uninserted if cannot insert (which is only when inv full) or maybe fails to remove anyway?
-	     resulted_remove_count = resulted_remove_count + math.ceil(ammo_inv.remove(ammo_inv[i]) / 1000 )--we just want to count stacks
-	  end
-   end
-   
-   --Remove all guns
-   for i = 1, guns_count, 1 do
-      if main_inv.can_insert(guns_inv[i]) then
-	     local inserted = main_inv.insert(guns_inv[i])--laterdo recover the uninserted if cannot insert (which is only when inv full) or maybe fails to remove anyway?
-	     resulted_remove_count = resulted_remove_count + math.ceil(guns_inv.remove(guns_inv[i]) / 1000)--we just want to count stacks
-	  end
-   end
-   
-   message = "Collected " .. resulted_remove_count .. " of " .. expected_remove_count .. " item stacks,"
-   if game.get_player(pindex).get_main_inventory().count_empty_stacks() == 0 then 
-      message = message .. " Inventory full. "
-   end
-   
-   return message
-end
-
---Read armor stats such as type and bonuses
-function read_armor_stats(pindex)
-   local armor_inv = game.get_player(pindex).get_inventory(defines.inventory.character_armor)
-   local result = ""
-   if armor_inv.is_empty() then
-      return "No armor equipped."
-   end
-   if armor_inv[1].grid == nil or not armor_inv[1].grid.valid  then
-      return armor_inv[1].name .. " equipped, with no equipment grid."
-   end
-   --Armor with Equipment
-   result = armor_inv[1].name .. " equipped, "
-   local grid = armor_inv[1].grid
-   if grid.count() == 0 then
-      return result .. " no armor equipment installed. "
-   end
-   --Read shield level
-   if grid.max_shield > 0 then
-      if grid.shield == grid.max_shield then
-	     result = " shields full, "
-	  else
-	     result = result .. " shields at " .. math.ceil(100 * grid.shield / grid.max_shield) .. " percent, "
-	  end
-   end
-   --Read battery level
-   if grid.battery_capacity > 0 then
-      if grid.available_in_batteries == grid.battery_capacity then
-	     result = result .. " batteries full, "
-	  elseif grid.available_in_batteries == 0 then
-	     result = result .. " batteries empty "
-	  else
-	     result = result .. " batteries at " .. math.ceil(100 * grid.available_in_batteries / grid.battery_capacity) .. " percent, "
-	  end
-   else
-      result = result .. " no batteries, "
-   end   
-   --Energy Producers
-   if grid.generator_energy > 0 or grid.max_solar_energy > 0 then
-      result = result .. " generating "
-	  if grid.generator_energy > 0 then
-	     result = result .. get_power_string(grid.generator_energy*60) .. " nonstop, "
-	  end
-	  if grid.max_solar_energy > 0 then
-	     result = result .. get_power_string(grid.max_solar_energy*60) .. " at daytime, "
-	  end
-   end
-   
-   --Movement bonus
-   if grid.count("exoskeleton-equipment") > 0 then
-      result = result .. " movement bonus " .. grid.count("exoskeleton-equipment") * 30 .. " percent for " .. get_power_string(grid.count("exoskeleton-equipment")*200000)
-   end
-   
-   return result
-end
-
---List armor equipment
-function read_equipment_list(pindex)
-   local armor_inv = game.get_player(pindex).get_inventory(defines.inventory.character_armor)
-   local result = ""
-   if armor_inv.is_empty() then
-      return "No armor equipped."
-   end
-   if armor_inv[1].grid == nil or not armor_inv[1].grid.valid  then
-      return "No equipment grid."
-   end
-   --Armor with Equipment
-   result = "Equipped, "
-   local grid = armor_inv[1].grid
-   if grid.equipment == nil or grid.equipment == {} then
-      return " No armor equipment installed. "
-   end
-   --Read Equipment List
-   result = "Equipped, "
-   local contents = grid.get_contents() 
-   local itemtable = {}
-   for name, count in pairs(contents) do
-      table.insert(itemtable, {name = name, count = count})
-   end
-   if #itemtable == 0 then
-      result = result .. " nothing, "
-   else
-      for i = 1, #itemtable, 1 do
-         result = result .. itemtable[i].count .. " " .. itemtable[i].name .. ", "
-      end
-   end
-   
-   result = result .. count_empty_equipment_slots(grid) .. " empty slots remaining "
-   
-   return result
-end
-
---Remove equipment and then armor. laterdo "inv full" checks
-function remove_equipment_and_armor(pindex)
-   local armor_inv = game.get_player(pindex).get_inventory(defines.inventory.character_armor)
-   local result = ""
-   if armor_inv.is_empty() then
-      return "No armor."
-   end
-   
-   local grid = armor_inv[1].grid
-   if grid ~= nil and grid.valid then 
-       local e_count = grid.count()
-	   --Take all items
-	   for i = 0, grid.width-1, 1 do
-	      for j = 0, grid.height-1, 1 do
-		     local check = grid.get({i,j})
-			 local inv = game.get_player(pindex).get_main_inventory()
-		     if check ~= nil and inv.can_insert({name = check.name}) then
-			    inv.insert({name = check.name})
-				grid.take{position = {i,j}}
-	         end
-	      end
-       end
-	   result = "Collected " .. e_count - grid.count() .. " of " .. e_count .. " items, "
-   end
-   
-   --Remove armor
-   if game.get_player(pindex).get_inventory(defines.inventory.character_main).count_empty_stacks() == 0 then
-      return "Inventory full."
-   else
-      result = result .. "removed " .. armor_inv[1].name
-	  game.get_player(pindex).clear_cursor()
-	  local stack2 = game.get_player(pindex).cursor_stack
-	  stack2.swap_stack(armor_inv[1])
-      game.get_player(pindex).clear_cursor()
-      return result
-   end
-   
-   return result
-end
-
---Locks the cursor to the nearest enemy within 50 tiles. Also plays a sound if the enemy is within range of the gun in hand.
-function aim_gun_at_nearest_enemy(pindex,enemy_in)
-   local p = game.get_player(pindex)
-   local gun_index  = p.character.selected_gun_index
-   local guns_inv   = p.get_inventory(defines.inventory.character_guns)
-   local ammo_inv   = game.get_player(pindex).get_inventory(defines.inventory.character_ammo)
-   local gun_stack  = guns_inv[gun_index]
-   local ammo_stack = ammo_inv[gun_index]
-   local enemy = enemy_in
-   --Return if missing a gun or ammo
-   if gun_stack == nil or not gun_stack.valid_for_read or not gun_stack.valid then
-      return false
-   end
-   if ammo_stack == nil or not ammo_stack.valid_for_read or not ammo_stack.valid then
-      return false
-   end
-   --Return if in Cursor Mode
-   if players[pindex].cursor then
-      return false
-   end
-   --Return if in a menu
-   if players[pindex].in_menu then
-      return false
-   end
-   --Check for nearby enemies
-   if enemy_in == nil or not enemy_in.valid then
-      enemy = p.surface.find_nearest_enemy{position = p.position, max_distance = 50, force = p.force}
-   end
-   if enemy == nil or not enemy.valid then
-      return false
-   end
-   --Play a sound when the enemy is within range of the gun 
-   local range = gun_stack.prototype.attack_parameters.range
-   local dist = util.distance(p.position,enemy.position)
-   if dist < range then      
-      p.play_sound{path = "aim-locked",volume_modifier=0.5}
-   end
-   --Return if there is a gun and ammo combination that already aims by itself
-   if gun_stack.name == "pistol" or gun_stack.name == "submachine-gun" and dist < 10 then --or ammo_stack.name == "rocket" or ammo_stack.name == "explosive-rocket" then
-      --**Note: normal/explosive rockets only fire when they lock on a target anyway. Meanwhile the SMG auto-aims only when close enough 
-      return true
-   end 
-   --If in range, move the cursor onto the enemy to aim the gun
-   if dist < range then 
-      players[pindex].cursor_pos = enemy.position
-      move_cursor_map(enemy.position,pindex)
-      cursor_highlight(pindex,nil,nil,true)
-   end
-   return true
-end
-
-
 --Set the input priority or the output priority or filter for a splitter
 function set_splitter_priority(splitter, is_input, is_left, filter_item_stack, clear)
    local clear = clear or false
@@ -11301,42 +11098,361 @@ script.on_event(defines.events.on_player_died,function(event)
    end
 end)
 
-function play_enemy_alert_sound(mode_in)
-   for pindex, player in pairs(players) do
-      local mode = mode_in or 1
-      local p = game.get_player(pindex)
-      if p ~= nil and p.valid then
-         local nearest_enemy = p.surface.find_nearest_enemy{position = p.position, max_distance = 100, force = p.force}
-         local dist = -1
-         if nearest_enemy ~= nil and nearest_enemy.valid then
-            dist = math.floor(util.distance(nearest_enemy.position,p.position))
-         else
-            return
+--Allows searching a menu that has support written for this
+function menu_search_open(pindex)
+   --Only allow "inventory" and "building" menus for now
+   if not players[pindex].in_menu then
+      printout("This menu does not support searching.",pindex)
+      return
+   end
+   if players[pindex].menu ~= "inventory" and players[pindex].menu ~= "building" and players[pindex].menu ~= "crafting" and players[pindex].menu ~= "technology" then
+      printout(players[pindex].menu .. " menu does not support searching.",pindex)
+      return
+   end
+   
+   --Open the searchbox frame
+   players[pindex].entering_search_term = true
+   players[pindex].menu_search_index = 0
+   players[pindex].menu_search_index_2 = 0
+   local frame = game.get_player(pindex).gui.screen.add{type = "frame", name = "enter-search-term"}
+   frame.bring_to_front()
+   frame.force_auto_center()
+   frame.focus()
+   players[pindex].menu_search_frame = frame
+   local input = frame.add{type="textfield", name = "input"}
+   input.focus()
+   
+   --Inform the player
+   printout(players[pindex].menu .. " enter a search term and press 'ENTER' ",pindex)
+end
+
+--Reads out the next inventory/menu item to match the search term
+function menu_search_get_next(pindex, str, start_phrase_in)
+   --Only allow "inventory" and "building" menus for now
+   if not players[pindex].in_menu then
+      printout("This menu does not support searching.",pindex)
+      return
+   end
+   if players[pindex].menu ~= "inventory" and players[pindex].menu ~= "building" and players[pindex].menu ~= "crafting" and players[pindex].menu ~= "technology"then
+      printout(players[pindex].menu .. " menu does not support searching.",pindex)
+      return
+   end
+   if str == nil or str == "" then
+      printout("Missing search term", pindex)
+      return 
+   end
+   --Start phrase
+   local start_phrase = ""
+   if start_phrase_in ~= nil then
+      start_phrase = start_phrase_in
+   end
+   --Get the current search index
+   local search_index = players[pindex].menu_search_index
+   local search_index_2 = players[pindex].menu_search_index_2
+   if search_index == nil then
+      players[pindex].menu_search_index = 0
+      players[pindex].menu_search_index_2 = 0
+      search_index = 0
+      search_index_2 = 0
+   end
+   --Search for the new index in the appropriate menu
+   local inv = nil
+   local new_index = nil
+   local new_index_2 = nil
+   local pb = players[pindex].building 
+   if players[pindex].menu == "inventory" then
+      inv = game.get_player(pindex).get_main_inventory()
+      new_index = inventory_find_index_of_next_name_match(inv, search_index, str, pindex)
+   elseif players[pindex].menu == "building" and pb.sectors and pb.sectors[pb.sector] and pb.sectors[pb.sector].name == "Output" then
+      inv = game.get_player(pindex).opened.get_output_inventory()
+      new_index = inventory_find_index_of_next_name_match(inv, search_index, str, pindex)
+   elseif players[pindex].menu == "crafting" then
+      new_index, new_index_2 = crafting_find_index_of_next_name_match(str,pindex, search_index, search_index_2, players[pindex].crafting.lua_recipes)
+   elseif players[pindex].menu == "building" and pb.recipe_selection == true then
+      new_index, new_index_2 = crafting_find_index_of_next_name_match(str,pindex, search_index, search_index_2, players[pindex].building.recipe_list)
+   elseif players[pindex].menu == "technology" then
+      local techs = {} --Reads the selected tech catagory
+      if players[pindex].technology.category == 1 then
+         techs = players[pindex].technology.lua_researchable
+      elseif players[pindex].technology.category == 2 then
+         techs = players[pindex].technology.lua_locked
+      elseif players[pindex].technology.category == 3 then
+         techs = players[pindex].technology.lua_unlocked
+      end
+      new_index = inventory_find_index_of_next_name_match(techs, search_index, str, pindex)
+   else
+      printout("This menu or building sector does not support searching.",pindex)
+      return
+   end
+   --Return a menu output according to the index found 
+   if new_index <= 0 then
+      printout("Could not find " .. str,pindex)
+      game.print("Could not find " .. str,{volume_modifier = 0})
+      return
+   elseif players[pindex].menu == "inventory" then
+      players[pindex].menu_search_index = new_index
+      players[pindex].inventory.index = new_index
+      read_inventory_slot(pindex, start_phrase)
+   elseif players[pindex].menu == "building" and pb.sectors and pb.sectors[pb.sector] and pb.sectors[pb.sector].name == "Output" then
+      players[pindex].menu_search_index = new_index
+      players[pindex].building.index = new_index
+      read_building_slot(pindex,false)
+   elseif players[pindex].menu == "crafting" then
+      players[pindex].menu_search_index = new_index
+      players[pindex].menu_search_index_2 = new_index_2
+      players[pindex].crafting.category = new_index
+      players[pindex].crafting.index = new_index_2
+      read_crafting_slot(pindex, start_phrase)
+   elseif players[pindex].menu == "building" and players[pindex].building.recipe_selection == true then
+      players[pindex].menu_search_index = new_index
+      players[pindex].menu_search_index_2 = new_index_2
+      players[pindex].building.category = new_index
+      players[pindex].building.index = new_index_2
+      read_building_recipe(pindex, start_phrase)
+   elseif players[pindex].menu == "technology" then
+      local techs = {}
+      local note = start_phrase
+      if players[pindex].technology.category == 1 then
+         techs = players[pindex].technology.lua_researchable
+         note = " researchable "
+      elseif players[pindex].technology.category == 2 then
+         techs = players[pindex].technology.lua_locked
+         note = " locked "
+      elseif players[pindex].technology.category == 3 then
+         techs = players[pindex].technology.lua_unlocked
+         note = " unlocked "
+      end
+      players[pindex].menu_search_index = new_index
+      players[pindex].technology.index = new_index
+      read_technology_slot(pindex, note)
+   else
+      printout("Search error",pindex)
+      return
+   end
+end
+
+--Reads out the last inventory/menu item to match the search term
+function menu_search_get_last(pindex,str)
+   --Only allow "inventory" and "building" menus for now
+   if not players[pindex].in_menu then
+      printout("This menu does not support searching backwards.",pindex)
+      return
+   end
+   if players[pindex].menu ~= "inventory" and players[pindex].menu ~= "building" then
+      printout(players[pindex].menu .. " menu does not support searching backwards.",pindex)
+      return
+   end
+   if str == nil or str == "" then
+      printout("Missing search term", pindex)
+      return
+   end
+   --Get the current search index
+   local search_index = players[pindex].menu_search_index
+   if search_index == nil then
+      players[pindex].menu_search_index = 0
+      search_index = 0
+   end
+   --Search for the new index in the appropriate menu
+   local inv = nil
+   local new_index = nil
+   local pb = players[pindex].building
+   if players[pindex].menu == "inventory" then
+      inv = game.get_player(pindex).get_main_inventory()
+      new_index = inventory_find_index_of_last_name_match(inv, search_index, str, pindex)
+   elseif players[pindex].menu == "building" and pb.sectors and pb.sectors[pb.sector] and pb.sectors[pb.sector].name == "Output" then
+      inv = game.get_player(pindex).opened.get_output_inventory()
+      new_index = inventory_find_index_of_last_name_match(inv, search_index, str, pindex)
+   else
+      printout("This menu or building sector does not support searching backwards.",pindex)
+      return
+   end
+   --Return a menu output according to the index found 
+   if new_index <= 0 then
+      printout("Could not find " .. str,pindex)
+      return
+   elseif players[pindex].menu == "inventory" then
+      players[pindex].menu_search_index = new_index
+      players[pindex].inventory.index = new_index
+      read_inventory_slot(pindex)
+   elseif players[pindex].menu == "building" and pb.sectors and pb.sectors[pb.sector] and pb.sectors[pb.sector].name == "Output" then
+      players[pindex].menu_search_index = new_index
+      players[pindex].building.index = new_index
+      read_building_slot(pindex,false)
+   else
+      printout("Search error",pindex)
+      return
+   end
+end
+
+--Returns the index for the next inventory item to match the search term, for any lua inventory
+function inventory_find_index_of_next_name_match(inv,index,str,pindex)
+   local repeat_i = -1
+   if index < 1 then
+      index = 1
+   end
+   --Iterate until the end of the inventory for a match
+   for i=index, #inv, 1 do
+      local stack = inv[i]
+      if stack ~= nil and (stack.object_name == "LuaTechnology" or stack.valid_for_read) then  
+         local name = string.lower(localising.get(stack.prototype,pindex))
+         local result = string.find(name, str)
+         if result ~= nil then 
+            if name ~= players[pindex].menu_search_last_name then
+               players[pindex].menu_search_last_name = name
+               game.get_player(pindex).play_sound{path = "Inventory-Move"}--sound for finding the next
+               return i
+            else
+               repeat_i = i
+            end
          end
-         if mode == 1 then     -- Nearest enemy is far (lowest freq)
-            if dist < 100 then
-               p.play_sound{path = "utility/item_deleted"}
+         --game.print(i .. " : " .. name .. " vs. " .. str,{volume_modifier=0})
+      end
+   end
+   --End of inventory reached, circle back
+   game.get_player(pindex).play_sound{path = "Mine-Building"}--sound for having cicled around 
+   for i=1, index, 1 do
+      local stack = inv[i]
+      if stack ~= nil and (stack.object_name == "LuaTechnology" or stack.valid_for_read) then 
+         local name = string.lower(localising.get(stack.prototype,pindex))
+         local result = string.find(name, str)
+         if result ~= nil then 
+            if name ~= players[pindex].menu_search_last_name then
+               players[pindex].menu_search_last_name = name
+               game.get_player(pindex).play_sound{path = "Inventory-Move"}--sound for finding the next
+               return i
+            else
+               repeat_i = i
             end
-            --Additional alert if there are more than 5 enemies nearby
-            local enemies = p.surface.find_enemy_units(p.position, 25, p.force)
-            if #enemies > 5 then
-               p.play_sound{path = "enemy-presence-high", volume_modifier = 0.5}
+         end
+         --game.print(i .. " : " .. name .. " vs. " .. str,{volume_modifier=0})
+      end 
+   end
+   --Check if any repeats found
+   if repeat_i > 0 then
+      return repeat_i
+   end
+   --No matches found at all
+   return -1 
+end
+
+--Returns the index for the last inventory item to match the search term, for any lua inventory
+function inventory_find_index_of_last_name_match(inv,index,str,pindex)
+   local repeat_i = -1
+   if index < 1 then
+      index = 1
+   end
+   --Iterate until the start of the inventory for a match
+   for i=index, 1, -1 do 
+      local stack = inv[i]
+      if stack ~= nil and stack.valid_for_read then  
+         local name = string.lower(localising.get(stack.prototype,pindex))
+         local result = string.find(name, str)
+         if result ~= nil then 
+            if name ~= players[pindex].menu_search_last_name then
+               players[pindex].menu_search_last_name = name
+               game.get_player(pindex).play_sound{path = "Inventory-Move"}--sound for finding the next
+               return i
+            else
+               repeat_i = i
             end
-         elseif mode == 2 then -- Nearest enemy is closer (medium freq)
-            if dist < 50 then
-               p.play_sound{path = "utility/item_deleted"}
+         end
+         --game.print(i .. " : " .. name .. " vs. " .. str,{volume_modifier=0})
+      end
+   end
+   --Start of inventory reached, circle back
+   game.get_player(pindex).play_sound{path = "Mine-Building"}--sound for having cicled around 
+   for i=#inv, index, -1 do
+      local stack = inv[i]
+      if stack ~= nil and stack.valid_for_read then  
+         local name = string.lower(localising.get(stack.prototype,pindex))
+         local result = string.find(name, str)
+         if result ~= nil then 
+            if name ~= players[pindex].menu_search_last_name then
+               players[pindex].menu_search_last_name = name
+               game.get_player(pindex).play_sound{path = "Inventory-Move"}--sound for finding the next
+               return i
+            else
+               repeat_i = i
             end
-            --Additional alert if there are more than 10 enemies nearby
-            local enemies = p.surface.find_enemy_units(p.position, 25, p.force)
-            if #enemies > 10 then
-               p.play_sound{path = "enemy-presence-high", volume_modifier = 0.5}
+         end
+         --game.print(i .. " : " .. name .. " vs. " .. str,{volume_modifier=0})
+      end
+   end
+   --Check if any repeats found
+   if repeat_i > 0 then
+      return repeat_i
+   end
+   --No matches found at all
+   return -1 
+end
+
+--Returns the index for the next recipe to match the search term, designed for the way recipes are saved in players[pindex]
+function crafting_find_index_of_next_name_match(str,pindex,last_i, last_j, recipe_set)
+   local recipes = recipe_set
+   local cata_total = #recipes
+   local repeat_i = -1
+   local repeat_j = -1
+   if last_i < 1 then
+      last_i = 1
+   end
+   if last_j < 1 then
+      last_j = 1
+   end
+   --Iterate until the end of the inventory for a match
+   for i = last_i, cata_total, 1 do
+      for j = last_j, #recipes[i], 1 do 
+         local recipe = recipes[i][j]
+         if recipe and recipe.valid then
+            local name = string.lower(localising.get(recipe,pindex))
+            local result = string.find(name, str)
+            --game.print(i .. "," .. j .. " : " .. name .. " vs. " .. str,{volume_modifier=0})
+            if result ~= nil then 
+               --game.print(" * " .. i .. "," .. j .. " : " .. name .. " vs. " .. str .. " * ",{volume_modifier=0})
+               if name ~= players[pindex].menu_search_last_name then
+                  players[pindex].menu_search_last_name = name
+                  game.get_player(pindex).play_sound{path = "Inventory-Move"}--sound for finding the next
+                  --game.print(" ** " .. recipes[i][j].name .. " ** ")
+                  return i, j
+               else
+                  repeat_i = i
+                  repeat_j = j
+               end
             end
-         elseif mode == 3 then -- Nearest enemy is too close (highest freq)
-            if dist < 25 then
-               p.play_sound{path = "utility/item_deleted"}
+         end
+      end
+      last_j = 1
+   end
+   --End of inventory reached, circle back
+   game.get_player(pindex).play_sound{path = "Mine-Building"}--sound for having cicled around 
+   for i = 1, cata_total, 1 do
+      for j = 1, #recipes[i], 1 do 
+         local recipe = recipes[i][j]
+         if recipe and recipe.valid then
+            local name = string.lower(localising.get(recipe,pindex))
+            local result = string.find(name, str)
+            --game.print(i .. "," .. j .. " : " .. name .. " vs. " .. str,{volume_modifier=0})
+            if result ~= nil then 
+               --game.print(" * " .. i .. "," .. j .. " : " .. name .. " vs. " .. str .. " * ",{volume_modifier=0})
+               if name ~= players[pindex].menu_search_last_name then
+                  players[pindex].menu_search_last_name = name
+                  game.get_player(pindex).play_sound{path = "Inventory-Move"}--sound for finding the next
+                  --game.print(" ** " .. recipes[i][j].name .. " ** ")
+                  return i, j
+               else
+                  repeat_i = i
+                  repeat_j = j
+               end
             end
          end
       end
    end
+   --Check if any repeats found
+   if repeat_i > 0 then
+      return repeat_i, repeat_j
+   end
+   --No matches found at all
+   return -1, -1 
 end
 
+
+script.on_event(defines.events.on_string_translated,localising.handler)
