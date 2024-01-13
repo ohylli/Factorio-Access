@@ -4136,9 +4136,10 @@ function build_preview_checks_info(stack, pindex)
       else
          --Notify if no connections and state nearest roboport
          result = result .. " not connected, "
-         local nearest_port, min_dist = find_nearest_roboport(p.surface, p.position, 1000)
-         if min_dist == nil or min_dist >= 1000 then
-            result = result .. " no other roboports poles within 1000 tiles, "
+         local max_dist = 2000
+         local nearest_port, min_dist = find_nearest_roboport(p.surface, p.position, max_dist)
+         if min_dist == nil or min_dist >= max_dist then
+            result = result .. " no other roboports poles within " .. max_dist .. " tiles, "
          else
             local dir = get_direction_of_that_from_this(nearest_port.position,pos)
             result = result .. math.ceil(min_dist) .. " tiles " .. direction_lookup(dir) .. " to nearest roboport, "
