@@ -10490,7 +10490,11 @@ script.on_event(defines.events.on_train_changed_state,function(event)
    end
 end)
 
---Returns the direction of that entity from this entity based on the ratios of the x and y distances. Returns 1 of 8 main directions, with a bias towards the diagonals to make it easier to align with the cardinal directions.
+--[[
+* Returns the direction of that entity from this entity based on the ratios of the x and y distances. 
+* Returns 1 of 8 main directions, with a bias away from the 4 cardinal directions, to make it easier to align with them. 
+* The deciding ratio is 1 to 4, meaning that for an object that is 100 tiles north, it can be offset by up to 25 tiles east or west before it stops being counted as "directly" in the north. 
+* The arctangent of 1/4 is about 14 degrees, meaning that the field of view that directly counts as a cardinal direction is about 30 degrees, while for a diagonal direction it is about 60 degrees.]]
 function get_direction_of_that_from_this(pos_that,pos_this)
    local diff_x = pos_that.x - pos_this.x
    local diff_y = pos_that.y - pos_this.y
