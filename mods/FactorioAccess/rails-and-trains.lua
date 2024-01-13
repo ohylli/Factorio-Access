@@ -879,6 +879,13 @@ function identify_rail_segment_end_object(rail, dir_ahead, accept_only_forward, 
    local result_extra = nil
    local result_is_forward = nil
    
+   if rail == nil or rail.valid == false then
+      --Error
+      result_entity = segment_last_rail
+      result_entity_label = "missing rail"
+      return result_entity, result_entity_label, result_extra, result_is_forward
+   end
+   
    --Correction: Flip the correct direction ahead for mismatching diagonal rails
    if rail.name == "straight-rail" and (rail.direction == dirs.southwest or rail.direction == dirs.northwest) 
       or rail.name == "curved-rail" and (rail.direction == dirs.north or rail.direction == dirs.northeast or rail.direction == dirs.east or rail.direction == dirs.southeast) then

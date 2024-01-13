@@ -995,7 +995,9 @@ function find_nearest_roboport(surf,pos,radius_in)
          nearest = port
       end
    end
-   rendering.draw_circle{color = {1, 1, 0}, radius = 4, width = 4, target = nearest.position, surface = surf, time_to_live = 90}
+   if nearest ~= nil then
+      rendering.draw_circle{color = {1, 1, 0}, radius = 4, width = 4, target = nearest.position, surface = surf, time_to_live = 90}
+   end
    return nearest, min_dist
 end
 
