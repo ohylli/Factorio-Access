@@ -11006,8 +11006,11 @@ script.on_event(defines.events.on_entity_damaged,function(event)
          ent.player.play_sound{path = "damaged-character-no-shield",volume_modifier=0.3}
       end
       return
-   elseif tick < 3600 and tick > 300 then
-      --No repeated alerts for the first 60 seconds (because of the spaceship fire damage)
+   elseif ent.get_health_ratio() == 1.0 then
+      --Ignore alerts if an entity has full health despite being damaged 
+      return
+   elseif tick < 3600 and tick > 600 then
+      --No alerts for the first 10th to 60th seconds (because of the alert spam from spaceship fire damage)
       return
    end
    
