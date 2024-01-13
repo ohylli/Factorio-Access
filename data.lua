@@ -103,6 +103,14 @@ data:extend({
 
 {
    type = "sound",
+   name = "inventory-wrap-around",
+   filename = "__FactorioAccess__/Audio/gear_drill_windup_09-inventory-wrap-around.wav",
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
    name = "Mine-Building",
    filename = "__FactorioAccess__/Audio/mine_02.ogg",
    volume = 1,
