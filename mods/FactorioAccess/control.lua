@@ -4717,11 +4717,13 @@ function menu_cursor_up(pindex)
    elseif players[pindex].menu == "inventory" then
       players[pindex].inventory.index = players[pindex].inventory.index -10
       if players[pindex].inventory.index < 1 then
-         if players[pindex].preferences.inventory_wraps_around == true then  --Wrap around setting: Move and play move sound and read slot
+         if players[pindex].preferences.inventory_wraps_around == true then  
+            --Wrap around setting: Move to the inventory end and read slot
             players[pindex].inventory.index = players[pindex].inventory.max + players[pindex].inventory.index
-            game.get_player(pindex).play_sound{path = "Inventory-Move"}
+            game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
             read_inventory_slot(pindex)
-         else --Border setting: Undo change and play error sound
+         else 
+            --Border setting: Undo change and play "wall" sound
             players[pindex].inventory.index = players[pindex].inventory.index +10
             game.get_player(pindex).play_sound{path = "Mine-Building"}
             printout("Border.", pindex)
@@ -4750,7 +4752,7 @@ function menu_cursor_up(pindex)
       if players[pindex].building.sector <= #players[pindex].building.sectors then
          --Most building sectors, eg. chest rows
          if players[pindex].building.sectors[players[pindex].building.sector].inventory == nil or #players[pindex].building.sectors[players[pindex].building.sector].inventory < 1 then
-            printout("blank", pindex)
+            printout("blank sector", pindex)
             return
          end
          --Move one row up in building inventory
@@ -4759,13 +4761,14 @@ function menu_cursor_up(pindex)
             game.get_player(pindex).play_sound{path = "Inventory-Move"}
             players[pindex].building.index = players[pindex].building.index - row_length
             if players[pindex].building.index < 1 then 
-               --Wrap around to the last row
+               --Wrap around to building inventory last row
+               game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
                players[pindex].building.index = players[pindex].building.index + #players[pindex].building.sectors[players[pindex].building.sector].inventory 
             end
          else
-            --Wrap over to slot 1
-            game.get_player(pindex).play_sound{path = "Inventory-Move"}
-            players[pindex].building.index = 1
+            --Inventory size < row length: Wrap over to the same slot
+            game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
+            --players[pindex].building.index = 1
          end
          read_building_slot(pindex,false)
       elseif players[pindex].building.recipe_list == nil then
@@ -4919,11 +4922,13 @@ function menu_cursor_down(pindex)
    elseif players[pindex].menu == "inventory" then
       players[pindex].inventory.index = players[pindex].inventory.index +10
       if players[pindex].inventory.index > players[pindex].inventory.max then
-         if players[pindex].preferences.inventory_wraps_around == true then  --Wrap around setting: Move and play move sound and read slot
-            players[pindex].inventory.index = players[pindex].inventory.index - players[pindex].inventory.max
-            game.get_player(pindex).play_sound{path = "Inventory-Move"}
+         if players[pindex].preferences.inventory_wraps_around == true then  
+            --Wrap around setting: Wrap over to first row
+            players[pindex].inventory.index = players[pindex].inventory.index % 10
+            game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
             read_inventory_slot(pindex)
-         else --Border setting: Undo change and play error sound
+         else 
+            --Border setting: Undo change and play "wall" sound
             players[pindex].inventory.index = players[pindex].inventory.index -10
             game.get_player(pindex).play_sound{path = "Mine-Building"}
             printout("Border.", pindex)
@@ -4952,7 +4957,7 @@ function menu_cursor_down(pindex)
       if players[pindex].building.sector <= #players[pindex].building.sectors then
          --Most building sectors, eg. chest rows
          if players[pindex].building.sectors[players[pindex].building.sector].inventory == nil or #players[pindex].building.sectors[players[pindex].building.sector].inventory < 1 then
-            printout("blank", pindex)
+            printout("blank sector", pindex)
             return
          end
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -4961,15 +4966,17 @@ function menu_cursor_down(pindex)
             --Move one row down
             players[pindex].building.index = players[pindex].building.index + row_length
             if players[pindex].building.index > #players[pindex].building.sectors[players[pindex].building.sector].inventory then
-               --Wrap around to the first row
+               --Wrap around to the building inventory first row
+               game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
                players[pindex].building.index = players[pindex].building.index % row_length
+               --If the row is shorter than usual, get to its end
                if players[pindex].building.index < 1 then
                   players[pindex].building.index = row_length
                end
             end
          else
-            --Keep same spot in first row
-            players[pindex].building.index = #players[pindex].building.sectors[players[pindex].building.sector].inventory
+            --Inventory size < row length: Wrap over to the same slot
+            game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
          end
          read_building_slot(pindex,false)
       elseif players[pindex].building.recipe_list == nil then
@@ -5122,11 +5129,13 @@ function menu_cursor_left(pindex)
    elseif players[pindex].menu == "inventory" then
       players[pindex].inventory.index = players[pindex].inventory.index -1    
       if players[pindex].inventory.index%10 == 0 then
-         if players[pindex].preferences.inventory_wraps_around == true then  --Wrap around setting: Move and play move sound and read slot
+         if players[pindex].preferences.inventory_wraps_around == true then  
+            --Wrap around setting: Move and play move sound and read slot
             players[pindex].inventory.index = players[pindex].inventory.index + 10
-            game.get_player(pindex).play_sound{path = "Inventory-Move"}
+            game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
             read_inventory_slot(pindex)
-         else --Border setting: Undo change and play error sound
+         else 
+            --Border setting: Undo change and play "wall" sound
             players[pindex].inventory.index = players[pindex].inventory.index +1
             game.get_player(pindex).play_sound{path = "Mine-Building"}
             printout("Border.", pindex)
@@ -5158,7 +5167,7 @@ function menu_cursor_left(pindex)
       if players[pindex].building.sector <= #players[pindex].building.sectors then
          --Most building sectors, e.g. chest rows
          if players[pindex].building.sectors[players[pindex].building.sector].inventory == nil or #players[pindex].building.sectors[players[pindex].building.sector].inventory < 1 then
-            printout("blank", pindex)
+            printout("blank sector", pindex)
             return
          end
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -5166,13 +5175,19 @@ function menu_cursor_left(pindex)
          if #players[pindex].building.sectors[players[pindex].building.sector].inventory > row_length then
             players[pindex].building.index = players[pindex].building.index - 1
             if players[pindex].building.index % row_length < 1 then
-               --Wrap around to the end of this (only) row
+               --Wrap around to the end of this row
+               game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
                players[pindex].building.index = players[pindex].building.index + row_length
+               if players[pindex].building.index > #players[pindex].building.sectors[players[pindex].building.sector].inventory then
+                  --If this final row is short, just jump to the end of the inventory
+                  players[pindex].building.index = #players[pindex].building.sectors[players[pindex].building.sector].inventory
+               end
             end
          else
             players[pindex].building.index = players[pindex].building.index - 1
             if players[pindex].building.index < 1 then
-               --Wrap around to the end of the inventory
+               --Wrap around to the end of this single-row inventory
+               game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
                players[pindex].building.index = #players[pindex].building.sectors[players[pindex].building.sector].inventory
             end
          end
@@ -5256,11 +5271,13 @@ function menu_cursor_right(pindex)
    elseif players[pindex].menu == "inventory" then
       players[pindex].inventory.index = players[pindex].inventory.index +1
       if players[pindex].inventory.index%10 == 1 then
-         if players[pindex].preferences.inventory_wraps_around == true then  --Wrap around setting: Move and play move sound and read slot
+         if players[pindex].preferences.inventory_wraps_around == true then  
+            --Wrap around setting: Move and play move sound and read slot
             players[pindex].inventory.index = players[pindex].inventory.index - 10
-            game.get_player(pindex).play_sound{path = "Inventory-Move"}
+            game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
             read_inventory_slot(pindex)
-         else --Border setting: Undo change and play error sound
+         else 
+            --Border setting: Undo change and play "wall" sound
             players[pindex].inventory.index = players[pindex].inventory.index -1
             game.get_player(pindex).play_sound{path = "Mine-Building"}
             printout("Border.", pindex)
@@ -5292,7 +5309,7 @@ function menu_cursor_right(pindex)
       if players[pindex].building.sector <= #players[pindex].building.sectors then
          --Most building sectors, e.g. chest inventories
          if players[pindex].building.sectors[players[pindex].building.sector].inventory == nil or #players[pindex].building.sectors[players[pindex].building.sector].inventory < 1 then
-            printout("blank", pindex)
+            printout("blank sector", pindex)
             return
          end
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -5300,13 +5317,15 @@ function menu_cursor_right(pindex)
          if #players[pindex].building.sectors[players[pindex].building.sector].inventory > row_length then
             players[pindex].building.index = players[pindex].building.index + 1
             if players[pindex].building.index % row_length == 1 then
-               --Wrap back around to the start of this (only?) row
+               --Wrap back around to the start of this row
+               game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
                players[pindex].building.index = players[pindex].building.index - row_length
             end
          else
             players[pindex].building.index = players[pindex].building.index + 1
             if players[pindex].building.index > #players[pindex].building.sectors[players[pindex].building.sector].inventory then
-               --Wrap around to the start of the inventory
+               --Wrap around to the start of the single-row inventory
+               game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
                players[pindex].building.index = 1
             end
          end
