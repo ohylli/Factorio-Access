@@ -4925,6 +4925,9 @@ function menu_cursor_down(pindex)
          if players[pindex].preferences.inventory_wraps_around == true then  
             --Wrap around setting: Wrap over to first row
             players[pindex].inventory.index = players[pindex].inventory.index % 10
+            if players[pindex].inventory.index == 0 then
+               players[pindex].inventory.index = 10
+            end
             game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
             read_inventory_slot(pindex)
          else 
