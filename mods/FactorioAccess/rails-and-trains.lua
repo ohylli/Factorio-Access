@@ -879,6 +879,13 @@ function identify_rail_segment_end_object(rail, dir_ahead, accept_only_forward, 
    local result_extra = nil
    local result_is_forward = nil
    
+   if rail == nil or rail.valid == false then
+      --Error
+      result_entity = segment_last_rail
+      result_entity_label = "missing rail"
+      return result_entity, result_entity_label, result_extra, result_is_forward
+   end
+   
    --Correction: Flip the correct direction ahead for mismatching diagonal rails
    if rail.name == "straight-rail" and (rail.direction == dirs.southwest or rail.direction == dirs.northwest) 
       or rail.name == "curved-rail" and (rail.direction == dirs.north or rail.direction == dirs.northeast or rail.direction == dirs.east or rail.direction == dirs.southeast) then
@@ -1183,7 +1190,7 @@ function train_read_next_rail_entity_ahead(pindex, invert, mute_in)
    return honk_score
 end
 
-
+--Takes all the output from the get_next_rail_entity_ahead and adds extra info before reading them out. Does NOT detect trains.
 function rail_read_next_rail_entity_ahead(pindex, rail, is_forward)
    local message = "Up this rail, "
    local origin_rail = rail
@@ -4455,7 +4462,7 @@ function go_to_valid_train_stop_from_list(pindex,train)
 end
 
 --Plays a train track alert sound for every player standing on or facing train tracks that meet the condition.
-function play_train_track_alert_sounds(step)
+function check_and_play_train_track_alert_sounds(step)
    for pindex, player in pairs(players) do
       --Check if the player is standing on a rail
       local p = game.get_player(pindex)

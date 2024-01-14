@@ -4136,9 +4136,10 @@ function build_preview_checks_info(stack, pindex)
       else
          --Notify if no connections and state nearest roboport
          result = result .. " not connected, "
-         local nearest_port, min_dist = find_nearest_roboport(p.surface, p.position, 1000)
-         if min_dist == nil or min_dist >= 1000 then
-            result = result .. " no other roboports poles within 1000 tiles, "
+         local max_dist = 2000
+         local nearest_port, min_dist = find_nearest_roboport(p.surface, p.position, max_dist)
+         if min_dist == nil or min_dist >= max_dist then
+            result = result .. " no other roboports poles within " .. max_dist .. " tiles, "
          else
             local dir = get_direction_of_that_from_this(nearest_port.position,pos)
             result = result .. math.ceil(min_dist) .. " tiles " .. direction_lookup(dir) .. " to nearest roboport, "
@@ -4716,11 +4717,13 @@ function menu_cursor_up(pindex)
    elseif players[pindex].menu == "inventory" then
       players[pindex].inventory.index = players[pindex].inventory.index -10
       if players[pindex].inventory.index < 1 then
-         if players[pindex].preferences.inventory_wraps_around == true then  --Wrap around setting: Move and play move sound and read slot
+         if players[pindex].preferences.inventory_wraps_around == true then  
+            --Wrap around setting: Move to the inventory end and read slot
             players[pindex].inventory.index = players[pindex].inventory.max + players[pindex].inventory.index
-            game.get_player(pindex).play_sound{path = "Inventory-Move"}
+            game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
             read_inventory_slot(pindex)
-         else --Border setting: Undo change and play error sound
+         else 
+            --Border setting: Undo change and play "wall" sound
             players[pindex].inventory.index = players[pindex].inventory.index +10
             game.get_player(pindex).play_sound{path = "Mine-Building"}
             printout("Border.", pindex)
@@ -4749,7 +4752,7 @@ function menu_cursor_up(pindex)
       if players[pindex].building.sector <= #players[pindex].building.sectors then
          --Most building sectors, eg. chest rows
          if players[pindex].building.sectors[players[pindex].building.sector].inventory == nil or #players[pindex].building.sectors[players[pindex].building.sector].inventory < 1 then
-            printout("blank", pindex)
+            printout("blank sector", pindex)
             return
          end
          --Move one row up in building inventory
@@ -4758,13 +4761,14 @@ function menu_cursor_up(pindex)
             game.get_player(pindex).play_sound{path = "Inventory-Move"}
             players[pindex].building.index = players[pindex].building.index - row_length
             if players[pindex].building.index < 1 then 
-               --Wrap around to the last row
+               --Wrap around to building inventory last row
+               game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
                players[pindex].building.index = players[pindex].building.index + #players[pindex].building.sectors[players[pindex].building.sector].inventory 
             end
          else
-            --Wrap over to slot 1
-            game.get_player(pindex).play_sound{path = "Inventory-Move"}
-            players[pindex].building.index = 1
+            --Inventory size < row length: Wrap over to the same slot
+            game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
+            --players[pindex].building.index = 1
          end
          read_building_slot(pindex,false)
       elseif players[pindex].building.recipe_list == nil then
@@ -4918,11 +4922,16 @@ function menu_cursor_down(pindex)
    elseif players[pindex].menu == "inventory" then
       players[pindex].inventory.index = players[pindex].inventory.index +10
       if players[pindex].inventory.index > players[pindex].inventory.max then
-         if players[pindex].preferences.inventory_wraps_around == true then  --Wrap around setting: Move and play move sound and read slot
-            players[pindex].inventory.index = players[pindex].inventory.index - players[pindex].inventory.max
-            game.get_player(pindex).play_sound{path = "Inventory-Move"}
+         if players[pindex].preferences.inventory_wraps_around == true then  
+            --Wrap around setting: Wrap over to first row
+            players[pindex].inventory.index = players[pindex].inventory.index % 10
+            if players[pindex].inventory.index == 0 then
+               players[pindex].inventory.index = 10
+            end
+            game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
             read_inventory_slot(pindex)
-         else --Border setting: Undo change and play error sound
+         else 
+            --Border setting: Undo change and play "wall" sound
             players[pindex].inventory.index = players[pindex].inventory.index -10
             game.get_player(pindex).play_sound{path = "Mine-Building"}
             printout("Border.", pindex)
@@ -4951,7 +4960,7 @@ function menu_cursor_down(pindex)
       if players[pindex].building.sector <= #players[pindex].building.sectors then
          --Most building sectors, eg. chest rows
          if players[pindex].building.sectors[players[pindex].building.sector].inventory == nil or #players[pindex].building.sectors[players[pindex].building.sector].inventory < 1 then
-            printout("blank", pindex)
+            printout("blank sector", pindex)
             return
          end
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -4960,15 +4969,17 @@ function menu_cursor_down(pindex)
             --Move one row down
             players[pindex].building.index = players[pindex].building.index + row_length
             if players[pindex].building.index > #players[pindex].building.sectors[players[pindex].building.sector].inventory then
-               --Wrap around to the first row
+               --Wrap around to the building inventory first row
+               game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
                players[pindex].building.index = players[pindex].building.index % row_length
+               --If the row is shorter than usual, get to its end
                if players[pindex].building.index < 1 then
                   players[pindex].building.index = row_length
                end
             end
          else
-            --Keep same spot in first row
-            players[pindex].building.index = #players[pindex].building.sectors[players[pindex].building.sector].inventory
+            --Inventory size < row length: Wrap over to the same slot
+            game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
          end
          read_building_slot(pindex,false)
       elseif players[pindex].building.recipe_list == nil then
@@ -5121,11 +5132,13 @@ function menu_cursor_left(pindex)
    elseif players[pindex].menu == "inventory" then
       players[pindex].inventory.index = players[pindex].inventory.index -1    
       if players[pindex].inventory.index%10 == 0 then
-         if players[pindex].preferences.inventory_wraps_around == true then  --Wrap around setting: Move and play move sound and read slot
+         if players[pindex].preferences.inventory_wraps_around == true then  
+            --Wrap around setting: Move and play move sound and read slot
             players[pindex].inventory.index = players[pindex].inventory.index + 10
-            game.get_player(pindex).play_sound{path = "Inventory-Move"}
+            game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
             read_inventory_slot(pindex)
-         else --Border setting: Undo change and play error sound
+         else 
+            --Border setting: Undo change and play "wall" sound
             players[pindex].inventory.index = players[pindex].inventory.index +1
             game.get_player(pindex).play_sound{path = "Mine-Building"}
             printout("Border.", pindex)
@@ -5157,7 +5170,7 @@ function menu_cursor_left(pindex)
       if players[pindex].building.sector <= #players[pindex].building.sectors then
          --Most building sectors, e.g. chest rows
          if players[pindex].building.sectors[players[pindex].building.sector].inventory == nil or #players[pindex].building.sectors[players[pindex].building.sector].inventory < 1 then
-            printout("blank", pindex)
+            printout("blank sector", pindex)
             return
          end
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -5165,13 +5178,19 @@ function menu_cursor_left(pindex)
          if #players[pindex].building.sectors[players[pindex].building.sector].inventory > row_length then
             players[pindex].building.index = players[pindex].building.index - 1
             if players[pindex].building.index % row_length < 1 then
-               --Wrap around to the end of this (only) row
+               --Wrap around to the end of this row
+               game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
                players[pindex].building.index = players[pindex].building.index + row_length
+               if players[pindex].building.index > #players[pindex].building.sectors[players[pindex].building.sector].inventory then
+                  --If this final row is short, just jump to the end of the inventory
+                  players[pindex].building.index = #players[pindex].building.sectors[players[pindex].building.sector].inventory
+               end
             end
          else
             players[pindex].building.index = players[pindex].building.index - 1
             if players[pindex].building.index < 1 then
-               --Wrap around to the end of the inventory
+               --Wrap around to the end of this single-row inventory
+               game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
                players[pindex].building.index = #players[pindex].building.sectors[players[pindex].building.sector].inventory
             end
          end
@@ -5255,11 +5274,13 @@ function menu_cursor_right(pindex)
    elseif players[pindex].menu == "inventory" then
       players[pindex].inventory.index = players[pindex].inventory.index +1
       if players[pindex].inventory.index%10 == 1 then
-         if players[pindex].preferences.inventory_wraps_around == true then  --Wrap around setting: Move and play move sound and read slot
+         if players[pindex].preferences.inventory_wraps_around == true then  
+            --Wrap around setting: Move and play move sound and read slot
             players[pindex].inventory.index = players[pindex].inventory.index - 10
-            game.get_player(pindex).play_sound{path = "Inventory-Move"}
+            game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
             read_inventory_slot(pindex)
-         else --Border setting: Undo change and play error sound
+         else 
+            --Border setting: Undo change and play "wall" sound
             players[pindex].inventory.index = players[pindex].inventory.index -1
             game.get_player(pindex).play_sound{path = "Mine-Building"}
             printout("Border.", pindex)
@@ -5291,7 +5312,7 @@ function menu_cursor_right(pindex)
       if players[pindex].building.sector <= #players[pindex].building.sectors then
          --Most building sectors, e.g. chest inventories
          if players[pindex].building.sectors[players[pindex].building.sector].inventory == nil or #players[pindex].building.sectors[players[pindex].building.sector].inventory < 1 then
-            printout("blank", pindex)
+            printout("blank sector", pindex)
             return
          end
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -5299,13 +5320,15 @@ function menu_cursor_right(pindex)
          if #players[pindex].building.sectors[players[pindex].building.sector].inventory > row_length then
             players[pindex].building.index = players[pindex].building.index + 1
             if players[pindex].building.index % row_length == 1 then
-               --Wrap back around to the start of this (only?) row
+               --Wrap back around to the start of this row
+               game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
                players[pindex].building.index = players[pindex].building.index - row_length
             end
          else
             players[pindex].building.index = players[pindex].building.index + 1
             if players[pindex].building.index > #players[pindex].building.sectors[players[pindex].building.sector].inventory then
-               --Wrap around to the start of the inventory
+               --Wrap around to the start of the single-row inventory
+               game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
                players[pindex].building.index = 1
             end
          end
@@ -5496,16 +5519,18 @@ function on_tick(event)
    --The elseifs can schedule up to 16 events.
    if event.tick % 15 == 0 then
       --Check and play train track warning sounds at appropriate frequencies
-      play_train_track_alert_sounds(3)
-      play_enemy_alert_sound(3)
+      check_and_play_train_track_alert_sounds(3)
+      check_and_play_enemy_alert_sound(3)
       if event.tick % 30 == 0 then
-         play_train_track_alert_sounds(2)
-         play_enemy_alert_sound(2)
+         check_and_play_train_track_alert_sounds(2)
+         check_and_play_enemy_alert_sound(2)
          if event.tick % 60 == 0 then
-            play_train_track_alert_sounds(1)
-            play_enemy_alert_sound(1)
+            check_and_play_train_track_alert_sounds(1)
+            check_and_play_enemy_alert_sound(1)
          end
       end
+   elseif event.tick % 15 == 1 then
+      --***check_and_play_bump_alert_sound(pindex,event.tick)
    elseif event.tick % 30 == 6 then
       --Check and play train horns
       for pindex, player in pairs(players) do
@@ -5790,7 +5815,7 @@ function move_key(direction,event, force_single_tile)
       end
       sync_build_arrow(pindex)
       if players[pindex].cursor_size == 0 then
-         -- Cursor size 0: read tile
+         -- Cursor size 0 ("1 by 1"): read tile
          if not game.get_player(pindex).driving then
             read_tile(pindex)
          end
@@ -10490,7 +10515,11 @@ script.on_event(defines.events.on_train_changed_state,function(event)
    end
 end)
 
---Returns the direction of that entity from this entity based on the ratios of the x and y distances. Returns 1 of 8 main directions, with a bias towards the diagonals to make it easier to align with the cardinal directions.
+--[[
+* Returns the direction of that entity from this entity based on the ratios of the x and y distances. 
+* Returns 1 of 8 main directions, with a bias away from the 4 cardinal directions, to make it easier to align with them. 
+* The deciding ratio is 1 to 4, meaning that for an object that is 100 tiles north, it can be offset by up to 25 tiles east or west before it stops being counted as "directly" in the north. 
+* The arctangent of 1/4 is about 14 degrees, meaning that the field of view that directly counts as a cardinal direction is about 30 degrees, while for a diagonal direction it is about 60 degrees.]]
 function get_direction_of_that_from_this(pos_that,pos_this)
    local diff_x = pos_that.x - pos_this.x
    local diff_y = pos_that.y - pos_this.y
@@ -11002,8 +11031,11 @@ script.on_event(defines.events.on_entity_damaged,function(event)
          ent.player.play_sound{path = "damaged-character-no-shield",volume_modifier=0.3}
       end
       return
-   elseif tick < 3600 and tick > 300 then
-      --No repeated alerts for the first 60 seconds (because of the spaceship fire damage)
+   elseif ent.get_health_ratio() == 1.0 then
+      --Ignore alerts if an entity has full health despite being damaged 
+      return
+   elseif tick < 3600 and tick > 600 then
+      --No alerts for the first 10th to 60th seconds (because of the alert spam from spaceship fire damage)
       return
    end
    
@@ -11454,5 +11486,165 @@ function crafting_find_index_of_next_name_match(str,pindex,last_i, last_j, recip
    return -1, -1 
 end
 
-
 script.on_event(defines.events.on_string_translated,localising.handler)
+
+   faplayer.bump = faplayer.bump or {--****
+      last_bump_tick = 1,     --Updated in bump checker
+      last_dir_key_tick = 1,  --Updated in key press handlers
+      last_dir_key_1st = nil, --Updated in key press handlers
+      last_dir_key_2nd = nil, --Updated in key press handlers
+      last_pos_1 = nil,       --Updated in bump checker
+      last_pos_2 = nil,       --Updated in bump checker
+      last_pos_3 = nil,       --Updated in bump checker
+      last_pos_4 = nil,       --Updated in bump checker
+      last_pos_5 = nil        --Updated in bump checker
+   }
+   
+--If the player has unexpected lateral movement while smooth running in a cardinal direction, like from bumping into an entity or being at the edge of water, play a sound.
+function check_and_play_bump_alert_sound(pindex,this_tick)--*****
+   local p = game.get_player(pindex)
+   
+   --Initialize
+   players[pindex].bump = players[pindex].bump or {
+      last_bump_tick = 1,
+      last_dir_key_tick = 1,
+      last_dir_key_1st = nil,
+      last_dir_key_2nd = nil,
+      last_pos_1 = nil,
+      last_pos_2 = nil,
+      last_pos_3 = nil,
+      last_pos_4 = nil,
+      last_pos_5 = nil
+   }
+   
+   --Return and reset if in a menu or a vehicle or in a different walking mode than smooth walking
+   if players[pindex].in_menu or p.vehicle ~= nil or players[pindex].walk ~= 2 then
+      --players[pindex].bump.last_pos_5 = nil
+      players[pindex].bump.last_pos_4 = nil
+      players[pindex].bump.last_pos_3 = nil
+      players[pindex].bump.last_pos_2 = nil
+      players[pindex].bump.last_pos_1 = nil
+      return
+   end
+   
+   --Update Positions since last check
+   --players[pindex].bump.last_pos_5 = players[pindex].bump.last_pos_4
+   players[pindex].bump.last_pos_4 = players[pindex].bump.last_pos_3
+   players[pindex].bump.last_pos_3 = players[pindex].bump.last_pos_2
+   players[pindex].bump.last_pos_2 = players[pindex].bump.last_pos_1
+   players[pindex].bump.last_pos_1 = p.position
+      
+   --Return if not enough positions filled (trying 4 for now) ***
+   if players[pindex].bump.last_pos_4 == nil then return end 
+   
+   --Return if bump sounded recently
+   if this_tick - players[pindex].bump.last_bump_tick < 60 then return end
+   
+   --Return if player changed direction recently
+   if this_tick - players[pindex].bump.last_dir_key_tick < 9 and players[pindex].bump.last_dir_key_1st ~= players[pindex].bump.last_dir_key_2nd then return end
+   
+   --Return if no last key info filled (rare)
+   if players[pindex].bump.last_dir_key_1st == nil then return end
+   
+   --Prepare analysis data
+   local TOLERANCE = 0.2
+   local was_going_straight = false
+   local face_dir = p.character.direction--****check: might be incorrect when running forward and turning backward to shoot.
+   local b = players[pindex].bump
+   
+   local diff_x1 = b.last_pos_1.x - b.last_pos_2.x
+   local diff_x2 = b.last_pos_2.x - b.last_pos_3.x
+   local diff_x3 = b.last_pos_3.x - b.last_pos_4.x
+      
+   local diff_y1 = b.last_pos_1.y - b.last_pos_2.y
+   local diff_y2 = b.last_pos_2.y - b.last_pos_3.y
+   local diff_y3 = b.last_pos_3.y - b.last_pos_4.y
+   
+   --Check if earlier movement has been straight
+   if players[pindex].bump.last_dir_key_1st == players[pindex].bump.last_dir_key_2nd then
+      was_going_straight = true
+   else
+      if face_dir == dirs.north or face_dir == dirs.south then
+         if math.abs(diff_x2) < TOLERANCE and math.abs(diff_x3) < TOLERANCE then
+            was_going_straight = true
+         end
+      else if face_dir == dirs.east or face_dir == dirs.west then
+         if math.abs(diff_y2) < TOLERANCE and math.abs(diff_y3) < TOLERANCE then
+            was_going_straight = true
+         end
+      end
+   end
+   
+   --Return if was not going straight earlier (like was running diagonally, as confirmed by last positions)
+   if not was_going_straight then 
+      return 
+   end
+   
+   game.print("checking bump",{volume_modifier=0})--***
+   
+   --Check if latest movement has been straight
+   local is_going_straight = false
+   if face_dir == dirs.north or face_dir == dirs.south then
+      if math.abs(diff_x1) < TOLERANCE then
+         is_going_straight = true
+      end
+   else if face_dir == dirs.east or face_dir == dirs.west then
+      if math.abs(diff_y1) < TOLERANCE then
+         is_going_straight = true
+      end
+   end
+   
+   --Return if going straight now
+   if is_going_straight then 
+      return 
+   end
+
+   --Now we can confirm that there is a sudden lateral movement
+   players[pindex].bump.last_bump_tick = this_tick
+   local bump_was_ent = false
+   local bump_was_cliff = false
+   local bump_was_tile = false
+   
+   --Check if there is an ent in front of the player
+   local ent = get_selected_ent(pindex)
+   if ent == nil or ent.valid == false then 
+      local ents = p.surface.find_entities_filtered{position = p.position, radius = 0.75}
+      for i, found_ent in ipairs(ents) do 
+         --Ignore ents you can walk through, laterdo better collision checks**
+         if found_ent.type ~= "resource" and found_ent.type ~= "transport-belt" and found_ent.type ~= "item-entity" and found_ent.type ~= "entity-ghost" and found_ent.type ~= "character" then
+            ent = found_ent
+         end
+      end
+   end
+   bump_was_ent = (ent == nil and ent.valid)
+   
+   if bump_was_ent then
+      p.play_sound{path = "Mine-Building"}--****update sound
+      game.print("bump: ent:" .. ent.name,{volume_modifier=0})--***
+      return
+   end
+   
+   --Check if there is a cliff nearby (the weird size can make it affect the player without being read)
+   local ents = p.surface.find_entities_filtered{position = p.position, radius = 2, type = "cliff" }
+   bump_was_cliff = (#ents > 0)
+   if bump_was_cliff then
+      p.play_sound{path = "Mine-Building"}--****update sound
+      game.print("bump: cliff",{volume_modifier=0})--***
+      return
+   end
+   
+   --Check if there is a tile that was bumped into
+   local tile = surf.get_tile(players[pindex].cursor_pos.x, players[pindex].cursor_pos.y)
+   bump_was_tile = tile.collides_with("player-layer")
+   
+   if bump_was_tile then
+      p.play_sound{path = "Mine-Building"}--****update sound
+      game.print("bump: tile:" .. tile.name,{volume_modifier=0})--***
+      return
+   end
+   
+   --The bump was something else...
+   p.play_sound{path = "Mine-Building"}--****update sound
+   game.print("bump: unknown, at " .. p.position.x .. "," .. p.position.y ,{volume_modifier=0})--***
+   return
+end
