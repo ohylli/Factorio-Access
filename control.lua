@@ -5519,16 +5519,18 @@ function on_tick(event)
    --The elseifs can schedule up to 16 events.
    if event.tick % 15 == 0 then
       --Check and play train track warning sounds at appropriate frequencies
-      play_train_track_alert_sounds(3)
-      play_enemy_alert_sound(3)
+      check_and_play_train_track_alert_sounds(3)
+      check_and_play_enemy_alert_sound(3)
       if event.tick % 30 == 0 then
-         play_train_track_alert_sounds(2)
-         play_enemy_alert_sound(2)
+         check_and_play_train_track_alert_sounds(2)
+         check_and_play_enemy_alert_sound(2)
          if event.tick % 60 == 0 then
-            play_train_track_alert_sounds(1)
-            play_enemy_alert_sound(1)
+            check_and_play_train_track_alert_sounds(1)
+            check_and_play_enemy_alert_sound(1)
          end
       end
+   elseif event.tick % 15 == 1 then
+      --***check_and_play_bump_alert_sound(pindex,event.tick)
    elseif event.tick % 30 == 6 then
       --Check and play train horns
       for pindex, player in pairs(players) do
@@ -5813,7 +5815,7 @@ function move_key(direction,event, force_single_tile)
       end
       sync_build_arrow(pindex)
       if players[pindex].cursor_size == 0 then
-         -- Cursor size 0: read tile
+         -- Cursor size 0 ("1 by 1"): read tile
          if not game.get_player(pindex).driving then
             read_tile(pindex)
          end
@@ -11484,5 +11486,165 @@ function crafting_find_index_of_next_name_match(str,pindex,last_i, last_j, recip
    return -1, -1 
 end
 
-
 script.on_event(defines.events.on_string_translated,localising.handler)
+
+   faplayer.bump = faplayer.bump or {--****
+      last_bump_tick = 1,     --Updated in bump checker
+      last_dir_key_tick = 1,  --Updated in key press handlers
+      last_dir_key_1st = nil, --Updated in key press handlers
+      last_dir_key_2nd = nil, --Updated in key press handlers
+      last_pos_1 = nil,       --Updated in bump checker
+      last_pos_2 = nil,       --Updated in bump checker
+      last_pos_3 = nil,       --Updated in bump checker
+      last_pos_4 = nil,       --Updated in bump checker
+      last_pos_5 = nil        --Updated in bump checker
+   }
+   
+--If the player has unexpected lateral movement while smooth running in a cardinal direction, like from bumping into an entity or being at the edge of water, play a sound.
+function check_and_play_bump_alert_sound(pindex,this_tick)--*****
+   local p = game.get_player(pindex)
+   
+   --Initialize
+   players[pindex].bump = players[pindex].bump or {
+      last_bump_tick = 1,
+      last_dir_key_tick = 1,
+      last_dir_key_1st = nil,
+      last_dir_key_2nd = nil,
+      last_pos_1 = nil,
+      last_pos_2 = nil,
+      last_pos_3 = nil,
+      last_pos_4 = nil,
+      last_pos_5 = nil
+   }
+   
+   --Return and reset if in a menu or a vehicle or in a different walking mode than smooth walking
+   if players[pindex].in_menu or p.vehicle ~= nil or players[pindex].walk ~= 2 then
+      --players[pindex].bump.last_pos_5 = nil
+      players[pindex].bump.last_pos_4 = nil
+      players[pindex].bump.last_pos_3 = nil
+      players[pindex].bump.last_pos_2 = nil
+      players[pindex].bump.last_pos_1 = nil
+      return
+   end
+   
+   --Update Positions since last check
+   --players[pindex].bump.last_pos_5 = players[pindex].bump.last_pos_4
+   players[pindex].bump.last_pos_4 = players[pindex].bump.last_pos_3
+   players[pindex].bump.last_pos_3 = players[pindex].bump.last_pos_2
+   players[pindex].bump.last_pos_2 = players[pindex].bump.last_pos_1
+   players[pindex].bump.last_pos_1 = p.position
+      
+   --Return if not enough positions filled (trying 4 for now) ***
+   if players[pindex].bump.last_pos_4 == nil then return end 
+   
+   --Return if bump sounded recently
+   if this_tick - players[pindex].bump.last_bump_tick < 60 then return end
+   
+   --Return if player changed direction recently
+   if this_tick - players[pindex].bump.last_dir_key_tick < 9 and players[pindex].bump.last_dir_key_1st ~= players[pindex].bump.last_dir_key_2nd then return end
+   
+   --Return if no last key info filled (rare)
+   if players[pindex].bump.last_dir_key_1st == nil then return end
+   
+   --Prepare analysis data
+   local TOLERANCE = 0.2
+   local was_going_straight = false
+   local face_dir = p.character.direction--****check: might be incorrect when running forward and turning backward to shoot.
+   local b = players[pindex].bump
+   
+   local diff_x1 = b.last_pos_1.x - b.last_pos_2.x
+   local diff_x2 = b.last_pos_2.x - b.last_pos_3.x
+   local diff_x3 = b.last_pos_3.x - b.last_pos_4.x
+      
+   local diff_y1 = b.last_pos_1.y - b.last_pos_2.y
+   local diff_y2 = b.last_pos_2.y - b.last_pos_3.y
+   local diff_y3 = b.last_pos_3.y - b.last_pos_4.y
+   
+   --Check if earlier movement has been straight
+   if players[pindex].bump.last_dir_key_1st == players[pindex].bump.last_dir_key_2nd then
+      was_going_straight = true
+   else
+      if face_dir == dirs.north or face_dir == dirs.south then
+         if math.abs(diff_x2) < TOLERANCE and math.abs(diff_x3) < TOLERANCE then
+            was_going_straight = true
+         end
+      else if face_dir == dirs.east or face_dir == dirs.west then
+         if math.abs(diff_y2) < TOLERANCE and math.abs(diff_y3) < TOLERANCE then
+            was_going_straight = true
+         end
+      end
+   end
+   
+   --Return if was not going straight earlier (like was running diagonally, as confirmed by last positions)
+   if not was_going_straight then 
+      return 
+   end
+   
+   game.print("checking bump",{volume_modifier=0})--***
+   
+   --Check if latest movement has been straight
+   local is_going_straight = false
+   if face_dir == dirs.north or face_dir == dirs.south then
+      if math.abs(diff_x1) < TOLERANCE then
+         is_going_straight = true
+      end
+   else if face_dir == dirs.east or face_dir == dirs.west then
+      if math.abs(diff_y1) < TOLERANCE then
+         is_going_straight = true
+      end
+   end
+   
+   --Return if going straight now
+   if is_going_straight then 
+      return 
+   end
+
+   --Now we can confirm that there is a sudden lateral movement
+   players[pindex].bump.last_bump_tick = this_tick
+   local bump_was_ent = false
+   local bump_was_cliff = false
+   local bump_was_tile = false
+   
+   --Check if there is an ent in front of the player
+   local ent = get_selected_ent(pindex)
+   if ent == nil or ent.valid == false then 
+      local ents = p.surface.find_entities_filtered{position = p.position, radius = 0.75}
+      for i, found_ent in ipairs(ents) do 
+         --Ignore ents you can walk through, laterdo better collision checks**
+         if found_ent.type ~= "resource" and found_ent.type ~= "transport-belt" and found_ent.type ~= "item-entity" and found_ent.type ~= "entity-ghost" and found_ent.type ~= "character" then
+            ent = found_ent
+         end
+      end
+   end
+   bump_was_ent = (ent == nil and ent.valid)
+   
+   if bump_was_ent then
+      p.play_sound{path = "Mine-Building"}--****update sound
+      game.print("bump: ent:" .. ent.name,{volume_modifier=0})--***
+      return
+   end
+   
+   --Check if there is a cliff nearby (the weird size can make it affect the player without being read)
+   local ents = p.surface.find_entities_filtered{position = p.position, radius = 2, type = "cliff" }
+   bump_was_cliff = (#ents > 0)
+   if bump_was_cliff then
+      p.play_sound{path = "Mine-Building"}--****update sound
+      game.print("bump: cliff",{volume_modifier=0})--***
+      return
+   end
+   
+   --Check if there is a tile that was bumped into
+   local tile = surf.get_tile(players[pindex].cursor_pos.x, players[pindex].cursor_pos.y)
+   bump_was_tile = tile.collides_with("player-layer")
+   
+   if bump_was_tile then
+      p.play_sound{path = "Mine-Building"}--****update sound
+      game.print("bump: tile:" .. tile.name,{volume_modifier=0})--***
+      return
+   end
+   
+   --The bump was something else...
+   p.play_sound{path = "Mine-Building"}--****update sound
+   game.print("bump: unknown, at " .. p.position.x .. "," .. p.position.y ,{volume_modifier=0})--***
+   return
+end

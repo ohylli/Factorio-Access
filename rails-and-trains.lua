@@ -1190,7 +1190,7 @@ function train_read_next_rail_entity_ahead(pindex, invert, mute_in)
    return honk_score
 end
 
-
+--Takes all the output from the get_next_rail_entity_ahead and adds extra info before reading them out. Does NOT detect trains.
 function rail_read_next_rail_entity_ahead(pindex, rail, is_forward)
    local message = "Up this rail, "
    local origin_rail = rail
@@ -4462,7 +4462,7 @@ function go_to_valid_train_stop_from_list(pindex,train)
 end
 
 --Plays a train track alert sound for every player standing on or facing train tracks that meet the condition.
-function play_train_track_alert_sounds(step)
+function check_and_play_train_track_alert_sounds(step)
    for pindex, player in pairs(players) do
       --Check if the player is standing on a rail
       local p = game.get_player(pindex)
