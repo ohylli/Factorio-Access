@@ -321,7 +321,7 @@ function remove_equipment_and_armor(pindex)
    return result
 end
 
-function play_enemy_alert_sound(mode_in)
+function check_and_play_enemy_alert_sound(mode_in)
    for pindex, player in pairs(players) do
       local mode = mode_in or 1
       local p = game.get_player(pindex)
