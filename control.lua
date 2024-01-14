@@ -11568,7 +11568,7 @@ function check_and_play_bump_alert_sound(pindex,this_tick)--*****
          if math.abs(diff_x2) < TOLERANCE and math.abs(diff_x3) < TOLERANCE then
             was_going_straight = true
          end
-      else if face_dir == dirs.east or face_dir == dirs.west then
+      elseif face_dir == dirs.east or face_dir == dirs.west then
          if math.abs(diff_y2) < TOLERANCE and math.abs(diff_y3) < TOLERANCE then
             was_going_straight = true
          end
@@ -11588,7 +11588,7 @@ function check_and_play_bump_alert_sound(pindex,this_tick)--*****
       if math.abs(diff_x1) < TOLERANCE then
          is_going_straight = true
       end
-   else if face_dir == dirs.east or face_dir == dirs.west then
+   elseif face_dir == dirs.east or face_dir == dirs.west then
       if math.abs(diff_y1) < TOLERANCE then
          is_going_straight = true
       end
@@ -11648,3 +11648,5 @@ function check_and_play_bump_alert_sound(pindex,this_tick)--*****
    game.print("bump: unknown, at " .. p.position.x .. "," .. p.position.y ,{volume_modifier=0})--***
    return
 end
+
+
