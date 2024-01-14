@@ -5552,12 +5552,7 @@ function on_tick(event)
    elseif event.tick % 300 == 14 then
       for pindex, player in pairs(players) do
          --Fix running speed bug (toggle walk aldo fixes it)
-         local p = game.get_player(pindex)
-         if p.character and p.character.valid and players[pindex] and players[pindex].walk == 0 then
-            p.character_running_speed_modifier = -1 --Freeze in place for telestep
-         elseif p.character and p.character.valid then
-            p.character_running_speed_modifier = 0  --Default speed for smooth walking
-         end
+         fix_walk(pindex)
       end
    end
 end
@@ -9397,14 +9392,28 @@ script.on_event("toggle-walk",function(event)
    players[pindex].move_queue = {}
    if players[pindex].walk == 0 then --Mode 1 (walk-by-step) is temporarily disabled until it comes back as an in game setting.
       players[pindex].walk = 2
-      players[pindex].character_running_speed_modifier = 0  -- 100% + 0 = 100%
-   else
+      game.get_player(pindex).character_running_speed_modifier = 0  -- 100% + 0 = 100%
+   else--walk == 1 or walk == 2
       players[pindex].walk = 0
-      players[pindex].character_running_speed_modifier = -1 -- 100% - 100% = 0%
+      game.get_player(pindex).character_running_speed_modifier = -1 -- 100% - 100% = 0%
    end
    --players[pindex].walk = (players[pindex].walk + 1) % 3
    printout(walk_type_speech[players[pindex].walk +1], pindex)
 end)
+
+function fix_walk(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
+   if game.get_player(pindex).character == nil or game.get_player(pindex).character.valid == false then
+      return
+   end
+   if players[pindex].walk == 0 then
+      game.get_player(pindex).character_running_speed_modifier = -1 -- 100% - 100% = 0%
+   else--walk > 0
+      game.get_player(pindex).character_running_speed_modifier =  0 -- 100% + 0 = 100%
+   end
+end
 
 --Toggle building while walking
 script.on_event("toggle-build-lock", function(event)
@@ -9433,6 +9442,7 @@ script.on_event("toggle-vanilla-mode",function(event)
    if players[pindex].vanilla_mode then
       game.get_player(pindex).print("Vanilla mode : ON")
       players[pindex].walk = 2
+      game.get_player(pindex).character_running_speed_modifier = 0
       players[pindex].hide_cursor = true
    else
       game.get_player(pindex).print("Vanilla mode : OFF")
@@ -11488,7 +11498,7 @@ end
 
 script.on_event(defines.events.on_string_translated,localising.handler)
 
-   faplayer.bump = faplayer.bump or {--****
+   --[[faplayer.bump = faplayer.bump or {--****
       last_bump_tick = 1,     --Updated in bump checker
       last_dir_key_tick = 1,  --Updated in key press handlers
       last_dir_key_1st = nil, --Updated in key press handlers
@@ -11498,7 +11508,7 @@ script.on_event(defines.events.on_string_translated,localising.handler)
       last_pos_3 = nil,       --Updated in bump checker
       last_pos_4 = nil,       --Updated in bump checker
       last_pos_5 = nil        --Updated in bump checker
-   }
+   }]]
    
 --If the player has unexpected lateral movement while smooth running in a cardinal direction, like from bumping into an entity or being at the edge of water, play a sound.
 function check_and_play_bump_alert_sound(pindex,this_tick)--*****
@@ -11650,3 +11660,4 @@ function check_and_play_bump_alert_sound(pindex,this_tick)--*****
 end
 
 
+--*****https://lua-api.factorio.com/latest/classes/LuaControl.html#walking_state
