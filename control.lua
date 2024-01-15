@@ -3317,7 +3317,7 @@ function repeat_last_spoken(pindex)
 end
 
 --Creates the scanner results list
-function scan_index(pindex,filter_direction)
+function scan_index(pindex)
    if not check_for_player(pindex) then
       printout("Scan pindex error.", pindex)
       return
@@ -3585,52 +3585,61 @@ function index_of_entity(array, value)
 end
 
 --The entity scanner runs here
-function scan_area(x,y,w,h, pindex)
+function scan_area(x,y,w,h, pindex, filter_direction)
    local first_player = game.get_player(pindex)
    local surf = first_player.surface
-   local ents = surf.find_entities_filtered{area = {{x, y},{x+w, y+h}}, type = {"resource", "tree"}, invert = true}
+   local ents = surf.find_entities_filtered{area = {{x, y},{x+w, y+h}}, type = {"resource", "tree", "highlight-box", "flying-text"}, invert = true} --Get all ents in the area except for these types
    local result = {}
    local pos = players[pindex].cursor_pos
    local forest_density = nil
    
-   --Find nearest edges of resource groups according to cursor pos
+   --Find the nearest edges of already-loaded resource groups according to cursor pos, and insert them to the initial list as aggregates
    for name, resource in pairs(players[pindex].resources) do
+      --Insert scanner entries 
       table.insert(result, {name = name, count = table_size(players[pindex].resources[name].patches), ents = {}, aggregate = true})
+      --Insert instances for the entry
       local index = #result
       for group, patch in pairs(resource.patches) do
-         if name == "forest" then
-            local forest_pos = nearest_edge(patch.edges, pos, name)
-            forest_density = classify_forest(forest_pos,pindex,false)
-         else
-            forest_density = nil
-         end
-         if forest_density ~= "empty" and forest_density ~= "patch" then --Do not add empty forests
-            table.insert(result[index].ents, {group = group, position = nearest_edge(patch.edges, pos, name)})
-         else
-            --(do not include in results)
+         if filter_direction == nil or filter_direction == get_direction_of_that_from_this(ents[i].position,pos) then --Filter direction check
+            --If it is a forest, check density
+            if name == "forest" then
+               local forest_pos = nearest_edge(patch.edges, pos, name)
+               forest_density = classify_forest(forest_pos,pindex,false)
+            else
+               forest_density = nil
+            end
+            --Insert to the list if this group is not a forest at all, or not an empty or tiny forest
+            if forest_density == nil or (forest_density ~= "empty" and forest_density ~= "patch") then 
+               table.insert(result[index].ents, {group = group, position = nearest_edge(patch.edges, pos, name)})
+            end
          end
       end
    end
-
+   
+   --Insert entities to the initial list
    for i=1, #ents, 1 do
-      local prod_info = extra_info_for_scan_list(ents[i],pindex,false)
-      local index = index_of_entity(result, ents[i].name .. prod_info)
-      if index == nil then
-         table.insert(result, {name = ents[i].name .. prod_info, count = 1, ents = {ents[i]}, aggregate = false}) 
+      local extra_entry_info = extra_info_for_scan_list(ents[i],pindex,false)
+      local scan_entry = ents[i].name .. extra_entry_info
+      local index = index_of_entity(result, scan_entry)
 
-      elseif #result[index] >= 100 then
-         table.remove(result[index].ents, math.random(100))
-         table.insert(result[index].ents, ents[i])
-         result[index].count = result[index].count + 1
+      if filter_direction == nil or filter_direction == get_direction_of_that_from_this(ents[i].position,pos) then --Filter direction check
+         if index == nil then --The entry is not already indexed, so add a new entry line to the list
+            table.insert(result, {name = scan_entry, count = 1, ents = {ents[i]}, aggregate = false}) 
 
-      else
-         table.insert(result[index].ents, ents[i])
-         result[index].count = result[index].count + 1
+         elseif #result[index] >= 100 then --If there are more than 100 instanes of this specific entry (?), replace a random one of them to add this
+            table.remove(result[index].ents, math.random(100))
+            table.insert(result[index].ents, ents[i])
+            result[index].count = result[index].count + 1
 
-         
---         result[index] = ents[i]
+         else
+            table.insert(result[index].ents, ents[i]) --Add this ent as another instance of the entry
+            result[index].count = result[index].count + 1        
+   --         result[index] = ents[i]
+         end
       end
    end
+   
+   --Sort the list
    if players[pindex].nearby.count == false then
       --Sort results by distance to cursor position when first creating the scanner list
       table.sort(result, function(k1, k2) 
@@ -3659,6 +3668,7 @@ function scan_area(x,y,w,h, pindex)
       end)
 
    else
+      --Sort results by count
       table.sort(result, function(k1, k2)
          return k1.count > k2.count
       end)
