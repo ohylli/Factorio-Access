@@ -2505,7 +2505,7 @@ function scan_sort(pindex)
 
    if players[pindex].nearby.count == false then
       table.sort(players[pindex].nearby.ents, function(k1, k2) 
-         local pos  = game.get_player(pindex).position
+         local pos = players[pindex].cursor_pos
          local surf = game.get_player(pindex).surface
          local ent1 = nil
          local ent2 = nil
@@ -3316,7 +3316,8 @@ function repeat_last_spoken(pindex)
    printout(players[pindex].last, pindex)
 end
 
-function scan_index(pindex)
+--Creates the scanner results list
+function scan_index(pindex,filter_direction)
    if not check_for_player(pindex) then
       printout("Scan pindex error.", pindex)
       return
@@ -3374,7 +3375,7 @@ function scan_index(pindex)
             scan_index(pindex)
             return
          end
-         --Sort by distance 
+         --Sort by distance to cursor pos while describing indexed entries
          table.sort(ents[players[pindex].nearby.index].ents, function(k1, k2) 
             local pos = players[pindex].cursor_pos
             return squared_distance(pos, k1.position) < squared_distance(pos, k2.position)
@@ -3583,6 +3584,7 @@ function index_of_entity(array, value)
    return nil
 end
 
+--The entity scanner runs here
 function scan_area(x,y,w,h, pindex)
    local first_player = game.get_player(pindex)
    local surf = first_player.surface
@@ -3591,6 +3593,7 @@ function scan_area(x,y,w,h, pindex)
    local pos = players[pindex].cursor_pos
    local forest_density = nil
    
+   --Find nearest edges of resource groups according to cursor pos
    for name, resource in pairs(players[pindex].resources) do
       table.insert(result, {name = name, count = table_size(players[pindex].resources[name].patches), ents = {}, aggregate = true})
       local index = #result
@@ -3604,7 +3607,7 @@ function scan_area(x,y,w,h, pindex)
          if forest_density ~= "empty" and forest_density ~= "patch" then --Do not add empty forests
             table.insert(result[index].ents, {group = group, position = nearest_edge(patch.edges, pos, name)})
          else
-            --do not include in results
+            --(do not include in results)
          end
       end
    end
@@ -3629,6 +3632,7 @@ function scan_area(x,y,w,h, pindex)
       end
    end
    if players[pindex].nearby.count == false then
+      --Sort results by distance to cursor position when first creating the scanner list
       table.sort(result, function(k1, k2) 
          local pos = players[pindex].cursor_pos
          local ent1 = nil
@@ -6492,7 +6496,7 @@ script.on_event("scan-mode-up", function(event)
    if not (players[pindex].in_menu) then
       players[pindex].nearby.index = 1
       players[pindex].nearby.count = false
-      printout("Sorting by distance from this position", pindex)
+      printout("Sorting by distance from the cursor position", pindex)
       scan_sort(pindex)
    end
 end)
