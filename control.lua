@@ -1537,7 +1537,7 @@ function teleport_to_closest(pindex, pos, muted, ignore_enemies)
          local smoke_effect = first_player.surface.create_entity{name = "iron-chest", position = first_player.position, raise_built = false, force = first_player.force}
          smoke_effect.destroy{}
          --Teleport sound at origin
-         game.get_player(pindex).play_sound{path = "teleported", volume_modifier = 0.2, position = old_pos}
+         game.get_player(pindex).play_sound{path = "player-teleported", volume_modifier = 0.2, position = old_pos}
          game.get_player(pindex).play_sound{path = "utility/scenario_message", volume_modifier = 0.8, position = old_pos}
       end
       local teleported = false 
@@ -1556,7 +1556,7 @@ function teleport_to_closest(pindex, pos, muted, ignore_enemies)
             local smoke_effect = first_player.surface.create_entity{name = "iron-chest", position = first_player.position, raise_built = false, force = first_player.force}
             smoke_effect.destroy{}
             --Teleport sound at target
-            game.get_player(pindex).play_sound{path = "teleported", volume_modifier = 0.2, position = new_pos}
+            game.get_player(pindex).play_sound{path = "player-teleported", volume_modifier = 0.2, position = new_pos}
             game.get_player(pindex).play_sound{path = "utility/scenario_message", volume_modifier = 0.8, position = new_pos}
          end
          if new_pos.x ~= pos.x or new_pos.y ~= pos.y then
@@ -5530,7 +5530,9 @@ function on_tick(event)
          end
       end
    elseif event.tick % 15 == 1 then
-      --***check_and_play_bump_alert_sound(pindex,event.tick)
+      for pindex, player in pairs(players) do
+         check_and_play_bump_alert_sound(pindex,event.tick)
+      end
    elseif event.tick % 30 == 6 then
       --Check and play train horns
       for pindex, player in pairs(players) do
@@ -5794,6 +5796,13 @@ function move_key(direction,event, force_single_tile)
       return 
    end
    local single_only = force_single_tile or false
+   
+   --Save the key press event
+   local pex = players[event.player_index]
+   pex.bump.last_dir_key_2nd = pex.bump.last_dir_key_1st
+   pex.bump.last_dir_key_1st = direction
+   pex.bump.last_dir_key_tick = event.tick
+   
    if players[pindex].in_menu and players[pindex].menu ~= "prompt" then
       -- Menus: move menu cursor
       menu_cursor_move(direction,pindex)
@@ -10090,18 +10099,7 @@ script.on_event("debug-test-key", function(event)
    local ent =  get_selected_ent(pindex)
    local stack = game.get_player(pindex).cursor_stack
    
-   
-   --if stack and stack.valid_for_read then
-   --   game.print(" * " .. localising.get(stack.prototype,pindex) .. " * ")
-   --end
-   
-   game.print(get_substring_before_space(get_substring_before_comma(ent.name)))
-   game.print(ent.name)
-   if ent.name == get_substring_before_space(get_substring_before_comma(ent.name)) then
-      game.print("equal")
-   else
-      game.print("not equal")
-   end   
+   game.print(direction_lookup(p.walking_state.direction))
 
 end)
 
@@ -10563,6 +10561,37 @@ function get_direction_of_that_from_this(pos_that,pos_this)
 	  end
    end
    return dir
+end
+
+--Directions lookup table, laterdo localise**
+function direction_lookup(dir)
+   local reading = "unknown"
+   if dir < 0 then
+      return "direction error 1"
+   end
+   
+   if dir == dirs.north then
+      reading = "North"
+   elseif dir == dirs.northeast then
+      reading = "Northeast"
+   elseif dir == dirs.east then
+      reading = "East"
+   elseif dir == dirs.southeast then
+      reading = "Southeast"
+   elseif dir == dirs.south then
+      reading = "South"
+   elseif dir == dirs.southwest then
+      reading = "Southwest"
+   elseif dir == dirs.west then
+      reading = "West"
+   elseif dir == dirs.northwest then
+      reading = "Northwest"
+   elseif dir == 99 then --Internally defined
+      reading = "Here"
+   else
+      reading = "unknown direction ID " .. dir
+   end      
+   return reading
 end
 
 --Spawns a lamp at the electric pole and uses its energy level to approximate the network satisfaction percentage with high accuracy
@@ -11035,10 +11064,10 @@ script.on_event(defines.events.on_entity_damaged,function(event)
       end
       --Play shield and/or character damaged sound
       if shield_left ~= nil then
-         ent.player.play_sound{path = "damaged-character-shield",volume_modifier=0.3}
+         ent.player.play_sound{path = "player-shield-damaged",volume_modifier=0.3}
       end
       if shield_left == nil or (shield_left < 1.0 and ent.get_health_ratio() < 1.0) then
-         ent.player.play_sound{path = "damaged-character-no-shield",volume_modifier=0.3}
+         ent.player.play_sound{path = "player-character-damaged",volume_modifier=0.3}
       end
       return
    elseif ent.get_health_ratio() == 1.0 then
@@ -11512,7 +11541,11 @@ script.on_event(defines.events.on_string_translated,localising.handler)
    
 --If the player has unexpected lateral movement while smooth running in a cardinal direction, like from bumping into an entity or being at the edge of water, play a sound.
 function check_and_play_bump_alert_sound(pindex,this_tick)--*****
+   if not check_for_player(pindex) or players[pindex].menu == "prompt" then
+      return 
+   end
    local p = game.get_player(pindex)
+   local face_dir = p.walking_state.direction
    
    --Initialize
    players[pindex].bump = players[pindex].bump or {
@@ -11523,13 +11556,11 @@ function check_and_play_bump_alert_sound(pindex,this_tick)--*****
       last_pos_1 = nil,
       last_pos_2 = nil,
       last_pos_3 = nil,
-      last_pos_4 = nil,
-      last_pos_5 = nil
+      last_pos_4 = nil
    }
    
    --Return and reset if in a menu or a vehicle or in a different walking mode than smooth walking
    if players[pindex].in_menu or p.vehicle ~= nil or players[pindex].walk ~= 2 then
-      --players[pindex].bump.last_pos_5 = nil
       players[pindex].bump.last_pos_4 = nil
       players[pindex].bump.last_pos_3 = nil
       players[pindex].bump.last_pos_2 = nil
@@ -11538,28 +11569,35 @@ function check_and_play_bump_alert_sound(pindex,this_tick)--*****
    end
    
    --Update Positions since last check
-   --players[pindex].bump.last_pos_5 = players[pindex].bump.last_pos_4
    players[pindex].bump.last_pos_4 = players[pindex].bump.last_pos_3
    players[pindex].bump.last_pos_3 = players[pindex].bump.last_pos_2
    players[pindex].bump.last_pos_2 = players[pindex].bump.last_pos_1
    players[pindex].bump.last_pos_1 = p.position
+   
+   --Return if not walking
+   if p.walking_state.walking == false then return end
       
-   --Return if not enough positions filled (trying 4 for now) ***
+   --Return if not enough positions filled (trying 4 for now)
    if players[pindex].bump.last_pos_4 == nil then return end 
    
    --Return if bump sounded recently
-   if this_tick - players[pindex].bump.last_bump_tick < 60 then return end
+   if this_tick - players[pindex].bump.last_bump_tick < 20 then return end
    
    --Return if player changed direction recently
    if this_tick - players[pindex].bump.last_dir_key_tick < 9 and players[pindex].bump.last_dir_key_1st ~= players[pindex].bump.last_dir_key_2nd then return end
    
+   --Return if current running direction is not equal to the last (e.g. letting go of a key)
+   if face_dir ~= players[pindex].bump.last_dir_key_1st then return end
+   
    --Return if no last key info filled (rare)
    if players[pindex].bump.last_dir_key_1st == nil then return end
    
+   --Return if not walking in a cardinal direction
+   if face_dir ~= dirs.north and face_dir ~= dirs.east and face_dir ~= dirs.south and face_dir ~= dirs.west then return end
+   
    --Prepare analysis data
-   local TOLERANCE = 0.2
+   local TOLERANCE = 0.02
    local was_going_straight = false
-   local face_dir = p.character.direction--****check: might be incorrect when running forward and turning backward to shoot.
    local b = players[pindex].bump
    
    local diff_x1 = b.last_pos_1.x - b.last_pos_2.x
@@ -11616,7 +11654,11 @@ function check_and_play_bump_alert_sound(pindex,this_tick)--*****
    local bump_was_tile = false
    
    --Check if there is an ent in front of the player
-   local ent = get_selected_ent(pindex)
+   local found_ent = get_selected_ent(pindex)
+   local ent = nil
+   if found_ent and found_ent.valid and found_ent.type ~= "resource" and found_ent.type ~= "transport-belt" and found_ent.type ~= "item-entity" and found_ent.type ~= "entity-ghost" and found_ent.type ~= "character" then
+      ent = found_ent
+   end
    if ent == nil or ent.valid == false then 
       local ents = p.surface.find_entities_filtered{position = p.position, radius = 0.75}
       for i, found_ent in ipairs(ents) do 
@@ -11626,7 +11668,7 @@ function check_and_play_bump_alert_sound(pindex,this_tick)--*****
          end
       end
    end
-   bump_was_ent = (ent == nil and ent.valid)
+   bump_was_ent = (ent ~= nil and ent.valid)
    
    if bump_was_ent then
       p.play_sound{path = "Mine-Building"}--****update sound
@@ -11644,7 +11686,7 @@ function check_and_play_bump_alert_sound(pindex,this_tick)--*****
    end
    
    --Check if there is a tile that was bumped into
-   local tile = surf.get_tile(players[pindex].cursor_pos.x, players[pindex].cursor_pos.y)
+   local tile = p.surface.get_tile(players[pindex].cursor_pos.x, players[pindex].cursor_pos.y)
    bump_was_tile = tile.collides_with("player-layer")
    
    if bump_was_tile then
@@ -11653,11 +11695,9 @@ function check_and_play_bump_alert_sound(pindex,this_tick)--*****
       return
    end
    
-   --The bump was something else...
+   --The bump was something else, probably missed it...
    p.play_sound{path = "Mine-Building"}--****update sound
    game.print("bump: unknown, at " .. p.position.x .. "," .. p.position.y ,{volume_modifier=0})--***
    return
 end
 
-
---*****https://lua-api.factorio.com/latest/classes/LuaControl.html#walking_state

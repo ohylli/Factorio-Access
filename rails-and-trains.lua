@@ -3097,38 +3097,6 @@ function get_heading(ent)
    return heading
 end
 
---Directions lookup table
-function direction_lookup(dir)
-   local reading = "unknown"
-   if dir < 0 then
-      return "direction error 1"
-   end
-   
-   if dir == dirs.north then
-      reading = "North"
-   elseif dir == dirs.northeast then
-      reading = "Northeast"
-   elseif dir == dirs.east then
-      reading = "East"
-   elseif dir == dirs.southeast then
-      reading = "Southeast"
-   elseif dir == dirs.south then
-      reading = "South"
-   elseif dir == dirs.southwest then
-      reading = "Southwest"
-   elseif dir == dirs.west then
-      reading = "West"
-   elseif dir == dirs.northwest then
-      reading = "Northwest"
-   elseif dir == 99 then --Internally defined
-      reading = "Here"
-   else
-      reading = "unknown direction ID " .. dir
-   end      
-   return reading
-end
-
-
 function rail_builder_open(pindex, rail)
    if players[pindex].vanilla_mode then
       return 
