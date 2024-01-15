@@ -3561,11 +3561,11 @@ function scan_middle(pindex)
    end
  end
 
-function rescan(pindex,filter_by_direction)
+function rescan(pindex,filter_dir)
    players[pindex].nearby.index = 1
    players[pindex].nearby.selection = 1
    first_player = game.get_player(pindex)
-   players[pindex].nearby.ents = scan_area(math.floor(players[pindex].cursor_pos.x)-2500, math.floor(players[pindex].cursor_pos.y)-2500, 5000, 5000, pindex)
+   players[pindex].nearby.ents = scan_area(math.floor(players[pindex].cursor_pos.x)-2500, math.floor(players[pindex].cursor_pos.y)-2500, 5000, 5000, pindex, filter_dir)
    populate_categories(pindex)
    players[pindex].nearby.index = 1
    players[pindex].nearby.selection = 1
@@ -3592,6 +3592,7 @@ function scan_area(x,y,w,h, pindex, filter_direction)
    local result = {}
    local pos = players[pindex].cursor_pos
    local forest_density = nil
+   local close_object_limit = 10.1
    
    --Find the nearest edges of already-loaded resource groups according to cursor pos, and insert them to the initial list as aggregates
    for name, resource in pairs(players[pindex].resources) do
@@ -3600,7 +3601,18 @@ function scan_area(x,y,w,h, pindex, filter_direction)
       --Insert instances for the entry
       local index = #result
       for group, patch in pairs(resource.patches) do
-         if filter_direction == nil or filter_direction == get_direction_of_that_from_this(ents[i].position,pos) then --Filter direction check
+         --Filter check 1: Is the entity in the filter diection? (If a filter is set at all)
+         local dir_of_ent = get_direction_of_that_from_this(nearest_edge(patch.edges, pos, name),pos)
+         local filter_passed = (filter_direction == nil or filter_direction == dir_of_ent)
+         if not filter_passed then
+            --Filter check 2: Is the entity nearby and almost within the filter diection?
+            if util.distance(nearest_edge(patch.edges, pos, name),pos) < close_object_limit then
+               local CW_dir = (filter_direction + 1) % (2 * dirs.south)
+               local CCW_dir = (filter_direction - 1) % (2 * dirs.south)
+               filter_passed = (dir_of_ent == CW_dir or dir_of_ent == CCW_dir)
+            end
+         end
+         if filter_passed then 
             --If it is a forest, check density
             if name == "forest" then
                local forest_pos = nearest_edge(patch.edges, pos, name)
@@ -3614,15 +3626,31 @@ function scan_area(x,y,w,h, pindex, filter_direction)
             end
          end
       end
+      --Remove empty entries
+      if result[index].ents == nil or result[index].ents == {} or result[index].ents[1] == nil then
+         table.remove(result,index)
+      end
    end
-   
+
    --Insert entities to the initial list
    for i=1, #ents, 1 do
       local extra_entry_info = extra_info_for_scan_list(ents[i],pindex,false)
       local scan_entry = ents[i].name .. extra_entry_info
       local index = index_of_entity(result, scan_entry)
+      
+      --Filter check 1: Is the entity in the filter diection? (If a filter is set at all)
+      local dir_of_ent = get_direction_of_that_from_this(ents[i].position,pos)
+      local filter_passed = (filter_direction == nil or filter_direction == dir_of_ent)
+      if not filter_passed then
+         --Filter check 2: Is the entity nearby and almost within the filter diection?
+         if util.distance(ents[i].position,pos) < close_object_limit then
+            local CW_dir = (filter_direction + 1) % (2 * dirs.south)
+            local CCW_dir = (filter_direction - 1) % (2 * dirs.south)
+            filter_passed = (dir_of_ent == CW_dir or dir_of_ent == CCW_dir)
+         end
+      end
 
-      if filter_direction == nil or filter_direction == get_direction_of_that_from_this(ents[i].position,pos) then --Filter direction check
+      if filter_passed then 
          if index == nil then --The entry is not already indexed, so add a new entry line to the list
             table.insert(result, {name = scan_entry, count = 1, ents = {ents[i]}, aggregate = false}) 
 
