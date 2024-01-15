@@ -104,7 +104,7 @@ data:extend({
 {
    type = "sound",
    name = "inventory-wrap-around",
-   filename = "__FactorioAccess__/Audio/gear_drill_windup_09-inventory-wrap-around.wav",
+   filename = "__FactorioAccess__/Audio/inventory-wrap-around-gear_drill_windup_09.wav",
    volume = 1,
    preload = true
 },
@@ -167,48 +167,72 @@ data:extend({
 
 {
    type = "sound",
-   name = "damaged-character-shield",
-   filename = "__FactorioAccess__/Audio/beep_16-shield-damaged.wav",
+   name = "player-shield-damaged",
+   filename = "__FactorioAccess__/Audio/player-shield-damaged-beep_16.wav",
    volume = 1,
    preload = true
 },
 
 {
    type = "sound",
-   name = "damaged-character-no-shield",
-   filename = "__FactorioAccess__/Audio/beep-06-character-damaged.wav",
+   name = "player-character-damaged",
+   filename = "__FactorioAccess__/Audio/player-character-damaged-beep_06.wav",
    volume = 1,
    preload = true
 },
 
 {
    type = "sound",
-   name = "damaged-entity-alert",
-   filename = "__FactorioAccess__/Audio/alarm-siren-warning-01-structure-damaged.wav",
+   name = "player-teleported",
+   filename = "__FactorioAccess__/Audio/player-teleported-alarm_siren_loop_09.wav",
    volume = 1,
    preload = true
 },
 
 {
    type = "sound",
-   name = "teleported",
-   filename = "__FactorioAccess__/Audio/alarm-siren-loop-09-teleported.wav",
+   name = "player-aim-locked",
+   filename = "__FactorioAccess__/Audio/player-aim-locked-beep_12.wav", 
    volume = 1,
    preload = true
 },
 
 {
    type = "sound",
-   name = "aim-locked",
-   filename = "__FactorioAccess__/Audio/beep-12-aim-locked.wav", 
+   name = "player-bump-alert",
+   filename = "__FactorioAccess__/Audio/player-bump-alert-ui_menu_button_error_04.wav", 
    volume = 1,
    preload = true
 },
 
 {
    type = "sound",
-   name = "enemy-presence-high",
-   filename = "__FactorioAccess__/Audio/alarm-siren-loop-11-enemy-presence-high.wav",
+   name = "player-bump-slide",
+   filename = "__FactorioAccess__/Audio/player-bump-slide-footstep_gravel_slide_05.wav", 
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "player-bump-trip",
+   filename = "__FactorioAccess__/Audio/player-bump-trip-footstep_concrete_land_11.wav", 
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "alert-structure-damaged",
+   filename = "__FactorioAccess__/Audio/alert-structure-damaged-alarm_siren_warning_01.wav",
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "alert-enemy-presence-high",
+   filename = "__FactorioAccess__/Audio/alert-enemy-presence-high-alarm_siren_loop_11.wav",
    volume = 1,
    preload = true
 },
