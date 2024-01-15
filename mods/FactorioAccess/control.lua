@@ -2443,7 +2443,7 @@ function get_scan_summary(scan_left_top, scan_right_bottom, pindex)
             area = get_ent_area_from_name(get_substring_before_space(get_substring_before_comma(ent.name)),pindex)
             if area == -1 then
                area = 1
-               game.get_player(pindex).print(get_substring_before_space(get_substring_before_comma(ent.name)) .. " could not be found for the area check ",{volume_modifier = 0})--***bug: unable to get area from name
+               game.get_player(pindex).print(get_substring_before_space(get_substring_before_comma(ent.name)) .. " could not be found for the area check ",{volume_modifier = 0})--bug: unable to get area from name
             end
          end 
          local percentage = math.floor((area * players[pindex].nearby.ents[i].count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .95)--Tolerate up to 0.05%
@@ -2477,9 +2477,14 @@ function draw_area_as_cursor(scan_left_top,scan_right_bottom,pindex)
    if h_tile ~= nil then
       rendering.destroy(h_tile)
    end
-   h_tile = rendering.draw_rectangle{color = {0.75,1,1,0.75},surface = game.get_player(pindex).surface, left_top = scan_left_top, right_bottom = scan_right_bottom, draw_on_ground = true}
+   h_tile = rendering.draw_rectangle{color = {0.75,1,1},surface = game.get_player(pindex).surface, left_top = scan_left_top, right_bottom = scan_right_bottom, draw_on_ground = true, players = nil}
    rendering.set_visible(h_tile,true)
    players[pindex].cursor_tile_highlight_box = h_tile 
+   
+   --Recolor cursor boxes if multiplayer
+   if game.is_multiplayer() then
+      set_cursor_colors_to_player_colors(pindex)
+   end
 end
    
 --Sort scan results by distance or count
@@ -9244,6 +9249,7 @@ script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
       players[pindex].building_direction_lag = true
       read_hand(pindex)
    end
+   sync_build_arrow(pindex)
 end)
 
 
@@ -10116,6 +10122,11 @@ script.on_event("debug-test-key", function(event)
    local stack = game.get_player(pindex).cursor_stack
    
    game.print(direction_lookup(p.walking_state.direction))
+   
+   --Recolor cursor boxes if multiplayer
+   if true then
+      set_cursor_colors_to_player_colors(pindex)
+   end
 
 end)
 
@@ -10906,7 +10917,7 @@ function sync_build_arrow(pindex)
       --Redraw arrow
       if dir_indicator ~= nil then rendering.destroy(player.building_direction_arrow) end
       player.building_direction_arrow = rendering.draw_sprite{sprite = "fluid.crude-oil", tint = {r = 0.25, b = 0.25, g = 1.0, a = 0.8}, render_layer = 254, 
-         surface = game.get_player(pindex).surface, players = {pindex}, target = player.cursor_pos, orientation = (dir/dirs.east/dirs.south)}
+         surface = game.get_player(pindex).surface, players = nil, target = player.cursor_pos, orientation = (dir/dirs.east/dirs.south)}
       dir_indicator = player.building_direction_arrow
       rendering.set_visible(dir_indicator,true)
       if players[pindex].hide_cursor or stack.name == "locomotive" or stack.name == "cargo-wagon" or stack.name == "fluid-wagon" or stack.name == "artillery-wagon" then
@@ -10944,7 +10955,7 @@ function sync_build_arrow(pindex)
          end
       end
       player.building_footprint = rendering.draw_rectangle{left_top = left_top, right_bottom = right_bottom , color = {r = 0.25, b = 0.25, g = 1.0, a = 0.25}, draw_on_ground = true, 
-         surface = game.get_player(pindex).surface, players = {pindex} }
+         surface = game.get_player(pindex).surface, players = nil }
       rendering.set_visible(player.building_footprint,true)
       if players[pindex].hide_cursor or stack.name == "locomotive" or stack.name == "cargo-wagon" or stack.name == "fluid-wagon" or stack.name == "artillery-wagon" then
          rendering.set_visible(player.building_footprint,false)
@@ -10952,6 +10963,11 @@ function sync_build_arrow(pindex)
    else
       if dir_indicator ~= nil then rendering.set_visible(dir_indicator,false) end
       if player.building_footprint ~= nil then rendering.set_visible(player.building_footprint,false) end
+   end
+   
+   --Recolor cursor boxes if multiplayer
+   if game.is_multiplayer() then
+      set_cursor_colors_to_player_colors(pindex)
    end
 end
 
@@ -10988,7 +11004,7 @@ function cursor_highlight(pindex, ent, box_type, skip_mouse_movement)
    end
    
    --Highlight the currently focused ground tile.
-   h_tile = rendering.draw_rectangle{color = {0.75,1,1,0.75}, surface = p.surface, draw_on_ground = true, 
+   h_tile = rendering.draw_rectangle{color = {0.75,1,1,0.75}, surface = p.surface, draw_on_ground = true, players = nil,
       left_top = {math.floor(c_pos.x)+0.05,math.floor(c_pos.y)+0.05}, right_bottom = {math.ceil(c_pos.x)-0.05,math.ceil(c_pos.y)-0.05}}
    
    players[pindex].cursor_ent_highlight_box = h_box
@@ -11003,6 +11019,24 @@ function cursor_highlight(pindex, ent, box_type, skip_mouse_movement)
       move_cursor_map(center_of_tile(c_pos),pindex)
    else
       move_cursor_map(center_of_tile(p.position),pindex)
+   end
+   
+   --Recolor cursor boxes if multiplayer
+   if game.is_multiplayer() then
+      set_cursor_colors_to_player_colors(pindex)
+   end
+end
+
+function set_cursor_colors_to_player_colors(pindex)
+   if not check_for_player(pindex) then
+      return 
+   end
+   local p = game.get_player(pindex)
+   if rendering.is_valid(players[pindex].cursor_tile_highlight_box) then
+      rendering.set_color(players[pindex].cursor_tile_highlight_box,p.color)
+   end
+   if rendering.is_valid(players[pindex].building_footprint) then
+      rendering.set_color(players[pindex].building_footprint,p.color)
    end
 end
 
@@ -11683,7 +11717,7 @@ function check_and_play_bump_alert_sound(pindex,this_tick)
       if ent.type == "cliff" then
          p.play_sound{path = "player-bump-slide"}
       else
-         p.play_sound{path = "player-bump-trip"}--****better sound
+         p.play_sound{path = "player-bump-trip"}
       end
       --game.print("bump: ent:" .. ent.name,{volume_modifier=0})--
       return
@@ -11731,7 +11765,7 @@ function check_and_play_stuck_alert_sound(pindex,this_tick)
       return
    end
       
-   --Return if not walking***
+   --Return if not walking
    if p.walking_state.walking == false then return end
       
    --Return if not enough positions filled (trying 3 for now)
