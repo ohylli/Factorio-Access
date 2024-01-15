@@ -89,24 +89,16 @@ data:extend({
 
 {
    type = "sound",
-   name = "player-turn",
-   filename = "__FactorioAccess__/Audio/player-turn-1face_dir.ogg",
+   name = "alert-enemy-presence-high",
+   filename = "__FactorioAccess__/Audio/alert-enemy-presence-high-alarm_siren_loop_11.wav",
    volume = 1,
    preload = true
 },
 
 {
    type = "sound",
-   name = "player-mine",
-   filename = "__FactorioAccess__/Audio/player-mine_02.ogg",
-   volume = 1,
-   preload = true
-},
-
-{
-   type = "sound",
-   name = "Rotate-Hand-Sound",
-   filename = "__core__/sound/gui-back.ogg",
+   name = "alert-structure-damaged",
+   filename = "__FactorioAccess__/Audio/alert-structure-damaged-alarm_siren_warning_01.wav",
    volume = 1,
    preload = true
 },
@@ -153,16 +145,48 @@ data:extend({
 
 {
    type = "sound",
-   name = "train-honk-short",
-   filename = "__FactorioAccess__/Audio/train-honk-short-2x-GotLag.ogg",
+   name = "player-bump-alert",
+   filename = "__FactorioAccess__/Audio/player-bump-alert-ui_menu_button_error_04.wav", 
    volume = 1,
    preload = true
 },
 
 {
    type = "sound",
-   name = "train-honk-long",
-   filename = "__FactorioAccess__/Audio/train-honk-long-freesound.ogg",
+   name = "player-bump-stuck-alert",
+   filename = "__FactorioAccess__/Audio/player-bump-stuck-alert-ui_menu_button_cancel_02.wav", 
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "player-bump-slide",
+   filename = "__FactorioAccess__/Audio/player-bump-slide-footstep_gravel_slide_05.wav", 
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "player-bump-trip",
+   filename = "__FactorioAccess__/Audio/player-bump-trip-clock_tick_01.wav", 
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "player-turn",
+   filename = "__FactorioAccess__/Audio/player-turn-1face_dir.ogg",
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "player-mine",
+   filename = "__FactorioAccess__/Audio/player-mine_02.ogg",
    volume = 1,
    preload = true
 },
@@ -170,7 +194,7 @@ data:extend({
 {
    type = "sound",
    name = "player-shield-damaged",
-   filename = "__FactorioAccess__/Audio/player-shield-damaged-beep_16.wav",
+   filename = "__FactorioAccess__/Audio/player-shield-damaged-sci-fi_shield_device_small_03.wav",
    volume = 1,
    preload = true
 },
@@ -201,40 +225,40 @@ data:extend({
 
 {
    type = "sound",
-   name = "player-bump-alert",
-   filename = "__FactorioAccess__/Audio/player-bump-alert-ui_menu_button_error_04.wav", 
+   name = "Rotate-Hand-Sound",
+   filename = "__core__/sound/gui-back.ogg",
    volume = 1,
    preload = true
 },
 
 {
    type = "sound",
-   name = "player-bump-slide",
-   filename = "__FactorioAccess__/Audio/player-bump-slide-footstep_gravel_slide_05.wav", 
+   name = "scanner-pulse",
+   filename = "__FactorioAccess__/Audio/scanner-pulse-ui_menu_button_beep_13.wav",
    volume = 1,
    preload = true
 },
 
 {
    type = "sound",
-   name = "player-bump-trip",
-   filename = "__FactorioAccess__/Audio/player-bump-trip-footstep_concrete_land_11.wav", 
+   name = "train-alert",
+   filename = "__FactorioAccess__/Audio/train-alert-ui_menu_button_beep_11.wav",
    volume = 1,
    preload = true
 },
 
 {
    type = "sound",
-   name = "alert-structure-damaged",
-   filename = "__FactorioAccess__/Audio/alert-structure-damaged-alarm_siren_warning_01.wav",
+   name = "train-honk-short",
+   filename = "__FactorioAccess__/Audio/train-honk-short-2x-GotLag.ogg",
    volume = 1,
    preload = true
 },
 
 {
    type = "sound",
-   name = "alert-enemy-presence-high",
-   filename = "__FactorioAccess__/Audio/alert-enemy-presence-high-alarm_siren_loop_11.wav",
+   name = "train-honk-long",
+   filename = "__FactorioAccess__/Audio/train-honk-long-freesound.ogg",
    volume = 1,
    preload = true
 },

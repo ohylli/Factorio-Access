@@ -4482,8 +4482,7 @@ function check_and_play_train_track_alert_sounds(step)
             and ((train.speed > 0 and util.distance(p.position,train.front_stock.position) <= util.distance(p.position,train.back_stock.position)) 
             or   (train.speed < 0 and util.distance(p.position,train.front_stock.position) >= util.distance(p.position,train.back_stock.position))) then 
                if (util.distance(p.position,train.front_stock.position) < 200 or util.distance(p.position,train.back_stock.position) < 200) then
-                  p.play_sound{path = "utility/new_objective"}
-                  p.play_sound{path = "utility/new_objective"}
+                  p.play_sound{path = "train-alert"} 
                   rendering.draw_circle{color = {1, 0.0, 0},radius = 4,width = 8,target = found_rail.position,surface = found_rail.surface,time_to_live = 15}
                else
                   p.play_sound{path = "utility/blueprint_selection_ended"}
@@ -4497,8 +4496,7 @@ function check_and_play_train_track_alert_sounds(step)
             if signal.signal_state == defines.signal_state.reserved then
                for i,train in ipairs(trains) do
                   if (util.distance(p.position,train.front_stock.position) < 200 or util.distance(p.position,train.back_stock.position) < 200) then
-                     p.play_sound{path = "utility/new_objective"}
-                     p.play_sound{path = "utility/new_objective"}
+                     p.play_sound{path = "train-alert"} 
                      rendering.draw_circle{color = {1, 0.0, 0},radius = 4,width = 8,target = found_rail.position,surface = found_rail.surface,time_to_live = 15}
                   else
                      p.play_sound{path = "utility/blueprint_selection_ended"}
