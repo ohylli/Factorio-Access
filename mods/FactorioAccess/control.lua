@@ -1213,7 +1213,7 @@ function ent_info(pindex, ent, description)
    end
 
    if ent.prototype.electric_energy_source_prototype ~= nil and ent.is_connected_to_electric_network() == false then
-      result = result .. "Not Connected"
+      result = result .. " Not Connected"
    elseif ent.prototype.electric_energy_source_prototype ~= nil and ent.energy == 0 and ent.type ~= "solar-panel" then
       result = result .. " Connected but no power "
    end
@@ -5533,6 +5533,7 @@ function on_tick(event)
    if event.tick % 15 == 0 then
       for pindex, player in pairs(players) do
          check_and_play_bump_alert_sound(pindex,event.tick)
+         check_and_play_stuck_alert_sound(pindex,event.tick)
       end
    elseif event.tick % 15 == 1 then
       --Check and play train track warning sounds at appropriate frequencies
@@ -11720,7 +11721,7 @@ function check_and_play_bump_alert_sound(pindex,this_tick)
 end
 
 --If walking but recently position has been unchanged, play alert
-function check_and_play_stuck_alert_sound(pindex,this_tick)--****
+function check_and_play_stuck_alert_sound(pindex,this_tick)
    if not check_for_player(pindex) or players[pindex].menu == "prompt" then
       return 
    end
@@ -11748,8 +11749,8 @@ function check_and_play_stuck_alert_sound(pindex,this_tick)--****
    --Return if not walking***
    if p.walking_state.walking == false then return end
       
-   --Return if not enough positions filled (trying 4 for now)
-   if players[pindex].bump.last_pos_4 == nil then return end 
+   --Return if not enough positions filled (trying 3 for now)
+   if players[pindex].bump.last_pos_3 == nil then return end 
      
    --Return if no last dir info filled (rare)
    if players[pindex].bump.last_dir_2 == nil then return end
@@ -11759,15 +11760,15 @@ function check_and_play_stuck_alert_sound(pindex,this_tick)--****
    
    local diff_x1 = b.last_pos_1.x - b.last_pos_2.x
    local diff_x2 = b.last_pos_2.x - b.last_pos_3.x
-   local diff_x3 = b.last_pos_3.x - b.last_pos_4.x
+   --local diff_x3 = b.last_pos_3.x - b.last_pos_4.x
       
    local diff_y1 = b.last_pos_1.y - b.last_pos_2.y
    local diff_y2 = b.last_pos_2.y - b.last_pos_3.y
-   local diff_y3 = b.last_pos_3.y - b.last_pos_4.y
+   --local diff_y3 = b.last_pos_3.y - b.last_pos_4.y
    
    --Check if earlier movement has been straight
-   if diff_x1 == 0 and diff_y1 == 0 and diff_x2 == 0 and diff_y2 == 0 and diff_x3 == 0 and diff_y3 == 0 then
-      p.play_sound{path = "player-stuck-alert"}
+   if diff_x1 == 0 and diff_y1 == 0 and diff_x2 == 0 and diff_y2 == 0 then --and diff_x3 == 0 and diff_y3 == 0 then
+      p.play_sound{path = "player-bump-stuck-alert"}
    end
    
 end
