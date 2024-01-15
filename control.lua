@@ -3561,7 +3561,7 @@ function scan_middle(pindex)
    end
  end
 
-function rescan(pindex)
+function rescan(pindex,filter_by_direction)
    players[pindex].nearby.index = 1
    players[pindex].nearby.selection = 1
    first_player = game.get_player(pindex)
@@ -6243,11 +6243,30 @@ script.on_event("rescan", function(event)
    if not (players[pindex].in_menu) then
       rescan(pindex)
       printout("Scan Complete", pindex)
-      game.get_player(pindex).play_sound{path = "scanner-pulse"}
-      rendering.draw_circle{color = {1, 1, 1},radius = 1,width =  4,target = game.get_player(pindex).position, surface = game.get_player(pindex).surface, draw_on_ground = true, time_to_live = 60}
-      rendering.draw_circle{color = {1, 1, 1},radius = 2,width =  8,target = game.get_player(pindex).position, surface = game.get_player(pindex).surface, draw_on_ground = true, time_to_live = 60}
+      run_scanner_effects(pindex)
    end
 end)
+
+script.on_event("scan-facing-direction", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if not (players[pindex].in_menu) then
+      --Set the filter direction ****
+      rescan(pindex)
+      printout("Scan Complete", pindex)
+      run_scanner_effects(pindex)
+   end
+end)
+
+--Sound and visual effects for the scanner
+function run_scanner_effects(pindex)
+   --Scanner visual and sound effects
+   game.get_player(pindex).play_sound{path = "scanner-pulse"}
+   rendering.draw_circle{color = {1, 1, 1},radius = 1,width =  4,target = game.get_player(pindex).position, surface = game.get_player(pindex).surface, draw_on_ground = true, time_to_live = 60}
+   rendering.draw_circle{color = {1, 1, 1},radius = 2,width =  8,target = game.get_player(pindex).position, surface = game.get_player(pindex).surface, draw_on_ground = true, time_to_live = 60}
+end
 
 script.on_event("a-scan-list-main-up-key", function(event)
    --laterdo: find a more elegant scan list solution here. It depends on hardcoded keybindings and alphabetically named event handling
@@ -6598,8 +6617,8 @@ script.on_event("repeat-last-spoken", function(event)
    repeat_last_spoken(pindex)
 end)
 
---Calls function to notify if items are being picked up via vanilla F key. laterdo: need to bind with the item pickup key
-script.on_event("pickup-items", function(event)
+--Calls function to notify if items are being picked up via vanilla F key.
+script.on_event("pickup-items-info", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -7291,7 +7310,7 @@ function play_mining_sound(pindex)
    end
 end
 
---Creates sound effects for vanilla mining. Needs to be same key as vanilla mining key. laterdo maybe connect to game control's keybind?
+--Creates sound effects for vanilla mining. Needs to be same key as vanilla mining key. 
 script.on_event("mine-access-sounds", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -7310,7 +7329,7 @@ script.on_event("mine-access-sounds", function(event)
    end
 end)
 
---laterdo known bug: the tile preview cursor is likely always going to be 2x2. Myabe create a warning about it
+--Mines tiles such as stone brick or concrete within the cursor area, including enlarged cursors****
 script.on_event("mine-tiles", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -9752,6 +9771,7 @@ script.on_event(defines.events.on_gui_confirmed,function(event)
       roboport_menu_close(pindex)
    elseif players[pindex].entering_search_term == true then
       local term = string.lower(event.element.text)
+      event.element.focus()
       players[pindex].menu_search_term = term
       if term ~= "" then 
          printout("Searching for " .. term .. ", go through results with 'SHIFT + ENTER' or 'CONTROL + ENTER' ",pindex)

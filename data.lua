@@ -593,9 +593,10 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "pickup-items",
+    name = "pickup-items-info",
     key_sequence = "F",
-    consuming = "none"
+    linked_game_control = "pick-items",
+    consuming = "none" 
 },
 
 {
