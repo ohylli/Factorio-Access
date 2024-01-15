@@ -3166,7 +3166,7 @@ function rail_builder_up(pindex)
    --Check the index against the limit
    if players[pindex].rail_builder.index < 0 then
       players[pindex].rail_builder.index = 0
-      game.get_player(pindex).play_sound{path = "Mine-Building"}
+      game.get_player(pindex).play_sound{path = "player-mine"}
    else
       --Play sound
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -3184,7 +3184,7 @@ function rail_builder_down(pindex)
    --Check the index against the limit
    if players[pindex].rail_builder.index > players[pindex].rail_builder.index_max then
       players[pindex].rail_builder.index = players[pindex].rail_builder.index_max
-      game.get_player(pindex).play_sound{path = "Mine-Building"}
+      game.get_player(pindex).play_sound{path = "player-mine"}
    else
       --Play sound
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -3582,7 +3582,7 @@ function train_menu_up(pindex)
    players[pindex].train_menu.index = players[pindex].train_menu.index - 1
    if players[pindex].train_menu.index < 0 then
       players[pindex].train_menu.index = 0
-      game.get_player(pindex).play_sound{path = "Mine-Building"}
+      game.get_player(pindex).play_sound{path = "player-mine"}
    else
       --Play sound
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -3595,7 +3595,7 @@ function train_menu_down(pindex)
    players[pindex].train_menu.index = players[pindex].train_menu.index + 1
    if players[pindex].train_menu.index > TRAIN_MENU_LENGTH then
       players[pindex].train_menu.index = TRAIN_MENU_LENGTH
-      game.get_player(pindex).play_sound{path = "Mine-Building"}
+      game.get_player(pindex).play_sound{path = "player-mine"}
    else
       --Play sound
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -3790,7 +3790,7 @@ function train_stop_menu_up(pindex)
    players[pindex].train_stop_menu.index = players[pindex].train_stop_menu.index - 1
    if players[pindex].train_stop_menu.index < 0 then
       players[pindex].train_stop_menu.index = 0
-      game.get_player(pindex).play_sound{path = "Mine-Building"}
+      game.get_player(pindex).play_sound{path = "player-mine"}
    else
       --Play sound
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -3804,7 +3804,7 @@ function train_stop_menu_down(pindex)
    players[pindex].train_stop_menu.index = players[pindex].train_stop_menu.index + 1
    if players[pindex].train_stop_menu.index > 8 then
       players[pindex].train_stop_menu.index = 8
-      game.get_player(pindex).play_sound{path = "Mine-Building"}
+      game.get_player(pindex).play_sound{path = "player-mine"}
    else
       --Play sound
       game.get_player(pindex).play_sound{path = "Inventory-Move"}

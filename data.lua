@@ -86,33 +86,27 @@ data.raw["map-gen-presets"].default["faccess-enemies-off"] = {
 
 data:extend({
  resource_map_node,
+
 {
    type = "sound",
-   name = "Face-Dir",
-   filename = "__FactorioAccess__/Audio/1face_dir.ogg",
-   volume = 1,
-   preload = true
-},
-{
-   type = "sound",
-   name = "Inventory-Move",
-   filename = "__FactorioAccess__/Audio/inventory-move.ogg",
+   name = "player-turn",
+   filename = "__FactorioAccess__/Audio/player-turn-1face_dir.ogg",
    volume = 1,
    preload = true
 },
 
 {
    type = "sound",
-   name = "inventory-wrap-around",
-   filename = "__FactorioAccess__/Audio/inventory-wrap-around-gear_drill_windup_09.wav",
+   name = "player-mine",
+   filename = "__FactorioAccess__/Audio/player-mine_02.ogg",
    volume = 1,
    preload = true
 },
 
 {
    type = "sound",
-   name = "Mine-Building",
-   filename = "__FactorioAccess__/Audio/mine_02.ogg",
+   name = "Rotate-Hand-Sound",
+   filename = "__core__/sound/gui-back.ogg",
    volume = 1,
    preload = true
 },
@@ -143,8 +137,16 @@ data:extend({
 
 {
    type = "sound",
-   name = "Rotate-Hand-Sound",
-   filename = "__core__/sound/gui-back.ogg",
+   name = "Inventory-Move",
+   filename = "__FactorioAccess__/Audio/inventory-move.ogg",
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "inventory-wrap-around",
+   filename = "__FactorioAccess__/Audio/inventory-wrap-around-gear_drill_windup_09.wav",
    volume = 1,
    preload = true
 },
