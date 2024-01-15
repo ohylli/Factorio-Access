@@ -2498,14 +2498,15 @@ function scan_sort(pindex)
             i1 = i1 + 1
          end
       end
-      if #name.ents == 0 then --this appears to be removing a sent that has become empty.
+      if #name.ents == 0 then --this appears to be removing a set that has become empty.
          table.remove(players[pindex].nearby.ents, i)
       end
    end
 
    if players[pindex].nearby.count == false then
+      --Sort by distance to player position
       table.sort(players[pindex].nearby.ents, function(k1, k2) 
-         local pos = players[pindex].cursor_pos
+         local pos = players[pindex].position
          local surf = game.get_player(pindex).surface
          local ent1 = nil
          local ent2 = nil
@@ -2543,6 +2544,7 @@ function scan_sort(pindex)
       end)
             
    else
+      --Sort table by count
       table.sort(players[pindex].nearby.ents, function(k1, k2)
          return k1.count > k2.count
       end)
@@ -3375,9 +3377,9 @@ function scan_index(pindex)
             scan_index(pindex)
             return
          end
-         --Sort by distance to cursor pos while describing indexed entries
+         --Sort by distance to player pos while describing indexed entries
          table.sort(ents[players[pindex].nearby.index].ents, function(k1, k2) 
-            local pos = players[pindex].cursor_pos
+            local pos = players[pindex].position
             return squared_distance(pos, k1.position) < squared_distance(pos, k2.position)
          end)
          if players[pindex].nearby.selection > #ents[players[pindex].nearby.index].ents then
@@ -3590,23 +3592,24 @@ function scan_area(x,y,w,h, pindex, filter_direction)
    local surf = first_player.surface
    local ents = surf.find_entities_filtered{area = {{x, y},{x+w, y+h}}, type = {"resource", "tree", "highlight-box", "flying-text"}, invert = true} --Get all ents in the area except for these types
    local result = {}
-   local pos = players[pindex].cursor_pos
+   local pos = players[pindex].position
    local forest_density = nil
-   local close_object_limit = 10.1
+   local close_object_limit = 20.1
    
-   --Find the nearest edges of already-loaded resource groups according to cursor pos, and insert them to the initial list as aggregates
+   --Find the nearest edges of already-loaded resource groups according to player pos, and insert them to the initial list as aggregates
    for name, resource in pairs(players[pindex].resources) do
       --Insert scanner entries 
       table.insert(result, {name = name, count = table_size(players[pindex].resources[name].patches), ents = {}, aggregate = true})
       --Insert instances for the entry
       local index = #result
       for group, patch in pairs(resource.patches) do
+         local nearest_edge = nearest_edge(patch.edges, pos, name)
          --Filter check 1: Is the entity in the filter diection? (If a filter is set at all)
-         local dir_of_ent = get_direction_of_that_from_this(nearest_edge(patch.edges, pos, name),pos)
+         local dir_of_ent = get_direction_of_that_from_this(nearest_edge,pos)
          local filter_passed = (filter_direction == nil or filter_direction == dir_of_ent)
          if not filter_passed then
             --Filter check 2: Is the entity nearby and almost within the filter diection?
-            if util.distance(nearest_edge(patch.edges, pos, name),pos) < close_object_limit then
+            if util.distance(nearest_edge,pos) < close_object_limit then
                local CW_dir = (filter_direction + 1) % (2 * dirs.south)
                local CCW_dir = (filter_direction - 1) % (2 * dirs.south)
                filter_passed = (dir_of_ent == CW_dir or dir_of_ent == CCW_dir)
@@ -3615,14 +3618,14 @@ function scan_area(x,y,w,h, pindex, filter_direction)
          if filter_passed then 
             --If it is a forest, check density
             if name == "forest" then
-               local forest_pos = nearest_edge(patch.edges, pos, name)
+               local forest_pos = nearest_edge
                forest_density = classify_forest(forest_pos,pindex,false)
             else
                forest_density = nil
             end
             --Insert to the list if this group is not a forest at all, or not an empty or tiny forest
             if forest_density == nil or (forest_density ~= "empty" and forest_density ~= "patch") then 
-               table.insert(result[index].ents, {group = group, position = nearest_edge(patch.edges, pos, name)})
+               table.insert(result[index].ents, {group = group, position = nearest_edge})
             end
          end
       end
@@ -3669,9 +3672,9 @@ function scan_area(x,y,w,h, pindex, filter_direction)
    
    --Sort the list
    if players[pindex].nearby.count == false then
-      --Sort results by distance to cursor position when first creating the scanner list
+      --Sort results by distance to player position when first creating the scanner list
       table.sort(result, function(k1, k2) 
-         local pos = players[pindex].cursor_pos
+         local pos = players[pindex].position
          local ent1 = nil
          local ent2 = nil
          if k1.aggregate then
@@ -6420,7 +6423,7 @@ script.on_event("jump-to-scan", function(event)--NOTE: This might be deprecated 
             end
 
             table.sort(ents[players[pindex].nearby.index].ents, function(k1, k2) 
-               local pos = players[pindex].cursor_pos
+               local pos = players[pindex].position
                return distance(pos, k1.position) < distance(pos, k2.position)
             end)
             if players[pindex].nearby.selection > #ents[players[pindex].nearby.index].ents then
@@ -6568,7 +6571,7 @@ script.on_event("scan-mode-up", function(event)
    if not (players[pindex].in_menu) then
       players[pindex].nearby.index = 1
       players[pindex].nearby.count = false
-      printout("Sorting by distance from the cursor position", pindex)
+      printout("Sorting by distance from your position", pindex)
       scan_sort(pindex)
    end
 end)
@@ -11811,7 +11814,7 @@ function check_and_play_bump_alert_sound(pindex,this_tick)
    
    --Check if there is a tile that was bumped into
    local tile = p.surface.get_tile(players[pindex].cursor_pos.x, players[pindex].cursor_pos.y)
-   bump_was_tile = tile.collides_with("player-layer")
+   bump_was_tile = (tile ~= nil and tile.valid and tile.collides_with("player-layer"))
    
    if bump_was_tile then
       p.play_sound{path = "player-bump-slide"}
