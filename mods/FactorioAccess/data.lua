@@ -480,6 +480,14 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "scan-facing-direction",
+    key_sequence = "SHIFT + END",
+    alternative_key_sequence = "SHIFT + RCTRL",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "a-scan-list-main-up-key",
     key_sequence = "PAGEUP",
     consuming = "none"
@@ -1031,8 +1039,9 @@ data:extend({
 {
     type = "custom-input",
     name = "menu-search-open",
-    key_sequence = "ENTER",
-    consuming = "none"
+    key_sequence = "CONTROL + F",
+    linked_game_control = "focus-search",
+    consuming = "game-only"
 },
 
 {
