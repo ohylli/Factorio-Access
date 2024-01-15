@@ -3610,9 +3610,10 @@ function scan_area(x,y,w,h, pindex, filter_direction)
          if not filter_passed then
             --Filter check 2: Is the entity nearby and almost within the filter diection?
             if util.distance(nearest_edge,pos) < close_object_limit then
+               local new_dir_of_ent = get_balanced_direction_of_that_from_this(nearest_edge,pos)--Check with less bias towards diagonal directions to preserve 135 degrees FOV
                local CW_dir = (filter_direction + 1) % (2 * dirs.south)
                local CCW_dir = (filter_direction - 1) % (2 * dirs.south)
-               filter_passed = (dir_of_ent == CW_dir or dir_of_ent == CCW_dir)
+               filter_passed = (new_dir_of_ent == filter_direction or new_dir_of_ent == CW_dir or new_dir_of_ent == CCW_dir)
             end
          end
          if filter_passed then 
@@ -3647,9 +3648,10 @@ function scan_area(x,y,w,h, pindex, filter_direction)
       if not filter_passed then
          --Filter check 2: Is the entity nearby and almost within the filter diection?
          if util.distance(ents[i].position,pos) < close_object_limit then
+            local new_dir_of_ent = get_balanced_direction_of_that_from_this(ents[i].position,pos)--Check with less bias towards diagonal directions to preserve 135 degrees FOV
             local CW_dir = (filter_direction + 1) % (2 * dirs.south)
             local CCW_dir = (filter_direction - 1) % (2 * dirs.south)
-            filter_passed = (dir_of_ent == CW_dir or dir_of_ent == CCW_dir)
+            filter_passed = (new_dir_of_ent == filter_direction or new_dir_of_ent == CW_dir or new_dir_of_ent == CCW_dir)
          end
       end
 
@@ -10647,6 +10649,46 @@ function get_direction_of_that_from_this(pos_that,pos_this)
 	     dir = defines.direction.west 
 	  end
    elseif math.abs(diff_y) > 4 * math.abs(diff_x) then --along north-south
+      if diff_y > 0 then 
+	     dir = defines.direction.south 
+	  else 
+	     dir = defines.direction.north 
+	  end
+   else --along diagonals
+      if diff_x > 0 and diff_y > 0 then
+	     dir = defines.direction.southeast
+      elseif diff_x > 0 and diff_y < 0 then
+	     dir = defines.direction.northeast
+      elseif diff_x < 0 and diff_y > 0 then
+	     dir = defines.direction.southwest
+	  elseif diff_x < 0 and diff_y < 0 then
+	     dir = defines.direction.northwest
+	  elseif diff_x == 0 and diff_y == 0 then
+        dir = 99--case for "it is right here"
+     else
+	     dir = -2
+	  end
+   end
+   return dir
+end
+
+--[[
+* Returns the direction of that entity from this entity based on the ratios of the x and y distances. 
+* Returns 1 of 8 main directions, with each getting about equal representation (45 degrees). 
+* The deciding ratio is 1 to 2.5, meaning that for an object that is 25 tiles north, it can be offset by up to 10 tiles east or west before it stops being counted as "directly" in the north. 
+* The arctangent of 1/2.5 is about 22 degrees, meaning that the field of view that directly counts as a cardinal direction is about 44 degrees, while for a diagonal direction it is about 46 degrees.]]
+function get_balanced_direction_of_that_from_this(pos_that,pos_this)
+   local diff_x = pos_that.x - pos_this.x
+   local diff_y = pos_that.y - pos_this.y
+   local dir = -1
+   
+   if math.abs(diff_x) > 2.5 * math.abs(diff_y) then --along east-west
+      if diff_x > 0 then 
+	     dir = defines.direction.east 
+	  else 
+	     dir = defines.direction.west 
+	  end
+   elseif math.abs(diff_y) > 2.5 * math.abs(diff_x) then --along north-south
       if diff_y > 0 then 
 	     dir = defines.direction.south 
 	  else 
