@@ -356,12 +356,12 @@ function check_and_play_enemy_alert_sound(mode_in)
             --Additional alert if there are more than 5 enemies nearby
             local enemies = p.surface.find_enemy_units(p.position, 25, p.force)
             if #enemies > 5 then
-               p.play_sound{path = "enemy-presence-high", volume_modifier = 0.5}
+               p.play_sound{path = "alert-enemy-presence-high", volume_modifier = 0.5}
             else
                for i, enemy in ipairs(enemies) do 
                   --Also check for strong enemies: big/huge biters, huge spitters, medium or larger worms, not spawners
                   if enemy.prototype.max_health > 360 then
-                     p.play_sound{path = "enemy-presence-high", volume_modifier = 0.5}
+                     p.play_sound{path = "alert-enemy-presence-high", volume_modifier = 0.5}
                      return
                   end
                end
@@ -375,7 +375,7 @@ function check_and_play_enemy_alert_sound(mode_in)
             --Additional alert if there are more than 10 enemies nearby
             local enemies = p.surface.find_enemy_units(p.position, 25, p.force)
             if #enemies > 10 then
-               p.play_sound{path = "enemy-presence-high", volume_modifier = 0.5}
+               p.play_sound{path = "alert-enemy-presence-high", volume_modifier = 0.5}
             end
          elseif mode == 3 then -- Nearest enemy is too close (highest freq)
             if dist < 25 then
@@ -423,7 +423,7 @@ function aim_gun_at_nearest_enemy(pindex,enemy_in)
    local range = gun_stack.prototype.attack_parameters.range
    local dist = util.distance(p.position,enemy.position)
    if dist < range and p.character.can_shoot(enemy,enemy.position) then      
-      p.play_sound{path = "aim-locked",volume_modifier=0.5}
+      p.play_sound{path = "player-aim-locked",volume_modifier=0.5}
    end
    --Return if there is a gun and ammo combination that already aims by itself
    if gun_stack.name == "pistol" or gun_stack.name == "submachine-gun" and dist < 10 then --or ammo_stack.name == "rocket" or ammo_stack.name == "explosive-rocket" then

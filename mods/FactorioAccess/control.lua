@@ -1213,7 +1213,7 @@ function ent_info(pindex, ent, description)
    end
 
    if ent.prototype.electric_energy_source_prototype ~= nil and ent.is_connected_to_electric_network() == false then
-      result = result .. "Not Connected"
+      result = result .. " Not Connected"
    elseif ent.prototype.electric_energy_source_prototype ~= nil and ent.energy == 0 and ent.type ~= "solar-panel" then
       result = result .. " Connected but no power "
    end
@@ -1537,7 +1537,7 @@ function teleport_to_closest(pindex, pos, muted, ignore_enemies)
          local smoke_effect = first_player.surface.create_entity{name = "iron-chest", position = first_player.position, raise_built = false, force = first_player.force}
          smoke_effect.destroy{}
          --Teleport sound at origin
-         game.get_player(pindex).play_sound{path = "teleported", volume_modifier = 0.2, position = old_pos}
+         game.get_player(pindex).play_sound{path = "player-teleported", volume_modifier = 0.2, position = old_pos}
          game.get_player(pindex).play_sound{path = "utility/scenario_message", volume_modifier = 0.8, position = old_pos}
       end
       local teleported = false 
@@ -1549,6 +1549,7 @@ function teleport_to_closest(pindex, pos, muted, ignore_enemies)
       if teleported then
          first_player.force.chart(first_player.surface, {{new_pos.x-15,new_pos.y-15},{new_pos.x+15,new_pos.y+15}})
          players[pindex].position = table.deepcopy(new_pos)
+         reset_bump_stats(pindex)
          if not muted then
             --Teleporting visuals at target
             rendering.draw_circle{color = {0.3, 0.3, 0.9},radius = 0.5,width = 15,target = new_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
@@ -1556,7 +1557,7 @@ function teleport_to_closest(pindex, pos, muted, ignore_enemies)
             local smoke_effect = first_player.surface.create_entity{name = "iron-chest", position = first_player.position, raise_built = false, force = first_player.force}
             smoke_effect.destroy{}
             --Teleport sound at target
-            game.get_player(pindex).play_sound{path = "teleported", volume_modifier = 0.2, position = new_pos}
+            game.get_player(pindex).play_sound{path = "player-teleported", volume_modifier = 0.2, position = new_pos}
             game.get_player(pindex).play_sound{path = "utility/scenario_message", volume_modifier = 0.8, position = new_pos}
          end
          if new_pos.x ~= pos.x or new_pos.y ~= pos.y then
@@ -2442,7 +2443,7 @@ function get_scan_summary(scan_left_top, scan_right_bottom, pindex)
             area = get_ent_area_from_name(get_substring_before_space(get_substring_before_comma(ent.name)),pindex)
             if area == -1 then
                area = 1
-               game.get_player(pindex).print(get_substring_before_space(get_substring_before_comma(ent.name)) .. " could not be found for the area check ",{volume_modifier = 0})--***bug: unable to get area from name
+               game.get_player(pindex).print(get_substring_before_space(get_substring_before_comma(ent.name)) .. " could not be found for the area check ",{volume_modifier = 0})--bug: unable to get area from name
             end
          end 
          local percentage = math.floor((area * players[pindex].nearby.ents[i].count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .95)--Tolerate up to 0.05%
@@ -2476,9 +2477,14 @@ function draw_area_as_cursor(scan_left_top,scan_right_bottom,pindex)
    if h_tile ~= nil then
       rendering.destroy(h_tile)
    end
-   h_tile = rendering.draw_rectangle{color = {0.75,1,1,0.75},surface = game.get_player(pindex).surface, left_top = scan_left_top, right_bottom = scan_right_bottom, draw_on_ground = true}
+   h_tile = rendering.draw_rectangle{color = {0.75,1,1},surface = game.get_player(pindex).surface, left_top = scan_left_top, right_bottom = scan_right_bottom, draw_on_ground = true, players = nil}
    rendering.set_visible(h_tile,true)
    players[pindex].cursor_tile_highlight_box = h_tile 
+   
+   --Recolor cursor boxes if multiplayer
+   if game.is_multiplayer() then
+      set_cursor_colors_to_player_colors(pindex)
+   end
 end
    
 --Sort scan results by distance or count
@@ -2499,7 +2505,7 @@ function scan_sort(pindex)
 
    if players[pindex].nearby.count == false then
       table.sort(players[pindex].nearby.ents, function(k1, k2) 
-         local pos  = game.get_player(pindex).position
+         local pos = players[pindex].cursor_pos
          local surf = game.get_player(pindex).surface
          local ent1 = nil
          local ent2 = nil
@@ -3310,6 +3316,7 @@ function repeat_last_spoken(pindex)
    printout(players[pindex].last, pindex)
 end
 
+--Creates the scanner results list
 function scan_index(pindex)
    if not check_for_player(pindex) then
       printout("Scan pindex error.", pindex)
@@ -3368,7 +3375,7 @@ function scan_index(pindex)
             scan_index(pindex)
             return
          end
-         --Sort by distance 
+         --Sort by distance to cursor pos while describing indexed entries
          table.sort(ents[players[pindex].nearby.index].ents, function(k1, k2) 
             local pos = players[pindex].cursor_pos
             return squared_distance(pos, k1.position) < squared_distance(pos, k2.position)
@@ -3450,7 +3457,7 @@ function scan_down(pindex)
       players[pindex].nearby.index = players[pindex].nearby.index + 1
       players[pindex].nearby.selection = 1
    else 
-      game.get_player(pindex).play_sound{path = "Mine-Building"}
+      game.get_player(pindex).play_sound{path = "player-mine"}
       players[pindex].nearby.selection = 1
    end
 --   if not(pcall(function()
@@ -3489,7 +3496,7 @@ function scan_up(pindex)
    elseif players[pindex].nearby.index <= 1 then
       players[pindex].nearby.index = 1
       players[pindex].nearby.selection = 1
-      game.get_player(pindex).play_sound{path = "Mine-Building"}
+      game.get_player(pindex).play_sound{path = "player-mine"}
    end
 --   if not(pcall(function()
    scan_index(pindex)
@@ -3577,52 +3584,64 @@ function index_of_entity(array, value)
    return nil
 end
 
-function scan_area(x,y,w,h, pindex)
+--The entity scanner runs here
+function scan_area(x,y,w,h, pindex, filter_direction)
    local first_player = game.get_player(pindex)
    local surf = first_player.surface
-   local ents = surf.find_entities_filtered{area = {{x, y},{x+w, y+h}}, type = {"resource", "tree"}, invert = true}
+   local ents = surf.find_entities_filtered{area = {{x, y},{x+w, y+h}}, type = {"resource", "tree", "highlight-box", "flying-text"}, invert = true} --Get all ents in the area except for these types
    local result = {}
    local pos = players[pindex].cursor_pos
    local forest_density = nil
    
+   --Find the nearest edges of already-loaded resource groups according to cursor pos, and insert them to the initial list as aggregates
    for name, resource in pairs(players[pindex].resources) do
+      --Insert scanner entries 
       table.insert(result, {name = name, count = table_size(players[pindex].resources[name].patches), ents = {}, aggregate = true})
+      --Insert instances for the entry
       local index = #result
       for group, patch in pairs(resource.patches) do
-         if name == "forest" then
-            local forest_pos = nearest_edge(patch.edges, pos, name)
-            forest_density = classify_forest(forest_pos,pindex,false)
-         else
-            forest_density = nil
-         end
-         if forest_density ~= "empty" and forest_density ~= "patch" then --Do not add empty forests
-            table.insert(result[index].ents, {group = group, position = nearest_edge(patch.edges, pos, name)})
-         else
-            --do not include in results
+         if filter_direction == nil or filter_direction == get_direction_of_that_from_this(ents[i].position,pos) then --Filter direction check
+            --If it is a forest, check density
+            if name == "forest" then
+               local forest_pos = nearest_edge(patch.edges, pos, name)
+               forest_density = classify_forest(forest_pos,pindex,false)
+            else
+               forest_density = nil
+            end
+            --Insert to the list if this group is not a forest at all, or not an empty or tiny forest
+            if forest_density == nil or (forest_density ~= "empty" and forest_density ~= "patch") then 
+               table.insert(result[index].ents, {group = group, position = nearest_edge(patch.edges, pos, name)})
+            end
          end
       end
    end
-
+   
+   --Insert entities to the initial list
    for i=1, #ents, 1 do
-      local prod_info = extra_info_for_scan_list(ents[i],pindex,false)
-      local index = index_of_entity(result, ents[i].name .. prod_info)
-      if index == nil then
-         table.insert(result, {name = ents[i].name .. prod_info, count = 1, ents = {ents[i]}, aggregate = false}) 
+      local extra_entry_info = extra_info_for_scan_list(ents[i],pindex,false)
+      local scan_entry = ents[i].name .. extra_entry_info
+      local index = index_of_entity(result, scan_entry)
 
-      elseif #result[index] >= 100 then
-         table.remove(result[index].ents, math.random(100))
-         table.insert(result[index].ents, ents[i])
-         result[index].count = result[index].count + 1
+      if filter_direction == nil or filter_direction == get_direction_of_that_from_this(ents[i].position,pos) then --Filter direction check
+         if index == nil then --The entry is not already indexed, so add a new entry line to the list
+            table.insert(result, {name = scan_entry, count = 1, ents = {ents[i]}, aggregate = false}) 
 
-      else
-         table.insert(result[index].ents, ents[i])
-         result[index].count = result[index].count + 1
+         elseif #result[index] >= 100 then --If there are more than 100 instanes of this specific entry (?), replace a random one of them to add this
+            table.remove(result[index].ents, math.random(100))
+            table.insert(result[index].ents, ents[i])
+            result[index].count = result[index].count + 1
 
-         
---         result[index] = ents[i]
+         else
+            table.insert(result[index].ents, ents[i]) --Add this ent as another instance of the entry
+            result[index].count = result[index].count + 1        
+   --         result[index] = ents[i]
+         end
       end
    end
+   
+   --Sort the list
    if players[pindex].nearby.count == false then
+      --Sort results by distance to cursor position when first creating the scanner list
       table.sort(result, function(k1, k2) 
          local pos = players[pindex].cursor_pos
          local ent1 = nil
@@ -3649,6 +3668,7 @@ function scan_area(x,y,w,h, pindex)
       end)
 
    else
+      --Sort results by count
       table.sort(result, function(k1, k2)
          return k1.count > k2.count
       end)
@@ -3762,7 +3782,7 @@ function read_tile(pindex, start_text)
    if stack and stack.valid_for_read and stack.name == "cut-paste-tool" and not players[pindex].vanilla_mode then
       if ent and ent.valid then--not while loop, because it causes crashes
          local name = ent.name
-         game.get_player(pindex).play_sound{path = "Mine-Building"}
+         game.get_player(pindex).play_sound{path = "player-mine"}
          if try_to_mine_with_sound(ent,pindex) then
             result = result .. name .. " mined, "
          end
@@ -3770,7 +3790,7 @@ function read_tile(pindex, start_text)
          ent = get_selected_ent(pindex)
          if ent and ent.valid and players[pindex].walk ~= 2 then--not while
             local name = ent.name
-            game.get_player(pindex).play_sound{path = "Mine-Building"}
+            game.get_player(pindex).play_sound{path = "player-mine"}
             if try_to_mine_with_sound(ent,pindex) then
                result = result .. name .. " mined, "
             end 
@@ -4618,6 +4638,19 @@ function initialize(player)
    faplayer.translation_id_lookup = faplayer.translation_id_lookup or {}
    localising.request_all_the_translations(player.index)
    
+   faplayer.bump = faplayer.bump or {
+      last_bump_tick = 1,     --Updated in bump checker
+      last_dir_key_tick = 1,  --Updated in key press handlers
+      last_dir_key_1st = nil, --Updated in key press handlers
+      last_dir_key_2nd = nil, --Updated in key press handlers
+      last_pos_1 = nil,       --Updated in bump checker
+      last_pos_2 = nil,       --Updated in bump checker
+      last_pos_3 = nil,       --Updated in bump checker
+      last_pos_4 = nil,       --Updated in bump checker
+      last_dir_2 = nil,       --Updated in bump checker
+      last_dir_1 = nil        --Updated in bump checker
+      }
+   
 end
 
 
@@ -4725,7 +4758,7 @@ function menu_cursor_up(pindex)
          else 
             --Border setting: Undo change and play "wall" sound
             players[pindex].inventory.index = players[pindex].inventory.index +10
-            game.get_player(pindex).play_sound{path = "Mine-Building"}
+            game.get_player(pindex).play_sound{path = "player-mine"}
             printout("Border.", pindex)
          end
       else
@@ -4933,7 +4966,7 @@ function menu_cursor_down(pindex)
          else 
             --Border setting: Undo change and play "wall" sound
             players[pindex].inventory.index = players[pindex].inventory.index -10
-            game.get_player(pindex).play_sound{path = "Mine-Building"}
+            game.get_player(pindex).play_sound{path = "player-mine"}
             printout("Border.", pindex)
          end
       else
@@ -5140,7 +5173,7 @@ function menu_cursor_left(pindex)
          else 
             --Border setting: Undo change and play "wall" sound
             players[pindex].inventory.index = players[pindex].inventory.index +1
-            game.get_player(pindex).play_sound{path = "Mine-Building"}
+            game.get_player(pindex).play_sound{path = "player-mine"}
             printout("Border.", pindex)
          end
       else
@@ -5282,7 +5315,7 @@ function menu_cursor_right(pindex)
          else 
             --Border setting: Undo change and play "wall" sound
             players[pindex].inventory.index = players[pindex].inventory.index -1
-            game.get_player(pindex).play_sound{path = "Mine-Building"}
+            game.get_player(pindex).play_sound{path = "player-mine"}
             printout("Border.", pindex)
          end
       else
@@ -5518,19 +5551,22 @@ function on_tick(event)
 
    --The elseifs can schedule up to 16 events.
    if event.tick % 15 == 0 then
+      for pindex, player in pairs(players) do
+         check_and_play_bump_alert_sound(pindex,event.tick)
+         check_and_play_stuck_alert_sound(pindex,event.tick)
+      end
+   elseif event.tick % 15 == 1 then
       --Check and play train track warning sounds at appropriate frequencies
       check_and_play_train_track_alert_sounds(3)
       check_and_play_enemy_alert_sound(3)
-      if event.tick % 30 == 0 then
+      if event.tick % 30 == 1 then
          check_and_play_train_track_alert_sounds(2)
          check_and_play_enemy_alert_sound(2)
-         if event.tick % 60 == 0 then
+         if event.tick % 60 == 1 then
             check_and_play_train_track_alert_sounds(1)
             check_and_play_enemy_alert_sound(1)
          end
       end
-   elseif event.tick % 15 == 1 then
-      --***check_and_play_bump_alert_sound(pindex,event.tick)
    elseif event.tick % 30 == 6 then
       --Check and play train horns
       for pindex, player in pairs(players) do
@@ -5552,12 +5588,7 @@ function on_tick(event)
    elseif event.tick % 300 == 14 then
       for pindex, player in pairs(players) do
          --Fix running speed bug (toggle walk aldo fixes it)
-         local p = game.get_player(pindex)
-         if p.character and p.character.valid and players[pindex] and players[pindex].walk == 0 then
-            p.character_running_speed_modifier = -1 --Freeze in place for telestep
-         elseif p.character and p.character.valid then
-            p.character_running_speed_modifier = 0  --Default speed for smooth walking
-         end
+         fix_walk(pindex)
       end
    end
 end
@@ -5757,7 +5788,7 @@ function move(direction,pindex)
    else
       --turn character:
       if players[pindex].walk == 0 then
-         game.get_player(pindex).play_sound{path = "Face-Dir"}
+         game.get_player(pindex).play_sound{path = "player-turn"}
       elseif players[pindex].walk == 1 then
          table.insert(players[pindex].move_queue,{direction=direction,dest=pos})
       end
@@ -5799,6 +5830,13 @@ function move_key(direction,event, force_single_tile)
       return 
    end
    local single_only = force_single_tile or false
+   
+   --Save the key press event
+   local pex = players[event.player_index]
+   pex.bump.last_dir_key_2nd = pex.bump.last_dir_key_1st
+   pex.bump.last_dir_key_1st = direction
+   pex.bump.last_dir_key_tick = event.tick
+   
    if players[pindex].in_menu and players[pindex].menu ~= "prompt" then
       -- Menus: move menu cursor
       menu_cursor_move(direction,pindex)
@@ -5847,6 +5885,7 @@ script.on_event(defines.events.on_player_driving_changed_state, function(event)
    if not check_for_player(pindex) then
       return
    end
+   reset_bump_stats(pindex)
    game.get_player(pindex).clear_cursor()
    if game.get_player(pindex).driving then
       players[pindex].last_vehicle = game.get_player(pindex).vehicle
@@ -6204,8 +6243,7 @@ script.on_event("rescan", function(event)
    if not (players[pindex].in_menu) then
       rescan(pindex)
       printout("Scan Complete", pindex)
-      game.get_player(pindex).play_sound{path = "utility/entity_settings_pasted"}
-      game.get_player(pindex).play_sound{path = "utility/entity_settings_copied"}
+      game.get_player(pindex).play_sound{path = "scanner-pulse"}
       rendering.draw_circle{color = {1, 1, 1},radius = 1,width =  4,target = game.get_player(pindex).position, surface = game.get_player(pindex).surface, draw_on_ground = true, time_to_live = 60}
       rendering.draw_circle{color = {1, 1, 1},radius = 2,width =  8,target = game.get_player(pindex).position, surface = game.get_player(pindex).surface, draw_on_ground = true, time_to_live = 60}
    end
@@ -6468,7 +6506,7 @@ script.on_event("scan-mode-up", function(event)
    if not (players[pindex].in_menu) then
       players[pindex].nearby.index = 1
       players[pindex].nearby.count = false
-      printout("Sorting by distance from this position", pindex)
+      printout("Sorting by distance from the cursor position", pindex)
       scan_sort(pindex)
    end
 end)
@@ -6497,7 +6535,7 @@ script.on_event("scan-selection-up", function(event)
       if players[pindex].nearby.selection > 1 then
          players[pindex].nearby.selection = players[pindex].nearby.selection - 1
       else
-         game.get_player(pindex).play_sound{path = "Mine-Building"}
+         game.get_player(pindex).play_sound{path = "player-mine"}
          players[pindex].nearby.selection = 1
       end
       scan_index(pindex)
@@ -6543,7 +6581,7 @@ script.on_event("scan-selection-down", function(event)
          if players[pindex].nearby.selection < #ents[players[pindex].nearby.index].ents then
             players[pindex].nearby.selection = players[pindex].nearby.selection + 1
          else
-            game.get_player(pindex).play_sound{path = "Mine-Building"}
+            game.get_player(pindex).play_sound{path = "player-mine"}
             players[pindex].nearby.selection = #ents[players[pindex].nearby.index].ents
          end
       end
@@ -7243,10 +7281,10 @@ function play_mining_sound(pindex)
    if player and player.mining_state.mining and player.selected and player.selected.valid then 
       --game.print("2",{volume_modifier=0})--
       if player.selected.prototype.is_building then
-         player.play_sound{path = "Mine-Building"}
+         player.play_sound{path = "player-mine"}
          --game.print("3A",{volume_modifier=0})--
       else
-         player.play_sound{path = "Mine-Building"}--Mine other things, eg. character corpses, laterdo new sound
+         player.play_sound{path = "player-mine"}--Mine other things, eg. character corpses, laterdo new sound
          --game.print("3B",{volume_modifier=0})--
       end
       schedule(25, "play_mining_sound", pindex)
@@ -7264,7 +7302,7 @@ script.on_event("mine-access-sounds", function(event)
       local ent = get_selected_ent(pindex)
       --if ent and (ent.prototype.mineable_properties.products == nil or ent.prototype.mineable_properties.products[1].name == ent.name) then
       if ent and ent.valid and (ent.prototype.mineable_properties.products ~= nil) then
-         game.get_player(pindex).play_sound{path = "Mine-Building"}
+         game.get_player(pindex).play_sound{path = "player-mine"}
          schedule(25, "play_mining_sound", pindex)
       elseif ent and ent.valid and ent.name == "character-corpse" then
          printout("Collecting items ", pindex)
@@ -7327,7 +7365,7 @@ script.on_event("mine-area", function(event)
       local pos = ent.position
       if ent.type == "tree" or ent.name == "rock-big" or ent.name == "rock-huge" or ent.name == "sand-rock-big" or ent.name == "item-on-ground" then
          --Obstacles within 5 tiles: trees and rocks and ground items
-         game.get_player(pindex).play_sound{path = "Mine-Building"}
+         game.get_player(pindex).play_sound{path = "player-mine"}
          cleared_count, comment = clear_obstacles_in_circle(pos, 5, pindex)
       elseif ent.name == "straight-rail" or ent.name == "curved-rail" then
          --Rails within 5 tiles (and their signals)
@@ -7348,13 +7386,13 @@ script.on_event("mine-area", function(event)
             end
          end
          if ent_is_remnant then
-            game.get_player(pindex).play_sound{path = "Mine-Building"}
+            game.get_player(pindex).play_sound{path = "player-mine"}
             cleared_count, comment = clear_obstacles_in_circle(players[pindex].cursor_pos, 5, pindex) 
          end
       end
    else
       --For empty tiles, clear obstacles
-      game.get_player(pindex).play_sound{path = "Mine-Building"}
+      game.get_player(pindex).play_sound{path = "player-mine"}
       cleared_count, comment = clear_obstacles_in_circle(players[pindex].cursor_pos, 5, pindex) 
    end
    cleared_total = cleared_total + cleared_count
@@ -7368,7 +7406,7 @@ script.on_event("mine-area", function(event)
       for i,ent in ipairs(all_ents) do
          if ent and ent.valid then
             local name = ent.name
-            game.get_player(pindex).play_sound{path = "Mine-Building"}
+            game.get_player(pindex).play_sound{path = "player-mine"}
             if try_to_mine_with_sound(ent,pindex) then
                cleared_total = cleared_total + 1
             end
@@ -9225,6 +9263,7 @@ script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
       players[pindex].building_direction_lag = true
       read_hand(pindex)
    end
+   sync_build_arrow(pindex)
 end)
 
 
@@ -9394,17 +9433,32 @@ script.on_event("toggle-walk",function(event)
    if not check_for_player(pindex) then
       return
    end
+   reset_bump_stats(pindex)
    players[pindex].move_queue = {}
    if players[pindex].walk == 0 then --Mode 1 (walk-by-step) is temporarily disabled until it comes back as an in game setting.
       players[pindex].walk = 2
-      players[pindex].character_running_speed_modifier = 0  -- 100% + 0 = 100%
-   else
+      game.get_player(pindex).character_running_speed_modifier = 0  -- 100% + 0 = 100%
+   else--walk == 1 or walk == 2
       players[pindex].walk = 0
-      players[pindex].character_running_speed_modifier = -1 -- 100% - 100% = 0%
+      game.get_player(pindex).character_running_speed_modifier = -1 -- 100% - 100% = 0%
    end
    --players[pindex].walk = (players[pindex].walk + 1) % 3
    printout(walk_type_speech[players[pindex].walk +1], pindex)
 end)
+
+function fix_walk(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
+   if game.get_player(pindex).character == nil or game.get_player(pindex).character.valid == false then
+      return
+   end
+   if players[pindex].walk == 0 then
+      game.get_player(pindex).character_running_speed_modifier = -1 -- 100% - 100% = 0%
+   else--walk > 0
+      game.get_player(pindex).character_running_speed_modifier =  0 -- 100% + 0 = 100%
+   end
+end
 
 --Toggle building while walking
 script.on_event("toggle-build-lock", function(event)
@@ -9433,6 +9487,7 @@ script.on_event("toggle-vanilla-mode",function(event)
    if players[pindex].vanilla_mode then
       game.get_player(pindex).print("Vanilla mode : ON")
       players[pindex].walk = 2
+      game.get_player(pindex).character_running_speed_modifier = 0
       players[pindex].hide_cursor = true
    else
       game.get_player(pindex).print("Vanilla mode : OFF")
@@ -10080,18 +10135,12 @@ script.on_event("debug-test-key", function(event)
    local ent =  get_selected_ent(pindex)
    local stack = game.get_player(pindex).cursor_stack
    
+   game.print(direction_lookup(p.walking_state.direction))
    
-   --if stack and stack.valid_for_read then
-   --   game.print(" * " .. localising.get(stack.prototype,pindex) .. " * ")
-   --end
-   
-   game.print(get_substring_before_space(get_substring_before_comma(ent.name)))
-   game.print(ent.name)
-   if ent.name == get_substring_before_space(get_substring_before_comma(ent.name)) then
-      game.print("equal")
-   else
-      game.print("not equal")
-   end   
+   --Recolor cursor boxes if multiplayer
+   if true then
+      set_cursor_colors_to_player_colors(pindex)
+   end
 
 end)
 
@@ -10555,6 +10604,37 @@ function get_direction_of_that_from_this(pos_that,pos_this)
    return dir
 end
 
+--Directions lookup table, laterdo localise**
+function direction_lookup(dir)
+   local reading = "unknown"
+   if dir < 0 then
+      return "direction error 1"
+   end
+   
+   if dir == dirs.north then
+      reading = "North"
+   elseif dir == dirs.northeast then
+      reading = "Northeast"
+   elseif dir == dirs.east then
+      reading = "East"
+   elseif dir == dirs.southeast then
+      reading = "Southeast"
+   elseif dir == dirs.south then
+      reading = "South"
+   elseif dir == dirs.southwest then
+      reading = "Southwest"
+   elseif dir == dirs.west then
+      reading = "West"
+   elseif dir == dirs.northwest then
+      reading = "Northwest"
+   elseif dir == 99 then --Internally defined
+      reading = "Here"
+   else
+      reading = "unknown direction ID " .. dir
+   end      
+   return reading
+end
+
 --Spawns a lamp at the electric pole and uses its energy level to approximate the network satisfaction percentage with high accuracy
 function get_electricity_satisfaction(electric_pole)
    local satisfaction = -1
@@ -10851,7 +10931,7 @@ function sync_build_arrow(pindex)
       --Redraw arrow
       if dir_indicator ~= nil then rendering.destroy(player.building_direction_arrow) end
       player.building_direction_arrow = rendering.draw_sprite{sprite = "fluid.crude-oil", tint = {r = 0.25, b = 0.25, g = 1.0, a = 0.8}, render_layer = 254, 
-         surface = game.get_player(pindex).surface, players = {pindex}, target = player.cursor_pos, orientation = (dir/dirs.east/dirs.south)}
+         surface = game.get_player(pindex).surface, players = nil, target = player.cursor_pos, orientation = (dir/dirs.east/dirs.south)}
       dir_indicator = player.building_direction_arrow
       rendering.set_visible(dir_indicator,true)
       if players[pindex].hide_cursor or stack.name == "locomotive" or stack.name == "cargo-wagon" or stack.name == "fluid-wagon" or stack.name == "artillery-wagon" then
@@ -10889,7 +10969,7 @@ function sync_build_arrow(pindex)
          end
       end
       player.building_footprint = rendering.draw_rectangle{left_top = left_top, right_bottom = right_bottom , color = {r = 0.25, b = 0.25, g = 1.0, a = 0.25}, draw_on_ground = true, 
-         surface = game.get_player(pindex).surface, players = {pindex} }
+         surface = game.get_player(pindex).surface, players = nil }
       rendering.set_visible(player.building_footprint,true)
       if players[pindex].hide_cursor or stack.name == "locomotive" or stack.name == "cargo-wagon" or stack.name == "fluid-wagon" or stack.name == "artillery-wagon" then
          rendering.set_visible(player.building_footprint,false)
@@ -10897,6 +10977,11 @@ function sync_build_arrow(pindex)
    else
       if dir_indicator ~= nil then rendering.set_visible(dir_indicator,false) end
       if player.building_footprint ~= nil then rendering.set_visible(player.building_footprint,false) end
+   end
+   
+   --Recolor cursor boxes if multiplayer
+   if game.is_multiplayer() then
+      set_cursor_colors_to_player_colors(pindex)
    end
 end
 
@@ -10933,7 +11018,7 @@ function cursor_highlight(pindex, ent, box_type, skip_mouse_movement)
    end
    
    --Highlight the currently focused ground tile.
-   h_tile = rendering.draw_rectangle{color = {0.75,1,1,0.75}, surface = p.surface, draw_on_ground = true, 
+   h_tile = rendering.draw_rectangle{color = {0.75,1,1,0.75}, surface = p.surface, draw_on_ground = true, players = nil,
       left_top = {math.floor(c_pos.x)+0.05,math.floor(c_pos.y)+0.05}, right_bottom = {math.ceil(c_pos.x)-0.05,math.ceil(c_pos.y)-0.05}}
    
    players[pindex].cursor_ent_highlight_box = h_box
@@ -10948,6 +11033,24 @@ function cursor_highlight(pindex, ent, box_type, skip_mouse_movement)
       move_cursor_map(center_of_tile(c_pos),pindex)
    else
       move_cursor_map(center_of_tile(p.position),pindex)
+   end
+   
+   --Recolor cursor boxes if multiplayer
+   if game.is_multiplayer() then
+      set_cursor_colors_to_player_colors(pindex)
+   end
+end
+
+function set_cursor_colors_to_player_colors(pindex)
+   if not check_for_player(pindex) then
+      return 
+   end
+   local p = game.get_player(pindex)
+   if rendering.is_valid(players[pindex].cursor_tile_highlight_box) then
+      rendering.set_color(players[pindex].cursor_tile_highlight_box,p.color)
+   end
+   if rendering.is_valid(players[pindex].building_footprint) then
+      rendering.set_color(players[pindex].building_footprint,p.color)
    end
 end
 
@@ -11025,10 +11128,10 @@ script.on_event(defines.events.on_entity_damaged,function(event)
       end
       --Play shield and/or character damaged sound
       if shield_left ~= nil then
-         ent.player.play_sound{path = "damaged-character-shield",volume_modifier=0.3}
+         ent.player.play_sound{path = "player-shield-damaged",volume_modifier=0.8}
       end
       if shield_left == nil or (shield_left < 1.0 and ent.get_health_ratio() < 1.0) then
-         ent.player.play_sound{path = "damaged-character-no-shield",volume_modifier=0.3}
+         ent.player.play_sound{path = "player-character-damaged",volume_modifier=0.4}
       end
       return
    elseif ent.get_health_ratio() == 1.0 then
@@ -11052,7 +11155,7 @@ script.on_event(defines.events.on_entity_damaged,function(event)
          local result = ent.name .. " damaged by " .. attacker_force.name .. " forces at " .. dist .. " " .. dir
          printout(result,pindex)
          --game.get_player(pindex).print(result,{volume_modifier=0})--**
-         game.get_player(pindex).play_sound{path = "damaged-entity-alert",volume_modifier=0.3}
+         game.get_player(pindex).play_sound{path = "alert-structure-damaged",volume_modifier=0.3}
       end
    end
 end)
@@ -11341,7 +11444,7 @@ function inventory_find_index_of_next_name_match(inv,index,str,pindex)
       end
    end
    --End of inventory reached, circle back
-   game.get_player(pindex).play_sound{path = "Mine-Building"}--sound for having cicled around 
+   game.get_player(pindex).play_sound{path = "player-mine"}--sound for having cicled around 
    for i=1, index, 1 do
       local stack = inv[i]
       if stack ~= nil and (stack.object_name == "LuaTechnology" or stack.valid_for_read) then 
@@ -11392,7 +11495,7 @@ function inventory_find_index_of_last_name_match(inv,index,str,pindex)
       end
    end
    --Start of inventory reached, circle back
-   game.get_player(pindex).play_sound{path = "Mine-Building"}--sound for having cicled around 
+   game.get_player(pindex).play_sound{path = "player-mine"}--sound for having cicled around 
    for i=#inv, index, -1 do
       local stack = inv[i]
       if stack ~= nil and stack.valid_for_read then  
@@ -11455,7 +11558,7 @@ function crafting_find_index_of_next_name_match(str,pindex,last_i, last_j, recip
       last_j = 1
    end
    --End of inventory reached, circle back
-   game.get_player(pindex).play_sound{path = "Mine-Building"}--sound for having cicled around 
+   game.get_player(pindex).play_sound{path = "player-mine"}--sound for having cicled around 
    for i = 1, cata_total, 1 do
       for j = 1, #recipes[i], 1 do 
          local recipe = recipes[i][j]
@@ -11487,69 +11590,70 @@ function crafting_find_index_of_next_name_match(str,pindex,last_i, last_j, recip
 end
 
 script.on_event(defines.events.on_string_translated,localising.handler)
-
-   faplayer.bump = faplayer.bump or {--****
-      last_bump_tick = 1,     --Updated in bump checker
-      last_dir_key_tick = 1,  --Updated in key press handlers
-      last_dir_key_1st = nil, --Updated in key press handlers
-      last_dir_key_2nd = nil, --Updated in key press handlers
-      last_pos_1 = nil,       --Updated in bump checker
-      last_pos_2 = nil,       --Updated in bump checker
-      last_pos_3 = nil,       --Updated in bump checker
-      last_pos_4 = nil,       --Updated in bump checker
-      last_pos_5 = nil        --Updated in bump checker
-   }
-   
+ 
 --If the player has unexpected lateral movement while smooth running in a cardinal direction, like from bumping into an entity or being at the edge of water, play a sound.
-function check_and_play_bump_alert_sound(pindex,this_tick)--*****
+function check_and_play_bump_alert_sound(pindex,this_tick)
+   if not check_for_player(pindex) or players[pindex].menu == "prompt" then
+      return 
+   end
    local p = game.get_player(pindex)
+   local face_dir = p.walking_state.direction
    
-   --Initialize
-   players[pindex].bump = players[pindex].bump or {
-      last_bump_tick = 1,
-      last_dir_key_tick = 1,
-      last_dir_key_1st = nil,
-      last_dir_key_2nd = nil,
-      last_pos_1 = nil,
-      last_pos_2 = nil,
-      last_pos_3 = nil,
-      last_pos_4 = nil,
-      last_pos_5 = nil
-   }
+   --Initialize 
+   if players[pindex].bump == nil then
+      reset_bump_stats(pindex)
+   end
    
    --Return and reset if in a menu or a vehicle or in a different walking mode than smooth walking
    if players[pindex].in_menu or p.vehicle ~= nil or players[pindex].walk ~= 2 then
-      --players[pindex].bump.last_pos_5 = nil
       players[pindex].bump.last_pos_4 = nil
       players[pindex].bump.last_pos_3 = nil
       players[pindex].bump.last_pos_2 = nil
       players[pindex].bump.last_pos_1 = nil
+      players[pindex].bump.last_dir_2 = nil
+      players[pindex].bump.last_dir_1 = nil
       return
    end
    
-   --Update Positions since last check
-   --players[pindex].bump.last_pos_5 = players[pindex].bump.last_pos_4
+   --Update Positions and directions since last check
    players[pindex].bump.last_pos_4 = players[pindex].bump.last_pos_3
    players[pindex].bump.last_pos_3 = players[pindex].bump.last_pos_2
    players[pindex].bump.last_pos_2 = players[pindex].bump.last_pos_1
    players[pindex].bump.last_pos_1 = p.position
+   
+   players[pindex].bump.last_dir_2 = players[pindex].bump.last_dir_1
+   players[pindex].bump.last_dir_1 = face_dir
+   
+   --Return if not walking
+   if p.walking_state.walking == false then return end
       
-   --Return if not enough positions filled (trying 4 for now) ***
+   --Return if not enough positions filled (trying 4 for now)
    if players[pindex].bump.last_pos_4 == nil then return end 
    
    --Return if bump sounded recently
-   if this_tick - players[pindex].bump.last_bump_tick < 60 then return end
+   if this_tick - players[pindex].bump.last_bump_tick < 15 then return end
    
    --Return if player changed direction recently
-   if this_tick - players[pindex].bump.last_dir_key_tick < 9 and players[pindex].bump.last_dir_key_1st ~= players[pindex].bump.last_dir_key_2nd then return end
+   if this_tick - players[pindex].bump.last_dir_key_tick < 30 and players[pindex].bump.last_dir_key_1st ~= players[pindex].bump.last_dir_key_2nd then return end
+   
+   --Return if current running direction is not equal to the last (e.g. letting go of a key)
+   if face_dir ~= players[pindex].bump.last_dir_key_1st then return end
    
    --Return if no last key info filled (rare)
    if players[pindex].bump.last_dir_key_1st == nil then return end
    
+   --Return if no last dir info filled (rare)
+   if players[pindex].bump.last_dir_2 == nil then return end
+   
+   --Return if not walking in a cardinal direction
+   if face_dir ~= dirs.north and face_dir ~= dirs.east and face_dir ~= dirs.south and face_dir ~= dirs.west then return end
+   
+   --Return if last dir is different
+   if players[pindex].bump.last_dir_1 ~= players[pindex].bump.last_dir_2 then return end
+   
    --Prepare analysis data
-   local TOLERANCE = 0.2
+   local TOLERANCE = 0.05
    local was_going_straight = false
-   local face_dir = p.character.direction--****check: might be incorrect when running forward and turning backward to shoot.
    local b = players[pindex].bump
    
    local diff_x1 = b.last_pos_1.x - b.last_pos_2.x
@@ -11568,7 +11672,7 @@ function check_and_play_bump_alert_sound(pindex,this_tick)--*****
          if math.abs(diff_x2) < TOLERANCE and math.abs(diff_x3) < TOLERANCE then
             was_going_straight = true
          end
-      else if face_dir == dirs.east or face_dir == dirs.west then
+      elseif face_dir == dirs.east or face_dir == dirs.west then
          if math.abs(diff_y2) < TOLERANCE and math.abs(diff_y3) < TOLERANCE then
             was_going_straight = true
          end
@@ -11580,7 +11684,7 @@ function check_and_play_bump_alert_sound(pindex,this_tick)--*****
       return 
    end
    
-   game.print("checking bump",{volume_modifier=0})--***
+   --game.print("checking bump",{volume_modifier=0})--
    
    --Check if latest movement has been straight
    local is_going_straight = false
@@ -11588,7 +11692,7 @@ function check_and_play_bump_alert_sound(pindex,this_tick)--*****
       if math.abs(diff_x1) < TOLERANCE then
          is_going_straight = true
       end
-   else if face_dir == dirs.east or face_dir == dirs.west then
+   elseif face_dir == dirs.east or face_dir == dirs.west then
       if math.abs(diff_y1) < TOLERANCE then
          is_going_straight = true
       end
@@ -11601,12 +11705,17 @@ function check_and_play_bump_alert_sound(pindex,this_tick)--*****
 
    --Now we can confirm that there is a sudden lateral movement
    players[pindex].bump.last_bump_tick = this_tick
+   p.play_sound{path = "player-bump-alert"}
    local bump_was_ent = false
    local bump_was_cliff = false
    local bump_was_tile = false
    
    --Check if there is an ent in front of the player
-   local ent = get_selected_ent(pindex)
+   local found_ent = get_selected_ent(pindex)
+   local ent = nil
+   if found_ent and found_ent.valid and found_ent.type ~= "resource" and found_ent.type ~= "transport-belt" and found_ent.type ~= "item-entity" and found_ent.type ~= "entity-ghost" and found_ent.type ~= "character" then
+      ent = found_ent
+   end
    if ent == nil or ent.valid == false then 
       local ents = p.surface.find_entities_filtered{position = p.position, radius = 0.75}
       for i, found_ent in ipairs(ents) do 
@@ -11616,11 +11725,15 @@ function check_and_play_bump_alert_sound(pindex,this_tick)--*****
          end
       end
    end
-   bump_was_ent = (ent == nil and ent.valid)
+   bump_was_ent = (ent ~= nil and ent.valid)
    
    if bump_was_ent then
-      p.play_sound{path = "Mine-Building"}--****update sound
-      game.print("bump: ent:" .. ent.name,{volume_modifier=0})--***
+      if ent.type == "cliff" then
+         p.play_sound{path = "player-bump-slide"}
+      else
+         p.play_sound{path = "player-bump-trip"}
+      end
+      --game.print("bump: ent:" .. ent.name,{volume_modifier=0})--
       return
    end
    
@@ -11628,23 +11741,82 @@ function check_and_play_bump_alert_sound(pindex,this_tick)--*****
    local ents = p.surface.find_entities_filtered{position = p.position, radius = 2, type = "cliff" }
    bump_was_cliff = (#ents > 0)
    if bump_was_cliff then
-      p.play_sound{path = "Mine-Building"}--****update sound
-      game.print("bump: cliff",{volume_modifier=0})--***
+      p.play_sound{path = "player-bump-slide"}
+      --game.print("bump: cliff",{volume_modifier=0})--
       return
    end
    
    --Check if there is a tile that was bumped into
-   local tile = surf.get_tile(players[pindex].cursor_pos.x, players[pindex].cursor_pos.y)
+   local tile = p.surface.get_tile(players[pindex].cursor_pos.x, players[pindex].cursor_pos.y)
    bump_was_tile = tile.collides_with("player-layer")
    
    if bump_was_tile then
-      p.play_sound{path = "Mine-Building"}--****update sound
-      game.print("bump: tile:" .. tile.name,{volume_modifier=0})--***
+      p.play_sound{path = "player-bump-slide"}
+      --game.print("bump: tile:" .. tile.name,{volume_modifier=0})--
       return
    end
    
-   --The bump was something else...
-   p.play_sound{path = "Mine-Building"}--****update sound
-   game.print("bump: unknown, at " .. p.position.x .. "," .. p.position.y ,{volume_modifier=0})--***
+   --The bump was something else, probably missed it...
+   --p.play_sound{path = "player-bump-slide"}
+   --game.print("bump: unknown, at " .. p.position.x .. "," .. p.position.y ,{volume_modifier=0})--
    return
+end
+
+--If walking but recently position has been unchanged, play alert
+function check_and_play_stuck_alert_sound(pindex,this_tick)
+   if not check_for_player(pindex) or players[pindex].menu == "prompt" then
+      return 
+   end
+   local p = game.get_player(pindex)
+  
+   --Initialize 
+   if players[pindex].bump == nil then
+      reset_bump_stats(pindex)
+   end
+   
+   --Return if in a menu or a vehicle or in a different walking mode than smooth walking
+   if players[pindex].in_menu or p.vehicle ~= nil or players[pindex].walk ~= 2 then
+      return
+   end
+      
+   --Return if not walking
+   if p.walking_state.walking == false then return end
+      
+   --Return if not enough positions filled (trying 3 for now)
+   if players[pindex].bump.last_pos_3 == nil then return end 
+     
+   --Return if no last dir info filled (rare)
+   if players[pindex].bump.last_dir_2 == nil then return end
+   
+   --Prepare analysis data
+   local b = players[pindex].bump
+   
+   local diff_x1 = b.last_pos_1.x - b.last_pos_2.x
+   local diff_x2 = b.last_pos_2.x - b.last_pos_3.x
+   --local diff_x3 = b.last_pos_3.x - b.last_pos_4.x
+      
+   local diff_y1 = b.last_pos_1.y - b.last_pos_2.y
+   local diff_y2 = b.last_pos_2.y - b.last_pos_3.y
+   --local diff_y3 = b.last_pos_3.y - b.last_pos_4.y
+   
+   --Check if earlier movement has been straight
+   if diff_x1 == 0 and diff_y1 == 0 and diff_x2 == 0 and diff_y2 == 0 then --and diff_x3 == 0 and diff_y3 == 0 then
+      p.play_sound{path = "player-bump-stuck-alert"}
+   end
+   
+end
+
+function reset_bump_stats(pindex)
+   players[pindex].bump = {
+      last_bump_tick = 1,
+      last_dir_key_tick = 1,
+      last_dir_key_1st = nil,
+      last_dir_key_2nd = nil,
+      last_pos_1 = nil,
+      last_pos_2 = nil,
+      last_pos_3 = nil,
+      last_pos_4 = nil,
+      last_dir_2 = nil,
+      last_dir_1 = nil
+   }
 end
