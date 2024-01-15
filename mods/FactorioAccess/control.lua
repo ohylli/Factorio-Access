@@ -515,30 +515,51 @@ function classify_forest(position,pindex,drawing)
    end
 end
 
-function nudge_key(direction, event)
+function nudge_key(direction, event)--****test
    local pindex = event.player_index
    if not check_for_player(pindex) or players[pindex].menu == "prompt" then
       return 
    end
    local ent = get_selected_ent(pindex)
    if ent and ent.valid then
-      if ent.prototype.is_building and ent.operable and ent.force == game.get_player(pindex).force then
+      if ent.force == game.get_player(pindex).force then
+         local old_pos = ent.position
          local new_pos = offset_position(ent.position,direction,1)
-         local teleported = ent.teleport(new_pos)
-         if teleported then
+         local temporary_teleported = false
+         local actually_teleported = false
+         --First teleport the ent to 0,0 temporarily
+         temporary_teleported = ent.teleport({0,0})
+         if not temporary_teleported then
+            game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+            printout({"access.failed-to-nudge"}, pindex)
+            return 
+         end
+         --Now check if the ent can be placed at its new location, and proceed or revert accordingly
+         if ent.surface.can_place_entity(name = ent.name, position = new_pos, direction = ent.direction) then
+            actually_teleported = ent.teleport(new_pos)
+         else
+            actually_teleported = ent.teleport(old_pos)
+            game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+            printout({"access.failed-to-nudge"}, pindex)
+            return 
+         end
+         if not actually_teleported then
+            printout({"access.failed-to-nudge"}, pindex)
+            return 
+         else
+            --Successfully teleported and so nudged
             printout({"access.nudged-one-direction",{"access.direction",direction}}, pindex)
             if players[pindex].cursor then
                players[pindex].cursor_pos = offset_position(players[pindex].cursor_pos,direction,1)
                cursor_highlight(pindex, ent, "train-visualization")
                sync_build_arrow(pindex)
             end
-            if ent.type == "electric-pole" then -- WIP***
+            if ent.type == "electric-pole" then 
+               -- laterdo **bugfix when nudged electric poles have extra wire reach, cut wires
                -- if ent.clone{position = new_pos, surface = ent.surface, force = ent.force, create_build_effect_smoke = false} == true then
                   -- ent.destroy{}
                -- end
             end
-         else
-            printout({"access.failed-to-nudge"}, pindex)
          end
       end
    else
@@ -5556,6 +5577,9 @@ player.force.research_all_technologies()
 --   player.force.research_all_technologies()
    end
    
+   --Starting inventory boost
+   local player = game.get_player(pindex).cutscene_character or game.get_player(pindex).character
+   player.insert{name = "rocket-fuel", count = 20}
 end
 
 script.on_event(defines.events.on_player_joined_game,function(event)
@@ -6299,7 +6323,7 @@ script.on_event("scan-facing-direction", function(event)
       return
    end
    if not (players[pindex].in_menu) then
-      --Set the filter direction ****
+      --Set the filter direction 
       local p = game.get_player(pindex)
       local dir = p.walking_state.direction
       rescan(pindex,dir)
