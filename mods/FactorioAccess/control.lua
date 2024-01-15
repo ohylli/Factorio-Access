@@ -3450,7 +3450,7 @@ function scan_down(pindex)
       players[pindex].nearby.index = players[pindex].nearby.index + 1
       players[pindex].nearby.selection = 1
    else 
-      game.get_player(pindex).play_sound{path = "Mine-Building"}
+      game.get_player(pindex).play_sound{path = "player-mine"}
       players[pindex].nearby.selection = 1
    end
 --   if not(pcall(function()
@@ -3489,7 +3489,7 @@ function scan_up(pindex)
    elseif players[pindex].nearby.index <= 1 then
       players[pindex].nearby.index = 1
       players[pindex].nearby.selection = 1
-      game.get_player(pindex).play_sound{path = "Mine-Building"}
+      game.get_player(pindex).play_sound{path = "player-mine"}
    end
 --   if not(pcall(function()
    scan_index(pindex)
@@ -3762,7 +3762,7 @@ function read_tile(pindex, start_text)
    if stack and stack.valid_for_read and stack.name == "cut-paste-tool" and not players[pindex].vanilla_mode then
       if ent and ent.valid then--not while loop, because it causes crashes
          local name = ent.name
-         game.get_player(pindex).play_sound{path = "Mine-Building"}
+         game.get_player(pindex).play_sound{path = "player-mine"}
          if try_to_mine_with_sound(ent,pindex) then
             result = result .. name .. " mined, "
          end
@@ -3770,7 +3770,7 @@ function read_tile(pindex, start_text)
          ent = get_selected_ent(pindex)
          if ent and ent.valid and players[pindex].walk ~= 2 then--not while
             local name = ent.name
-            game.get_player(pindex).play_sound{path = "Mine-Building"}
+            game.get_player(pindex).play_sound{path = "player-mine"}
             if try_to_mine_with_sound(ent,pindex) then
                result = result .. name .. " mined, "
             end 
@@ -4725,7 +4725,7 @@ function menu_cursor_up(pindex)
          else 
             --Border setting: Undo change and play "wall" sound
             players[pindex].inventory.index = players[pindex].inventory.index +10
-            game.get_player(pindex).play_sound{path = "Mine-Building"}
+            game.get_player(pindex).play_sound{path = "player-mine"}
             printout("Border.", pindex)
          end
       else
@@ -4933,7 +4933,7 @@ function menu_cursor_down(pindex)
          else 
             --Border setting: Undo change and play "wall" sound
             players[pindex].inventory.index = players[pindex].inventory.index -10
-            game.get_player(pindex).play_sound{path = "Mine-Building"}
+            game.get_player(pindex).play_sound{path = "player-mine"}
             printout("Border.", pindex)
          end
       else
@@ -5140,7 +5140,7 @@ function menu_cursor_left(pindex)
          else 
             --Border setting: Undo change and play "wall" sound
             players[pindex].inventory.index = players[pindex].inventory.index +1
-            game.get_player(pindex).play_sound{path = "Mine-Building"}
+            game.get_player(pindex).play_sound{path = "player-mine"}
             printout("Border.", pindex)
          end
       else
@@ -5282,7 +5282,7 @@ function menu_cursor_right(pindex)
          else 
             --Border setting: Undo change and play "wall" sound
             players[pindex].inventory.index = players[pindex].inventory.index -1
-            game.get_player(pindex).play_sound{path = "Mine-Building"}
+            game.get_player(pindex).play_sound{path = "player-mine"}
             printout("Border.", pindex)
          end
       else
@@ -5754,7 +5754,7 @@ function move(direction,pindex)
    else
       --turn character:
       if players[pindex].walk == 0 then
-         game.get_player(pindex).play_sound{path = "Face-Dir"}
+         game.get_player(pindex).play_sound{path = "player-turn"}
       elseif players[pindex].walk == 1 then
          table.insert(players[pindex].move_queue,{direction=direction,dest=pos})
       end
@@ -6501,7 +6501,7 @@ script.on_event("scan-selection-up", function(event)
       if players[pindex].nearby.selection > 1 then
          players[pindex].nearby.selection = players[pindex].nearby.selection - 1
       else
-         game.get_player(pindex).play_sound{path = "Mine-Building"}
+         game.get_player(pindex).play_sound{path = "player-mine"}
          players[pindex].nearby.selection = 1
       end
       scan_index(pindex)
@@ -6547,7 +6547,7 @@ script.on_event("scan-selection-down", function(event)
          if players[pindex].nearby.selection < #ents[players[pindex].nearby.index].ents then
             players[pindex].nearby.selection = players[pindex].nearby.selection + 1
          else
-            game.get_player(pindex).play_sound{path = "Mine-Building"}
+            game.get_player(pindex).play_sound{path = "player-mine"}
             players[pindex].nearby.selection = #ents[players[pindex].nearby.index].ents
          end
       end
@@ -7247,10 +7247,10 @@ function play_mining_sound(pindex)
    if player and player.mining_state.mining and player.selected and player.selected.valid then 
       --game.print("2",{volume_modifier=0})--
       if player.selected.prototype.is_building then
-         player.play_sound{path = "Mine-Building"}
+         player.play_sound{path = "player-mine"}
          --game.print("3A",{volume_modifier=0})--
       else
-         player.play_sound{path = "Mine-Building"}--Mine other things, eg. character corpses, laterdo new sound
+         player.play_sound{path = "player-mine"}--Mine other things, eg. character corpses, laterdo new sound
          --game.print("3B",{volume_modifier=0})--
       end
       schedule(25, "play_mining_sound", pindex)
@@ -7268,7 +7268,7 @@ script.on_event("mine-access-sounds", function(event)
       local ent = get_selected_ent(pindex)
       --if ent and (ent.prototype.mineable_properties.products == nil or ent.prototype.mineable_properties.products[1].name == ent.name) then
       if ent and ent.valid and (ent.prototype.mineable_properties.products ~= nil) then
-         game.get_player(pindex).play_sound{path = "Mine-Building"}
+         game.get_player(pindex).play_sound{path = "player-mine"}
          schedule(25, "play_mining_sound", pindex)
       elseif ent and ent.valid and ent.name == "character-corpse" then
          printout("Collecting items ", pindex)
@@ -7331,7 +7331,7 @@ script.on_event("mine-area", function(event)
       local pos = ent.position
       if ent.type == "tree" or ent.name == "rock-big" or ent.name == "rock-huge" or ent.name == "sand-rock-big" or ent.name == "item-on-ground" then
          --Obstacles within 5 tiles: trees and rocks and ground items
-         game.get_player(pindex).play_sound{path = "Mine-Building"}
+         game.get_player(pindex).play_sound{path = "player-mine"}
          cleared_count, comment = clear_obstacles_in_circle(pos, 5, pindex)
       elseif ent.name == "straight-rail" or ent.name == "curved-rail" then
          --Rails within 5 tiles (and their signals)
@@ -7352,13 +7352,13 @@ script.on_event("mine-area", function(event)
             end
          end
          if ent_is_remnant then
-            game.get_player(pindex).play_sound{path = "Mine-Building"}
+            game.get_player(pindex).play_sound{path = "player-mine"}
             cleared_count, comment = clear_obstacles_in_circle(players[pindex].cursor_pos, 5, pindex) 
          end
       end
    else
       --For empty tiles, clear obstacles
-      game.get_player(pindex).play_sound{path = "Mine-Building"}
+      game.get_player(pindex).play_sound{path = "player-mine"}
       cleared_count, comment = clear_obstacles_in_circle(players[pindex].cursor_pos, 5, pindex) 
    end
    cleared_total = cleared_total + cleared_count
@@ -7372,7 +7372,7 @@ script.on_event("mine-area", function(event)
       for i,ent in ipairs(all_ents) do
          if ent and ent.valid then
             local name = ent.name
-            game.get_player(pindex).play_sound{path = "Mine-Building"}
+            game.get_player(pindex).play_sound{path = "player-mine"}
             if try_to_mine_with_sound(ent,pindex) then
                cleared_total = cleared_total + 1
             end
@@ -11091,7 +11091,7 @@ script.on_event(defines.events.on_entity_damaged,function(event)
          local result = ent.name .. " damaged by " .. attacker_force.name .. " forces at " .. dist .. " " .. dir
          printout(result,pindex)
          --game.get_player(pindex).print(result,{volume_modifier=0})--**
-         game.get_player(pindex).play_sound{path = "damaged-entity-alert",volume_modifier=0.3}
+         game.get_player(pindex).play_sound{path = "alert-structure-damaged",volume_modifier=0.3}
       end
    end
 end)
@@ -11380,7 +11380,7 @@ function inventory_find_index_of_next_name_match(inv,index,str,pindex)
       end
    end
    --End of inventory reached, circle back
-   game.get_player(pindex).play_sound{path = "Mine-Building"}--sound for having cicled around 
+   game.get_player(pindex).play_sound{path = "player-mine"}--sound for having cicled around 
    for i=1, index, 1 do
       local stack = inv[i]
       if stack ~= nil and (stack.object_name == "LuaTechnology" or stack.valid_for_read) then 
@@ -11431,7 +11431,7 @@ function inventory_find_index_of_last_name_match(inv,index,str,pindex)
       end
    end
    --Start of inventory reached, circle back
-   game.get_player(pindex).play_sound{path = "Mine-Building"}--sound for having cicled around 
+   game.get_player(pindex).play_sound{path = "player-mine"}--sound for having cicled around 
    for i=#inv, index, -1 do
       local stack = inv[i]
       if stack ~= nil and stack.valid_for_read then  
@@ -11494,7 +11494,7 @@ function crafting_find_index_of_next_name_match(str,pindex,last_i, last_j, recip
       last_j = 1
    end
    --End of inventory reached, circle back
-   game.get_player(pindex).play_sound{path = "Mine-Building"}--sound for having cicled around 
+   game.get_player(pindex).play_sound{path = "player-mine"}--sound for having cicled around 
    for i = 1, cata_total, 1 do
       for j = 1, #recipes[i], 1 do 
          local recipe = recipes[i][j]
@@ -11671,7 +11671,7 @@ function check_and_play_bump_alert_sound(pindex,this_tick)--*****
    bump_was_ent = (ent ~= nil and ent.valid)
    
    if bump_was_ent then
-      p.play_sound{path = "Mine-Building"}--****update sound
+      p.play_sound{path = "player-mine"}--****update sound
       game.print("bump: ent:" .. ent.name,{volume_modifier=0})--***
       return
    end
@@ -11680,7 +11680,7 @@ function check_and_play_bump_alert_sound(pindex,this_tick)--*****
    local ents = p.surface.find_entities_filtered{position = p.position, radius = 2, type = "cliff" }
    bump_was_cliff = (#ents > 0)
    if bump_was_cliff then
-      p.play_sound{path = "Mine-Building"}--****update sound
+      p.play_sound{path = "player-mine"}--****update sound
       game.print("bump: cliff",{volume_modifier=0})--***
       return
    end
@@ -11690,13 +11690,13 @@ function check_and_play_bump_alert_sound(pindex,this_tick)--*****
    bump_was_tile = tile.collides_with("player-layer")
    
    if bump_was_tile then
-      p.play_sound{path = "Mine-Building"}--****update sound
+      p.play_sound{path = "player-mine"}--****update sound
       game.print("bump: tile:" .. tile.name,{volume_modifier=0})--***
       return
    end
    
    --The bump was something else, probably missed it...
-   p.play_sound{path = "Mine-Building"}--****update sound
+   p.play_sound{path = "player-mine"}--****update sound
    game.print("bump: unknown, at " .. p.position.x .. "," .. p.position.y ,{volume_modifier=0})--***
    return
 end
