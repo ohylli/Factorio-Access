@@ -5907,6 +5907,19 @@ script.on_event(defines.events.on_player_driving_changed_state, function(event)
    end
 end)
 
+--Pause / resume the game 
+script.on_event("pause-game-fa", function(event)
+   if game.tick_paused == true then
+      for pindex, player in pairs(players) do
+         printout("Game paused", pindex)--does not call**
+      end
+   else
+      for pindex, player in pairs(players) do
+         printout("Game resumed", pindex)
+      end
+   end
+end)
+
 script.on_event("cursor-up", function(event)
    move_key(defines.direction.north,event)
 end)

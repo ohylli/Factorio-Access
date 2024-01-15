@@ -265,6 +265,14 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "pause-game-fa",
+    key_sequence = "ESC",
+    linked_game_control = "toggle-menu",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "cursor-up",
     key_sequence = "W",
     linked_game_control = "move-up",
