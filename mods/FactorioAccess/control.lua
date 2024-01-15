@@ -6254,8 +6254,10 @@ script.on_event("scan-facing-direction", function(event)
    end
    if not (players[pindex].in_menu) then
       --Set the filter direction ****
-      rescan(pindex)
-      printout("Scan Complete", pindex)
+      local p = game.get_player(pindex)
+      local dir = p.walking_state.direction
+      rescan(pindex,dir)
+      printout("Scanning " .. direction_lookup(dir), pindex)
       run_scanner_effects(pindex)
    end
 end)
@@ -7329,7 +7331,7 @@ script.on_event("mine-access-sounds", function(event)
    end
 end)
 
---Mines tiles such as stone brick or concrete within the cursor area, including enlarged cursors****
+--Mines tiles such as stone brick or concrete within the cursor area, including enlarged cursors
 script.on_event("mine-tiles", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
