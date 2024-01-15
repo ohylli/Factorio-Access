@@ -1549,6 +1549,7 @@ function teleport_to_closest(pindex, pos, muted, ignore_enemies)
       if teleported then
          first_player.force.chart(first_player.surface, {{new_pos.x-15,new_pos.y-15},{new_pos.x+15,new_pos.y+15}})
          players[pindex].position = table.deepcopy(new_pos)
+         reset_bump_stats(pindex)
          if not muted then
             --Teleporting visuals at target
             rendering.draw_circle{color = {0.3, 0.3, 0.9},radius = 0.5,width = 15,target = new_pos, surface = first_player.surface, draw_on_ground = true, time_to_live = 60}
@@ -5865,6 +5866,7 @@ script.on_event(defines.events.on_player_driving_changed_state, function(event)
    if not check_for_player(pindex) then
       return
    end
+   reset_bump_stats(pindex)
    game.get_player(pindex).clear_cursor()
    if game.get_player(pindex).driving then
       players[pindex].last_vehicle = game.get_player(pindex).vehicle
@@ -9411,6 +9413,7 @@ script.on_event("toggle-walk",function(event)
    if not check_for_player(pindex) then
       return
    end
+   reset_bump_stats(pindex)
    players[pindex].move_queue = {}
    if players[pindex].walk == 0 then --Mode 1 (walk-by-step) is temporarily disabled until it comes back as an in game setting.
       players[pindex].walk = 2
@@ -11548,19 +11551,10 @@ function check_and_play_bump_alert_sound(pindex,this_tick)
    local p = game.get_player(pindex)
    local face_dir = p.walking_state.direction
    
-   --Initialize
-   players[pindex].bump = players[pindex].bump or {
-      last_bump_tick = 1,
-      last_dir_key_tick = 1,
-      last_dir_key_1st = nil,
-      last_dir_key_2nd = nil,
-      last_pos_1 = nil,
-      last_pos_2 = nil,
-      last_pos_3 = nil,
-      last_pos_4 = nil,
-      last_dir_2 = nil,
-      last_dir_1 = nil
-   }
+   --Initialize 
+   if players[pindex].bump == nil then
+      reset_bump_stats(pindex)
+   end
    
    --Return and reset if in a menu or a vehicle or in a different walking mode than smooth walking
    if players[pindex].in_menu or p.vehicle ~= nil or players[pindex].walk ~= 2 then
@@ -11727,19 +11721,10 @@ function check_and_play_stuck_alert_sound(pindex,this_tick)
    end
    local p = game.get_player(pindex)
   
-   --Initialize (call other function)
-   players[pindex].bump = players[pindex].bump or {
-      last_bump_tick = 1,
-      last_dir_key_tick = 1,
-      last_dir_key_1st = nil,
-      last_dir_key_2nd = nil,
-      last_pos_1 = nil,
-      last_pos_2 = nil,
-      last_pos_3 = nil,
-      last_pos_4 = nil,
-      last_dir_2 = nil,
-      last_dir_1 = nil
-   }
+   --Initialize 
+   if players[pindex].bump == nil then
+      reset_bump_stats(pindex)
+   end
    
    --Return if in a menu or a vehicle or in a different walking mode than smooth walking
    if players[pindex].in_menu or p.vehicle ~= nil or players[pindex].walk ~= 2 then
@@ -11771,4 +11756,19 @@ function check_and_play_stuck_alert_sound(pindex,this_tick)
       p.play_sound{path = "player-bump-stuck-alert"}
    end
    
+end
+
+function reset_bump_stats(pindex)
+   players[pindex].bump = {
+      last_bump_tick = 1,
+      last_dir_key_tick = 1,
+      last_dir_key_1st = nil,
+      last_dir_key_2nd = nil,
+      last_pos_1 = nil,
+      last_pos_2 = nil,
+      last_pos_3 = nil,
+      last_pos_4 = nil,
+      last_dir_2 = nil,
+      last_dir_1 = nil
+   }
 end
