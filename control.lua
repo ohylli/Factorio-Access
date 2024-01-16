@@ -535,7 +535,7 @@ function nudge_key(direction, event)--****test
             return 
          end
          --Now check if the ent can be placed at its new location, and proceed or revert accordingly
-         if ent.surface.can_place_entity(name = ent.name, position = new_pos, direction = ent.direction) then
+         if ent.surface.can_place_entity{name = ent.name, position = new_pos, direction = ent.direction} then
             actually_teleported = ent.teleport(new_pos)
          else
             actually_teleported = ent.teleport(old_pos)
