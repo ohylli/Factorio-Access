@@ -515,7 +515,7 @@ function classify_forest(position,pindex,drawing)
    end
 end
 
-function nudge_key(direction, event)--****test
+function nudge_key(direction, event)--
    local pindex = event.player_index
    if not check_for_player(pindex) or players[pindex].menu == "prompt" then
       return 
