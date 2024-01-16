@@ -72,6 +72,7 @@ local access_radar_recipe = table.deepcopy(data.raw["recipe"]["radar"])
 access_radar_recipe.enabled = true
 access_radar_recipe.name = "access-radar"
 access_radar_recipe.result = "access-radar"
+access_radar_recipe.ingredients = {{"electronic-circuit", 10}, {"iron-gear-wheel", 10}, {"iron-plate", 20}}
 
 data:extend{access_radar,access_radar_item}
 data:extend{access_radar_item,access_radar_recipe}

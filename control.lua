@@ -5601,9 +5601,9 @@ player.force.research_all_technologies()
 --   player.force.research_all_technologies()
    end
    
-   --Starting inventory boost
+   --Starting inventory boost for easy difficulty 
    local player = game.get_player(pindex).cutscene_character or game.get_player(pindex).character
-   player.insert{name = "rocket-fuel", count = 20}
+   --player.insert{name = "rocket-fuel", count = 20}
 end
 
 script.on_event(defines.events.on_player_joined_game,function(event)
@@ -7890,7 +7890,7 @@ script.on_event("click-menu", function(event)
             target(pindex)
 
          elseif players[pindex].travel.index.x == 2 then
-            printout("Enter a new name for this fast travel point, then press enter to confirm.", pindex)
+            printout("Enter a new name for this fast travel point, then press 'ENTER' to confirm.", pindex)
             players[pindex].travel.renaming = true
             local frame = game.get_player(pindex).gui.screen["travel"]
             local input = frame.add{type="textfield", name = "input"}
@@ -7902,7 +7902,7 @@ script.on_event("click-menu", function(event)
             players[pindex].travel.x = 1
             players[pindex].travel.index.y = players[pindex].travel.index.y - 1
          elseif players[pindex].travel.index.x == 4 then
-            printout("Enter a name for this fast travel point, then press enter to confirm.", pindex)
+            printout("Enter a name for this fast travel point, then press 'ENTER' to confirm.", pindex)
             players[pindex].travel.creating = true
             local frame = game.get_player(pindex).gui.screen["travel"]
             local input = frame.add{type="textfield", name = "input"}
@@ -9722,7 +9722,7 @@ script.on_event("menu-search-get-next",function(event)
    end
    local str = players[pindex].menu_search_term
    if str == nil or str == "" then
-      printout("Press ENTER to start typing in a search term",pindex)
+      printout("Press 'CONTROL + F' to start typing in a search term",pindex)
       return
    end
    menu_search_get_next(pindex,str)
@@ -9738,7 +9738,7 @@ script.on_event("menu-search-get-last",function(event)
    end
    local str = players[pindex].menu_search_term
    if str == nil or str == "" then
-      printout("Press ENTER to start typing in a search term",pindex)
+      printout("Press 'CONTROL + F' to start typing in a search term",pindex)
       return
    end
    menu_search_get_last(pindex,str)
