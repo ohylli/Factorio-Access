@@ -1,5 +1,9 @@
---data:
+--Data:
+
+--Universal belt immunity:
 data.raw.character.character.has_belt_immunity = true
+
+--Create resource map node entities as aggregate entities
 local resource_map_node = table.deepcopy(data.raw.container) 
 resource_map_node.name = "map-node"
 resource_map_node.type = "simple-entity-with-force"
@@ -31,6 +35,43 @@ small_electric_pole.collision_mask = {"object-layer", "floor-layer", "water-tile
 local medium_electric_pole = data.raw["electric-pole"]["medium-electric-pole"]
 medium_electric_pole.collision_mask = {"object-layer", "floor-layer", "water-tile"}
 
+--Add new radar type that does long distance scanning
+local access_radar = table.deepcopy(data.raw["radar"]["radar"])
+access_radar.icons = {
+  {
+    icon = access_radar.icon,
+    icon_size = access_radar.icon_size,
+    tint = {r=0.5,g=0.5,b=0.8,a=0.3}
+  }
+}
+access_radar.name = "access-radar"
+access_radar.energy_usage = "300kW"  --Default: "300kW"
+access_radar.energy_per_sector = "2MJ" --Default: "10MJ", now scans a new chunk in about 6 seconds instead of about 30
+access_radar.energy_per_nearby_scan = "250kJ" --Default: "250kJ"
+access_radar.max_distance_of_sector_revealed = 32 --Default: 14, now scans up to 512 tiles away instead of 224
+access_radar.max_distance_of_nearby_sector_revealed = 2 --Default: 3, now reveals fewer nearby chunks
+access_radar.rotation_speed = 0.005 --Default: 0.01, slower spin identifies it from a distance
+
+local access_radar_item = table.deepcopy(data.raw["item"]["radar"])
+access_radar_item.name = "access-radar"
+access_radar_item.place_result = "access-radar"
+access_radar_item.icons = {
+  {
+    icon = access_radar_item.icon,
+    icon_size = access_radar_item.icon_size,
+    tint = {r=0.5,g=0.5,b=0.8,a=0.3}
+  }
+}
+
+local access_radar_recipe = table.deepcopy(data.raw["recipe"]["radar"])
+access_radar_recipe.enabled = true
+access_radar_recipe.name = "access-radar"
+access_radar_recipe.result = "access-radar"
+
+data:extend{access_radar,access_radar_item}
+data:extend{access_radar_item,access_radar_recipe}
+
+--Map generation preset attempts
 resource_def={richness = 4}
 
 data.raw["map-gen-presets"].default["faccess-compass-valley"] = {
@@ -67,12 +108,7 @@ data.raw["map-gen-presets"].default["faccess-compass-valley"] = {
     }
 }
 
-data.raw["map-gen-presets"].default["faccess-peaceful"] = {
-    order="_B",
-    basic_settings={
-        peaceful_mode = true,
-    }
-}
+
 
 data.raw["map-gen-presets"].default["faccess-enemies-off"] = {
     order="_B",
@@ -83,6 +119,12 @@ data.raw["map-gen-presets"].default["faccess-enemies-off"] = {
     }
 }
 
+data.raw["map-gen-presets"].default["faccess-peaceful"] = {
+    order="_C",
+    basic_settings={
+        peaceful_mode = true,
+    }
+}
 
 data:extend({
  resource_map_node,
