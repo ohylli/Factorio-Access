@@ -10036,7 +10036,7 @@ script.on_event("set-splitter-input-priority-left", function(event)
    local ent = get_selected_ent(pindex)
    if not ent then
       return
-   elseif ent.name == "splitter" then
+   elseif ent.valid and ent.type == "splitter" then
       local result = set_splitter_priority(ent, true, true, nil)
       printout(result,pindex)
    end
@@ -10050,7 +10050,7 @@ script.on_event("set-splitter-input-priority-right", function(event)
    local ent =  get_selected_ent(pindex)
    if not ent then
       return
-   elseif ent.name == "splitter" then
+   elseif ent.valid and ent.type == "splitter" then
       local result = set_splitter_priority(ent, true, false, nil)
       printout(result,pindex)
    end
@@ -10065,7 +10065,7 @@ script.on_event("set-splitter-output-priority-left", function(event)
    if not ent then
       return
    end
-   if ent.name == "splitter" then
+   if ent.valid and ent.type == "splitter" then
       local result = set_splitter_priority(ent, false, true, nil)
       printout(result,pindex)
    end
@@ -10081,7 +10081,7 @@ script.on_event("set-splitter-output-priority-right", function(event)
       return
    end
    --Build left turns on end rails
-   if ent.name == "splitter" then
+   if ent.valid and ent.type == "splitter" then
       local result = set_splitter_priority(ent, false, false, nil)
       printout(result,pindex)
    end
@@ -10102,13 +10102,13 @@ script.on_event("set-splitter-filter", function(event)
       local stack = game.get_player(pindex).cursor_stack
       local ent =  get_selected_ent(pindex)
       if stack == nil or not stack.valid_for_read or not stack.valid then
-         if ent and ent.name == "splitter" then
+         if ent and ent.valid and ent.type == "splitter" then
             --Clear the filter
             local result = set_splitter_priority(ent, nil, nil, nil, true)
             printout(result,pindex)
          end
          return
-      elseif ent and ent.name == "splitter" then
+      elseif ent and ent.valid and ent.type == "splitter" then
          --Set the filter
          local result = set_splitter_priority(ent, nil, nil, stack)
          printout(result,pindex)
