@@ -3,6 +3,7 @@ require('rails-and-trains')
 require('worker-robots')
 local localising=require('localising')
 require('equipment-and-combat')
+require('help-system')
 
 groups = {}
 entity_types = {}
