@@ -36,21 +36,26 @@ local medium_electric_pole = data.raw["electric-pole"]["medium-electric-pole"]
 medium_electric_pole.collision_mask = {"object-layer", "floor-layer", "water-tile"}
 
 --Add new radar type that does long distance scanning
+local ar_tint = {r=0.5,g=0.5,b=0.5,a=0.9}
 local access_radar = table.deepcopy(data.raw["radar"]["radar"])
 access_radar.icons = {
   {
     icon = access_radar.icon,
     icon_size = access_radar.icon_size,
-    tint = {r=0.5,g=0.5,b=0.8,a=0.3}
+    tint = ar_tint
   }
 }
+--This radar scans a new sector every 5 seconds instead of 33, and it refreshes its short range every 5 seconds (precisely fast enough) instead of 1 second, but the short range is smaller and the radar costs double the power.
 access_radar.name = "access-radar"
-access_radar.energy_usage = "300kW"  --Default: "300kW"
-access_radar.energy_per_sector = "2MJ" --Default: "10MJ", now scans a new chunk in about 6 seconds instead of about 30
-access_radar.energy_per_nearby_scan = "250kJ" --Default: "250kJ"
-access_radar.max_distance_of_sector_revealed = 32 --Default: 14, now scans up to 512 tiles away instead of 224
-access_radar.max_distance_of_nearby_sector_revealed = 2 --Default: 3, now reveals fewer nearby chunks
-access_radar.rotation_speed = 0.005 --Default: 0.01, slower spin identifies it from a distance
+access_radar.energy_usage = "600kW"  --Default: "300kW"
+access_radar.energy_per_sector = "3MJ" --Default: "10MJ"
+access_radar.energy_per_nearby_scan = "3MJ" --Default: "250kJ"
+access_radar.max_distance_of_sector_revealed = 32 --Default: 14, now scans up to 1024 tiles away instead of 224
+access_radar.max_distance_of_nearby_sector_revealed = 2 --Default: 3
+access_radar.rotation_speed = 0.01 --Default: 0.01
+access_radar.tint = ar_tint
+access_radar.pictures.layers[1].tint = ar_tint--grey
+access_radar.pictures.layers[2].tint = ar_tint--grey
 
 local access_radar_item = table.deepcopy(data.raw["item"]["radar"])
 access_radar_item.name = "access-radar"
@@ -59,7 +64,7 @@ access_radar_item.icons = {
   {
     icon = access_radar_item.icon,
     icon_size = access_radar_item.icon_size,
-    tint = {r=0.5,g=0.5,b=0.8,a=0.3}
+    tint = ar_tint
   }
 }
 
@@ -70,6 +75,7 @@ access_radar_recipe.result = "access-radar"
 
 data:extend{access_radar,access_radar_item}
 data:extend{access_radar_item,access_radar_recipe}
+
 
 --Map generation preset attempts
 resource_def={richness = 4}
