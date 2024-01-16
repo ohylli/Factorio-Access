@@ -7245,7 +7245,7 @@ script.on_event("reverse-switch-menu-or-gun", function(event)
       elseif players[pindex].menu == "technology" then 
          players[pindex].menu = "crafting_queue"
          load_crafting_queue(pindex)
-		 read_crafting_queue(pindex, "Crafting queue, ")
+		 read_crafting_queue(pindex, "Crafting queue, " .. game.get_player(pindex).crafting_queue_size .. " total, ")
       elseif players[pindex].menu == "crafting" then
          players[pindex].menu = "inventory"
          read_inventory_slot(pindex, "Inventory, ")
