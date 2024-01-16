@@ -1121,6 +1121,9 @@ function ent_info(pindex, ent, description)
             result = result .. "and other items "
          end
       end
+   elseif ent.type == "radar" then
+      result = result .. ", " .. radar_charting_info(ent)
+      --game.print(result)--test
    elseif ent.type == "electric-pole" then
       --List connected electric poles
       if #ent.neighbours.copper == 0 then
@@ -1345,6 +1348,26 @@ function transport_belt_junction_info(sideload_count, backload_count, outload_co
    end
    return result
    --Note: A pouring end either pours into a sideloading junction, or into a corner. Lanes are preserved if the target is a corner.
+end
+
+--Reports the charting range and how much of it has been charted so far
+function radar_charting_info(radar)
+   local charting_range = radar.prototype.max_distance_of_sector_revealed
+   local count = 0
+   local total = 0
+   local centerx = math.floor(radar.position.x/32)
+   local centery = math.floor(radar.position.y/32)
+   for i = (centerx - charting_range), (centerx + charting_range), (1)  do
+      for j = (centery - charting_range), (centery + charting_range), (1)  do
+         if radar.force.is_chunk_charted(radar.surface,{i, j}) then
+            count = count + 1 
+         end
+         total = total + 1
+      end
+   end
+   local percent_charted = math.floor(count/total * 100)
+   local result = percent_charted .. " percent charted, " .. charting_range * 32 .. " tiles charting range "
+   return result
 end
 
 --Creates the building network that is traveled during structure travel. 
