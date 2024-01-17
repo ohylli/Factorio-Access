@@ -9874,6 +9874,7 @@ script.on_event(defines.events.on_gui_confirmed,function(event)
       end
       event.element.destroy()
       players[pindex].menu_search_frame.destroy()
+      players[pindex].menu_search_frame = nil
    end
    players[pindex].last_menu_search_tick = event.tick
 end)   
@@ -11405,6 +11406,10 @@ function menu_search_open(pindex)
    players[pindex].entering_search_term = true
    players[pindex].menu_search_index = 0
    players[pindex].menu_search_index_2 = 0
+   if players[pindex].menu_search_frame ~= nil then
+      players[pindex].menu_search_frame.destroy() 
+      players[pindex].menu_search_frame = nil
+   end
    local frame = game.get_player(pindex).gui.screen.add{type = "frame", name = "enter-search-term"}
    frame.bring_to_front()
    frame.force_auto_center()
