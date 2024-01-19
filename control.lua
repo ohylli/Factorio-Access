@@ -5836,7 +5836,7 @@ function move(direction,pindex)
    else
       --turn character:
       if players[pindex].walk == 0 then
-         game.get_player(pindex).play_sound{path = "player-turn"}
+         game.get_player(pindex).play_sound{path = "player-turned"}
       elseif players[pindex].walk == 1 then
          table.insert(players[pindex].move_queue,{direction=direction,dest=pos})
       end
@@ -11236,10 +11236,10 @@ script.on_event(defines.events.on_entity_damaged,function(event)
       end
       --Play shield and/or character damaged sound
       if shield_left ~= nil then
-         ent.player.play_sound{path = "player-shield-damaged",volume_modifier=0.8}
+         ent.player.play_sound{path = "player-damaged-shield",volume_modifier=0.8}
       end
       if shield_left == nil or (shield_left < 1.0 and ent.get_health_ratio() < 1.0) then
-         ent.player.play_sound{path = "player-character-damaged",volume_modifier=0.4}
+         ent.player.play_sound{path = "player-damaged-character",volume_modifier=0.4}
       end
       return
    elseif ent.get_health_ratio() == 1.0 then
