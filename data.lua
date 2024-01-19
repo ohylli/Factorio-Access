@@ -139,7 +139,7 @@ data:extend({
 {
    type = "sound",
    name = "alert-enemy-presence-high",
-   filename = "__FactorioAccess__/Audio/alert-enemy-presence-high-zapsplat_science_fiction_alarm_fast_high_pitched_warning_tone_emergency_003_60104.mp3",
+   filename = "__FactorioAccess__/Audio/alert-enemy-presence-high-zapsplat-trimmed-science_fiction_alarm_fast_high_pitched_warning_tone_emergency_003_60104.wav",
    volume = 1,
    preload = true
 },
@@ -147,7 +147,7 @@ data:extend({
 {
    type = "sound",
    name = "alert-enemy-presence-low",
-   filename = "__FactorioAccess__/Audio/alert-enemy-presence-low-zapsplat_multimedia_game_tone_short_bright_futuristic_beep_action_tone_002_59161.mp3",
+   filename = "__FactorioAccess__/Audio/alert-enemy-presence-low-zapsplat-modified_multimedia_game_tone_short_bright_futuristic_beep_action_tone_002_59161.wav",
    volume = 1,
    preload = true
 },
@@ -155,7 +155,7 @@ data:extend({
 {
    type = "sound",
    name = "alert-structure-damaged",
-   filename = "__FactorioAccess__/Audio/alert-structure-damaged-zapsplat-emergency_alarm_003.mp3",
+   filename = "__FactorioAccess__/Audio/alert-structure-damaged-zapsplat-modified-emergency_alarm_003.wav",
    volume = 1,
    preload = true
 },
@@ -187,7 +187,7 @@ data:extend({
 {
    type = "sound",
    name = "inventory-edge",
-   filename = "__FactorioAccess__/Audio/inventory-edge-zapsplat_vehicles_car_roof_light_switch_click_002_80933.mp3",
+   filename = "__FactorioAccess__/Audio/inventory-edge-zapsplat_vehicles_car_roof_light_switch_click_002_80933.wav",
    volume = 1,
    preload = true
 },
@@ -203,7 +203,7 @@ data:extend({
 {
    type = "sound",
    name = "inventory-wrap-around",
-   filename = "__FactorioAccess__/Audio/inventory-wrap-around-zapsplat_leisure_toy_plastic_wind_up_003_13198.mp3",
+   filename = "__FactorioAccess__/Audio/inventory-wrap-around-zapsplat_leisure_toy_plastic_wind_up_003_13198.wav",
    volume = 1,
    preload = true
 },
@@ -211,7 +211,7 @@ data:extend({
 {
    type = "sound",
    name = "player-aim-locked",
-   filename = "__FactorioAccess__/Audio/player-aim-locked-zapsplat_multimedia_game_beep_high_pitched_generic_002_25862.mp3", 
+   filename = "__FactorioAccess__/Audio/player-aim-locked-zapsplat_multimedia_game_beep_high_pitched_generic_002_25862.wav", 
    volume = 1,
    preload = true
 },
@@ -219,7 +219,7 @@ data:extend({
 {
    type = "sound",
    name = "player-bump-alert",
-   filename = "__FactorioAccess__/Audio/player-bump-alert-zapsplat_multimedia_game_sound_synth_digital_tone_beep_001_38533.mp3", 
+   filename = "__FactorioAccess__/Audio/player-bump-alert-zapsplat-trimmed_multimedia_game_sound_synth_digital_tone_beep_001_38533.wav", 
    volume = 1,
    preload = true
 },
@@ -227,7 +227,7 @@ data:extend({
 {
    type = "sound",
    name = "player-bump-stuck-alert",
-   filename = "__FactorioAccess__/Audio/player-bump-stuck-alert-zapsplat_multimedia_game_sound_synth_digital_tone_beep_005_38537.mp3", 
+   filename = "__FactorioAccess__/Audio/player-bump-stuck-alert-zapsplat_multimedia_game_sound_synth_digital_tone_beep_005_38537.wav", 
    volume = 1,
    preload = true
 },
@@ -235,7 +235,7 @@ data:extend({
 {
    type = "sound",
    name = "player-bump-slide",
-   filename = "__FactorioAccess__/Audio/player-bump-slide-zapsplat_foley_footstep_boot_kick_gravel_stones_out_002.mp3", 
+   filename = "__FactorioAccess__/Audio/player-bump-slide-zapsplat_foley_footstep_boot_kick_gravel_stones_out_002.wav", 
    volume = 1,
    preload = true
 },
@@ -243,7 +243,7 @@ data:extend({
 {
    type = "sound",
    name = "player-bump-trip",
-   filename = "__FactorioAccess__/Audio/player-bump-trip-zapsplat_industrial_tool_pick_axe_single_hit_strike_wood_tree_trunk_001_103466.mp3", 
+   filename = "__FactorioAccess__/Audio/player-bump-trip-zapsplat-trimmed_industrial_tool_pick_axe_single_hit_strike_wood_tree_trunk_001_103466.wav", 
    volume = 1,
    preload = true
 },
@@ -251,7 +251,7 @@ data:extend({
 {
    type = "sound",
    name = "player-damaged-character",
-   filename = "__FactorioAccess__/Audio/player-damaged-character-zapsplat_multimedia_beep_harsh_synth_single_high_pitched_87498.mp3",
+   filename = "__FactorioAccess__/Audio/player-damaged-character-zapsplat-modified_multimedia_beep_harsh_synth_single_high_pitched_87498.wav",
    volume = 1,
    preload = true
 },
@@ -259,7 +259,7 @@ data:extend({
 {
    type = "sound",
    name = "player-damaged-shield",
-   filename = "__FactorioAccess__/Audio/player-damaged-shield-zapsplat_multimedia_game_sound_sci_fi_futuristic_beep_action_tone_001_64989.mp3",
+   filename = "__FactorioAccess__/Audio/player-damaged-shield-zapsplat_multimedia_game_sound_sci_fi_futuristic_beep_action_tone_001_64989.wav",
    volume = 1,
    preload = true
 },
@@ -275,7 +275,7 @@ data:extend({
 {
    type = "sound",
    name = "player-teleported",
-   filename = "__FactorioAccess__/Audio/player-teleported-zapsplat_science_fiction_computer_alarm_single_medium_ring_beep_fast_004_84296.mp3",
+   filename = "__FactorioAccess__/Audio/player-teleported-zapsplat_science_fiction_computer_alarm_single_medium_ring_beep_fast_004_84296.wav",
    volume = 1,
    preload = true
 },
@@ -299,7 +299,7 @@ data:extend({
 {
    type = "sound",
    name = "scanner-pulse",
-   filename = "__FactorioAccess__/Audio/scanner-pulse-zapsplat_science_fiction_computer_alarm_single_medium_ring_beep_fast_001_84293.mp3",
+   filename = "__FactorioAccess__/Audio/scanner-pulse-zapsplat_science_fiction_computer_alarm_single_medium_ring_beep_fast_001_84293.wav",
    volume = 1,
    preload = true
 },
@@ -307,7 +307,7 @@ data:extend({
 {
    type = "sound",
    name = "train-alert-high",
-   filename = "__FactorioAccess__/Audio/train-alert-high-zapsplat_science_fiction_alarm_warning_buzz_harsh_large_reverb_60111.mp3",
+   filename = "__FactorioAccess__/Audio/train-alert-high-zapsplat-trimmed_science_fiction_alarm_warning_buzz_harsh_large_reverb_60111.wav",
    volume = 1,
    preload = true
 },
@@ -315,7 +315,7 @@ data:extend({
 {
    type = "sound",
    name = "train-alert-low",
-   filename = "__FactorioAccess__/Audio/train-alert-low-zapsplat_multimedia_beep_digital_high_tech_electronic_001_87483.mp3",
+   filename = "__FactorioAccess__/Audio/train-alert-low-zapsplat_multimedia_beep_digital_high_tech_electronic_001_87483.wav",
    volume = 1,
    preload = true
 },
@@ -331,7 +331,7 @@ data:extend({
 {
    type = "sound",
    name = "train-honk-long",
-   filename = "__FactorioAccess__/Audio/train-honk-long-pixabay-diesel-horn-02-98042.mp3",
+   filename = "__FactorioAccess__/Audio/train-honk-long-pixabay-modified-diesel-horn-02-98042.wav",
    volume = 1,
    preload = true
 },
