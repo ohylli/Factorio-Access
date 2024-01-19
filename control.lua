@@ -3078,20 +3078,6 @@ function read_inventory_slot(pindex, start_phrase_in)
    end
 end
 
-
-function set_quick_bar(index, pindex)
-   local page = game.get_player(pindex).get_active_quick_bar_page(1)-1
-   local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
-   if stack and stack.valid_for_read and stack.valid == true then
-      game.get_player(pindex).set_quick_bar_slot(index + 10*page, stack) 
-      printout("Assigned " .. index, pindex)
-
-   else
-      game.get_player(pindex).set_quick_bar_slot(index + 10*page, nil) 
-      printout("Unassigned " .. index, pindex)
-   end
-end
-
 function read_hand(pindex)
    if players[pindex].skip_read_hand == true then
       players[pindex].skip_read_hand = false
@@ -3273,25 +3259,6 @@ function locate_hand_in_crafting_menu(pindex)
 
    --Run the search
    menu_search_get_next(pindex,item_name,nil)
-end
-
-function read_quick_bar(index,pindex)
-   page = game.get_player(pindex).get_active_quick_bar_page(1)-1
-   local item = game.get_player(pindex).get_quick_bar_slot(index+ 10*page)
-   if item ~= nil then
-      local count = game.get_player(pindex).character.get_main_inventory().get_item_count(item.name)
-      local stack = game.get_player(pindex).cursor_stack
-      if stack and stack.valid_for_read then
-         count = count + stack.count
-         printout("unselected " .. item.name .. " x " .. count, pindex)
-      else
-         printout("selected " .. item.name .. " x " .. count, pindex)
-      end
-
-   else
-      printout("Empty Slot",pindex)
-   end
-
 end
 
 function target(pindex)
@@ -6949,123 +6916,107 @@ script.on_event("read-menu-name", function(event)--read_menu_name
    printout(menu_name,pindex)
 end)
 
-script.on_event("quickbar-1", function(event)
-   pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   if not (players[pindex].in_menu) then
-      read_quick_bar(1,pindex)
-   end
-end)
-
-script.on_event("quickbar-2", function(event)
-   pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   if not (players[pindex].in_menu) then
-      read_quick_bar(2,pindex)
-   end
-end)
-
-script.on_event("quickbar-3", function(event)
-   pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   if not (players[pindex].in_menu) then
-      read_quick_bar(3,pindex)
-   end
-end)
-
-script.on_event("quickbar-4", function(event)
-   pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   if not (players[pindex].in_menu) then
-      read_quick_bar(4,pindex)
-   end
-end)
-
-script.on_event("quickbar-5", function(event)
-   pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   if not (players[pindex].in_menu) then
-      read_quick_bar(5,pindex)
-   end
-end)
-
-script.on_event("quickbar-6", function(event)
-   pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   if not (players[pindex].in_menu) then
-      read_quick_bar(6,pindex)
-   end
-end)
-
-script.on_event("quickbar-7", function(event)
-   pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   if not (players[pindex].in_menu) then
-      read_quick_bar(7,pindex)
-   end
-end)
-
-script.on_event("quickbar-8", function(event)
-   pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   if not (players[pindex].in_menu) then
-      read_quick_bar(8,pindex)
-   end
-end)
-
-script.on_event("quickbar-9", function(event)
-   pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   if not (players[pindex].in_menu) then
-      read_quick_bar(9,pindex)
-   end
-end)
-
-script.on_event("quickbar-10", function(event)
-   pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   if not (players[pindex].in_menu) then
-      read_quick_bar(10,pindex)
-   end
-end)
-
+--Quickbar even handlers
+local quickbar_slots = {}
 local set_quickbar_names = {}
+local quickbar_pages = {}
 for i = 1,10 do
+   table.insert(quickbar_slots,"quickbar-"..i)
    table.insert(set_quickbar_names,"set-quickbar-"..i)
+   table.insert(quickbar_pages,"quickbar-page-"..i)
 end
+
+script.on_event(quickbar_slots, function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].menu == "inventory" or players[pindex].menu == "none" or players[pindex].menu == "building" then
+      local num=tonumber(string.sub(event.input_name,-1))
+      if num == 0 then
+         num = 10
+      end
+      read_quick_bar_slot(num,pindex)
+   end
+end)
+
 script.on_event(set_quickbar_names,function(event)--all 10 quickbar setting event handlers
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
    end
-   if players[pindex].menu == "inventory" then
+   if players[pindex].menu == "inventory" or players[pindex].menu == "none" or players[pindex].menu == "building" then
       local num=tonumber(string.sub(event.input_name,-1))
       if num == 0 then
          num = 10
       end
-      set_quick_bar(num, pindex)
+      set_quick_bar_slot(num, pindex)
    end
 end)
+
+script.on_event(quickbar_pages,function(event)--all 10 quickbar page setting event handlers
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+
+   local num=tonumber(string.sub(event.input_name,-1))
+   if num == 0 then
+      num = 10
+   end
+   read_switched_quick_bar(num, pindex)
+end)
+
+function read_quick_bar_slot(index,pindex)
+   page = game.get_player(pindex).get_active_quick_bar_page(1)-1
+   local item = game.get_player(pindex).get_quick_bar_slot(index+ 10*page)
+   if item ~= nil then
+      local count = game.get_player(pindex).character.get_main_inventory().get_item_count(item.name)
+      local stack = game.get_player(pindex).cursor_stack
+      if stack and stack.valid_for_read then
+         count = count + stack.count
+         printout("unselected " .. localising.get(item, pindex) .. " x " .. count, pindex)
+      else
+         printout("selected " .. localising.get(item, pindex) .. " x " .. count, pindex)
+      end
+
+   else
+      printout("Empty quickbar slot",pindex)
+   end
+end
+
+function set_quick_bar_slot(index, pindex)
+   local page = game.get_player(pindex).get_active_quick_bar_page(1)-1
+   local stack_cur = game.get_player(pindex).cursor_stack
+   local stack_inv = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
+   if stack_cur and stack_cur.valid_for_read and stack_cur.valid == true then
+      game.get_player(pindex).set_quick_bar_slot(index + 10*page, stack_cur) 
+      printout("Quickbar assigned " .. index .. " " .. localising.get(stack_cur, pindex), pindex)
+   elseif players[pindex].menu == "inventory" and stack_inv and stack_inv.valid_for_read and stack_inv.valid == true then
+      game.get_player(pindex).set_quick_bar_slot(index + 10*page, stack_inv) 
+      printout("Quickbar assigned " .. index .. " " .. localising.get(stack_inv, pindex), pindex)
+   else
+      local item = game.get_player(pindex).get_quick_bar_slot(index+ 10*page)
+      local item_name = ""
+      if item ~= nil then
+         item_name = localising.get(item, pindex)
+      end
+      game.get_player(pindex).set_quick_bar_slot(index + 10*page, nil) 
+      printout("Quickbar unassigned " .. index .. " " .. item_name, pindex)
+   end
+end
+
+function read_switched_quick_bar(index,pindex)
+   page = game.get_player(pindex).get_active_quick_bar_page(index)
+   local item = game.get_player(pindex).get_quick_bar_slot(1 + 10*(index-1))
+   local item_name = "empty slot"
+   if item ~= nil then
+      item_name = localising.get(item, pindex)
+   end
+   local result = "Quickbar " .. index .. " selected starting with " .. item_name 
+   printout(result, pindex)
+
+end
 
 script.on_event("switch-menu-or-gun", function(event)
    pindex = event.player_index

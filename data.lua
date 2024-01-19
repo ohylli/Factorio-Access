@@ -681,6 +681,7 @@ data:extend({
     type = "custom-input",
     name = "quickbar-1",
     key_sequence = "1",
+    linked_game_control = "quick-bar-button-1",
     consuming = "none"
 },
 
@@ -688,6 +689,7 @@ data:extend({
     type = "custom-input",
     name = "quickbar-2",
     key_sequence = "2",
+    linked_game_control = "quick-bar-button-2",
     consuming = "none"
 },
 
@@ -695,6 +697,7 @@ data:extend({
     type = "custom-input",
     name = "quickbar-3",
     key_sequence = "3",
+    linked_game_control = "quick-bar-button-3",
     consuming = "none"
 },
 
@@ -702,6 +705,7 @@ data:extend({
     type = "custom-input",
     name = "quickbar-4",
     key_sequence = "4",
+    linked_game_control = "quick-bar-button-4",
     consuming = "none"
 },
 
@@ -709,6 +713,7 @@ data:extend({
     type = "custom-input",
     name = "quickbar-5",
     key_sequence = "5",
+    linked_game_control = "quick-bar-button-5",
     consuming = "none"
 },
 
@@ -716,6 +721,7 @@ data:extend({
     type = "custom-input",
     name = "quickbar-6",
     key_sequence = "6",
+    linked_game_control = "quick-bar-button-6",
     consuming = "none"
 },
 
@@ -723,6 +729,7 @@ data:extend({
     type = "custom-input",
     name = "quickbar-7",
     key_sequence = "7",
+    linked_game_control = "quick-bar-button-7",
     consuming = "none"
 },
 
@@ -730,6 +737,7 @@ data:extend({
     type = "custom-input",
     name = "quickbar-8",
     key_sequence = "8",
+    linked_game_control = "quick-bar-button-8",
     consuming = "none"
 },
 
@@ -737,6 +745,7 @@ data:extend({
     type = "custom-input",
     name = "quickbar-9",
     key_sequence = "9",
+    linked_game_control = "quick-bar-button-9",
     consuming = "none"
 },
 
@@ -744,6 +753,7 @@ data:extend({
     type = "custom-input",
     name = "quickbar-10",
     key_sequence = "0",
+    linked_game_control = "quick-bar-button-10",
     consuming = "none"
 },
 
@@ -814,6 +824,76 @@ data:extend({
     type = "custom-input",
     name = "set-quickbar-10",
     key_sequence = "CONTROL + 0",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "quickbar-page-1",
+    key_sequence = "SHIFT + 1",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "quickbar-page-2",
+    key_sequence = "SHIFT + 2",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "quickbar-page-3",
+    key_sequence = "SHIFT + 3",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "quickbar-page-4",
+    key_sequence = "SHIFT + 4",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "quickbar-page-5",
+    key_sequence = "SHIFT + 5",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "quickbar-page-6",
+    key_sequence = "SHIFT + 6",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "quickbar-page-7",
+    key_sequence = "SHIFT + 7",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "quickbar-page-8",
+    key_sequence = "SHIFT + 8",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "quickbar-page-9",
+    key_sequence = "SHIFT + 9",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "quickbar-page-10",
+    key_sequence = "SHIFT + 0",
     consuming = "none"
 },
 
