@@ -3471,7 +3471,7 @@ function scan_down(pindex)
       players[pindex].nearby.index = players[pindex].nearby.index + 1
       players[pindex].nearby.selection = 1
    else 
-      game.get_player(pindex).play_sound{path = "player-mine"}
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
       players[pindex].nearby.selection = 1
    end
 --   if not(pcall(function()
@@ -3510,7 +3510,7 @@ function scan_up(pindex)
    elseif players[pindex].nearby.index <= 1 then
       players[pindex].nearby.index = 1
       players[pindex].nearby.selection = 1
-      game.get_player(pindex).play_sound{path = "player-mine"}
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
    end
 --   if not(pcall(function()
    scan_index(pindex)
@@ -4803,8 +4803,8 @@ function menu_cursor_up(pindex)
          else 
             --Border setting: Undo change and play "wall" sound
             players[pindex].inventory.index = players[pindex].inventory.index +10
-            game.get_player(pindex).play_sound{path = "player-mine"}
-            printout("Border.", pindex)
+            game.get_player(pindex).play_sound{path = "inventory-edge"}
+            --printout("Border.", pindex)
          end
       else
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -5011,8 +5011,8 @@ function menu_cursor_down(pindex)
          else 
             --Border setting: Undo change and play "wall" sound
             players[pindex].inventory.index = players[pindex].inventory.index -10
-            game.get_player(pindex).play_sound{path = "player-mine"}
-            printout("Border.", pindex)
+            game.get_player(pindex).play_sound{path = "inventory-edge"}
+            --printout("Border.", pindex)
          end
       else
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -5218,8 +5218,8 @@ function menu_cursor_left(pindex)
          else 
             --Border setting: Undo change and play "wall" sound
             players[pindex].inventory.index = players[pindex].inventory.index +1
-            game.get_player(pindex).play_sound{path = "player-mine"}
-            printout("Border.", pindex)
+            game.get_player(pindex).play_sound{path = "inventory-edge"}
+            --printout("Border.", pindex)
          end
       else
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -5360,8 +5360,8 @@ function menu_cursor_right(pindex)
          else 
             --Border setting: Undo change and play "wall" sound
             players[pindex].inventory.index = players[pindex].inventory.index -1
-            game.get_player(pindex).play_sound{path = "player-mine"}
-            printout("Border.", pindex)
+            game.get_player(pindex).play_sound{path = "inventory-edge"}
+            --printout("Border.", pindex)
          end
       else
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -6617,7 +6617,7 @@ script.on_event("scan-selection-up", function(event)
       if players[pindex].nearby.selection > 1 then
          players[pindex].nearby.selection = players[pindex].nearby.selection - 1
       else
-         game.get_player(pindex).play_sound{path = "player-mine"}
+         game.get_player(pindex).play_sound{path = "inventory-edge"}
          players[pindex].nearby.selection = 1
       end
       scan_index(pindex)
@@ -6663,7 +6663,7 @@ script.on_event("scan-selection-down", function(event)
          if players[pindex].nearby.selection < #ents[players[pindex].nearby.index].ents then
             players[pindex].nearby.selection = players[pindex].nearby.selection + 1
          else
-            game.get_player(pindex).play_sound{path = "player-mine"}
+            game.get_player(pindex).play_sound{path = "inventory-edge"}
             players[pindex].nearby.selection = #ents[players[pindex].nearby.index].ents
          end
       end
@@ -11556,7 +11556,7 @@ function inventory_find_index_of_next_name_match(inv,index,str,pindex)
       end
    end
    --End of inventory reached, circle back
-   game.get_player(pindex).play_sound{path = "player-mine"}--sound for having cicled around 
+   game.get_player(pindex).play_sound{path = "inventory-wrap-around"}--sound for having cicled around 
    for i=1, index, 1 do
       local stack = inv[i]
       if stack ~= nil and (stack.object_name == "LuaTechnology" or stack.valid_for_read) then 
@@ -11607,7 +11607,7 @@ function inventory_find_index_of_last_name_match(inv,index,str,pindex)
       end
    end
    --Start of inventory reached, circle back
-   game.get_player(pindex).play_sound{path = "player-mine"}--sound for having cicled around 
+   game.get_player(pindex).play_sound{path = "inventory-wrap-around"}--sound for having cicled around 
    for i=#inv, index, -1 do
       local stack = inv[i]
       if stack ~= nil and stack.valid_for_read then  
@@ -11670,7 +11670,7 @@ function crafting_find_index_of_next_name_match(str,pindex,last_i, last_j, recip
       last_j = 1
    end
    --End of inventory reached, circle back
-   game.get_player(pindex).play_sound{path = "player-mine"}--sound for having cicled around 
+   game.get_player(pindex).play_sound{path = "inventory-wrap-around"}--sound for having cicled around 
    for i = 1, cata_total, 1 do
       for j = 1, #recipes[i], 1 do 
          local recipe = recipes[i][j]

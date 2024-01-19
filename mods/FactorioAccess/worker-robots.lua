@@ -1193,7 +1193,7 @@ function roboport_menu_up(pindex)
    players[pindex].roboport_menu.index = players[pindex].roboport_menu.index - 1
    if players[pindex].roboport_menu.index < 0 then
       players[pindex].roboport_menu.index = 0
-      game.get_player(pindex).play_sound{path = "player-mine"}
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
    else
       --Play sound
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -1206,7 +1206,7 @@ function roboport_menu_down(pindex)
    players[pindex].roboport_menu.index = players[pindex].roboport_menu.index + 1
    if players[pindex].roboport_menu.index > ROBOPORT_MENU_LENGTH then
       players[pindex].roboport_menu.index = ROBOPORT_MENU_LENGTH
-      game.get_player(pindex).play_sound{path = "player-mine"}
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
    else
       --Play sound
       game.get_player(pindex).play_sound{path = "Inventory-Move"}

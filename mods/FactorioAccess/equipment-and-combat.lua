@@ -351,7 +351,7 @@ function check_and_play_enemy_alert_sound(mode_in)
             if dist < 100 then
                local pos = p.position
                pos.x = pos.x + x_offset
-               p.play_sound{path = "utility/item_deleted", position = pos, volume_modifier = 1.0}
+               p.play_sound{path = "alert-enemy-presence-low", position = pos, volume_modifier = 1.0}
             end
             --Additional alert if there are more than 5 enemies nearby
             local enemies = p.surface.find_enemy_units(p.position, 25, p.force)
@@ -370,7 +370,7 @@ function check_and_play_enemy_alert_sound(mode_in)
             if dist < 50 then
                local pos = p.position
                pos.x = pos.x + x_offset
-               p.play_sound{path = "utility/item_deleted", position = pos, volume_modifier = 1.0}
+               p.play_sound{path = "alert-enemy-presence-low", position = pos, volume_modifier = 1.0}
             end
             --Additional alert if there are more than 10 enemies nearby
             local enemies = p.surface.find_enemy_units(p.position, 25, p.force)
@@ -381,7 +381,7 @@ function check_and_play_enemy_alert_sound(mode_in)
             if dist < 25 then
                local pos = p.position
                pos.x = pos.x + x_offset
-               p.play_sound{path = "utility/item_deleted", position = pos, volume_modifier = 1.0}
+               p.play_sound{path = "alert-enemy-presence-low", position = pos, volume_modifier = 1.0}
             end
          end
       end
