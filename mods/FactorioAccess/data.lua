@@ -1369,15 +1369,22 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "debug-test-key",
-    key_sequence = "ALT + G",
+    name = "launch-rocket",
+    key_sequence = "SPACE",
     consuming = "none"
 },
 
 {
     type = "custom-input",
-    name = "launch-rocket",
-    key_sequence = "SPACE",
+    name = "help-key",
+    key_sequence = "H",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "debug-test-key",
+    key_sequence = "ALT + G",
     consuming = "none"
 },
 
@@ -1487,7 +1494,7 @@ data:extend({
 
 })
 
---Additions below for removing tips and tricks
+--*Additions below for removing tips and tricks to prevent screen clutter*
 vanilla_tip_and_tricks_item_table=
 {
    "introduction",
@@ -1592,19 +1599,19 @@ function remove_tip_and_tricks_item(inname)
    end
 end
 
-   data.raw["tips-and-tricks-item"]["introduction"].category="game-interaction";
-   data.raw["tips-and-tricks-item"]["introduction"].trigger=nil;
+data.raw["tips-and-tricks-item"]["introduction"].category="game-interaction";
+data.raw["tips-and-tricks-item"]["introduction"].trigger=nil;
 
-   data.raw["tips-and-tricks-item"]["show-info"].starting_status="unlocked";
-   data.raw["tips-and-tricks-item"]["show-info"].dependencies=nil;
+data.raw["tips-and-tricks-item"]["show-info"].starting_status="unlocked";
+data.raw["tips-and-tricks-item"]["show-info"].dependencies=nil;
 
-   data.raw["tips-and-tricks-item"]["e-confirm"].starting_status="unlocked";
-   data.raw["tips-and-tricks-item"]["e-confirm"].trigger=nil;
-   data.raw["tips-and-tricks-item"]["e-confirm"].skip_trigger={type="use-confirm"};--**nil
-   data.raw["tips-and-tricks-item"]["e-confirm"].dependencies=nil;
+data.raw["tips-and-tricks-item"]["e-confirm"].starting_status="unlocked";
+data.raw["tips-and-tricks-item"]["e-confirm"].trigger=nil;
+data.raw["tips-and-tricks-item"]["e-confirm"].skip_trigger={type="use-confirm"};--**nil
+data.raw["tips-and-tricks-item"]["e-confirm"].dependencies=nil;
 
 
 for _,item in pairs(vanilla_tip_and_tricks_item_table) do
    remove_tip_and_tricks_item(item);
 end
---Additions above for removing tips and tricks
+--*Additions above for removing tips and tricks*
