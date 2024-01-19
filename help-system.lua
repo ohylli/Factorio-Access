@@ -25,7 +25,7 @@ function load_tutorial(pindex)
    
    local str_count = 0
    local err_count = 0
-   for i = 1, #tutorial.chapter_lengths, 1, do --for every chapter
+   for i = 1, #tutorial.chapter_lengths, 1 do --for every chapter
       local chapter_length = tutorial.chapter_lengths[i]   
       for j = 1, chapter_length, 1 do --for every step
          local header_str_name = "tutorial-chapter-" .. i .. "-step-" .. j .. "-header"
@@ -82,7 +82,7 @@ function tutorial_menu_up(pindex)
 			tutorial.chapter_index = 0
 			tutorial.step_index = 1
 			--play_sound: end of list***
-		elseif tutorial.chapter_index == 0
+		elseif tutorial.chapter_index == 0 then 
 			tutorial.step_index = 1
 		else
 			tutorial.step_index = tutorial.chapter_lengths[tutorial.chapter_index]
