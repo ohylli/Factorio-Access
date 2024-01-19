@@ -1180,7 +1180,7 @@ data:extend({
 {
     type = "custom-input",
     name = "read-hand",
-    key_sequence = "Q",
+    key_sequence = "SHIFT + Q",
     consuming = "none"
 },
 
