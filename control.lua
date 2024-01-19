@@ -10193,25 +10193,6 @@ script.on_event("inventory-remove-all-equipment-and-armor", function(event)
    
 end)
 
---**Use this key to test stuff (ALT-G)
-script.on_event("debug-test-key", function(event)
-   local pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   local p = game.get_player(pindex)
-   local ent =  get_selected_ent(pindex)
-   local stack = game.get_player(pindex).cursor_stack
-   
-   game.print(direction_lookup(p.walking_state.direction))
-   
-   --Recolor cursor boxes if multiplayer
-   if true then
-      set_cursor_colors_to_player_colors(pindex)
-   end
-
-end)
-
 --Attempt to launch a rocket
 script.on_event("launch-rocket", function(event)
    local pindex = event.player_index
@@ -10237,6 +10218,33 @@ script.on_event("launch-rocket", function(event)
    end
 end)
 
+--Help key and tutorial system WIP
+script.on_event("help-key", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   printout("Help system coming soon.",pindex)
+end)
+
+--**Use this key to test stuff (ALT-G)
+script.on_event("debug-test-key", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local p = game.get_player(pindex)
+   local ent =  get_selected_ent(pindex)
+   local stack = game.get_player(pindex).cursor_stack
+   
+   game.print(direction_lookup(p.walking_state.direction))
+   
+   --Recolor cursor boxes if multiplayer
+   if true then
+      set_cursor_colors_to_player_colors(pindex)
+   end
+
+end)
 
 script.on_event("logistic-request-read", function(event)
    local pindex = event.player_index
