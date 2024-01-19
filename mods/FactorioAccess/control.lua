@@ -3053,6 +3053,18 @@ function load_crafting_queue(pindex)
    end
 end
 
+function get_crafting_que_total(pindex)
+   local p = game.get_player(pindex)
+   local total_items = 0
+   if p.crafting_queue == nil or p.crafting_queue == {} then
+      return 0
+   end 
+   for i,q_item in ipairs(p.crafting_queue) do 
+      total_items = total_items + q_item.count
+   end
+   return total_items
+end 
+
 function read_crafting_slot(pindex, start_phrase)
    start_phrase = start_phrase or ""
    recipe = players[pindex].crafting.lua_recipes[players[pindex].crafting.category][players[pindex].crafting.index]
@@ -3242,7 +3254,7 @@ function locate_hand_in_crafting_menu(pindex)
    p.opened = p
    
    --Get the name
-   local item_name = string.lower(get_substring_before_dash(localising.get(stack.prototype,pindex)))
+   local item_name = string.lower(get_substring_before_space(get_substring_before_dash(localising.get(stack.prototype,pindex))))
    players[pindex].menu_search_term = item_name
    
    --Empty hand stack (clear cursor stack) after getting the name 
@@ -7072,7 +7084,7 @@ script.on_event("switch-menu-or-gun", function(event)
       elseif players[pindex].menu == "crafting" then 
          players[pindex].menu = "crafting_queue"
          load_crafting_queue(pindex)
-		 read_crafting_queue(pindex, "Crafting queue, ")
+		 read_crafting_queue(pindex, "Crafting queue, " .. get_crafting_que_total(pindex) .. " total, ")
       elseif players[pindex].menu == "crafting_queue" then
          players[pindex].menu = "technology"
 		 read_technology_slot(pindex, "Technology, Researchable Technologies, ")
@@ -7200,7 +7212,7 @@ script.on_event("reverse-switch-menu-or-gun", function(event)
       elseif players[pindex].menu == "technology" then 
          players[pindex].menu = "crafting_queue"
          load_crafting_queue(pindex)
-		 read_crafting_queue(pindex, "Crafting queue, " .. game.get_player(pindex).crafting_queue_size .. " total, ")
+		 read_crafting_queue(pindex, "Crafting queue, " .. get_crafting_que_total(pindex) .. " total, ")
       elseif players[pindex].menu == "crafting" then
          players[pindex].menu = "inventory"
          read_inventory_slot(pindex, "Inventory, ")
@@ -7606,7 +7618,7 @@ script.on_event("click-menu", function(event)
             }
             game.get_player(pindex).cancel_crafting(T)
             load_crafting_queue(pindex)
-            read_crafting_queue(pindex)
+            read_crafting_queue(pindex, "cancelled 1, ")
          end
          
       elseif players[pindex].menu == "building" then
@@ -8491,7 +8503,7 @@ script.on_event("crafting-all", function(event)
             }
             game.get_player(pindex).cancel_crafting(T)
             load_crafting_queue(pindex)
-            read_crafting_queue(pindex)
+            read_crafting_queue(pindex, "cancelled all, ")
 
          end
       end
@@ -8818,7 +8830,7 @@ script.on_event("crafting-5", function(event)
             }
             game.get_player(pindex).cancel_crafting(T)
             load_crafting_queue(pindex)
-            read_crafting_queue(pindex)
+            read_crafting_queue(pindex, "cancelled 5, ")
          end
       end
    end

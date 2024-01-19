@@ -2,7 +2,7 @@
 local localising = {}
 --Returns the localised name of an object as a string
 function localising.get(object,pindex)--*** todo make this work
-   if string.sub(object.object_name,-9) ~= "Prototype" then
+   if object.valid and string.sub(object.object_name,-9) ~= "Prototype" then
       object = object.prototype
    end
    local result = players[pindex].localisations
