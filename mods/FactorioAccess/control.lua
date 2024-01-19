@@ -3697,7 +3697,8 @@ function scan_area(x,y,w,h, pindex, filter_direction)
    end
    
    --Sort the list
-   if players[pindex].nearby.count == false then
+   if players[pindex].nearby.count == false or players[pindex].nearby.count == nil then
+      players[pindex].nearby.count = false
       --Sort results by distance to player position when first creating the scanner list
       table.sort(result, function(k1, k2) 
          local pos = players[pindex].position
