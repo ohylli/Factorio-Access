@@ -8064,6 +8064,8 @@ function open_operable_building(ent,pindex)--open_building
          p.opened = ent
       end
       --Other stuff...
+      players[pindex].menu_search_index = 0
+      players[pindex].menu_search_index_2 = 0
       if ent.prototype.subgroup.name == "belt" then
          players[pindex].in_menu = true
          players[pindex].menu = "belt"
