@@ -146,6 +146,14 @@ data:extend({
 
 {
    type = "sound",
+   name = "alert-enemy-presence-low",
+   filename = "__FactorioAccess__/Audio/alert-enemy-presence-low-zapsplat_multimedia_game_tone_short_bright_futuristic_beep_action_tone_002_59161.mp3",
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
    name = "alert-structure-damaged",
    filename = "__FactorioAccess__/Audio/alert-structure-damaged-alarm_siren_warning_01.wav",
    volume = 1,
@@ -180,6 +188,14 @@ data:extend({
    type = "sound",
    name = "Inventory-Move",
    filename = "__FactorioAccess__/Audio/inventory-move.ogg",
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "inventory-edge",
+   filename = "__FactorioAccess__/Audio/inventory-edge-zapsplat_vehicles_car_roof_light_switch_click_002_80933.mp3",
    volume = 1,
    preload = true
 },
@@ -290,7 +306,15 @@ data:extend({
 
 {
    type = "sound",
-   name = "train-alert",
+   name = "train-alert-high",
+   filename = "__FactorioAccess__/Audio/train-alert-ui_menu_button_beep_11.wav",
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "train-alert-low",
    filename = "__FactorioAccess__/Audio/train-alert-ui_menu_button_beep_11.wav",
    volume = 1,
    preload = true
