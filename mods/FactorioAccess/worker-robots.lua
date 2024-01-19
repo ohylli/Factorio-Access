@@ -78,8 +78,10 @@ function decrement_logistic_request_max_amount(stack_size, amount_max_in)
    elseif amount_max >= math.floor(stack_size/2) then
       amount_max = 1
    elseif amount_max >= 1 then
-      amount_max = 1
-   elseif amount_max == nil or amount_max == 0 then
+      amount_max = 0
+   elseif amount_max >= 0 then
+      amount_max = 0
+   elseif amount_max == nil then
       amount_max = stack_size
    end
    
