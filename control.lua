@@ -5955,7 +5955,7 @@ script.on_event(defines.events.on_player_driving_changed_state, function(event)
    end
 end)
 
---Pause / resume the game 
+--Pause / resume the game. If a menu GUI is open, ESC makes it close the menu instead
 script.on_event("pause-game-fa", function(event)
    if game.tick_paused == true then
       for pindex, player in pairs(players) do
@@ -5963,7 +5963,11 @@ script.on_event("pause-game-fa", function(event)
       end
    else
       for pindex, player in pairs(players) do
-         printout("Game resumed", pindex)
+         if game.get_player(pindex).opened ~= nil then
+            printout("Menu closed", pindex)
+         else
+            printout("Game resumed", pindex)
+         end
       end
    end
 end)
