@@ -4217,7 +4217,7 @@ function build_preview_checks_info(stack, pindex)
          local max_dist = 2000
          local nearest_port, min_dist = find_nearest_roboport(p.surface, p.position, max_dist)
          if min_dist == nil or min_dist >= max_dist then
-            result = result .. " no other roboports poles within " .. max_dist .. " tiles, "
+            result = result .. " no other roboports within " .. max_dist .. " tiles, "
          else
             local dir = get_direction_of_that_from_this(nearest_port.position,pos)
             result = result .. math.ceil(min_dist) .. " tiles " .. direction_lookup(dir) .. " to nearest roboport, "
