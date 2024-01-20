@@ -6596,8 +6596,8 @@ script.on_event("scan-category-down", function(event)
    end
 end)
 
---Default key was N
-script.on_event("scan-mode-up", function(event)
+
+script.on_event("scan-sort-by-distance", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -6605,13 +6605,13 @@ script.on_event("scan-mode-up", function(event)
    if not (players[pindex].in_menu) then
       players[pindex].nearby.index = 1
       players[pindex].nearby.count = false
-      printout("Sorting by distance from your position", pindex)
+      printout("Sorting scan results by distance from your position", pindex)
       scan_sort(pindex)
    end
 end)
 
---Default key was SHIFT + N
-script.on_event("scan-mode-down", function(event)
+
+script.on_event("scan-sort-by-count", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -6619,7 +6619,7 @@ script.on_event("scan-mode-down", function(event)
    if not (players[pindex].in_menu) then
       players[pindex].nearby.index = 1
       players[pindex].nearby.count = true
-      printout("Sorting by count", pindex)
+      printout("Sorting scan results by total count", pindex)
       scan_sort(pindex)
    end
 end)
