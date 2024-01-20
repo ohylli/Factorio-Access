@@ -879,6 +879,13 @@ function identify_rail_segment_end_object(rail, dir_ahead, accept_only_forward, 
    local result_extra = nil
    local result_is_forward = nil
    
+   if rail == nil or rail.valid == false then
+      --Error
+      result_entity = segment_last_rail
+      result_entity_label = "missing rail"
+      return result_entity, result_entity_label, result_extra, result_is_forward
+   end
+   
    --Correction: Flip the correct direction ahead for mismatching diagonal rails
    if rail.name == "straight-rail" and (rail.direction == dirs.southwest or rail.direction == dirs.northwest) 
       or rail.name == "curved-rail" and (rail.direction == dirs.north or rail.direction == dirs.northeast or rail.direction == dirs.east or rail.direction == dirs.southeast) then
@@ -1183,7 +1190,7 @@ function train_read_next_rail_entity_ahead(pindex, invert, mute_in)
    return honk_score
 end
 
-
+--Takes all the output from the get_next_rail_entity_ahead and adds extra info before reading them out. Does NOT detect trains.
 function rail_read_next_rail_entity_ahead(pindex, rail, is_forward)
    local message = "Up this rail, "
    local origin_rail = rail
@@ -3090,38 +3097,6 @@ function get_heading(ent)
    return heading
 end
 
---Directions lookup table
-function direction_lookup(dir)
-   local reading = "unknown"
-   if dir < 0 then
-      return "direction error 1"
-   end
-   
-   if dir == dirs.north then
-      reading = "North"
-   elseif dir == dirs.northeast then
-      reading = "Northeast"
-   elseif dir == dirs.east then
-      reading = "East"
-   elseif dir == dirs.southeast then
-      reading = "Southeast"
-   elseif dir == dirs.south then
-      reading = "South"
-   elseif dir == dirs.southwest then
-      reading = "Southwest"
-   elseif dir == dirs.west then
-      reading = "West"
-   elseif dir == dirs.northwest then
-      reading = "Northwest"
-   elseif dir == 99 then --Internally defined
-      reading = "Here"
-   else
-      reading = "unknown direction ID " .. dir
-   end      
-   return reading
-end
-
-
 function rail_builder_open(pindex, rail)
    if players[pindex].vanilla_mode then
       return 
@@ -3191,7 +3166,7 @@ function rail_builder_up(pindex)
    --Check the index against the limit
    if players[pindex].rail_builder.index < 0 then
       players[pindex].rail_builder.index = 0
-      game.get_player(pindex).play_sound{path = "Mine-Building"}
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
    else
       --Play sound
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -3209,7 +3184,7 @@ function rail_builder_down(pindex)
    --Check the index against the limit
    if players[pindex].rail_builder.index > players[pindex].rail_builder.index_max then
       players[pindex].rail_builder.index = players[pindex].rail_builder.index_max
-      game.get_player(pindex).play_sound{path = "Mine-Building"}
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
    else
       --Play sound
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -3607,7 +3582,7 @@ function train_menu_up(pindex)
    players[pindex].train_menu.index = players[pindex].train_menu.index - 1
    if players[pindex].train_menu.index < 0 then
       players[pindex].train_menu.index = 0
-      game.get_player(pindex).play_sound{path = "Mine-Building"}
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
    else
       --Play sound
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -3620,7 +3595,7 @@ function train_menu_down(pindex)
    players[pindex].train_menu.index = players[pindex].train_menu.index + 1
    if players[pindex].train_menu.index > TRAIN_MENU_LENGTH then
       players[pindex].train_menu.index = TRAIN_MENU_LENGTH
-      game.get_player(pindex).play_sound{path = "Mine-Building"}
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
    else
       --Play sound
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -3815,7 +3790,7 @@ function train_stop_menu_up(pindex)
    players[pindex].train_stop_menu.index = players[pindex].train_stop_menu.index - 1
    if players[pindex].train_stop_menu.index < 0 then
       players[pindex].train_stop_menu.index = 0
-      game.get_player(pindex).play_sound{path = "Mine-Building"}
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
    else
       --Play sound
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -3829,7 +3804,7 @@ function train_stop_menu_down(pindex)
    players[pindex].train_stop_menu.index = players[pindex].train_stop_menu.index + 1
    if players[pindex].train_stop_menu.index > 8 then
       players[pindex].train_stop_menu.index = 8
-      game.get_player(pindex).play_sound{path = "Mine-Building"}
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
    else
       --Play sound
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -4455,7 +4430,7 @@ function go_to_valid_train_stop_from_list(pindex,train)
 end
 
 --Plays a train track alert sound for every player standing on or facing train tracks that meet the condition.
-function play_train_track_alert_sounds(step)
+function check_and_play_train_track_alert_sounds(step)
    for pindex, player in pairs(players) do
       --Check if the player is standing on a rail
       local p = game.get_player(pindex)
@@ -4484,7 +4459,7 @@ function play_train_track_alert_sounds(step)
          local trains = p.surface.get_trains()
          for i,train in ipairs(trains) do
             if train.speed ~= 0 and (util.distance(p.position,train.front_stock.position) < 400 or util.distance(p.position,train.back_stock.position) < 400) then 
-               p.play_sound{path = "utility/blueprint_selection_ended"}
+               p.play_sound{path = "train-alert-low"}
                rendering.draw_circle{color = {1, 1, 0},radius = 2,width = 2,target = found_rail.position,surface = found_rail.surface,time_to_live = 15}
             end
          end
@@ -4495,7 +4470,7 @@ function play_train_track_alert_sounds(step)
             if  train.speed ~= 0 and (util.distance(p.position,train.front_stock.position) < 200 or util.distance(p.position,train.back_stock.position) < 200)
             and ((train.speed > 0 and util.distance(p.position,train.front_stock.position) <= util.distance(p.position,train.back_stock.position)) 
             or   (train.speed < 0 and util.distance(p.position,train.front_stock.position) >= util.distance(p.position,train.back_stock.position))) then 
-               p.play_sound{path = "utility/blueprint_selection_ended"}
+               p.play_sound{path = "train-alert-low"}
                rendering.draw_circle{color = {1, 0.5, 0},radius = 3,width = 4,target = found_rail.position,surface = found_rail.surface,time_to_live = 15}
             end
          end
@@ -4507,12 +4482,10 @@ function play_train_track_alert_sounds(step)
             and ((train.speed > 0 and util.distance(p.position,train.front_stock.position) <= util.distance(p.position,train.back_stock.position)) 
             or   (train.speed < 0 and util.distance(p.position,train.front_stock.position) >= util.distance(p.position,train.back_stock.position))) then 
                if (util.distance(p.position,train.front_stock.position) < 200 or util.distance(p.position,train.back_stock.position) < 200) then
-                  p.play_sound{path = "utility/new_objective"}
-                  p.play_sound{path = "utility/new_objective"}
+                  p.play_sound{path = "train-alert-high"} 
                   rendering.draw_circle{color = {1, 0.0, 0},radius = 4,width = 8,target = found_rail.position,surface = found_rail.surface,time_to_live = 15}
                else
-                  p.play_sound{path = "utility/blueprint_selection_ended"}
-                  p.play_sound{path = "utility/blueprint_selection_ended"}
+                  p.play_sound{path = "train-alert-low"}
                   rendering.draw_circle{color = {1, 0.4, 0},radius = 4,width = 8,target = found_rail.position,surface = found_rail.surface,time_to_live = 15}
                end
             end
@@ -4522,12 +4495,10 @@ function play_train_track_alert_sounds(step)
             if signal.signal_state == defines.signal_state.reserved then
                for i,train in ipairs(trains) do
                   if (util.distance(p.position,train.front_stock.position) < 200 or util.distance(p.position,train.back_stock.position) < 200) then
-                     p.play_sound{path = "utility/new_objective"}
-                     p.play_sound{path = "utility/new_objective"}
+                     p.play_sound{path = "train-alert-high"} 
                      rendering.draw_circle{color = {1, 0.0, 0},radius = 4,width = 8,target = found_rail.position,surface = found_rail.surface,time_to_live = 15}
                   else
-                     p.play_sound{path = "utility/blueprint_selection_ended"}
-                     p.play_sound{path = "utility/blueprint_selection_ended"}
+                     p.play_sound{path = "train-alert-low"}
                      rendering.draw_circle{color = {1, 0.4, 0},radius = 4,width = 8,target = found_rail.position,surface = found_rail.surface,time_to_live = 15}
                   end
                end
