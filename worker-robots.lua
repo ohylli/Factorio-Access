@@ -78,8 +78,10 @@ function decrement_logistic_request_max_amount(stack_size, amount_max_in)
    elseif amount_max >= math.floor(stack_size/2) then
       amount_max = 1
    elseif amount_max >= 1 then
-      amount_max = 1
-   elseif amount_max == nil or amount_max == 0 then
+      amount_max = 0
+   elseif amount_max >= 0 then
+      amount_max = 0
+   elseif amount_max == nil then
       amount_max = stack_size
    end
    
@@ -995,7 +997,9 @@ function find_nearest_roboport(surf,pos,radius_in)
          nearest = port
       end
    end
-   rendering.draw_circle{color = {1, 1, 0}, radius = 4, width = 4, target = nearest.position, surface = surf, time_to_live = 90}
+   if nearest ~= nil then
+      rendering.draw_circle{color = {1, 1, 0}, radius = 4, width = 4, target = nearest.position, surface = surf, time_to_live = 90}
+   end
    return nearest, min_dist
 end
 
@@ -1191,7 +1195,7 @@ function roboport_menu_up(pindex)
    players[pindex].roboport_menu.index = players[pindex].roboport_menu.index - 1
    if players[pindex].roboport_menu.index < 0 then
       players[pindex].roboport_menu.index = 0
-      game.get_player(pindex).play_sound{path = "Mine-Building"}
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
    else
       --Play sound
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -1204,7 +1208,7 @@ function roboport_menu_down(pindex)
    players[pindex].roboport_menu.index = players[pindex].roboport_menu.index + 1
    if players[pindex].roboport_menu.index > ROBOPORT_MENU_LENGTH then
       players[pindex].roboport_menu.index = ROBOPORT_MENU_LENGTH
-      game.get_player(pindex).play_sound{path = "Mine-Building"}
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
    else
       --Play sound
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
