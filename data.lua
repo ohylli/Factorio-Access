@@ -300,7 +300,7 @@ data:extend({
    type = "sound",
    name = "scanner-pulse",
    filename = "__FactorioAccess__/Audio/scanner-pulse-zapsplat_science_fiction_computer_alarm_single_medium_ring_beep_fast_001_84293.wav",
-   volume = 1,
+   volume = 0.5,
    preload = true
 },
 

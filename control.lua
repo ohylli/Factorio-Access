@@ -3618,7 +3618,7 @@ function scan_area(x,y,w,h, pindex, filter_direction)
    local result = {}
    local pos = players[pindex].position
    local forest_density = nil
-   local close_object_limit = 20.1
+   local close_object_limit = 10.1
    
    --Find the nearest edges of already-loaded resource groups according to player pos, and insert them to the initial list as aggregates
    for name, resource in pairs(players[pindex].resources) do
@@ -5972,14 +5972,15 @@ end)
 script.on_event("pause-game-fa", function(event)
    if game.tick_paused == true then
       for pindex, player in pairs(players) do
-         printout("Game paused", pindex)--does not call**
+         printout("Game paused", pindex)--does not call because these handlers appear to require ticks running?**
       end
    else
       for pindex, player in pairs(players) do
          if game.get_player(pindex).opened ~= nil then
             printout("Menu closed", pindex)
          else
-            printout("Game resumed", pindex)
+            --printout("Game resumed", pindex)--This is always incorrect cos this event fires before the pause happens.
+            game.get_player(pindex).play_sound{path = "Close-Inventory-Sound"}--This kind of works.
          end
       end
    end
@@ -7744,8 +7745,10 @@ script.on_event("click-menu", function(event)
             if players[pindex].building.sector == #players[pindex].building.sectors + 1 then --Building recipe selection
                if players[pindex].building.recipe_selection then
                   if not(pcall(function()
+                     local there_was_a_recipe_before = false
                      players[pindex].building.recipe = players[pindex].building.recipe_list[players[pindex].building.category][players[pindex].building.index]
                      if players[pindex].building.ent.valid then
+                        there_was_a_recipe_before = (players[pindex].building.ent.get_recipe() ~= nil)
                         players[pindex].building.ent.set_recipe(players[pindex].building.recipe)
                      end
                      players[pindex].building.recipe_selection = false
@@ -7754,9 +7757,12 @@ script.on_event("click-menu", function(event)
                      game.get_player(pindex).play_sound{path = "utility/inventory_click"}
                      --Open GUI if not already
                      local p = game.get_player(pindex)
-                     if players[pindex].building.ent.valid then 
+                     if there_was_a_recipe_before == false and players[pindex].building.ent.valid then 
+                        --Refresh the GUI --**laterdo figure this out, closing and opening in the same tick does not work.
+                        --players[pindex].refreshing_building_gui = true
                         --p.opened = nil
-                        --p.opened = players[pindex].building.ent--bug** doesnt work 
+                        --p.opened = players[pindex].building.ent 
+                        --players[pindex].refreshing_building_gui = false
                      end
                   end)) then
                      printout("For this building, recipes are selected automatically based on the input item, this menu is for information only.", pindex)
