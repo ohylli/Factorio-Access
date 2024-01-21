@@ -553,7 +553,7 @@ function nudge_key(direction, event)--
             if players[pindex].cursor then
                players[pindex].cursor_pos = offset_position(players[pindex].cursor_pos,direction,1)
                cursor_highlight(pindex, ent, "train-visualization")
-               sync_build_arrow(pindex)
+               sync_build_cursor_graphics(pindex)
             end
             if ent.type == "electric-pole" then 
                -- laterdo **bugfix when nudged electric poles have extra wire reach, cut wires
@@ -606,7 +606,7 @@ function move_cursor_structure(pindex, dir)
          end
          local ent = network[network[current][adjusted[(0 + dir) %8]][index].num]
          if ent.ent.valid then
-            move_cursor_map(ent.ent.position,pindex)
+            move_mouse_cursor(ent.ent.position,pindex)
             players[pindex].cursor_pos = ent.ent.position
             --Case 1: Proposing a new structure
             printout("To " .. ent.name .. " " .. extra_info_for_scan_list(ent.ent,pindex,true) .. ", " .. description  .. ", " .. index .. " of " .. #network[current][adjusted[(0 + dir) % 8]], pindex)
@@ -636,7 +636,7 @@ function move_cursor_structure(pindex, dir)
       end
       local ent = network[current]
       if ent.ent.valid then
-         move_cursor_map(ent.ent.position,pindex)
+         move_mouse_cursor(ent.ent.position,pindex)
          players[pindex].cursor_pos = ent.ent.position
          --Case 2: Returning to the current structure
          printout("Back at " .. ent.name .. " " .. extra_info_for_scan_list(ent.ent,pindex,true) .. ", " .. description, pindex)
@@ -666,7 +666,7 @@ function move_cursor_structure(pindex, dir)
       end
       local ent = network[current]
      if ent.ent.valid then
-         move_cursor_map(ent.ent.position,pindex)
+         move_mouse_cursor(ent.ent.position,pindex)
          players[pindex].cursor_pos = ent.ent.position
          --Case 3: Moved to the new structure
          printout("Now at " .. ent.name .. " " .. extra_info_for_scan_list(ent.ent,pindex,true) .. ", " .. description, pindex)
@@ -701,7 +701,7 @@ function move_cursor_structure(pindex, dir)
       end
       local ent = network[network[current][direction][index].num]
       if ent.ent.valid then
-         move_cursor_map(ent.ent.position,pindex)
+         move_mouse_cursor(ent.ent.position,pindex)
          players[pindex].cursor_pos = ent.ent.position
          --Case 4: Propose a new structure within the same direction
          printout("To " .. ent.name .. " " .. extra_info_for_scan_list(ent.ent,pindex,true) .. ", " .. description  .. ", " .. index .. " of " .. #network[current][direction], pindex)
@@ -1612,7 +1612,7 @@ function teleport_to_closest(pindex, pos, muted, ignore_enemies)
          end        
          --Update cursor after teleport
          players[pindex].cursor_pos = table.deepcopy(new_pos)
-         move_cursor_map(center_of_tile(players[pindex].cursor_pos),pindex)
+         move_mouse_cursor(center_of_tile(players[pindex].cursor_pos),pindex)
          cursor_highlight(pindex,nil,nil)
       else
          printout("Teleport Failed", pindex)
@@ -2792,7 +2792,7 @@ function read_belt_slot(pindex, start_phrase)
    end)
 
    if stack ~= nil and stack.valid_for_read and stack.valid then
-      result = result .. localising.get(stack,pindex) .. " x " .. stack.count
+      result = result .. stack.name .. " x " .. stack.count
       if players[pindex].belt.sector > 1 then
          result = result .. ", " .. stack.percent .. "%"
       end
@@ -3276,13 +3276,14 @@ end
 function target(pindex)
    local ent = get_selected_ent(pindex)
    if ent and not players[pindex].vanilla_mode then
-         move_cursor_map(ent.position,pindex)
+         move_mouse_cursor(ent.position,pindex)
    elseif not players[pindex].vanilla_mode then
-         move_cursor_map(players[pindex].cursor_pos, pindex)
+         move_mouse_cursor(players[pindex].cursor_pos, pindex)
    end
 end
 
-function move_cursor_map(position,pindex)
+--Move the mouse cursor 
+function move_mouse_cursor(position,pindex)
    local player = players[pindex]
    local pixels = mult_position( sub_position(position, player.position), 32*player.zoom)
    local screen = game.players[pindex].display_resolution
@@ -3740,7 +3741,7 @@ function toggle_cursor(pindex)
       players[pindex].cursor = true
       players[pindex].build_lock = false
       players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos)
-      move_cursor_map(players[pindex].cursor_pos,pindex)
+      move_mouse_cursor(players[pindex].cursor_pos,pindex)
       if not players[pindex].vanilla_mode then game.get_player(pindex).game_view_settings.update_entity_selection = false end
       read_tile(pindex, "Cursor mode enabled, ")
    else
@@ -3749,8 +3750,8 @@ function toggle_cursor(pindex)
       game.get_player(pindex).game_view_settings.update_entity_selection = true
       players[pindex].cursor_pos = offset_position(players[pindex].position,players[pindex].player_direction,1)
       players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos)
-      move_cursor_map(players[pindex].cursor_pos,pindex)
-      sync_build_arrow(pindex)
+      move_mouse_cursor(players[pindex].cursor_pos,pindex)
+      sync_build_cursor_graphics(pindex)
       target(pindex)
       players[pindex].player_direction = game.get_player(pindex).character.direction
       players[pindex].build_lock = false
@@ -4727,7 +4728,7 @@ script.on_event(defines.events.on_player_changed_position,function(event)
             players[pindex].cursor_pos = new_pos
             players[pindex].position = pos
             cursor_highlight(pindex, nil, nil)
-            sync_build_arrow(pindex)
+            sync_build_cursor_graphics(pindex)
             players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos)
             if not players[pindex].vanilla_mode then
                target(pindex)
@@ -4749,7 +4750,7 @@ script.on_event(defines.events.on_player_changed_position,function(event)
             players[pindex].position = pos
             
             cursor_highlight(pindex, nil, nil)
-            sync_build_arrow(pindex)
+            sync_build_cursor_graphics(pindex)
             
             if players[pindex].build_lock then
                build_item_in_hand(pindex, -2)
@@ -5821,7 +5822,7 @@ function move(direction,pindex)
          players[pindex].position = new_pos
          players[pindex].cursor_pos = offset_position(players[pindex].position, direction,1)
          cursor_highlight(pindex, nil, nil)
-         sync_build_arrow(pindex)
+         sync_build_cursor_graphics(pindex)
          if players[pindex].tile.previous ~= nil
             and players[pindex].tile.previous.valid
             and players[pindex].tile.previous.type == "transport-belt"
@@ -5856,7 +5857,7 @@ function move(direction,pindex)
       players[pindex].player_direction = direction
       players[pindex].cursor_pos = new_pos
       cursor_highlight(pindex, nil, nil)
-      sync_build_arrow(pindex)
+      sync_build_cursor_graphics(pindex)
       target(pindex)
       if game.get_player(pindex).driving then
          target(pindex)
@@ -5912,7 +5913,7 @@ function move_key(direction,event, force_single_tile)
          players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos)
          target(pindex)
       end
-      sync_build_arrow(pindex)
+      sync_build_cursor_graphics(pindex)
       if players[pindex].cursor_size == 0 then
          -- Cursor size 0 ("1 by 1"): read tile
          if not game.get_player(pindex).driving then
@@ -6087,7 +6088,7 @@ script.on_event("teleport-to-alert-forced", function(event)
    players[pindex].position = game.get_player(pindex).position
    players[pindex].last_damage_alert_pos = game.get_player(pindex).position
    cursor_highlight(pindex, nil, nil)
-   sync_build_arrow(pindex)
+   sync_build_cursor_graphics(pindex)
    refresh_player_tile(pindex)
 end)
 
@@ -6500,13 +6501,13 @@ script.on_event("jump-to-scan", function(event)--NOTE: This might be deprecated 
          if players[pindex].cursor then
             players[pindex].cursor_pos = center_of_tile(ent.position)
             cursor_highlight(pindex, ent, nil)
-            sync_build_arrow(pindex)
+            sync_build_cursor_graphics(pindex)
             printout("Cursor has jumped to " .. ent.name .. " at " .. math.floor(players[pindex].cursor_pos.x) .. " " .. math.floor(players[pindex].cursor_pos.y), pindex)
          else
             teleport_to_closest(pindex, ent.position, false, false)
             players[pindex].cursor_pos = offset_position(players[pindex].position, players[pindex].player_direction, 1)
             cursor_highlight(pindex, nil, nil)--laterdo check for new cursor ent here, to update the highlight?
-            sync_build_arrow(pindex)
+            sync_build_cursor_graphics(pindex)
          end
       end
    end
@@ -7831,7 +7832,7 @@ script.on_event("click-menu", function(event)
                players[pindex].cursor = true
                players[pindex].cursor_pos = center_of_tile(ent.position)
                cursor_highlight(pindex, ent, nil)
-               sync_build_arrow(pindex)
+               sync_build_cursor_graphics(pindex)
                printout({"access.teleported-the-cursor-to", "".. math.floor(players[pindex].cursor_pos.x) .. " " .. math.floor(players[pindex].cursor_pos.y)}, pindex)
 --               players[pindex].menu = ""
 --               players[pindex].in_menu = false
@@ -7854,7 +7855,7 @@ script.on_event("click-menu", function(event)
             else
                players[pindex].cursor_pos = offset_position(players[pindex].position, players[pindex].player_direction, 1)
             end
-            sync_build_arrow(pindex)
+            sync_build_cursor_graphics(pindex)
             game.get_player(pindex).opened = nil
             cursor_highlight(pindex, nil, nil)--laterdo check for ent here for cursor highlight?
             if not refresh_player_tile(pindex) then
@@ -7906,7 +7907,7 @@ script.on_event("click-menu", function(event)
          else
             players[pindex].cursor_pos = offset_position(players[pindex].position, players[pindex].player_direction, 1)
          end
-         sync_build_arrow(pindex)
+         sync_build_cursor_graphics(pindex)
          game.get_player(pindex).opened = nil
          cursor_highlight(pindex, nil, nil)--laterdo check for ent here for cursor highlight?
          if not refresh_player_tile(pindex) then
@@ -9121,7 +9122,7 @@ script.on_event("rotate-building", function(event)
          print("not a valid stack for rotating", pindex)
       end
    end
-   sync_build_arrow(pindex)
+   sync_build_cursor_graphics(pindex)
 end)
 
 script.on_event("inventory-read-weapons-data", function(event)
@@ -9354,7 +9355,7 @@ script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
       players[pindex].building_direction_lag = true
       read_hand(pindex)
    end
-   sync_build_arrow(pindex)
+   sync_build_cursor_graphics(pindex)
 end)
 
 
@@ -11059,7 +11060,7 @@ function rotate_180(dir)
    return (dir + dirs.south) % (2 * dirs.south)
 end
 
-function sync_build_arrow(pindex)
+function sync_build_cursor_graphics(pindex)
    local player = players[pindex]
    local stack = game.get_player(pindex).cursor_stack
    if player.building_direction == nil then
@@ -11114,6 +11115,14 @@ function sync_build_arrow(pindex)
       rendering.set_visible(player.building_footprint,true)
       if players[pindex].hide_cursor or stack.name == "locomotive" or stack.name == "cargo-wagon" or stack.name == "fluid-wagon" or stack.name == "artillery-wagon" then
          rendering.set_visible(player.building_footprint,false)
+      end
+      
+      --Move mouse Cursor --****new bug: if not in full screen mode, the y component of zoom callibration is wrong
+      if player.cursor then
+         --move_mouse_cursor({x = (left_top.x + math.floor(width)),y = (left_top.y + math.floor(height))},pindex)--****
+      else
+         --****do this
+         
       end
    else
       if dir_indicator ~= nil then rendering.set_visible(dir_indicator,false) end
@@ -11171,9 +11180,9 @@ function cursor_highlight(pindex, ent, box_type, skip_mouse_movement)
       return 
    end 
    if util.distance(p.position,c_pos) <= game.get_player(pindex).reach_distance then
-      move_cursor_map(center_of_tile(c_pos),pindex)
+      move_mouse_cursor(center_of_tile(c_pos),pindex)
    else
-      move_cursor_map(center_of_tile(p.position),pindex)
+      move_mouse_cursor(center_of_tile(p.position),pindex)
    end
    
    --Recolor cursor boxes if multiplayer
