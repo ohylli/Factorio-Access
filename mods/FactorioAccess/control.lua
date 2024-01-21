@@ -2605,7 +2605,7 @@ end
 
 
 function center_of_tile(pos)
-   return {x = math.floor(pos.x)+0.5, y = math.floor(pos.y)+ .5}
+   return {x = math.floor(pos.x)+0.5, y = math.floor(pos.y)+ 0.5}
 end
 
 function get_power_string(power)
@@ -3286,10 +3286,12 @@ function target(pindex)
    end
 end
 
---Move the mouse cursor 
+--Move the mouse cursor to the correct pixel on the screen ****todo figure out how to center mouse cursor on tile, given that the ref frame is off-center along with the character, etc.
 function move_mouse_cursor(position,pindex)
    local player = players[pindex]
    local pixels = mult_position( sub_position(position, player.position), 32*player.zoom)
+   --local pixels = mult_position( sub_position(position, center_of_tile(player.position)), 32*player.zoom)
+   --local pixels = mult_position( sub_position(center_of_tile(position), center_of_tile(player.position)), 32*player.zoom)
    local screen = game.players[pindex].display_resolution
    screen = {x = screen.width, y = screen.height}
    pixels = add_position(pixels,mult_position(screen,0.5))
@@ -5810,10 +5812,11 @@ function move(direction,pindex)
    local pos = players[pindex].position
    local new_pos = offset_position(pos,direction,1)
    if players[pindex].player_direction == direction then
-      --move character:
+      --Same direction: Move character:
       if players[pindex].walk == 2 then
          return
       end
+      new_pos = center_of_tile(new_pos)
       can_port = first_player.surface.can_place_entity{name = "character", position = new_pos}
       if can_port then
          if players[pindex].walk == 1 then
@@ -5843,7 +5846,13 @@ function move(direction,pindex)
          if not game.get_player(pindex).driving then
             read_tile(pindex)
          end
-         target(pindex)
+         
+         local stack = first_player.cursor_stack
+         if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then 
+            sync_build_cursor_graphics(pindex)
+         else
+            cursor_highlight(pindex, nil, nil)
+         end
          
          if players[pindex].build_lock then
             build_item_in_hand(pindex, -2)
@@ -5853,20 +5862,30 @@ function move(direction,pindex)
          target(pindex)
       end
    else
-      --turn character:
+      --New direction: Turn character: --turn
       if players[pindex].walk == 0 then
+         new_pos = center_of_tile(new_pos)
          game.get_player(pindex).play_sound{path = "player-turned"}
       elseif players[pindex].walk == 1 then
+         new_pos = center_of_tile(new_pos)
          table.insert(players[pindex].move_queue,{direction=direction,dest=pos})
       end
       players[pindex].player_direction = direction
       players[pindex].cursor_pos = new_pos
-      cursor_highlight(pindex, nil, nil)
-      sync_build_cursor_graphics(pindex)
-      target(pindex)
+      
+      local stack = first_player.cursor_stack
+      if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then 
+         sync_build_cursor_graphics(pindex)
+      else
+         cursor_highlight(pindex, nil, nil)
+      end
+      
       if game.get_player(pindex).driving then
          target(pindex)
-      elseif players[pindex].walk ~= 2 then
+         return
+      end
+      
+      if players[pindex].walk ~= 2 then
          read_tile(pindex)
       elseif players[pindex].walk == 2 then
          refresh_player_tile(pindex)
@@ -5922,6 +5941,7 @@ function cursor_mode_move(direction, pindex, single_only)
       diff = 1
    end
    players[pindex].cursor_pos = center_of_tile(offset_position(players[pindex].cursor_pos, direction, diff))
+   
    if players[pindex].cursor_size == 0 then
       -- Cursor size 0 ("1 by 1"): Read tile
       if not game.get_player(pindex).driving then
@@ -5933,7 +5953,7 @@ function cursor_mode_move(direction, pindex, single_only)
       if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then 
          sync_build_cursor_graphics(pindex)
       else
-         cursor_highlight(pindex, nil, nil)
+         cursor_highlight(pindex, nil, nil)--***banana
       end
       
       --Apply build lock if active
@@ -10345,7 +10365,7 @@ script.on_event(defines.events.on_gui_opened, function(event)
       p.opened = nil
       --game.print("Closed an extra controller GUI",{volume_modifier = 0})--**checks GUI shenanigans
    elseif p.opened ~= nil then
-      --If the opened is an ent and it is not the cursor end then close it ****todo
+      --If the opened is an ent and it is not the cursor end then close it ****todo (not working correctly yet)
       local ent = get_selected_ent(pindex)
       if ent ~= p.opened then
          game.print("Opened building GUI mismatch!",{volume_modifier = 0})--***
@@ -11142,21 +11162,35 @@ function sync_build_cursor_graphics(pindex)
       
       --Move mouse cursor according to building box
       if player.cursor then
-         if dir == dirs.east or dir == dirs.west then
+         --Adjust for cursor
+         if flip then
             --Flip width and height
             local temp = width
             width = height
             height = temp
          end
          if cursor_position_is_on_screen(pindex) then
-            move_mouse_cursor({x = (left_top.x + math.floor(width/2)),y = (left_top.y + math.floor(height/2))},pindex)
+            move_mouse_cursor({x = (left_top.x + 0.1 + math.floor(width/2)),y = (left_top.y + 0.1 + math.floor( height/2))},pindex)
          else 
             move_mouse_cursor(players[pindex].position,pindex)
          end
       else
-         --****do this
+         --Adjust for direct placement
          local pos = player.cursor_pos
-         move_mouse_cursor({x = (pos.x + math.floor(width/2)),y = (pos.y + math.floor(height/2))},pindex)
+         if p_dir == dirs.north then
+            pos = offset_position(pos, dirs.north, math.floor(height/2))
+            pos = offset_position(pos, dirs.east, math.floor(width/2))
+         elseif p_dir == dirs.east then
+            pos = offset_position(pos, dirs.south, math.floor(height/2))
+            pos = offset_position(pos, dirs.east, math.floor(width/2))
+         elseif p_dir == dirs.south then 
+            pos = offset_position(pos, dirs.south, math.floor(height/2))
+            pos = offset_position(pos, dirs.east, math.floor(width/2))
+         elseif p_dir == dirs.west then
+            pos = offset_position(pos, dirs.south, math.floor(height/2))
+            pos = offset_position(pos, dirs.west, math.floor(width/2))
+         end
+         move_mouse_cursor(pos,pindex)
       end
    else
       if dir_indicator ~= nil then rendering.set_visible(dir_indicator,false) end
