@@ -3792,6 +3792,7 @@ function jump_to_player(pindex)
    end
 end
 
+--Reads the cursor tile and the entities on it (I'm not sure why these search area params are these -SirFendi)
 function refresh_player_tile(pindex)
    local surf = game.get_player(pindex).surface
    local search_area = {{x=-0.5,y=-.5},{x=0.29,y=0.29}}
@@ -9461,7 +9462,6 @@ script.on_event(defines.events.on_gui_closed, function(event)
       return
    end
    players[pindex].move_queue = {}
---   rescan(pindex)
    if players[pindex].in_menu == true and players[pindex].menu ~= "prompt"then
       if players[pindex].menu == "inventory" then
          game.get_player(pindex).play_sound{path="Close-Inventory-Sound"}
@@ -9479,6 +9479,7 @@ script.on_event(defines.events.on_gui_closed, function(event)
          subgroup = 0
       }
       players[pindex].building.item_selection = false
+      close_menu_resets(pindex)
    end
 end)
 
@@ -10337,14 +10338,24 @@ script.on_event(defines.events.on_gui_opened, function(event)
    if not check_for_player(pindex) then
       return
    end
+   local p = game.get_player(pindex)
    players[pindex].move_queue = {}
    if event.gui_type == defines.gui_type.controller and players[pindex].menu == "none" and event.tick - players[pindex].last_menu_toggle_tick < 5 then
-      --We close the player GUI if closing/opening another menu toggles the player GUI screen
-      game.get_player(pindex).opened = nil
-      --game.print("Closed an extra GUI",{volume_modifier = 0})--**laterdo enable these and review what doess what
-   elseif game.get_player(event.player_index).opened ~= nil then
+      --If closing another menu toggles the player GUI screen, we close this screen
+      p.opened = nil
+      --game.print("Closed an extra controller GUI",{volume_modifier = 0})--**checks GUI shenanigans
+   elseif p.opened ~= nil then
+      --If the opened is an ent and it is not the cursor end then close it ****todo
+      local ent = get_selected_ent(pindex)
+      if ent ~= p.opened then
+         game.print("Opened building GUI mismatch!",{volume_modifier = 0})--***
+         --p.opened = nil
+      else 
+         game.print("Opened building GUI match.",{volume_modifier = 0})--***
+      end
+      --Assume a GUI has been opened, whether in a menu or not
       players[pindex].in_menu = true
-      --game.print("Opened an extra GUI",{volume_modifier = 0})--**laterdo enable these and review what doess what
+      --game.print("Opened an extra GUI",{volume_modifier = 0})--**checks GUI shenanigans
    end
 end)
 
@@ -11220,8 +11231,10 @@ function cursor_highlight(pindex, ent, box_type, skip_mouse_movement)
    end
 end
 
-function cursor_position_is_on_screen(pindex)--****improve
-   return (util.distance(players[pindex].cursor_pos , players[pindex].position) <= game.get_player(pindex).reach_distance + 1)
+function cursor_position_is_on_screen(pindex)
+   --****todo improve if possible : Check if (cursor_pos - player_pos) <= k * tiles, where k = number of tiles on screen at current resolution and zoom level
+   --implement by checking max zoom value and how many tiles fit on screen then.
+   return (util.distance(players[pindex].cursor_pos , players[pindex].position) <= game.get_player(pindex).reach_distance + 0.5)
 end
 
 function set_cursor_colors_to_player_colors(pindex)
@@ -11421,11 +11434,12 @@ script.on_event(defines.events.on_player_display_resolution_changed,function(eve
    if not check_for_player(pindex) then
       return 
    end
-   if players ~= nil and players[pindex] ~= nil then
-      players[pindex].display_resolution = event.old_resolution--****
+   local new_res = game.get_player(pindex).display_resolution
+   if players and players[pindex] then
+      players[pindex].display_resolution = new_res
    end
+   game.print("Display resolution changed: " .. new_res.width .. " x " .. new_res.height ,{volume_modifier = 0})
 end)
-
 
 --Allows searching a menu that has support written for this
 function menu_search_open(pindex)
