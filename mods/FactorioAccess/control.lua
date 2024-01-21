@@ -3,6 +3,7 @@ require('rails-and-trains')
 require('worker-robots')
 local localising=require('localising')
 require('equipment-and-combat')
+require('help-system')
 
 groups = {}
 entity_types = {}
@@ -515,30 +516,51 @@ function classify_forest(position,pindex,drawing)
    end
 end
 
-function nudge_key(direction, event)
+function nudge_key(direction, event)--
    local pindex = event.player_index
    if not check_for_player(pindex) or players[pindex].menu == "prompt" then
       return 
    end
    local ent = get_selected_ent(pindex)
    if ent and ent.valid then
-      if ent.prototype.is_building and ent.operable and ent.force == game.get_player(pindex).force then
+      if ent.force == game.get_player(pindex).force then
+         local old_pos = ent.position
          local new_pos = offset_position(ent.position,direction,1)
-         local teleported = ent.teleport(new_pos)
-         if teleported then
+         local temporary_teleported = false
+         local actually_teleported = false
+         --First teleport the ent to 0,0 temporarily
+         temporary_teleported = ent.teleport({0,0})
+         if not temporary_teleported then
+            game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+            printout({"access.failed-to-nudge"}, pindex)
+            return 
+         end
+         --Now check if the ent can be placed at its new location, and proceed or revert accordingly
+         if ent.surface.can_place_entity{name = ent.name, position = new_pos, direction = ent.direction} then
+            actually_teleported = ent.teleport(new_pos)
+         else
+            actually_teleported = ent.teleport(old_pos)
+            game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+            printout({"access.failed-to-nudge"}, pindex)
+            return 
+         end
+         if not actually_teleported then
+            printout({"access.failed-to-nudge"}, pindex)
+            return 
+         else
+            --Successfully teleported and so nudged
             printout({"access.nudged-one-direction",{"access.direction",direction}}, pindex)
             if players[pindex].cursor then
                players[pindex].cursor_pos = offset_position(players[pindex].cursor_pos,direction,1)
                cursor_highlight(pindex, ent, "train-visualization")
                sync_build_arrow(pindex)
             end
-            if ent.type == "electric-pole" then -- WIP***
+            if ent.type == "electric-pole" then 
+               -- laterdo **bugfix when nudged electric poles have extra wire reach, cut wires
                -- if ent.clone{position = new_pos, surface = ent.surface, force = ent.force, create_build_effect_smoke = false} == true then
                   -- ent.destroy{}
                -- end
             end
-         else
-            printout({"access.failed-to-nudge"}, pindex)
          end
       end
    else
@@ -1099,6 +1121,9 @@ function ent_info(pindex, ent, description)
             result = result .. "and other items "
          end
       end
+   elseif ent.type == "radar" then
+      result = result .. ", " .. radar_charting_info(ent)
+      --game.print(result)--test
    elseif ent.type == "electric-pole" then
       --List connected electric poles
       if #ent.neighbours.copper == 0 then
@@ -1323,6 +1348,26 @@ function transport_belt_junction_info(sideload_count, backload_count, outload_co
    end
    return result
    --Note: A pouring end either pours into a sideloading junction, or into a corner. Lanes are preserved if the target is a corner.
+end
+
+--Reports the charting range and how much of it has been charted so far
+function radar_charting_info(radar)
+   local charting_range = radar.prototype.max_distance_of_sector_revealed
+   local count = 0
+   local total = 0
+   local centerx = math.floor(radar.position.x/32)
+   local centery = math.floor(radar.position.y/32)
+   for i = (centerx - charting_range), (centerx + charting_range), (1)  do
+      for j = (centery - charting_range), (centery + charting_range), (1)  do
+         if radar.force.is_chunk_charted(radar.surface,{i, j}) then
+            count = count + 1 
+         end
+         total = total + 1
+      end
+   end
+   local percent_charted = math.floor(count/total * 100)
+   local result = percent_charted .. " percent charted, " .. charting_range * 32 .. " tiles charting range "
+   return result
 end
 
 --Creates the building network that is traveled during structure travel. 
@@ -2498,14 +2543,15 @@ function scan_sort(pindex)
             i1 = i1 + 1
          end
       end
-      if #name.ents == 0 then --this appears to be removing a sent that has become empty.
+      if #name.ents == 0 then --this appears to be removing a set that has become empty.
          table.remove(players[pindex].nearby.ents, i)
       end
    end
 
    if players[pindex].nearby.count == false then
+      --Sort by distance to player position
       table.sort(players[pindex].nearby.ents, function(k1, k2) 
-         local pos = players[pindex].cursor_pos
+         local pos = players[pindex].position
          local surf = game.get_player(pindex).surface
          local ent1 = nil
          local ent2 = nil
@@ -2543,6 +2589,7 @@ function scan_sort(pindex)
       end)
             
    else
+      --Sort table by count
       table.sort(players[pindex].nearby.ents, function(k1, k2)
          return k1.count > k2.count
       end)
@@ -3031,20 +3078,6 @@ function read_inventory_slot(pindex, start_phrase_in)
    end
 end
 
-
-function set_quick_bar(index, pindex)
-   local page = game.get_player(pindex).get_active_quick_bar_page(1)-1
-   local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
-   if stack and stack.valid_for_read and stack.valid == true then
-      game.get_player(pindex).set_quick_bar_slot(index + 10*page, stack) 
-      printout("Assigned " .. index, pindex)
-
-   else
-      game.get_player(pindex).set_quick_bar_slot(index + 10*page, nil) 
-      printout("Unassigned " .. index, pindex)
-   end
-end
-
 function read_hand(pindex)
    if players[pindex].skip_read_hand == true then
       players[pindex].skip_read_hand = false
@@ -3228,25 +3261,6 @@ function locate_hand_in_crafting_menu(pindex)
    menu_search_get_next(pindex,item_name,nil)
 end
 
-function read_quick_bar(index,pindex)
-   page = game.get_player(pindex).get_active_quick_bar_page(1)-1
-   local item = game.get_player(pindex).get_quick_bar_slot(index+ 10*page)
-   if item ~= nil then
-      local count = game.get_player(pindex).character.get_main_inventory().get_item_count(item.name)
-      local stack = game.get_player(pindex).cursor_stack
-      if stack and stack.valid_for_read then
-         count = count + stack.count
-         printout("unselected " .. item.name .. " x " .. count, pindex)
-      else
-         printout("selected " .. item.name .. " x " .. count, pindex)
-      end
-
-   else
-      printout("Empty Slot",pindex)
-   end
-
-end
-
 function target(pindex)
    local ent = get_selected_ent(pindex)
    if ent and not players[pindex].vanilla_mode then
@@ -3375,9 +3389,9 @@ function scan_index(pindex)
             scan_index(pindex)
             return
          end
-         --Sort by distance to cursor pos while describing indexed entries
+         --Sort by distance to player pos while describing indexed entries
          table.sort(ents[players[pindex].nearby.index].ents, function(k1, k2) 
-            local pos = players[pindex].cursor_pos
+            local pos = players[pindex].position
             return squared_distance(pos, k1.position) < squared_distance(pos, k2.position)
          end)
          if players[pindex].nearby.selection > #ents[players[pindex].nearby.index].ents then
@@ -3457,7 +3471,7 @@ function scan_down(pindex)
       players[pindex].nearby.index = players[pindex].nearby.index + 1
       players[pindex].nearby.selection = 1
    else 
-      game.get_player(pindex).play_sound{path = "player-mine"}
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
       players[pindex].nearby.selection = 1
    end
 --   if not(pcall(function()
@@ -3496,7 +3510,7 @@ function scan_up(pindex)
    elseif players[pindex].nearby.index <= 1 then
       players[pindex].nearby.index = 1
       players[pindex].nearby.selection = 1
-      game.get_player(pindex).play_sound{path = "player-mine"}
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
    end
 --   if not(pcall(function()
    scan_index(pindex)
@@ -3561,11 +3575,11 @@ function scan_middle(pindex)
    end
  end
 
-function rescan(pindex)
+function rescan(pindex,filter_dir)
    players[pindex].nearby.index = 1
    players[pindex].nearby.selection = 1
    first_player = game.get_player(pindex)
-   players[pindex].nearby.ents = scan_area(math.floor(players[pindex].cursor_pos.x)-2500, math.floor(players[pindex].cursor_pos.y)-2500, 5000, 5000, pindex)
+   players[pindex].nearby.ents = scan_area(math.floor(players[pindex].cursor_pos.x)-2500, math.floor(players[pindex].cursor_pos.y)-2500, 5000, 5000, pindex, filter_dir)
    populate_categories(pindex)
    players[pindex].nearby.index = 1
    players[pindex].nearby.selection = 1
@@ -3590,39 +3604,70 @@ function scan_area(x,y,w,h, pindex, filter_direction)
    local surf = first_player.surface
    local ents = surf.find_entities_filtered{area = {{x, y},{x+w, y+h}}, type = {"resource", "tree", "highlight-box", "flying-text"}, invert = true} --Get all ents in the area except for these types
    local result = {}
-   local pos = players[pindex].cursor_pos
+   local pos = players[pindex].position
    local forest_density = nil
+   local close_object_limit = 20.1
    
-   --Find the nearest edges of already-loaded resource groups according to cursor pos, and insert them to the initial list as aggregates
+   --Find the nearest edges of already-loaded resource groups according to player pos, and insert them to the initial list as aggregates
    for name, resource in pairs(players[pindex].resources) do
       --Insert scanner entries 
       table.insert(result, {name = name, count = table_size(players[pindex].resources[name].patches), ents = {}, aggregate = true})
       --Insert instances for the entry
       local index = #result
       for group, patch in pairs(resource.patches) do
-         if filter_direction == nil or filter_direction == get_direction_of_that_from_this(ents[i].position,pos) then --Filter direction check
+         local nearest_edge = nearest_edge(patch.edges, pos, name)
+         --Filter check 1: Is the entity in the filter diection? (If a filter is set at all)
+         local dir_of_ent = get_direction_of_that_from_this(nearest_edge,pos)
+         local filter_passed = (filter_direction == nil or filter_direction == dir_of_ent)
+         if not filter_passed then
+            --Filter check 2: Is the entity nearby and almost within the filter diection?
+            if util.distance(nearest_edge,pos) < close_object_limit then
+               local new_dir_of_ent = get_balanced_direction_of_that_from_this(nearest_edge,pos)--Check with less bias towards diagonal directions to preserve 135 degrees FOV
+               local CW_dir = (filter_direction + 1) % (2 * dirs.south)
+               local CCW_dir = (filter_direction - 1) % (2 * dirs.south)
+               filter_passed = (new_dir_of_ent == filter_direction or new_dir_of_ent == CW_dir or new_dir_of_ent == CCW_dir)
+            end
+         end
+         if filter_passed then 
             --If it is a forest, check density
             if name == "forest" then
-               local forest_pos = nearest_edge(patch.edges, pos, name)
+               local forest_pos = nearest_edge
                forest_density = classify_forest(forest_pos,pindex,false)
             else
                forest_density = nil
             end
             --Insert to the list if this group is not a forest at all, or not an empty or tiny forest
             if forest_density == nil or (forest_density ~= "empty" and forest_density ~= "patch") then 
-               table.insert(result[index].ents, {group = group, position = nearest_edge(patch.edges, pos, name)})
+               table.insert(result[index].ents, {group = group, position = nearest_edge})
             end
          end
       end
+      --Remove empty entries
+      if result[index].ents == nil or result[index].ents == {} or result[index].ents[1] == nil then
+         table.remove(result,index)
+      end
    end
-   
+
    --Insert entities to the initial list
    for i=1, #ents, 1 do
       local extra_entry_info = extra_info_for_scan_list(ents[i],pindex,false)
       local scan_entry = ents[i].name .. extra_entry_info
       local index = index_of_entity(result, scan_entry)
+      
+      --Filter check 1: Is the entity in the filter diection? (If a filter is set at all)
+      local dir_of_ent = get_direction_of_that_from_this(ents[i].position,pos)
+      local filter_passed = (filter_direction == nil or filter_direction == dir_of_ent)
+      if not filter_passed then
+         --Filter check 2: Is the entity nearby and almost within the filter diection?
+         if util.distance(ents[i].position,pos) < close_object_limit then
+            local new_dir_of_ent = get_balanced_direction_of_that_from_this(ents[i].position,pos)--Check with less bias towards diagonal directions to preserve 135 degrees FOV
+            local CW_dir = (filter_direction + 1) % (2 * dirs.south)
+            local CCW_dir = (filter_direction - 1) % (2 * dirs.south)
+            filter_passed = (new_dir_of_ent == filter_direction or new_dir_of_ent == CW_dir or new_dir_of_ent == CCW_dir)
+         end
+      end
 
-      if filter_direction == nil or filter_direction == get_direction_of_that_from_this(ents[i].position,pos) then --Filter direction check
+      if filter_passed then 
          if index == nil then --The entry is not already indexed, so add a new entry line to the list
             table.insert(result, {name = scan_entry, count = 1, ents = {ents[i]}, aggregate = false}) 
 
@@ -3641,9 +3686,9 @@ function scan_area(x,y,w,h, pindex, filter_direction)
    
    --Sort the list
    if players[pindex].nearby.count == false then
-      --Sort results by distance to cursor position when first creating the scanner list
+      --Sort results by distance to player position when first creating the scanner list
       table.sort(result, function(k1, k2) 
-         local pos = players[pindex].cursor_pos
+         local pos = players[pindex].position
          local ent1 = nil
          local ent2 = nil
          if k1.aggregate then
@@ -4758,8 +4803,8 @@ function menu_cursor_up(pindex)
          else 
             --Border setting: Undo change and play "wall" sound
             players[pindex].inventory.index = players[pindex].inventory.index +10
-            game.get_player(pindex).play_sound{path = "player-mine"}
-            printout("Border.", pindex)
+            game.get_player(pindex).play_sound{path = "inventory-edge"}
+            --printout("Border.", pindex)
          end
       else
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -4966,8 +5011,8 @@ function menu_cursor_down(pindex)
          else 
             --Border setting: Undo change and play "wall" sound
             players[pindex].inventory.index = players[pindex].inventory.index -10
-            game.get_player(pindex).play_sound{path = "player-mine"}
-            printout("Border.", pindex)
+            game.get_player(pindex).play_sound{path = "inventory-edge"}
+            --printout("Border.", pindex)
          end
       else
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -5173,8 +5218,8 @@ function menu_cursor_left(pindex)
          else 
             --Border setting: Undo change and play "wall" sound
             players[pindex].inventory.index = players[pindex].inventory.index +1
-            game.get_player(pindex).play_sound{path = "player-mine"}
-            printout("Border.", pindex)
+            game.get_player(pindex).play_sound{path = "inventory-edge"}
+            --printout("Border.", pindex)
          end
       else
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -5315,8 +5360,8 @@ function menu_cursor_right(pindex)
          else 
             --Border setting: Undo change and play "wall" sound
             players[pindex].inventory.index = players[pindex].inventory.index -1
-            game.get_player(pindex).play_sound{path = "player-mine"}
-            printout("Border.", pindex)
+            game.get_player(pindex).play_sound{path = "inventory-edge"}
+            --printout("Border.", pindex)
          end
       else
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -5523,6 +5568,9 @@ player.force.research_all_technologies()
 --   player.force.research_all_technologies()
    end
    
+   --Starting inventory boost for easy difficulty 
+   local player = game.get_player(pindex).cutscene_character or game.get_player(pindex).character
+   --player.insert{name = "rocket-fuel", count = 20}
 end
 
 script.on_event(defines.events.on_player_joined_game,function(event)
@@ -5788,7 +5836,7 @@ function move(direction,pindex)
    else
       --turn character:
       if players[pindex].walk == 0 then
-         game.get_player(pindex).play_sound{path = "player-turn"}
+         game.get_player(pindex).play_sound{path = "player-turned"}
       elseif players[pindex].walk == 1 then
          table.insert(players[pindex].move_queue,{direction=direction,dest=pos})
       end
@@ -5904,6 +5952,23 @@ script.on_event(defines.events.on_player_driving_changed_state, function(event)
       end
    else
       printout("Driving state changed." ,pindex)
+   end
+end)
+
+--Pause / resume the game. If a menu GUI is open, ESC makes it close the menu instead
+script.on_event("pause-game-fa", function(event)
+   if game.tick_paused == true then
+      for pindex, player in pairs(players) do
+         printout("Game paused", pindex)--does not call**
+      end
+   else
+      for pindex, player in pairs(players) do
+         if game.get_player(pindex).opened ~= nil then
+            printout("Menu closed", pindex)
+         else
+            printout("Game resumed", pindex)
+         end
+      end
    end
 end)
 
@@ -6243,11 +6308,32 @@ script.on_event("rescan", function(event)
    if not (players[pindex].in_menu) then
       rescan(pindex)
       printout("Scan Complete", pindex)
-      game.get_player(pindex).play_sound{path = "scanner-pulse"}
-      rendering.draw_circle{color = {1, 1, 1},radius = 1,width =  4,target = game.get_player(pindex).position, surface = game.get_player(pindex).surface, draw_on_ground = true, time_to_live = 60}
-      rendering.draw_circle{color = {1, 1, 1},radius = 2,width =  8,target = game.get_player(pindex).position, surface = game.get_player(pindex).surface, draw_on_ground = true, time_to_live = 60}
+      run_scanner_effects(pindex)
    end
 end)
+
+script.on_event("scan-facing-direction", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if not (players[pindex].in_menu) then
+      --Set the filter direction 
+      local p = game.get_player(pindex)
+      local dir = p.walking_state.direction
+      rescan(pindex,dir)
+      printout("Scanning " .. direction_lookup(dir), pindex)
+      run_scanner_effects(pindex)
+   end
+end)
+
+--Sound and visual effects for the scanner
+function run_scanner_effects(pindex)
+   --Scanner visual and sound effects
+   game.get_player(pindex).play_sound{path = "scanner-pulse"}
+   rendering.draw_circle{color = {1, 1, 1},radius = 1,width =  4,target = game.get_player(pindex).position, surface = game.get_player(pindex).surface, draw_on_ground = true, time_to_live = 60}
+   rendering.draw_circle{color = {1, 1, 1},radius = 2,width =  8,target = game.get_player(pindex).position, surface = game.get_player(pindex).surface, draw_on_ground = true, time_to_live = 60}
+end
 
 script.on_event("a-scan-list-main-up-key", function(event)
    --laterdo: find a more elegant scan list solution here. It depends on hardcoded keybindings and alphabetically named event handling
@@ -6358,7 +6444,7 @@ script.on_event("jump-to-scan", function(event)--NOTE: This might be deprecated 
             end
 
             table.sort(ents[players[pindex].nearby.index].ents, function(k1, k2) 
-               local pos = players[pindex].cursor_pos
+               local pos = players[pindex].position
                return distance(pos, k1.position) < distance(pos, k2.position)
             end)
             if players[pindex].nearby.selection > #ents[players[pindex].nearby.index].ents then
@@ -6506,7 +6592,7 @@ script.on_event("scan-mode-up", function(event)
    if not (players[pindex].in_menu) then
       players[pindex].nearby.index = 1
       players[pindex].nearby.count = false
-      printout("Sorting by distance from the cursor position", pindex)
+      printout("Sorting by distance from your position", pindex)
       scan_sort(pindex)
    end
 end)
@@ -6535,7 +6621,7 @@ script.on_event("scan-selection-up", function(event)
       if players[pindex].nearby.selection > 1 then
          players[pindex].nearby.selection = players[pindex].nearby.selection - 1
       else
-         game.get_player(pindex).play_sound{path = "player-mine"}
+         game.get_player(pindex).play_sound{path = "inventory-edge"}
          players[pindex].nearby.selection = 1
       end
       scan_index(pindex)
@@ -6581,7 +6667,7 @@ script.on_event("scan-selection-down", function(event)
          if players[pindex].nearby.selection < #ents[players[pindex].nearby.index].ents then
             players[pindex].nearby.selection = players[pindex].nearby.selection + 1
          else
-            game.get_player(pindex).play_sound{path = "player-mine"}
+            game.get_player(pindex).play_sound{path = "inventory-edge"}
             players[pindex].nearby.selection = #ents[players[pindex].nearby.index].ents
          end
       end
@@ -6598,8 +6684,8 @@ script.on_event("repeat-last-spoken", function(event)
    repeat_last_spoken(pindex)
 end)
 
---Calls function to notify if items are being picked up via vanilla F key. laterdo: need to bind with the item pickup key
-script.on_event("pickup-items", function(event)
+--Calls function to notify if items are being picked up via vanilla F key.
+script.on_event("pickup-items-info", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -6834,123 +6920,107 @@ script.on_event("read-menu-name", function(event)--read_menu_name
    printout(menu_name,pindex)
 end)
 
-script.on_event("quickbar-1", function(event)
-   pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   if not (players[pindex].in_menu) then
-      read_quick_bar(1,pindex)
-   end
-end)
-
-script.on_event("quickbar-2", function(event)
-   pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   if not (players[pindex].in_menu) then
-      read_quick_bar(2,pindex)
-   end
-end)
-
-script.on_event("quickbar-3", function(event)
-   pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   if not (players[pindex].in_menu) then
-      read_quick_bar(3,pindex)
-   end
-end)
-
-script.on_event("quickbar-4", function(event)
-   pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   if not (players[pindex].in_menu) then
-      read_quick_bar(4,pindex)
-   end
-end)
-
-script.on_event("quickbar-5", function(event)
-   pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   if not (players[pindex].in_menu) then
-      read_quick_bar(5,pindex)
-   end
-end)
-
-script.on_event("quickbar-6", function(event)
-   pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   if not (players[pindex].in_menu) then
-      read_quick_bar(6,pindex)
-   end
-end)
-
-script.on_event("quickbar-7", function(event)
-   pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   if not (players[pindex].in_menu) then
-      read_quick_bar(7,pindex)
-   end
-end)
-
-script.on_event("quickbar-8", function(event)
-   pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   if not (players[pindex].in_menu) then
-      read_quick_bar(8,pindex)
-   end
-end)
-
-script.on_event("quickbar-9", function(event)
-   pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   if not (players[pindex].in_menu) then
-      read_quick_bar(9,pindex)
-   end
-end)
-
-script.on_event("quickbar-10", function(event)
-   pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   if not (players[pindex].in_menu) then
-      read_quick_bar(10,pindex)
-   end
-end)
-
+--Quickbar even handlers
+local quickbar_slots = {}
 local set_quickbar_names = {}
+local quickbar_pages = {}
 for i = 1,10 do
+   table.insert(quickbar_slots,"quickbar-"..i)
    table.insert(set_quickbar_names,"set-quickbar-"..i)
+   table.insert(quickbar_pages,"quickbar-page-"..i)
 end
+
+script.on_event(quickbar_slots, function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].menu == "inventory" or players[pindex].menu == "none" or players[pindex].menu == "building" then
+      local num=tonumber(string.sub(event.input_name,-1))
+      if num == 0 then
+         num = 10
+      end
+      read_quick_bar_slot(num,pindex)
+   end
+end)
+
 script.on_event(set_quickbar_names,function(event)--all 10 quickbar setting event handlers
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
    end
-   if players[pindex].menu == "inventory" then
+   if players[pindex].menu == "inventory" or players[pindex].menu == "none" or players[pindex].menu == "building" then
       local num=tonumber(string.sub(event.input_name,-1))
       if num == 0 then
          num = 10
       end
-      set_quick_bar(num, pindex)
+      set_quick_bar_slot(num, pindex)
    end
 end)
+
+script.on_event(quickbar_pages,function(event)--all 10 quickbar page setting event handlers
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+
+   local num=tonumber(string.sub(event.input_name,-1))
+   if num == 0 then
+      num = 10
+   end
+   read_switched_quick_bar(num, pindex)
+end)
+
+function read_quick_bar_slot(index,pindex)
+   page = game.get_player(pindex).get_active_quick_bar_page(1)-1
+   local item = game.get_player(pindex).get_quick_bar_slot(index+ 10*page)
+   if item ~= nil then
+      local count = game.get_player(pindex).character.get_main_inventory().get_item_count(item.name)
+      local stack = game.get_player(pindex).cursor_stack
+      if stack and stack.valid_for_read then
+         count = count + stack.count
+         printout("unselected " .. localising.get(item, pindex) .. " x " .. count, pindex)
+      else
+         printout("selected " .. localising.get(item, pindex) .. " x " .. count, pindex)
+      end
+
+   else
+      printout("Empty quickbar slot",pindex)
+   end
+end
+
+function set_quick_bar_slot(index, pindex)
+   local page = game.get_player(pindex).get_active_quick_bar_page(1)-1
+   local stack_cur = game.get_player(pindex).cursor_stack
+   local stack_inv = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
+   if stack_cur and stack_cur.valid_for_read and stack_cur.valid == true then
+      game.get_player(pindex).set_quick_bar_slot(index + 10*page, stack_cur) 
+      printout("Quickbar assigned " .. index .. " " .. localising.get(stack_cur, pindex), pindex)
+   elseif players[pindex].menu == "inventory" and stack_inv and stack_inv.valid_for_read and stack_inv.valid == true then
+      game.get_player(pindex).set_quick_bar_slot(index + 10*page, stack_inv) 
+      printout("Quickbar assigned " .. index .. " " .. localising.get(stack_inv, pindex), pindex)
+   else
+      local item = game.get_player(pindex).get_quick_bar_slot(index+ 10*page)
+      local item_name = ""
+      if item ~= nil then
+         item_name = localising.get(item, pindex)
+      end
+      game.get_player(pindex).set_quick_bar_slot(index + 10*page, nil) 
+      printout("Quickbar unassigned " .. index .. " " .. item_name, pindex)
+   end
+end
+
+function read_switched_quick_bar(index,pindex)
+   page = game.get_player(pindex).get_active_quick_bar_page(index)
+   local item = game.get_player(pindex).get_quick_bar_slot(1 + 10*(index-1))
+   local item_name = "empty slot"
+   if item ~= nil then
+      item_name = localising.get(item, pindex)
+   end
+   local result = "Quickbar " .. index .. " selected starting with " .. item_name 
+   printout(result, pindex)
+
+end
 
 script.on_event("switch-menu-or-gun", function(event)
    pindex = event.player_index
@@ -7130,7 +7200,7 @@ script.on_event("reverse-switch-menu-or-gun", function(event)
       elseif players[pindex].menu == "technology" then 
          players[pindex].menu = "crafting_queue"
          load_crafting_queue(pindex)
-		 read_crafting_queue(pindex, "Crafting queue, ")
+		 read_crafting_queue(pindex, "Crafting queue, " .. game.get_player(pindex).crafting_queue_size .. " total, ")
       elseif players[pindex].menu == "crafting" then
          players[pindex].menu = "inventory"
          read_inventory_slot(pindex, "Inventory, ")
@@ -7291,7 +7361,7 @@ function play_mining_sound(pindex)
    end
 end
 
---Creates sound effects for vanilla mining. Needs to be same key as vanilla mining key. laterdo maybe connect to game control's keybind?
+--Creates sound effects for vanilla mining. Needs to be same key as vanilla mining key. 
 script.on_event("mine-access-sounds", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -7310,7 +7380,7 @@ script.on_event("mine-access-sounds", function(event)
    end
 end)
 
---laterdo known bug: the tile preview cursor is likely always going to be 2x2. Myabe create a warning about it
+--Mines tiles such as stone brick or concrete within the cursor area, including enlarged cursors
 script.on_event("mine-tiles", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -7775,7 +7845,7 @@ script.on_event("click-menu", function(event)
             target(pindex)
 
          elseif players[pindex].travel.index.x == 2 then
-            printout("Enter a new name for this fast travel point, then press enter to confirm.", pindex)
+            printout("Enter a new name for this fast travel point, then press 'ENTER' to confirm.", pindex)
             players[pindex].travel.renaming = true
             local frame = game.get_player(pindex).gui.screen["travel"]
             local input = frame.add{type="textfield", name = "input"}
@@ -7787,7 +7857,7 @@ script.on_event("click-menu", function(event)
             players[pindex].travel.x = 1
             players[pindex].travel.index.y = players[pindex].travel.index.y - 1
          elseif players[pindex].travel.index.x == 4 then
-            printout("Enter a name for this fast travel point, then press enter to confirm.", pindex)
+            printout("Enter a name for this fast travel point, then press 'ENTER' to confirm.", pindex)
             players[pindex].travel.creating = true
             local frame = game.get_player(pindex).gui.screen["travel"]
             local input = frame.add{type="textfield", name = "input"}
@@ -9607,7 +9677,7 @@ script.on_event("menu-search-get-next",function(event)
    end
    local str = players[pindex].menu_search_term
    if str == nil or str == "" then
-      printout("Press ENTER to start typing in a search term",pindex)
+      printout("Press 'CONTROL + F' to start typing in a search term",pindex)
       return
    end
    menu_search_get_next(pindex,str)
@@ -9623,7 +9693,7 @@ script.on_event("menu-search-get-last",function(event)
    end
    local str = players[pindex].menu_search_term
    if str == nil or str == "" then
-      printout("Press ENTER to start typing in a search term",pindex)
+      printout("Press 'CONTROL + F' to start typing in a search term",pindex)
       return
    end
    menu_search_get_last(pindex,str)
@@ -9752,12 +9822,14 @@ script.on_event(defines.events.on_gui_confirmed,function(event)
       roboport_menu_close(pindex)
    elseif players[pindex].entering_search_term == true then
       local term = string.lower(event.element.text)
+      event.element.focus()
       players[pindex].menu_search_term = term
       if term ~= "" then 
          printout("Searching for " .. term .. ", go through results with 'SHIFT + ENTER' or 'CONTROL + ENTER' ",pindex)
       end
       event.element.destroy()
       players[pindex].menu_search_frame.destroy()
+      players[pindex].menu_search_frame = nil
    end
    players[pindex].last_menu_search_tick = event.tick
 end)   
@@ -9920,7 +9992,7 @@ script.on_event("set-splitter-input-priority-left", function(event)
    local ent = get_selected_ent(pindex)
    if not ent then
       return
-   elseif ent.name == "splitter" then
+   elseif ent.valid and ent.type == "splitter" then
       local result = set_splitter_priority(ent, true, true, nil)
       printout(result,pindex)
    end
@@ -9934,7 +10006,7 @@ script.on_event("set-splitter-input-priority-right", function(event)
    local ent =  get_selected_ent(pindex)
    if not ent then
       return
-   elseif ent.name == "splitter" then
+   elseif ent.valid and ent.type == "splitter" then
       local result = set_splitter_priority(ent, true, false, nil)
       printout(result,pindex)
    end
@@ -9949,7 +10021,7 @@ script.on_event("set-splitter-output-priority-left", function(event)
    if not ent then
       return
    end
-   if ent.name == "splitter" then
+   if ent.valid and ent.type == "splitter" then
       local result = set_splitter_priority(ent, false, true, nil)
       printout(result,pindex)
    end
@@ -9965,7 +10037,7 @@ script.on_event("set-splitter-output-priority-right", function(event)
       return
    end
    --Build left turns on end rails
-   if ent.name == "splitter" then
+   if ent.valid and ent.type == "splitter" then
       local result = set_splitter_priority(ent, false, false, nil)
       printout(result,pindex)
    end
@@ -9986,13 +10058,13 @@ script.on_event("set-splitter-filter", function(event)
       local stack = game.get_player(pindex).cursor_stack
       local ent =  get_selected_ent(pindex)
       if stack == nil or not stack.valid_for_read or not stack.valid then
-         if ent and ent.name == "splitter" then
+         if ent and ent.valid and ent.type == "splitter" then
             --Clear the filter
             local result = set_splitter_priority(ent, nil, nil, nil, true)
             printout(result,pindex)
          end
          return
-      elseif ent and ent.name == "splitter" then
+      elseif ent and ent.valid and ent.type == "splitter" then
          --Set the filter
          local result = set_splitter_priority(ent, nil, nil, stack)
          printout(result,pindex)
@@ -10125,25 +10197,6 @@ script.on_event("inventory-remove-all-equipment-and-armor", function(event)
    
 end)
 
---**Use this key to test stuff (ALT-G)
-script.on_event("debug-test-key", function(event)
-   local pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   local p = game.get_player(pindex)
-   local ent =  get_selected_ent(pindex)
-   local stack = game.get_player(pindex).cursor_stack
-   
-   game.print(direction_lookup(p.walking_state.direction))
-   
-   --Recolor cursor boxes if multiplayer
-   if true then
-      set_cursor_colors_to_player_colors(pindex)
-   end
-
-end)
-
 --Attempt to launch a rocket
 script.on_event("launch-rocket", function(event)
    local pindex = event.player_index
@@ -10169,6 +10222,33 @@ script.on_event("launch-rocket", function(event)
    end
 end)
 
+--Help key and tutorial system WIP
+script.on_event("help-key", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   printout("Help system coming soon.",pindex)
+end)
+
+--**Use this key to test stuff (ALT-G)
+script.on_event("debug-test-key", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local p = game.get_player(pindex)
+   local ent =  get_selected_ent(pindex)
+   local stack = game.get_player(pindex).cursor_stack
+   
+   game.print(direction_lookup(p.walking_state.direction))
+   
+   --Recolor cursor boxes if multiplayer
+   if true then
+      set_cursor_colors_to_player_colors(pindex)
+   end
+
+end)
 
 script.on_event("logistic-request-read", function(event)
    local pindex = event.player_index
@@ -10581,6 +10661,46 @@ function get_direction_of_that_from_this(pos_that,pos_this)
 	     dir = defines.direction.west 
 	  end
    elseif math.abs(diff_y) > 4 * math.abs(diff_x) then --along north-south
+      if diff_y > 0 then 
+	     dir = defines.direction.south 
+	  else 
+	     dir = defines.direction.north 
+	  end
+   else --along diagonals
+      if diff_x > 0 and diff_y > 0 then
+	     dir = defines.direction.southeast
+      elseif diff_x > 0 and diff_y < 0 then
+	     dir = defines.direction.northeast
+      elseif diff_x < 0 and diff_y > 0 then
+	     dir = defines.direction.southwest
+	  elseif diff_x < 0 and diff_y < 0 then
+	     dir = defines.direction.northwest
+	  elseif diff_x == 0 and diff_y == 0 then
+        dir = 99--case for "it is right here"
+     else
+	     dir = -2
+	  end
+   end
+   return dir
+end
+
+--[[
+* Returns the direction of that entity from this entity based on the ratios of the x and y distances. 
+* Returns 1 of 8 main directions, with each getting about equal representation (45 degrees). 
+* The deciding ratio is 1 to 2.5, meaning that for an object that is 25 tiles north, it can be offset by up to 10 tiles east or west before it stops being counted as "directly" in the north. 
+* The arctangent of 1/2.5 is about 22 degrees, meaning that the field of view that directly counts as a cardinal direction is about 44 degrees, while for a diagonal direction it is about 46 degrees.]]
+function get_balanced_direction_of_that_from_this(pos_that,pos_this)
+   local diff_x = pos_that.x - pos_this.x
+   local diff_y = pos_that.y - pos_this.y
+   local dir = -1
+   
+   if math.abs(diff_x) > 2.5 * math.abs(diff_y) then --along east-west
+      if diff_x > 0 then 
+	     dir = defines.direction.east 
+	  else 
+	     dir = defines.direction.west 
+	  end
+   elseif math.abs(diff_y) > 2.5 * math.abs(diff_x) then --along north-south
       if diff_y > 0 then 
 	     dir = defines.direction.south 
 	  else 
@@ -11128,10 +11248,10 @@ script.on_event(defines.events.on_entity_damaged,function(event)
       end
       --Play shield and/or character damaged sound
       if shield_left ~= nil then
-         ent.player.play_sound{path = "player-shield-damaged",volume_modifier=0.8}
+         ent.player.play_sound{path = "player-damaged-shield",volume_modifier=0.8}
       end
       if shield_left == nil or (shield_left < 1.0 and ent.get_health_ratio() < 1.0) then
-         ent.player.play_sound{path = "player-character-damaged",volume_modifier=0.4}
+         ent.player.play_sound{path = "player-damaged-character",volume_modifier=0.4}
       end
       return
    elseif ent.get_health_ratio() == 1.0 then
@@ -11249,6 +11369,10 @@ function menu_search_open(pindex)
    players[pindex].entering_search_term = true
    players[pindex].menu_search_index = 0
    players[pindex].menu_search_index_2 = 0
+   if players[pindex].menu_search_frame ~= nil then
+      players[pindex].menu_search_frame.destroy() 
+      players[pindex].menu_search_frame = nil
+   end
    local frame = game.get_player(pindex).gui.screen.add{type = "frame", name = "enter-search-term"}
    frame.bring_to_front()
    frame.force_auto_center()
@@ -11444,7 +11568,7 @@ function inventory_find_index_of_next_name_match(inv,index,str,pindex)
       end
    end
    --End of inventory reached, circle back
-   game.get_player(pindex).play_sound{path = "player-mine"}--sound for having cicled around 
+   game.get_player(pindex).play_sound{path = "inventory-wrap-around"}--sound for having cicled around 
    for i=1, index, 1 do
       local stack = inv[i]
       if stack ~= nil and (stack.object_name == "LuaTechnology" or stack.valid_for_read) then 
@@ -11495,7 +11619,7 @@ function inventory_find_index_of_last_name_match(inv,index,str,pindex)
       end
    end
    --Start of inventory reached, circle back
-   game.get_player(pindex).play_sound{path = "player-mine"}--sound for having cicled around 
+   game.get_player(pindex).play_sound{path = "inventory-wrap-around"}--sound for having cicled around 
    for i=#inv, index, -1 do
       local stack = inv[i]
       if stack ~= nil and stack.valid_for_read then  
@@ -11558,7 +11682,7 @@ function crafting_find_index_of_next_name_match(str,pindex,last_i, last_j, recip
       last_j = 1
    end
    --End of inventory reached, circle back
-   game.get_player(pindex).play_sound{path = "player-mine"}--sound for having cicled around 
+   game.get_player(pindex).play_sound{path = "inventory-wrap-around"}--sound for having cicled around 
    for i = 1, cata_total, 1 do
       for j = 1, #recipes[i], 1 do 
          local recipe = recipes[i][j]
@@ -11748,7 +11872,7 @@ function check_and_play_bump_alert_sound(pindex,this_tick)
    
    --Check if there is a tile that was bumped into
    local tile = p.surface.get_tile(players[pindex].cursor_pos.x, players[pindex].cursor_pos.y)
-   bump_was_tile = tile.collides_with("player-layer")
+   bump_was_tile = (tile ~= nil and tile.valid and tile.collides_with("player-layer"))
    
    if bump_was_tile then
       p.play_sound{path = "player-bump-slide"}

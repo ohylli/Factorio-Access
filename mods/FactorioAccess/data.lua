@@ -1,5 +1,9 @@
---data:
+--Data:
+
+--Universal belt immunity:
 data.raw.character.character.has_belt_immunity = true
+
+--Create resource map node entities as aggregate entities
 local resource_map_node = table.deepcopy(data.raw.container) 
 resource_map_node.name = "map-node"
 resource_map_node.type = "simple-entity-with-force"
@@ -31,6 +35,50 @@ small_electric_pole.collision_mask = {"object-layer", "floor-layer", "water-tile
 local medium_electric_pole = data.raw["electric-pole"]["medium-electric-pole"]
 medium_electric_pole.collision_mask = {"object-layer", "floor-layer", "water-tile"}
 
+--Add new radar type that does long distance scanning
+local ar_tint = {r=0.5,g=0.5,b=0.5,a=0.9}
+local access_radar = table.deepcopy(data.raw["radar"]["radar"])
+access_radar.icons = {
+  {
+    icon = access_radar.icon,
+    icon_size = access_radar.icon_size,
+    tint = ar_tint
+  }
+}
+--This radar scans a new sector every 5 seconds instead of 33, and it refreshes its short range every 5 seconds (precisely fast enough) instead of 1 second, but the short range is smaller and the radar costs double the power.
+access_radar.name = "access-radar"
+access_radar.energy_usage = "600kW"  --Default: "300kW"
+access_radar.energy_per_sector = "3MJ" --Default: "10MJ"
+access_radar.energy_per_nearby_scan = "3MJ" --Default: "250kJ"
+access_radar.max_distance_of_sector_revealed = 32 --Default: 14, now scans up to 1024 tiles away instead of 448
+access_radar.max_distance_of_nearby_sector_revealed = 2 --Default: 3
+access_radar.rotation_speed = 0.01 --Default: 0.01
+access_radar.tint = ar_tint
+access_radar.pictures.layers[1].tint = ar_tint--grey
+access_radar.pictures.layers[2].tint = ar_tint--grey
+
+local access_radar_item = table.deepcopy(data.raw["item"]["radar"])
+access_radar_item.name = "access-radar"
+access_radar_item.place_result = "access-radar"
+access_radar_item.icons = {
+  {
+    icon = access_radar_item.icon,
+    icon_size = access_radar_item.icon_size,
+    tint = ar_tint
+  }
+}
+
+local access_radar_recipe = table.deepcopy(data.raw["recipe"]["radar"])
+access_radar_recipe.enabled = true
+access_radar_recipe.name = "access-radar"
+access_radar_recipe.result = "access-radar"
+access_radar_recipe.ingredients = {{"electronic-circuit", 10}, {"iron-gear-wheel", 10}, {"iron-plate", 20}}
+
+data:extend{access_radar,access_radar_item}
+data:extend{access_radar_item,access_radar_recipe}
+
+
+--Map generation preset attempts
 resource_def={richness = 4}
 
 data.raw["map-gen-presets"].default["faccess-compass-valley"] = {
@@ -67,12 +115,7 @@ data.raw["map-gen-presets"].default["faccess-compass-valley"] = {
     }
 }
 
-data.raw["map-gen-presets"].default["faccess-peaceful"] = {
-    order="_B",
-    basic_settings={
-        peaceful_mode = true,
-    }
-}
+
 
 data.raw["map-gen-presets"].default["faccess-enemies-off"] = {
     order="_B",
@@ -83,6 +126,12 @@ data.raw["map-gen-presets"].default["faccess-enemies-off"] = {
     }
 }
 
+data.raw["map-gen-presets"].default["faccess-peaceful"] = {
+    order="_C",
+    basic_settings={
+        peaceful_mode = true,
+    }
+}
 
 data:extend({
  resource_map_node,
@@ -90,7 +139,15 @@ data:extend({
 {
    type = "sound",
    name = "alert-enemy-presence-high",
-   filename = "__FactorioAccess__/Audio/alert-enemy-presence-high-alarm_siren_loop_11.wav",
+   filename = "__FactorioAccess__/Audio/alert-enemy-presence-high-zapsplat-trimmed-science_fiction_alarm_fast_high_pitched_warning_tone_emergency_003_60104.wav",
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "alert-enemy-presence-low",
+   filename = "__FactorioAccess__/Audio/alert-enemy-presence-low-zapsplat-modified_multimedia_game_tone_short_bright_futuristic_beep_action_tone_002_59161.wav",
    volume = 1,
    preload = true
 },
@@ -98,7 +155,7 @@ data:extend({
 {
    type = "sound",
    name = "alert-structure-damaged",
-   filename = "__FactorioAccess__/Audio/alert-structure-damaged-alarm_siren_warning_01.wav",
+   filename = "__FactorioAccess__/Audio/alert-structure-damaged-zapsplat-modified-emergency_alarm_003.wav",
    volume = 1,
    preload = true
 },
@@ -129,6 +186,14 @@ data:extend({
 
 {
    type = "sound",
+   name = "inventory-edge",
+   filename = "__FactorioAccess__/Audio/inventory-edge-zapsplat_vehicles_car_roof_light_switch_click_002_80933.wav",
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
    name = "Inventory-Move",
    filename = "__FactorioAccess__/Audio/inventory-move.ogg",
    volume = 1,
@@ -138,7 +203,15 @@ data:extend({
 {
    type = "sound",
    name = "inventory-wrap-around",
-   filename = "__FactorioAccess__/Audio/inventory-wrap-around-gear_drill_windup_09.wav",
+   filename = "__FactorioAccess__/Audio/inventory-wrap-around-zapsplat_leisure_toy_plastic_wind_up_003_13198.wav",
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "player-aim-locked",
+   filename = "__FactorioAccess__/Audio/player-aim-locked-zapsplat_multimedia_game_beep_high_pitched_generic_002_25862.wav", 
    volume = 1,
    preload = true
 },
@@ -146,7 +219,7 @@ data:extend({
 {
    type = "sound",
    name = "player-bump-alert",
-   filename = "__FactorioAccess__/Audio/player-bump-alert-ui_menu_button_error_04.wav", 
+   filename = "__FactorioAccess__/Audio/player-bump-alert-zapsplat-trimmed_multimedia_game_sound_synth_digital_tone_beep_001_38533.wav", 
    volume = 1,
    preload = true
 },
@@ -154,7 +227,7 @@ data:extend({
 {
    type = "sound",
    name = "player-bump-stuck-alert",
-   filename = "__FactorioAccess__/Audio/player-bump-stuck-alert-ui_menu_button_cancel_02.wav", 
+   filename = "__FactorioAccess__/Audio/player-bump-stuck-alert-zapsplat_multimedia_game_sound_synth_digital_tone_beep_005_38537.wav", 
    volume = 1,
    preload = true
 },
@@ -162,7 +235,7 @@ data:extend({
 {
    type = "sound",
    name = "player-bump-slide",
-   filename = "__FactorioAccess__/Audio/player-bump-slide-footstep_gravel_slide_05.wav", 
+   filename = "__FactorioAccess__/Audio/player-bump-slide-zapsplat_foley_footstep_boot_kick_gravel_stones_out_002.wav", 
    volume = 1,
    preload = true
 },
@@ -170,15 +243,23 @@ data:extend({
 {
    type = "sound",
    name = "player-bump-trip",
-   filename = "__FactorioAccess__/Audio/player-bump-trip-clock_tick_01.wav", 
+   filename = "__FactorioAccess__/Audio/player-bump-trip-zapsplat-trimmed_industrial_tool_pick_axe_single_hit_strike_wood_tree_trunk_001_103466.wav", 
    volume = 1,
    preload = true
 },
 
 {
    type = "sound",
-   name = "player-turn",
-   filename = "__FactorioAccess__/Audio/player-turn-1face_dir.ogg",
+   name = "player-damaged-character",
+   filename = "__FactorioAccess__/Audio/player-damaged-character-zapsplat-modified_multimedia_beep_harsh_synth_single_high_pitched_87498.wav",
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "player-damaged-shield",
+   filename = "__FactorioAccess__/Audio/player-damaged-shield-zapsplat_multimedia_game_sound_sci_fi_futuristic_beep_action_tone_001_64989.wav",
    volume = 1,
    preload = true
 },
@@ -193,32 +274,16 @@ data:extend({
 
 {
    type = "sound",
-   name = "player-shield-damaged",
-   filename = "__FactorioAccess__/Audio/player-shield-damaged-sci-fi_shield_device_small_03.wav",
-   volume = 1,
-   preload = true
-},
-
-{
-   type = "sound",
-   name = "player-character-damaged",
-   filename = "__FactorioAccess__/Audio/player-character-damaged-beep_06.wav",
-   volume = 1,
-   preload = true
-},
-
-{
-   type = "sound",
    name = "player-teleported",
-   filename = "__FactorioAccess__/Audio/player-teleported-alarm_siren_loop_09.wav",
+   filename = "__FactorioAccess__/Audio/player-teleported-zapsplat_science_fiction_computer_alarm_single_medium_ring_beep_fast_004_84296.wav",
    volume = 1,
    preload = true
 },
 
 {
    type = "sound",
-   name = "player-aim-locked",
-   filename = "__FactorioAccess__/Audio/player-aim-locked-beep_12.wav", 
+   name = "player-turned",
+   filename = "__FactorioAccess__/Audio/player-turned-1face_dir.ogg",
    volume = 1,
    preload = true
 },
@@ -234,15 +299,23 @@ data:extend({
 {
    type = "sound",
    name = "scanner-pulse",
-   filename = "__FactorioAccess__/Audio/scanner-pulse-ui_menu_button_beep_13.wav",
+   filename = "__FactorioAccess__/Audio/scanner-pulse-zapsplat_science_fiction_computer_alarm_single_medium_ring_beep_fast_001_84293.wav",
    volume = 1,
    preload = true
 },
 
 {
    type = "sound",
-   name = "train-alert",
-   filename = "__FactorioAccess__/Audio/train-alert-ui_menu_button_beep_11.wav",
+   name = "train-alert-high",
+   filename = "__FactorioAccess__/Audio/train-alert-high-zapsplat-trimmed_science_fiction_alarm_warning_buzz_harsh_large_reverb_60111.wav",
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "train-alert-low",
+   filename = "__FactorioAccess__/Audio/train-alert-low-zapsplat_multimedia_beep_digital_high_tech_electronic_001_87483.wav",
    volume = 1,
    preload = true
 },
@@ -258,9 +331,17 @@ data:extend({
 {
    type = "sound",
    name = "train-honk-long",
-   filename = "__FactorioAccess__/Audio/train-honk-long-freesound.ogg",
+   filename = "__FactorioAccess__/Audio/train-honk-long-pixabay-modified-diesel-horn-02-98042.wav",
    volume = 1,
    preload = true
+},
+
+{
+    type = "custom-input",
+    name = "pause-game-fa",
+    key_sequence = "ESC",
+    linked_game_control = "toggle-menu",
+    consuming = "none"
 },
 
 {
@@ -480,6 +561,14 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "scan-facing-direction",
+    key_sequence = "SHIFT + END",
+    alternative_key_sequence = "SHIFT + RCTRL",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "a-scan-list-main-up-key",
     key_sequence = "PAGEUP",
     consuming = "none"
@@ -585,9 +674,10 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "pickup-items",
+    name = "pickup-items-info",
     key_sequence = "F",
-    consuming = "none"
+    linked_game_control = "pick-items",
+    consuming = "none" 
 },
 
 {
@@ -615,6 +705,7 @@ data:extend({
     type = "custom-input",
     name = "quickbar-1",
     key_sequence = "1",
+    linked_game_control = "quick-bar-button-1",
     consuming = "none"
 },
 
@@ -622,6 +713,7 @@ data:extend({
     type = "custom-input",
     name = "quickbar-2",
     key_sequence = "2",
+    linked_game_control = "quick-bar-button-2",
     consuming = "none"
 },
 
@@ -629,6 +721,7 @@ data:extend({
     type = "custom-input",
     name = "quickbar-3",
     key_sequence = "3",
+    linked_game_control = "quick-bar-button-3",
     consuming = "none"
 },
 
@@ -636,6 +729,7 @@ data:extend({
     type = "custom-input",
     name = "quickbar-4",
     key_sequence = "4",
+    linked_game_control = "quick-bar-button-4",
     consuming = "none"
 },
 
@@ -643,6 +737,7 @@ data:extend({
     type = "custom-input",
     name = "quickbar-5",
     key_sequence = "5",
+    linked_game_control = "quick-bar-button-5",
     consuming = "none"
 },
 
@@ -650,6 +745,7 @@ data:extend({
     type = "custom-input",
     name = "quickbar-6",
     key_sequence = "6",
+    linked_game_control = "quick-bar-button-6",
     consuming = "none"
 },
 
@@ -657,6 +753,7 @@ data:extend({
     type = "custom-input",
     name = "quickbar-7",
     key_sequence = "7",
+    linked_game_control = "quick-bar-button-7",
     consuming = "none"
 },
 
@@ -664,6 +761,7 @@ data:extend({
     type = "custom-input",
     name = "quickbar-8",
     key_sequence = "8",
+    linked_game_control = "quick-bar-button-8",
     consuming = "none"
 },
 
@@ -671,6 +769,7 @@ data:extend({
     type = "custom-input",
     name = "quickbar-9",
     key_sequence = "9",
+    linked_game_control = "quick-bar-button-9",
     consuming = "none"
 },
 
@@ -678,6 +777,7 @@ data:extend({
     type = "custom-input",
     name = "quickbar-10",
     key_sequence = "0",
+    linked_game_control = "quick-bar-button-10",
     consuming = "none"
 },
 
@@ -748,6 +848,76 @@ data:extend({
     type = "custom-input",
     name = "set-quickbar-10",
     key_sequence = "CONTROL + 0",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "quickbar-page-1",
+    key_sequence = "SHIFT + 1",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "quickbar-page-2",
+    key_sequence = "SHIFT + 2",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "quickbar-page-3",
+    key_sequence = "SHIFT + 3",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "quickbar-page-4",
+    key_sequence = "SHIFT + 4",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "quickbar-page-5",
+    key_sequence = "SHIFT + 5",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "quickbar-page-6",
+    key_sequence = "SHIFT + 6",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "quickbar-page-7",
+    key_sequence = "SHIFT + 7",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "quickbar-page-8",
+    key_sequence = "SHIFT + 8",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "quickbar-page-9",
+    key_sequence = "SHIFT + 9",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "quickbar-page-10",
+    key_sequence = "SHIFT + 0",
     consuming = "none"
 },
 
@@ -1031,8 +1201,9 @@ data:extend({
 {
     type = "custom-input",
     name = "menu-search-open",
-    key_sequence = "ENTER",
-    consuming = "none"
+    key_sequence = "CONTROL + F",
+    linked_game_control = "focus-search",
+    consuming = "game-only"
 },
 
 {
@@ -1198,15 +1369,22 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "debug-test-key",
-    key_sequence = "ALT + G",
+    name = "launch-rocket",
+    key_sequence = "SPACE",
     consuming = "none"
 },
 
 {
     type = "custom-input",
-    name = "launch-rocket",
-    key_sequence = "SPACE",
+    name = "help-key",
+    key_sequence = "H",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "debug-test-key",
+    key_sequence = "ALT + G",
     consuming = "none"
 },
 
@@ -1316,7 +1494,7 @@ data:extend({
 
 })
 
---Additions below for removing tips and tricks
+--*Additions below for removing tips and tricks to prevent screen clutter*
 vanilla_tip_and_tricks_item_table=
 {
    "introduction",
@@ -1421,19 +1599,19 @@ function remove_tip_and_tricks_item(inname)
    end
 end
 
-   data.raw["tips-and-tricks-item"]["introduction"].category="game-interaction";
-   data.raw["tips-and-tricks-item"]["introduction"].trigger=nil;
+data.raw["tips-and-tricks-item"]["introduction"].category="game-interaction";
+data.raw["tips-and-tricks-item"]["introduction"].trigger=nil;
 
-   data.raw["tips-and-tricks-item"]["show-info"].starting_status="unlocked";
-   data.raw["tips-and-tricks-item"]["show-info"].dependencies=nil;
+data.raw["tips-and-tricks-item"]["show-info"].starting_status="unlocked";
+data.raw["tips-and-tricks-item"]["show-info"].dependencies=nil;
 
-   data.raw["tips-and-tricks-item"]["e-confirm"].starting_status="unlocked";
-   data.raw["tips-and-tricks-item"]["e-confirm"].trigger=nil;
-   data.raw["tips-and-tricks-item"]["e-confirm"].skip_trigger={type="use-confirm"};--**nil
-   data.raw["tips-and-tricks-item"]["e-confirm"].dependencies=nil;
+data.raw["tips-and-tricks-item"]["e-confirm"].starting_status="unlocked";
+data.raw["tips-and-tricks-item"]["e-confirm"].trigger=nil;
+data.raw["tips-and-tricks-item"]["e-confirm"].skip_trigger={type="use-confirm"};--**nil
+data.raw["tips-and-tricks-item"]["e-confirm"].dependencies=nil;
 
 
 for _,item in pairs(vanilla_tip_and_tricks_item_table) do
    remove_tip_and_tricks_item(item);
 end
---Additions above for removing tips and tricks
+--*Additions above for removing tips and tricks*
