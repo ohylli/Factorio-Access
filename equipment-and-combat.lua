@@ -351,17 +351,17 @@ function check_and_play_enemy_alert_sound(mode_in)
             if dist < 100 then
                local pos = p.position
                pos.x = pos.x + x_offset
-               p.play_sound{path = "utility/item_deleted", position = pos, volume_modifier = 1.0}
+               p.play_sound{path = "alert-enemy-presence-low", position = pos, volume_modifier = 0.5}
             end
             --Additional alert if there are more than 5 enemies nearby
             local enemies = p.surface.find_enemy_units(p.position, 25, p.force)
             if #enemies > 5 then
-               p.play_sound{path = "alert-enemy-presence-high", volume_modifier = 0.5}
+               p.play_sound{path = "alert-enemy-presence-high", volume_modifier = 1.0}
             else
                for i, enemy in ipairs(enemies) do 
                   --Also check for strong enemies: big/huge biters, huge spitters, medium or larger worms, not spawners
                   if enemy.prototype.max_health > 360 then
-                     p.play_sound{path = "alert-enemy-presence-high", volume_modifier = 0.5}
+                     p.play_sound{path = "alert-enemy-presence-high", volume_modifier = 1.0}
                      return
                   end
                end
@@ -370,18 +370,18 @@ function check_and_play_enemy_alert_sound(mode_in)
             if dist < 50 then
                local pos = p.position
                pos.x = pos.x + x_offset
-               p.play_sound{path = "utility/item_deleted", position = pos, volume_modifier = 1.0}
+               p.play_sound{path = "alert-enemy-presence-low", position = pos, volume_modifier = 1.0}
             end
             --Additional alert if there are more than 10 enemies nearby
             local enemies = p.surface.find_enemy_units(p.position, 25, p.force)
             if #enemies > 10 then
-               p.play_sound{path = "alert-enemy-presence-high", volume_modifier = 0.5}
+               p.play_sound{path = "alert-enemy-presence-high", volume_modifier = 1.0}
             end
          elseif mode == 3 then -- Nearest enemy is too close (highest freq)
             if dist < 25 then
                local pos = p.position
                pos.x = pos.x + x_offset
-               p.play_sound{path = "utility/item_deleted", position = pos, volume_modifier = 1.0}
+               p.play_sound{path = "alert-enemy-presence-low", position = pos, volume_modifier = 0.5}
             end
          end
       end

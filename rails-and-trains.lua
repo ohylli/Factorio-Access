@@ -3166,7 +3166,7 @@ function rail_builder_up(pindex)
    --Check the index against the limit
    if players[pindex].rail_builder.index < 0 then
       players[pindex].rail_builder.index = 0
-      game.get_player(pindex).play_sound{path = "player-mine"}
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
    else
       --Play sound
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -3184,7 +3184,7 @@ function rail_builder_down(pindex)
    --Check the index against the limit
    if players[pindex].rail_builder.index > players[pindex].rail_builder.index_max then
       players[pindex].rail_builder.index = players[pindex].rail_builder.index_max
-      game.get_player(pindex).play_sound{path = "player-mine"}
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
    else
       --Play sound
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -3582,7 +3582,7 @@ function train_menu_up(pindex)
    players[pindex].train_menu.index = players[pindex].train_menu.index - 1
    if players[pindex].train_menu.index < 0 then
       players[pindex].train_menu.index = 0
-      game.get_player(pindex).play_sound{path = "player-mine"}
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
    else
       --Play sound
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -3595,7 +3595,7 @@ function train_menu_down(pindex)
    players[pindex].train_menu.index = players[pindex].train_menu.index + 1
    if players[pindex].train_menu.index > TRAIN_MENU_LENGTH then
       players[pindex].train_menu.index = TRAIN_MENU_LENGTH
-      game.get_player(pindex).play_sound{path = "player-mine"}
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
    else
       --Play sound
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -3790,7 +3790,7 @@ function train_stop_menu_up(pindex)
    players[pindex].train_stop_menu.index = players[pindex].train_stop_menu.index - 1
    if players[pindex].train_stop_menu.index < 0 then
       players[pindex].train_stop_menu.index = 0
-      game.get_player(pindex).play_sound{path = "player-mine"}
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
    else
       --Play sound
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -3804,7 +3804,7 @@ function train_stop_menu_down(pindex)
    players[pindex].train_stop_menu.index = players[pindex].train_stop_menu.index + 1
    if players[pindex].train_stop_menu.index > 8 then
       players[pindex].train_stop_menu.index = 8
-      game.get_player(pindex).play_sound{path = "player-mine"}
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
    else
       --Play sound
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -4459,7 +4459,7 @@ function check_and_play_train_track_alert_sounds(step)
          local trains = p.surface.get_trains()
          for i,train in ipairs(trains) do
             if train.speed ~= 0 and (util.distance(p.position,train.front_stock.position) < 400 or util.distance(p.position,train.back_stock.position) < 400) then 
-               p.play_sound{path = "utility/blueprint_selection_ended"}
+               p.play_sound{path = "train-alert-low"}
                rendering.draw_circle{color = {1, 1, 0},radius = 2,width = 2,target = found_rail.position,surface = found_rail.surface,time_to_live = 15}
             end
          end
@@ -4470,7 +4470,7 @@ function check_and_play_train_track_alert_sounds(step)
             if  train.speed ~= 0 and (util.distance(p.position,train.front_stock.position) < 200 or util.distance(p.position,train.back_stock.position) < 200)
             and ((train.speed > 0 and util.distance(p.position,train.front_stock.position) <= util.distance(p.position,train.back_stock.position)) 
             or   (train.speed < 0 and util.distance(p.position,train.front_stock.position) >= util.distance(p.position,train.back_stock.position))) then 
-               p.play_sound{path = "utility/blueprint_selection_ended"}
+               p.play_sound{path = "train-alert-low"}
                rendering.draw_circle{color = {1, 0.5, 0},radius = 3,width = 4,target = found_rail.position,surface = found_rail.surface,time_to_live = 15}
             end
          end
@@ -4482,11 +4482,10 @@ function check_and_play_train_track_alert_sounds(step)
             and ((train.speed > 0 and util.distance(p.position,train.front_stock.position) <= util.distance(p.position,train.back_stock.position)) 
             or   (train.speed < 0 and util.distance(p.position,train.front_stock.position) >= util.distance(p.position,train.back_stock.position))) then 
                if (util.distance(p.position,train.front_stock.position) < 200 or util.distance(p.position,train.back_stock.position) < 200) then
-                  p.play_sound{path = "train-alert"} 
+                  p.play_sound{path = "train-alert-high"} 
                   rendering.draw_circle{color = {1, 0.0, 0},radius = 4,width = 8,target = found_rail.position,surface = found_rail.surface,time_to_live = 15}
                else
-                  p.play_sound{path = "utility/blueprint_selection_ended"}
-                  p.play_sound{path = "utility/blueprint_selection_ended"}
+                  p.play_sound{path = "train-alert-low"}
                   rendering.draw_circle{color = {1, 0.4, 0},radius = 4,width = 8,target = found_rail.position,surface = found_rail.surface,time_to_live = 15}
                end
             end
@@ -4496,11 +4495,10 @@ function check_and_play_train_track_alert_sounds(step)
             if signal.signal_state == defines.signal_state.reserved then
                for i,train in ipairs(trains) do
                   if (util.distance(p.position,train.front_stock.position) < 200 or util.distance(p.position,train.back_stock.position) < 200) then
-                     p.play_sound{path = "train-alert"} 
+                     p.play_sound{path = "train-alert-high"} 
                      rendering.draw_circle{color = {1, 0.0, 0},radius = 4,width = 8,target = found_rail.position,surface = found_rail.surface,time_to_live = 15}
                   else
-                     p.play_sound{path = "utility/blueprint_selection_ended"}
-                     p.play_sound{path = "utility/blueprint_selection_ended"}
+                     p.play_sound{path = "train-alert-low"}
                      rendering.draw_circle{color = {1, 0.4, 0},radius = 4,width = 8,target = found_rail.position,surface = found_rail.surface,time_to_live = 15}
                   end
                end
