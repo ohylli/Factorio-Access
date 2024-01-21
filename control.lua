@@ -5890,13 +5890,12 @@ function move(direction,pindex)
    end
 end
 
+--Move key pressed to move the character or the cursor in the world or in a menu 
 function move_key(direction,event, force_single_tile)
    local pindex = event.player_index
    if not check_for_player(pindex) or players[pindex].menu == "prompt" then
       return 
    end
-   local single_only = force_single_tile or false
-   
    --Save the key press event
    local pex = players[event.player_index]
    pex.bump.last_dir_key_2nd = pex.bump.last_dir_key_1st
@@ -5907,41 +5906,50 @@ function move_key(direction,event, force_single_tile)
       -- Menus: move menu cursor
       menu_cursor_move(direction,pindex)
    elseif players[pindex].cursor then
-      -- Cursor mode: Move cursor on map
-      local diff = players[pindex].cursor_size * 2 + 1
-      if single_only then
-         diff = 1
-      end
-      players[pindex].cursor_pos = offset_position(players[pindex].cursor_pos, direction, diff)
-      if not players[pindex].vanilla_mode then
-         players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos)
-         target(pindex)
-      end
-      sync_build_cursor_graphics(pindex)
-      if players[pindex].cursor_size == 0 then
-         -- Cursor size 0 ("1 by 1"): read tile
-         if not game.get_player(pindex).driving then
-            read_tile(pindex)
-         end
-         target(pindex)
-         players[pindex].player_direction = direction
-         if players[pindex].build_lock then
-            build_item_in_hand(pindex, -1)            
-         end
-      elseif not game.get_player(pindex).driving then
-         -- Larger cursor sizes: scan area
-         local scan_left_top = {math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size,math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size}
-         local scan_right_bottom = {math.floor(players[pindex].cursor_pos.x)+players[pindex].cursor_size+1,math.floor(players[pindex].cursor_pos.y)+players[pindex].cursor_size+1}
-         players[pindex].nearby.index = 1
-         players[pindex].nearby.ents = scan_area(math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size, math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size, players[pindex].cursor_size * 2 + 1, players[pindex].cursor_size * 2 + 1, pindex)
-         populate_categories(pindex)
-         local scan_summary = get_scan_summary(scan_left_top, scan_right_bottom, pindex)
-         draw_area_as_cursor(scan_left_top,scan_right_bottom,pindex)
-         printout(scan_summary,pindex)
-      end
+      -- Cursor mode: Move cursor on map 
+      cursor_mode_move(direction, pindex, force_single_tile)
    else
       -- General case: Move character
       move(direction,pindex)
+   end
+end
+
+--Move the cursor, and conduct area scans for larger cursors
+function cursor_mode_move(direction, pindex, single_only)
+   local diff = players[pindex].cursor_size * 2 + 1
+   if single_only then
+      diff = 1
+   end
+   players[pindex].cursor_pos = center_of_tile(offset_position(players[pindex].cursor_pos, direction, diff))
+   if players[pindex].cursor_size == 0 then
+      -- Cursor size 0 ("1 by 1"): Read tile
+      if not game.get_player(pindex).driving then
+         read_tile(pindex)
+      end
+      
+      --Update drawn cursor
+      local stack = game.get_player(pindex).cursor_stack
+      if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then 
+         sync_build_cursor_graphics(pindex)
+      else
+         cursor_highlight(pindex, nil, nil)
+      end
+      
+      --Apply build lock if active
+      players[pindex].player_direction = direction
+      if players[pindex].build_lock then
+         build_item_in_hand(pindex, -1)            
+      end
+   elseif not game.get_player(pindex).driving then
+      -- Larger cursor sizes: scan area
+      local scan_left_top = {math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size,math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size}
+      local scan_right_bottom = {math.floor(players[pindex].cursor_pos.x)+players[pindex].cursor_size+1,math.floor(players[pindex].cursor_pos.y)+players[pindex].cursor_size+1}
+      players[pindex].nearby.index = 1
+      players[pindex].nearby.ents = scan_area(math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size, math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size, players[pindex].cursor_size * 2 + 1, players[pindex].cursor_size * 2 + 1, pindex)
+      populate_categories(pindex)
+      local scan_summary = get_scan_summary(scan_left_top, scan_right_bottom, pindex)
+      draw_area_as_cursor(scan_left_top,scan_right_bottom,pindex)
+      printout(scan_summary,pindex)
    end
 end
 
@@ -11121,12 +11129,23 @@ function sync_build_cursor_graphics(pindex)
          rendering.set_visible(player.building_footprint,false)
       end
       
-      --Move mouse Cursor --****new bug: if not in full screen mode, the y component of zoom callibration is wrong
+      --Move mouse cursor according to building box
       if player.cursor then
-         move_mouse_cursor({x = (left_top.x + math.floor(width/2)),y = (left_top.y + math.floor(height/2))},pindex)--****
+         if dir == dirs.east or dir == dirs.west then
+            --Flip width and height
+            local temp = width
+            width = height
+            height = temp
+         end
+         if cursor_position_is_on_screen(pindex) then
+            move_mouse_cursor({x = (left_top.x + math.floor(width/2)),y = (left_top.y + math.floor(height/2))},pindex)
+         else 
+            move_mouse_cursor(players[pindex].position,pindex)
+         end
       else
          --****do this
-         
+         local pos = player.cursor_pos
+         move_mouse_cursor({x = (pos.x + math.floor(width/2)),y = (pos.y + math.floor(height/2))},pindex)
       end
    else
       if dir_indicator ~= nil then rendering.set_visible(dir_indicator,false) end
@@ -11192,11 +11211,17 @@ function cursor_highlight(pindex, ent, box_type, skip_mouse_movement)
    if stack ~= nil and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then 
       return
    end
-   if util.distance(p.position,c_pos) <= game.get_player(pindex).reach_distance then--**** maybe add check here
+   
+   --Restore the mouse cursor to the player position when it would otherwise be off screen 
+   if cursor_position_is_on_screen(pindex) then
       move_mouse_cursor(center_of_tile(c_pos),pindex)
    else
       move_mouse_cursor(center_of_tile(p.position),pindex)
    end
+end
+
+function cursor_position_is_on_screen(pindex)--****improve
+   return (util.distance(players[pindex].cursor_pos , players[pindex].position) <= game.get_player(pindex).reach_distance + 1)
 end
 
 function set_cursor_colors_to_player_colors(pindex)
@@ -11389,7 +11414,18 @@ script.on_event(defines.events.on_player_died,function(event)
       printout(result,pindex)
       game.get_player(pindex).print(result)--**laterdo unique sound, for now use console sound 
    end
+end) 
+
+script.on_event(defines.events.on_player_display_resolution_changed,function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return 
+   end
+   if players ~= nil and players[pindex] ~= nil then
+      players[pindex].display_resolution = event.old_resolution--****
+   end
 end)
+
 
 --Allows searching a menu that has support written for this
 function menu_search_open(pindex)
