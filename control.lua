@@ -606,6 +606,7 @@ function move_cursor_structure(pindex, dir)
          end
          local ent = network[network[current][adjusted[(0 + dir) %8]][index].num]
          if ent.ent.valid then
+            cursor_highlight(pindex, nil, nil)
             move_mouse_cursor(ent.ent.position,pindex)
             players[pindex].cursor_pos = ent.ent.position
             --Case 1: Proposing a new structure
@@ -636,6 +637,7 @@ function move_cursor_structure(pindex, dir)
       end
       local ent = network[current]
       if ent.ent.valid then
+         cursor_highlight(pindex, nil, nil)
          move_mouse_cursor(ent.ent.position,pindex)
          players[pindex].cursor_pos = ent.ent.position
          --Case 2: Returning to the current structure
@@ -666,6 +668,7 @@ function move_cursor_structure(pindex, dir)
       end
       local ent = network[current]
      if ent.ent.valid then
+         cursor_highlight(pindex, nil, nil)
          move_mouse_cursor(ent.ent.position,pindex)
          players[pindex].cursor_pos = ent.ent.position
          --Case 3: Moved to the new structure
@@ -701,6 +704,7 @@ function move_cursor_structure(pindex, dir)
       end
       local ent = network[network[current][direction][index].num]
       if ent.ent.valid then
+         cursor_highlight(pindex, nil, nil)
          move_mouse_cursor(ent.ent.position,pindex)
          players[pindex].cursor_pos = ent.ent.position
          --Case 4: Propose a new structure within the same direction
@@ -11119,7 +11123,7 @@ function sync_build_cursor_graphics(pindex)
       
       --Move mouse Cursor --****new bug: if not in full screen mode, the y component of zoom callibration is wrong
       if player.cursor then
-         --move_mouse_cursor({x = (left_top.x + math.floor(width)),y = (left_top.y + math.floor(height))},pindex)--****
+         move_mouse_cursor({x = (left_top.x + math.floor(width/2)),y = (left_top.y + math.floor(height/2))},pindex)--****
       else
          --****do this
          
@@ -11175,19 +11179,23 @@ function cursor_highlight(pindex, ent, box_type, skip_mouse_movement)
    players[pindex].cursor_tile_highlight_box = h_tile
    game.get_player(pindex).game_view_settings.update_entity_selection = true
    
+   --Recolor cursor boxes if multiplayer
+   if game.is_multiplayer() then
+      set_cursor_colors_to_player_colors(pindex)
+   end
+   
    --Highlight nearby entities by default means (reposition the cursor)
    if players[pindex].vanilla_mode or skip_mouse_movement == true then
       return 
    end 
-   if util.distance(p.position,c_pos) <= game.get_player(pindex).reach_distance then
+   local stack = game.get_player(pindex).cursor_stack
+   if stack ~= nil and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then 
+      return
+   end
+   if util.distance(p.position,c_pos) <= game.get_player(pindex).reach_distance then--**** maybe add check here
       move_mouse_cursor(center_of_tile(c_pos),pindex)
    else
       move_mouse_cursor(center_of_tile(p.position),pindex)
-   end
-   
-   --Recolor cursor boxes if multiplayer
-   if game.is_multiplayer() then
-      set_cursor_colors_to_player_colors(pindex)
    end
 end
 
