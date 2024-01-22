@@ -2808,7 +2808,7 @@ end
 
 
 function reset_rotation(pindex)
-   players[pindex].building_direction = -1
+   players[pindex].building_direction = dirs.north
 end
 
 function read_building_recipe(pindex, start_phrase)
@@ -3106,7 +3106,7 @@ function read_hand(pindex)
       local build_entity = cursor_stack.prototype.place_result
       if build_entity and build_entity.supports_direction then
          table.insert(out,1)
-         table.insert(out,{"access.facing-direction",players[pindex].building_direction * dirs.east})
+         table.insert(out,{"access.facing-direction",players[pindex].building_direction})
       else
          table.insert(out,0)
          table.insert(out,"")
@@ -3888,7 +3888,7 @@ function build_preview_checks_info(stack, pindex)
    local surf = game.get_player(pindex).surface
    local pos = table.deepcopy(players[pindex].cursor_pos)
    local result = ""
-   local build_dir = players[pindex].building_direction * dirs.east--laterdo get player building directions to match the official defines
+   local build_dir = players[pindex].building_direction
    local ent_p = stack.prototype.place_result --it is an entity prototype!
    if ent_p == nil or not ent_p.valid then
       return "invalid entity"
@@ -4253,27 +4253,27 @@ function build_preview_checks_info(stack, pindex)
                position.x = position.x + math.ceil(2*ent_p.selection_box.right_bottom.x)/2 - .5
                position.y = position.y + math.ceil(2*ent_p.selection_box.right_bottom.y)/2 - .5
          elseif players[pindex].player_direction == defines.direction.north then
-            if build_dir == 0 or build_dir == 2 then
+            if build_dir == dirs.north or build_dir == dirs.south then
                position.y = position.y + math.ceil(2* ent_p.selection_box.left_top.y)/2 + .5
-            elseif build_dir == 1 or build_dir == 3 then
+            elseif build_dir == dirs.east or build_dir == dirs.west then
             position.y = position.y + math.ceil(2* ent_p.selection_box.left_top.x)/2 + .5
             end
          elseif players[pindex].player_direction == defines.direction.south then
-            if build_dir == 0 or build_dir == 2 then
+            if build_dir == dirs.north or build_dir == dirs.south then
                position.y = position.y + math.ceil(2* ent_p.selection_box.right_bottom.y)/2 - .5
-            elseif build_dir == 1 or build_dir == 3 then
+            elseif build_dir == dirs.east or build_dir == dirs.west then
                position.y = position.y + math.ceil(2* ent_p.selection_box.right_bottom.x)/2 - .5
             end
          elseif players[pindex].player_direction == defines.direction.west then
-            if build_dir == 0 or build_dir == 2 then
+            if build_dir == dirs.north or build_dir == dirs.south then
                position.x = position.x + math.ceil(2* ent_p.selection_box.left_top.x)/2 + .5
-            elseif build_dir == 1 or build_dir == 3 then
+            elseif build_dir == dirs.east or build_dir == dirs.west then
                position.x = position.x + math.ceil(2* ent_p.selection_box.left_top.y)/2 + .5
             end
          elseif players[pindex].player_direction == defines.direction.east then
-            if build_dir == 0 or build_dir == 2 then
+            if build_dir == dirs.north or build_dir == dirs.south then
                position.x = position.x + math.ceil(2* ent_p.selection_box.right_bottom.x)/2 - .5
-            elseif build_dir == 1 or build_dir == 3 then
+            elseif build_dir == dirs.east or build_dir == dirs.west then
                position.x = position.x + math.ceil(2* ent_p.selection_box.right_bottom.y)/2 - .5
             end
          end
@@ -4297,7 +4297,7 @@ function build_preview_checks_info(stack, pindex)
             local area = {
                left_top = {(position.x + math.ceil(ent_p.selection_box.left_top.x) - supply_dist), (position.y + math.ceil(ent_p.selection_box.left_top.y) - supply_dist)},
                right_bottom = {(position.x + math.floor(ent_p.selection_box.right_bottom.x) + supply_dist), (position.y + math.floor(ent_p.selection_box.right_bottom.y) + supply_dist)},
-               orientation = players[pindex].building_direction/4
+               orientation = players[pindex].building_direction/(2 * dirs.south)
            }--**laterdo "connected" check is a little buggy at the supply area edges, need to trim and tune, maybe re-enable direction based offset? The offset could be due to the pole width: 1 vs 2, maybe just make it more conservative? 
             local T = {
                area = area,
@@ -4375,7 +4375,7 @@ function read_coords(pindex, start_phrase)
          --If there is a build preview, give its dimensions and which way they extend
          local stack = game.get_player(pindex).cursor_stack
          if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and (stack.prototype.place_result.tile_height > 1 or stack.prototype.place_result.tile_width > 1) then
-            local dir = players[pindex].building_direction * dirs.east
+            local dir = players[pindex].building_direction 
             turn_to_cursor_direction_cardinal(pindex)
             local p_dir = players[pindex].player_direction
             local preview_str = ", preview is " 
@@ -4535,7 +4535,7 @@ function initialize(player)
    faplayer.cursor_pos = faplayer.cursor_pos or offset_position(faplayer.position,faplayer.player_direction,1)
    faplayer.walk = faplayer.walk or 0
    faplayer.move_queue = faplayer.move_queue or {}
-   faplayer.building_direction = faplayer.building_direction or 0 --Values are 0,1,2,3 for N,E,S,W
+   faplayer.building_direction = faplayer.building_direction or dirs.north--top
    faplayer.building_footprint = faplayer.building_footprint or nil
    faplayer.building_dir_arrow = faplayer.building_dir_arrow or nil
    faplayer.overhead_sprite = nil
@@ -4743,7 +4743,6 @@ script.on_event(defines.events.on_player_changed_position,function(event)
    end
    if players[pindex].walk == 2 then
       players[pindex].position = p.position
-      turn_to_cursor_direction_cardinal(pindex)
       local pos = center_of_tile(p.position)
       if p.walking_state.direction ~= players[pindex].player_direction and players[pindex].cursor == false then 
          --Directions mismatch. Turn to new direction --turn (Note, this code handles diagonal turns and other direction changes)
@@ -4754,8 +4753,9 @@ script.on_event(defines.events.on_player_changed_position,function(event)
          --Build lock building + rotate belts in hand unless cursor mode
          local stack = p.cursor_stack
          if players[pindex].build_lock and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and stack.prototype.place_result.type == "transport-belt" then 
-            players[pindex].building_direction = math.floor(p.character.direction / dirs.east)
-            build_item_in_hand(pindex, -2)
+            turn_to_cursor_direction_cardinal(pindex)
+            players[pindex].building_direction = players[pindex].player_direction
+            build_item_in_hand(pindex, -2)--build extra belt when turning
          end
       elseif players[pindex].cursor == false then 
          --Directions same: Walk straight
@@ -4769,7 +4769,8 @@ script.on_event(defines.events.on_player_changed_position,function(event)
          if players[pindex].build_lock then
             local stack = p.cursor_stack
             if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and stack.prototype.place_result.type == "transport-belt" then 
-               players[pindex].building_direction = math.floor(p.character.direction / dirs.east)
+               turn_to_cursor_direction_cardinal(pindex)
+               players[pindex].building_direction = players[pindex].player_direction
             end
             build_item_in_hand(pindex, -2)
          end
@@ -5916,7 +5917,7 @@ function move(direction,pindex)
       --Rotate belts in hand for build lock Mode
       local stack = game.get_player(pindex).cursor_stack
       if players[pindex].build_lock and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and stack.prototype.place_result.type == "transport-belt" then 
-         players[pindex].building_direction = math.floor(players[pindex].player_direction / dirs.east)
+         players[pindex].building_direction = players[pindex].player_direction
       end
    end
    
@@ -8342,7 +8343,7 @@ function build_item_in_hand(pindex, offset_val)
    
    if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then
       local ent = stack.prototype.place_result
-      local dimensions = get_tile_dimensions(stack.prototype, players[pindex].building_direction * dirs.east)
+      local dimensions = get_tile_dimensions(stack.prototype, players[pindex].building_direction)
       local position = nil
 
       if not(players[pindex].cursor) then
@@ -8358,7 +8359,7 @@ function build_item_in_hand(pindex, offset_val)
             local left_top = {x = math.floor(players[pindex].cursor_pos.x),y = math.floor(players[pindex].cursor_pos.y)}
             local right_bottom = {x = left_top.x + width, y = left_top.y + height}
             local flip = false
-            local dir = players[pindex].building_direction * dirs.east
+            local dir = players[pindex].building_direction
             turn_to_cursor_direction_cardinal(pindex)
             local p_dir = players[pindex].player_direction
             
@@ -8494,7 +8495,7 @@ function build_item_in_hand(pindex, offset_val)
      end
       local building = {
          position = position,
-         direction = players[pindex].building_direction * dirs.east,
+         direction = players[pindex].building_direction,
          alt = false
       }
       --building.position = game.get_player(pindex).surface.find_non_colliding_position(ent.name, position, .5, .05)--DOES NOT RESPECT DIRECTION
@@ -9159,18 +9160,18 @@ script.on_event("rotate-building", function(event)--todo**** cursor preview rota
          if stack.prototype.place_result.supports_direction then
             if not(players[pindex].lag_building_direction) then
                game.get_player(pindex).play_sound{path="Rotate-Hand-Sound"}
-               build_dir = build_dir + 1
-               if build_dir > 3 then
-                  build_dir = build_dir %4
+               build_dir = build_dir + dirs.east
+               if build_dir > dirs.northwest then
+                  build_dir = build_dir % (2 * dirs.south)
                end
             end
-            if build_dir == 0 then
+            if build_dir == dirs.north then
                printout("North", pindex)
-            elseif build_dir == 1 then
+            elseif build_dir == dirs.east then
                printout("East", pindex)
-            elseif build_dir == 2 then
+            elseif build_dir == dirs.south then
                printout("South", pindex)
-            elseif build_dir == 3 then
+            elseif build_dir == dirs.west then
                printout("West", pindex)
             end
             players[pindex].lag_building_direction = false
@@ -11156,9 +11157,9 @@ function sync_build_cursor_graphics(pindex)
    local player = players[pindex]
    local stack = game.get_player(pindex).cursor_stack
    if player.building_direction == nil then
-      player.building_direction = 0
+      player.building_direction = dirs.north
    end
-   local dir = player.building_direction * dirs.east
+   local dir = player.building_direction
    local dir_indicator = player.building_dir_arrow
    turn_to_cursor_direction_cardinal(pindex)
    local p_dir = player.player_direction
