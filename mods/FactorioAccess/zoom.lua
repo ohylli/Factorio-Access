@@ -32,7 +32,12 @@ function zoom_change(pindex,etick,change_by_tick)
       local zoom = tick_to_zoom(tick)
       if zoom < MAX_ZOOM and zoom > MIN_ZOOM then
          global.players[pindex].zoom = zoom
-         target(pindex)
+         local stack = game.get_player(pindex).cursor_stack
+         if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then 
+            sync_build_cursor_graphics(pindex)
+         else
+            cursor_highlight(pindex, nil, nil)
+         end
       end
    end
 end
