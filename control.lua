@@ -3759,7 +3759,7 @@ function toggle_cursor(pindex)
       move_mouse_cursor(players[pindex].cursor_pos,pindex)
       sync_build_cursor_graphics(pindex)
       target(pindex)
-      players[pindex].player_direction = game.get_player(pindex).walking_state.direction
+      players[pindex].player_direction = game.get_player(pindex).character.direction
       players[pindex].build_lock = false
       read_tile(pindex, "Cursor mode disabled, ")
    end
@@ -3820,6 +3820,7 @@ function read_tile(pindex, start_text)
    end
    local ent = get_selected_ent(pindex)
    if not ent then
+      --If there is no ent, read the tile instead
       players[pindex].tile.previous = nil
       result = result .. players[pindex].tile.tile
       cursor_highlight(pindex, nil, nil)
@@ -4722,7 +4723,7 @@ end
 
 
 --Update the position info and cursor info during smooth walking 
---****todo fix reading bug: no read if more of same ent until releasing the move key, this is despite event firing successfully 
+--***todo fix reading bug: there is no read if more of same ent is being detected, until releasing the move key or the end changes. This is despite event firing successfully.
 script.on_event(defines.events.on_player_changed_position,function(event)
    local pindex = event.player_index
    local p = game.get_player(pindex)
@@ -4734,14 +4735,14 @@ script.on_event(defines.events.on_player_changed_position,function(event)
       local pos = center_of_tile(p.position)
       if p.walking_state.direction ~= players[pindex].player_direction and players[pindex].cursor == false then 
          --Directions mismatch. Turn to new direction --turn (Note, this code handles diagonal turns and other direction changes)
-         players[pindex].player_direction = p.walking_state.direction
+         players[pindex].player_direction = p.character.direction
          local new_pos = center_of_tile(offset_position(pos,players[pindex].player_direction,1))
          players[pindex].cursor_pos = new_pos           
 
          --Build lock building + rotate belts in hand unless cursor mode
          local stack = p.cursor_stack
          if players[pindex].build_lock and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and stack.prototype.place_result.type == "transport-belt" then 
-            players[pindex].building_direction = math.floor(p.walking_state.direction / dirs.east)
+            players[pindex].building_direction = math.floor(p.character.direction / dirs.east)
             build_item_in_hand(pindex, -2)
          end
       elseif players[pindex].cursor == false then 
@@ -4756,7 +4757,7 @@ script.on_event(defines.events.on_player_changed_position,function(event)
          if players[pindex].build_lock then
             local stack = p.cursor_stack
             if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and stack.prototype.place_result.type == "transport-belt" then 
-               players[pindex].building_direction = math.floor(p.walking_state.direction / dirs.east)
+               players[pindex].building_direction = math.floor(p.character.direction / dirs.east)
             end
             build_item_in_hand(pindex, -2)
          end
@@ -4766,9 +4767,8 @@ script.on_event(defines.events.on_player_changed_position,function(event)
       local stack = p.cursor_stack
       if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then 
          sync_build_cursor_graphics(pindex)
-      else
-         cursor_highlight(pindex, nil, nil)
       end
+      cursor_highlight(pindex, nil, nil)
       
       --Name a detected entity that you can or cannot walk on, or a tile you cannot walk on
       refresh_player_tile(pindex)
@@ -5741,8 +5741,8 @@ function update_menu_visuals()
    end
 end
 
-
 script.on_event(defines.events.on_tick,on_initial_joining_tick)
+
 function move_characters(event)
    for pindex, player in pairs(players) do
       if player.walk ~= 2 or player.cursor or player.in_menu then
@@ -5775,8 +5775,6 @@ function move_characters(event)
       end
    end
 end
-
-
 
 function add_position(p1,p2)
    return { x = p1.x + p2.x, y = p1.y + p2.y}
@@ -5982,32 +5980,34 @@ function cursor_mode_move(direction, pindex, single_only)
    end
 end
 
+--Makes the character face the cursor but can be overwriten by vanilla move keys.
 function turn_to_cursor_direction_cardinal(pindex)--
    local p = game.get_player(pindex)
    local pex = players[pindex]
    local dir = get_balanced_direction_of_that_from_this(pex.cursor_pos, p.position)
    if dir == dirs.northwest or dir == dirs.north or dir == dirs.northeast then
-      p.walking_state.direction = dirs.north
+      p.character.direction = dirs.north
       pex.player_direction = dirs.north
    elseif dir == dirs.southwest or dir == dirs.south or dir == dirs.southeast then
-      p.walking_state.direction = dirs.south
+      p.character.direction = dirs.south
       pex.player_direction = dirs.south
    else
-      p.walking_state.direction = dir
+      p.character.direction = dir
       pex.player_direction = dir
    end
-   --game.print("set cardinal 1: " .. direction_lookup(pex.player_direction))--
-   --game.print("set cardinal 2: " .. direction_lookup(p.walking_state.direction))--****
+   --game.print("set cardinal pindex_dir: " .. direction_lookup(pex.player_direction))--
+   --game.print("set cardinal charct_dir: " .. direction_lookup(p.character.direction))--
 end
 
-function turn_to_cursor_direction_precise(pindex)--****
+--Makes the character face the cursor but can be overwriten by vanilla move keys.****todo schedule re-turns in cursor mode 
+function turn_to_cursor_direction_precise(pindex)
    local p = game.get_player(pindex)
    local pex = players[pindex]
    local dir = get_balanced_direction_of_that_from_this(pex.cursor_pos, p.position) 
-   p.walking_state.direction = dir
+   p.character.direction = dir
    pex.player_direction = dir
-   --game.print("set precise 1: " .. direction_lookup(pex.player_direction))--
-   --game.print("set precise 2: " .. direction_lookup(p.walking_state.direction))--****
+   --game.print("set precise pindex_dir: " .. direction_lookup(pex.player_direction))--
+   --game.print("set precise charct_dir: " .. direction_lookup(p.character.direction))--
 end
 
 --Called when a player enters or exits a vehicle
@@ -6404,7 +6404,7 @@ script.on_event("scan-facing-direction", function(event)
    if not (players[pindex].in_menu) then
       --Set the filter direction 
       local p = game.get_player(pindex)
-      local dir = p.walking_state.direction
+      local dir = p.character.direction
       rescan(pindex,dir)
       printout("Scanning " .. direction_lookup(dir), pindex)
       run_scanner_effects(pindex)
@@ -7059,7 +7059,7 @@ function read_quick_bar_slot(index,pindex)
    page = game.get_player(pindex).get_active_quick_bar_page(1)-1
    local item = game.get_player(pindex).get_quick_bar_slot(index+ 10*page)
    if item ~= nil then
-      local count = game.get_player(pindex).character.get_main_inventory().get_item_count(item.name)
+      local count = game.get_player(pindex).get_main_inventory().get_item_count(item.name)
       local stack = game.get_player(pindex).cursor_stack
       if stack and stack.valid_for_read then
          count = count + stack.count
@@ -9130,7 +9130,7 @@ function into_lookup(array)
     return lookup
 end
 
-script.on_event("rotate-building", function(event)--todo**** cursor preview rotation
+script.on_event("rotate-building", function(event)--todo**** cursor preview rotation sync with input keys
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -10333,7 +10333,7 @@ script.on_event("debug-test-key", function(event)
    local ent =  get_selected_ent(pindex)
    local stack = game.get_player(pindex).cursor_stack
    
-   game.print(direction_lookup(p.walking_state.direction))
+   --game.print(direction_lookup(p.walking_state.direction))
    
    --Recolor cursor boxes if multiplayer
    if true then
@@ -11887,7 +11887,7 @@ function check_and_play_bump_alert_sound(pindex,this_tick)
       return 
    end
    local p = game.get_player(pindex)
-   local face_dir = p.walking_state.direction
+   local face_dir = p.character.direction
    
    --Initialize 
    if players[pindex].bump == nil then
