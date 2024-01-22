@@ -5946,8 +5946,6 @@ function cursor_mode_move(direction, pindex, single_only)
       diff = 1
    end
    players[pindex].cursor_pos = center_of_tile(offset_position(players[pindex].cursor_pos, direction, diff))
-   --Update player direction to face the cursor
-   turn_to_cursor_direction_precise(pindex)
    
    if players[pindex].cursor_size == 0 then
       -- Cursor size 0 ("1 by 1"): Read tile
@@ -5978,6 +5976,11 @@ function cursor_mode_move(direction, pindex, single_only)
       draw_area_as_cursor(scan_left_top,scan_right_bottom,pindex)
       printout(scan_summary,pindex)
    end
+   
+   --Update player direction to face the cursor (after the vanilla move event that turns the character too, and only ends when the movement key is released)
+   turn_to_cursor_direction_precise(pindex)
+   schedule(30, "turn_to_cursor_direction_precise", pindex)
+   schedule(60, "turn_to_cursor_direction_precise", pindex)
 end
 
 --Makes the character face the cursor but can be overwriten by vanilla move keys.
@@ -5999,7 +6002,7 @@ function turn_to_cursor_direction_cardinal(pindex)--
    --game.print("set cardinal charct_dir: " .. direction_lookup(p.character.direction))--
 end
 
---Makes the character face the cursor but can be overwriten by vanilla move keys.****todo schedule re-turns in cursor mode 
+--Makes the character face the cursor but can be overwriten by vanilla move keys.
 function turn_to_cursor_direction_precise(pindex)
    local p = game.get_player(pindex)
    local pex = players[pindex]
@@ -10330,10 +10333,12 @@ script.on_event("debug-test-key", function(event)
       return
    end
    local p = game.get_player(pindex)
+   local pex = players[pindex]
    local ent =  get_selected_ent(pindex)
    local stack = game.get_player(pindex).cursor_stack
    
-   --game.print(direction_lookup(p.walking_state.direction))
+   p.print("zoom: " .. pex.zoom,{volume_modifier=0})
+   p.print("scale: " .. p.display_scale,{volume_modifier=0})
    
    --Recolor cursor boxes if multiplayer
    if true then
@@ -10405,10 +10410,10 @@ script.on_event(defines.events.on_gui_opened, function(event)
       --If the opened is an ent and it is not the cursor end then close it ****todo (not working correctly yet)
       local ent = get_selected_ent(pindex)
       if ent ~= p.opened then
-         game.print("Opened building GUI mismatch!",{volume_modifier = 0})--***
+         p.print("Opened building GUI mismatch!",{volume_modifier = 0})--***
          --p.opened = nil
       else 
-         game.print("Opened building GUI match.",{volume_modifier = 0})--***
+         p.print("Opened building GUI match.",{volume_modifier = 0})--***
       end
       --Assume a GUI has been opened, whether in a menu or not
       players[pindex].in_menu = true
@@ -10778,7 +10783,7 @@ function get_direction_of_that_from_this(pos_that,pos_this)
 	  elseif diff_x < 0 and diff_y < 0 then
 	     dir = defines.direction.northwest
 	  elseif diff_x == 0 and diff_y == 0 then
-        dir = 99--case for "it is right here"
+        dir = defines.direction.north
      else
 	     dir = -2
 	  end
@@ -10818,7 +10823,7 @@ function get_balanced_direction_of_that_from_this(pos_that,pos_this)
 	  elseif diff_x < 0 and diff_y < 0 then
 	     dir = defines.direction.northwest
 	  elseif diff_x == 0 and diff_y == 0 then
-        dir = 99--case for "it is right here"
+        dir = defines.direction.north
      else
 	     dir = -2
 	  end
@@ -11310,9 +11315,9 @@ function cursor_highlight(pindex, ent, box_type, skip_mouse_movement)
 end
 
 function cursor_position_is_on_screen(pindex)
-   --****todo improve if possible : Check if (cursor_pos - player_pos) <= k * tiles, where k = number of tiles on screen at current resolution and zoom level
-   --implement by checking max zoom value and how many tiles fit on screen then.
-   return (util.distance(players[pindex].cursor_pos , players[pindex].position) <= game.get_player(pindex).reach_distance + 0.5)
+   local range_y = math.floor(16/players[pindex].zoom)--found experimentally by counting tile ranges at different zoom levels
+   local range_x = range_y * game.get_player(pindex).display_scale * 1.5--found experimentally by checking scales
+   return (math.abs(players[pindex].cursor_pos.y - players[pindex].position.y) <= range_y and math.abs(players[pindex].cursor_pos.x - players[pindex].position.x) <= range_x)
 end
 
 function set_cursor_colors_to_player_colors(pindex)
@@ -11516,7 +11521,19 @@ script.on_event(defines.events.on_player_display_resolution_changed,function(eve
    if players and players[pindex] then
       players[pindex].display_resolution = new_res
    end
-   game.print("Display resolution changed: " .. new_res.width .. " x " .. new_res.height ,{volume_modifier = 0})
+   game.get_player(pindex).print("Display resolution changed: " .. new_res.width .. " x " .. new_res.height ,{volume_modifier = 0})
+end)
+
+script.on_event(defines.events.on_player_display_scale_changed,function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return 
+   end
+   local new_sc = game.get_player(pindex).display_scale
+   if players and players[pindex] then
+      players[pindex].display_resolution = new_sc
+   end
+   game.get_player(pindex).print("Display scale changed: " .. new_sc ,{volume_modifier = 0})
 end)
 
 --Allows searching a menu that has support written for this
@@ -11612,7 +11629,7 @@ function menu_search_get_next(pindex, str, start_phrase_in)
    --Return a menu output according to the index found 
    if new_index <= 0 then
       printout("Could not find " .. str,pindex)
-      game.print("Could not find " .. str,{volume_modifier = 0})
+      game.get_player(pindex).print("Could not find " .. str,{volume_modifier = 0})
       return
    elseif players[pindex].menu == "inventory" then
       players[pindex].menu_search_index = new_index
