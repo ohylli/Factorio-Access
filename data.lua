@@ -1082,7 +1082,15 @@ data:extend({
     name = "rotate-building",
     key_sequence = "R",
     linked_game_control = "rotate",
-    consuming = "game-only"
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "reverse-rotate-building",
+    key_sequence = "SHIFT + R",
+    linked_game_control = "reverse-rotate",
+    consuming = "none"
 },
 
 {

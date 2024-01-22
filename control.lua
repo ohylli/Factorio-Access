@@ -3286,7 +3286,7 @@ function target(pindex)
    end
 end
 
---Move the mouse cursor to the correct pixel on the screen **todo figure out how to center mouse cursor on tile during smooth walk (the player and the camera are both not tile aligned)
+--Move the mouse cursor to the correct pixel on the screen **todo figure out how to center mouse cursor on tile during smooth walk (the player and the camera are both not tile aligned. The current solution is to teleport the player to the tile center when cursor mode enables)
 function move_mouse_cursor(position,pindex)
    local player = players[pindex]
    local pixels = mult_position( sub_position(position, player.position), 32*player.zoom)
@@ -3744,7 +3744,18 @@ function toggle_cursor(pindex)
    if not players[pindex].cursor and not players[pindex].hide_cursor then
       players[pindex].cursor = true
       players[pindex].build_lock = false
-      game.get_player(pindex).teleport(center_of_tile(game.get_player(pindex).position))--teleport to the center of the nearest tile to align
+      
+      --Teleport to the center of the nearest tile to align
+      local can_port = game.get_player(pindex).surface.can_place_entity{name = "character", position = center_of_tile(game.get_player(pindex).position)}
+      local ents = game.get_player(pindex).surface.find_entities_filtered{position = center_of_tile(game.get_player(pindex).position), radius = 0.1, type = {"character"}, invert = true}
+      if #ents > 0 and ents[1].valid then
+         local ent = ents[1]
+         --Ignore ents you can walk through, laterdo better collision checks**
+         can_port = can_port or all_ents_are_walkable(game.get_player(pindex).position)
+      end
+      if can_port then
+         game.get_player(pindex).teleport(center_of_tile(game.get_player(pindex).position))
+      end      
       players[pindex].position = game.get_player(pindex).position
       players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos)
       move_mouse_cursor(players[pindex].cursor_pos,pindex)
@@ -9425,7 +9436,7 @@ script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
    end
    if players[pindex].previous_hand_item_name ~= new_item_name then
       players[pindex].previous_hand_item_name = new_item_name
-      players[pindex].building_direction_lag = true
+      --players[pindex].building_direction_lag = true
       read_hand(pindex)
    end
    sync_build_cursor_graphics(pindex)
@@ -10406,15 +10417,7 @@ script.on_event(defines.events.on_gui_opened, function(event)
       --If closing another menu toggles the player GUI screen, we close this screen
       p.opened = nil
       --game.print("Closed an extra controller GUI",{volume_modifier = 0})--**checks GUI shenanigans
-   elseif p.opened ~= nil then
-      --If the opened is an ent and it is not the cursor end then close it ****todo (not working correctly yet)
-      local ent = get_selected_ent(pindex)
-      if ent ~= p.opened then
-         p.print("Opened building GUI mismatch!",{volume_modifier = 0})--***
-         --p.opened = nil
-      else 
-         p.print("Opened building GUI match.",{volume_modifier = 0})--***
-      end
+   else
       --Assume a GUI has been opened, whether in a menu or not
       players[pindex].in_menu = true
       --game.print("Opened an extra GUI",{volume_modifier = 0})--**checks GUI shenanigans
@@ -11213,8 +11216,10 @@ function sync_build_cursor_graphics(pindex)
             height = temp
          end
          if cursor_position_is_on_screen(pindex) then
+            game.get_player(pindex).game_view_settings.update_entity_selection = true
             move_mouse_cursor({x = (left_top.x + 0.1 + math.floor(width/2)),y = (left_top.y + 0.1 + math.floor( height/2))},pindex)
          else 
+            game.get_player(pindex).game_view_settings.update_entity_selection = false
             move_mouse_cursor(players[pindex].position,pindex)
          end
       else
@@ -11308,8 +11313,10 @@ function cursor_highlight(pindex, ent, box_type, skip_mouse_movement)
    
    --Restore the mouse cursor to the player position when it would otherwise be off screen 
    if cursor_position_is_on_screen(pindex) then
+      game.get_player(pindex).game_view_settings.update_entity_selection = true
       move_mouse_cursor(center_of_tile(c_pos),pindex)
    else
+      game.get_player(pindex).game_view_settings.update_entity_selection = false
       move_mouse_cursor(center_of_tile(p.position),pindex)
    end
 end
@@ -12127,3 +12134,13 @@ function reset_bump_stats(pindex)
       last_dir_1 = nil
    }
 end
+
+function all_ents_are_walkable(pos)
+   local result = true
+   local ents = game.surface.find_entities_filtered{position = center_of_tile(pos), radius = 0.4, invert = true, type = {"resource", "transport-belt", "underground-belt", "splitter", "item-entity", "entity-ghost", "heat-pipe", "pipe", "pipe-to-ground", "character", "rail-signal", "flying-text", "highlight-box" }}--****
+   for i, ent in ipairs(ents) do 
+      result = false 
+   end
+   return result
+end 
+
