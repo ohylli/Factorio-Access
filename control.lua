@@ -11224,7 +11224,7 @@ function sync_build_cursor_graphics(pindex)
          end
          if cursor_position_is_on_screen(pindex) then
             game.get_player(pindex).game_view_settings.update_entity_selection = true
-            move_mouse_cursor({x = (left_top.x + 0.1 + math.floor(width/2)),y = (left_top.y + 0.1 + math.floor( height/2))},pindex)
+            move_mouse_cursor({x = (left_top.x + width/2),y = (left_top.y  + height/2)},pindex)
          else 
             game.get_player(pindex).game_view_settings.update_entity_selection = false
             move_mouse_cursor(players[pindex].position,pindex)
@@ -11239,17 +11239,17 @@ function sync_build_cursor_graphics(pindex)
          end
          local pos = player.cursor_pos
          if p_dir == dirs.north then
-            pos = offset_position(pos, dirs.north, math.floor(height/2) - 0.25)
-            pos = offset_position(pos, dirs.east, math.floor(width/2) - 0.25)
+            pos = offset_position(pos, dirs.north, height/2 - 0.5)
+            pos = offset_position(pos, dirs.east, width/2 - 0.5)
          elseif p_dir == dirs.east then
-            pos = offset_position(pos, dirs.south, math.floor(height/2) - 0.25)
-            pos = offset_position(pos, dirs.east, math.floor(width/2) - 0.25)
+            pos = offset_position(pos, dirs.south, height/2 - 0.5)
+            pos = offset_position(pos, dirs.east, width/2 - 0.5)
          elseif p_dir == dirs.south then 
-            pos = offset_position(pos, dirs.south, math.floor(height/2) - 0.25)
-            pos = offset_position(pos, dirs.east, math.floor(width/2) - 0.25)
+            pos = offset_position(pos, dirs.south, height/2 - 0.5)
+            pos = offset_position(pos, dirs.east, width/2 - 0.5)
          elseif p_dir == dirs.west then
-            pos = offset_position(pos, dirs.south, math.floor(height/2) - 0.25)
-            pos = offset_position(pos, dirs.west, math.floor(width/2) - 0.25)
+            pos = offset_position(pos, dirs.south, height/2 - 0.5)
+            pos = offset_position(pos, dirs.west, width/2 - 0.5)
          end
          move_mouse_cursor(pos,pindex)
       end
