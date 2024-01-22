@@ -3286,12 +3286,10 @@ function target(pindex)
    end
 end
 
---Move the mouse cursor to the correct pixel on the screen ****todo figure out how to center mouse cursor on tile, given that the ref frame is off-center along with the character, etc.
+--Move the mouse cursor to the correct pixel on the screen **todo figure out how to center mouse cursor on tile during smooth walk (the player and the camera are both not tile aligned)
 function move_mouse_cursor(position,pindex)
    local player = players[pindex]
    local pixels = mult_position( sub_position(position, player.position), 32*player.zoom)
-   --local pixels = mult_position( sub_position(position, center_of_tile(player.position)), 32*player.zoom)
-   --local pixels = mult_position( sub_position(center_of_tile(position), center_of_tile(player.position)), 32*player.zoom)
    local screen = game.players[pindex].display_resolution
    screen = {x = screen.width, y = screen.height}
    pixels = add_position(pixels,mult_position(screen,0.5))
@@ -3746,6 +3744,8 @@ function toggle_cursor(pindex)
    if not players[pindex].cursor and not players[pindex].hide_cursor then
       players[pindex].cursor = true
       players[pindex].build_lock = false
+      game.get_player(pindex).teleport(center_of_tile(game.get_player(pindex).position))--teleport to the center of the nearest tile to align
+      players[pindex].position = game.get_player(pindex).position
       players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos)
       move_mouse_cursor(players[pindex].cursor_pos,pindex)
       if not players[pindex].vanilla_mode then game.get_player(pindex).game_view_settings.update_entity_selection = false end
@@ -9093,7 +9093,7 @@ function into_lookup(array)
     return lookup
 end
 
-script.on_event("rotate-building", function(event)
+script.on_event("rotate-building", function(event)--todo**** cursor preview rotation
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -11115,7 +11115,7 @@ function sync_build_cursor_graphics(pindex)
    if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result then
       --Redraw arrow
       if dir_indicator ~= nil then rendering.destroy(player.building_direction_arrow) end
-      player.building_direction_arrow = rendering.draw_sprite{sprite = "fluid.crude-oil", tint = {r = 0.25, b = 0.25, g = 1.0, a = 0.8}, render_layer = 254, 
+      player.building_direction_arrow = rendering.draw_sprite{sprite = "fluid.crude-oil", tint = {r = 0.25, b = 0.25, g = 1.0, a = 0.75}, render_layer = 254, 
          surface = game.get_player(pindex).surface, players = nil, target = player.cursor_pos, orientation = (dir/dirs.east/dirs.south)}
       dir_indicator = player.building_direction_arrow
       rendering.set_visible(dir_indicator,true)
@@ -11153,7 +11153,7 @@ function sync_build_cursor_graphics(pindex)
             right_bottom.y = (right_bottom.y - width + 1)
          end
       end
-      player.building_footprint = rendering.draw_rectangle{left_top = left_top, right_bottom = right_bottom , color = {r = 0.25, b = 0.25, g = 1.0, a = 0.25}, draw_on_ground = true, 
+      player.building_footprint = rendering.draw_rectangle{left_top = left_top, right_bottom = right_bottom , color = {r = 0.25, b = 0.25, g = 1.0, a = 0.75}, draw_on_ground = true, 
          surface = game.get_player(pindex).surface, players = nil }
       rendering.set_visible(player.building_footprint,true)
       if players[pindex].hide_cursor or stack.name == "locomotive" or stack.name == "cargo-wagon" or stack.name == "fluid-wagon" or stack.name == "artillery-wagon" then
@@ -11176,19 +11176,25 @@ function sync_build_cursor_graphics(pindex)
          end
       else
          --Adjust for direct placement
+         if flip then
+            --Flip width and height
+            local temp = width
+            width = height
+            height = temp
+         end
          local pos = player.cursor_pos
          if p_dir == dirs.north then
-            pos = offset_position(pos, dirs.north, math.floor(height/2))
-            pos = offset_position(pos, dirs.east, math.floor(width/2))
+            pos = offset_position(pos, dirs.north, math.floor(height/2) - 0.25)
+            pos = offset_position(pos, dirs.east, math.floor(width/2) - 0.25)
          elseif p_dir == dirs.east then
-            pos = offset_position(pos, dirs.south, math.floor(height/2))
-            pos = offset_position(pos, dirs.east, math.floor(width/2))
+            pos = offset_position(pos, dirs.south, math.floor(height/2) - 0.25)
+            pos = offset_position(pos, dirs.east, math.floor(width/2) - 0.25)
          elseif p_dir == dirs.south then 
-            pos = offset_position(pos, dirs.south, math.floor(height/2))
-            pos = offset_position(pos, dirs.east, math.floor(width/2))
+            pos = offset_position(pos, dirs.south, math.floor(height/2) - 0.25)
+            pos = offset_position(pos, dirs.east, math.floor(width/2) - 0.25)
          elseif p_dir == dirs.west then
-            pos = offset_position(pos, dirs.south, math.floor(height/2))
-            pos = offset_position(pos, dirs.west, math.floor(width/2))
+            pos = offset_position(pos, dirs.south, math.floor(height/2) - 0.25)
+            pos = offset_position(pos, dirs.west, math.floor(width/2) - 0.25)
          end
          move_mouse_cursor(pos,pindex)
       end
@@ -11276,10 +11282,10 @@ function set_cursor_colors_to_player_colors(pindex)
       return 
    end
    local p = game.get_player(pindex)
-   if rendering.is_valid(players[pindex].cursor_tile_highlight_box) then
+   if players[pindex].cursor_tile_highlight_box ~= nil and rendering.is_valid(players[pindex].cursor_tile_highlight_box) then
       rendering.set_color(players[pindex].cursor_tile_highlight_box,p.color)
    end
-   if rendering.is_valid(players[pindex].building_footprint) then
+   if players[pindex].building_footprint ~= nil and rendering.is_valid(players[pindex].building_footprint) then
       rendering.set_color(players[pindex].building_footprint,p.color)
    end
 end
