@@ -4743,11 +4743,11 @@ script.on_event(defines.events.on_player_changed_position,function(event)
    end
    if players[pindex].walk == 2 then
       players[pindex].position = p.position
-      local pos = center_of_tile(p.position)
+      local pos = (p.position)
       if p.walking_state.direction ~= players[pindex].player_direction and players[pindex].cursor == false then 
          --Directions mismatch. Turn to new direction --turn (Note, this code handles diagonal turns and other direction changes)
          players[pindex].player_direction = p.character.direction
-         local new_pos = center_of_tile(offset_position(pos,players[pindex].player_direction,1))
+         local new_pos = (offset_position(pos,players[pindex].player_direction,1))
          players[pindex].cursor_pos = new_pos           
 
          --Build lock building + rotate belts in hand unless cursor mode
@@ -4759,7 +4759,7 @@ script.on_event(defines.events.on_player_changed_position,function(event)
          end
       elseif players[pindex].cursor == false then 
          --Directions same: Walk straight
-         local new_pos = center_of_tile(offset_position(pos,players[pindex].player_direction,1))
+         local new_pos = (offset_position(pos,players[pindex].player_direction,1))
          players[pindex].cursor_pos = new_pos
          if not players[pindex].vanilla_mode then
             target(pindex) 
@@ -5849,8 +5849,7 @@ function move(direction,pindex)
          end
          players[pindex].position = new_pos
          players[pindex].cursor_pos = offset_position(players[pindex].position, direction,1)
-         cursor_highlight(pindex, nil, nil)
-         sync_build_cursor_graphics(pindex)
+
          if players[pindex].tile.previous ~= nil
             and players[pindex].tile.previous.valid
             and players[pindex].tile.previous.type == "transport-belt"
@@ -5870,9 +5869,8 @@ function move(direction,pindex)
          local stack = first_player.cursor_stack
          if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then 
             sync_build_cursor_graphics(pindex)
-         else
-            cursor_highlight(pindex, nil, nil)
          end
+         cursor_highlight(pindex, nil, nil)
          
          if players[pindex].build_lock then
             build_item_in_hand(pindex, -2)
@@ -5896,9 +5894,8 @@ function move(direction,pindex)
       local stack = first_player.cursor_stack
       if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then 
          sync_build_cursor_graphics(pindex)
-      else
-         cursor_highlight(pindex, nil, nil)
       end
+      cursor_highlight(pindex, nil, nil)
       
       if game.get_player(pindex).driving then
          target(pindex)
@@ -11172,7 +11169,7 @@ function sync_build_cursor_graphics(pindex)
       --Redraw arrow
       if dir_indicator ~= nil then rendering.destroy(player.building_dir_arrow) end
       player.building_dir_arrow = rendering.draw_sprite{sprite = "fluid.crude-oil", tint = {r = 0.25, b = 0.25, g = 1.0, a = 0.75}, render_layer = 254, 
-         surface = game.get_player(pindex).surface, players = nil, target = player.cursor_pos, orientation = (dir/dirs.east/dirs.south)}
+         surface = game.get_player(pindex).surface, players = nil, target = center_of_tile(player.cursor_pos), orientation = (dir/dirs.east/dirs.south)}
       dir_indicator = player.building_dir_arrow
       rendering.set_visible(dir_indicator,true)
       if players[pindex].hide_cursor or stack.name == "locomotive" or stack.name == "cargo-wagon" or stack.name == "fluid-wagon" or stack.name == "artillery-wagon" then
