@@ -5612,6 +5612,8 @@ player.force.research_all_technologies()
    --Starting inventory boost for easy difficulty 
    local player = game.get_player(pindex).cutscene_character or game.get_player(pindex).character
    --player.insert{name = "rocket-fuel", count = 20}
+   
+   players[pindex].building_direction = dirs.north--
 end
 
 script.on_event(defines.events.on_player_joined_game,function(event)
@@ -9146,7 +9148,7 @@ function into_lookup(array)
     return lookup
 end
 
-script.on_event("rotate-building", function(event)--todo**** cursor preview rotation sync with input keys
+script.on_event("rotate-building", function(event)--todo**** reverse rotation handler 
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -9165,6 +9167,9 @@ script.on_event("rotate-building", function(event)--todo**** cursor preview rota
                   build_dir = build_dir % (2 * dirs.south)
                end
             end
+            players[pindex].building_direction = build_dir
+            sync_build_cursor_graphics(pindex)
+            
             if build_dir == dirs.north then
                printout("North", pindex)
             elseif build_dir == dirs.east then
@@ -9211,7 +9216,6 @@ script.on_event("rotate-building", function(event)--todo**** cursor preview rota
          printout("Cannot rotate", pindex)
       end
    end
-   sync_build_cursor_graphics(pindex)
 end)
 
 script.on_event("inventory-read-weapons-data", function(event)
@@ -9721,6 +9725,7 @@ script.on_event("recalibrate-zoom",function(event)
       return
    end
    fix_zoom(pindex)
+   sync_build_cursor_graphics(pindex)
 end)
 
 script.on_event("read-hand",function(event)
@@ -12141,11 +12146,10 @@ function reset_bump_stats(pindex)
 end
 
 function all_ents_are_walkable(pos)
-   local result = true
-   local ents = game.surface.find_entities_filtered{position = center_of_tile(pos), radius = 0.4, invert = true, type = {"resource", "transport-belt", "underground-belt", "splitter", "item-entity", "entity-ghost", "heat-pipe", "pipe", "pipe-to-ground", "character", "rail-signal", "flying-text", "highlight-box" }}--****
+   local ents = game.surfaces[1].find_entities_filtered{position = center_of_tile(pos), radius = 0.4, invert = true, type = {"resource", "transport-belt", "underground-belt", "splitter", "item-entity", "entity-ghost", "heat-pipe", "pipe", "pipe-to-ground", "character", "rail-signal", "flying-text", "highlight-box" }}
    for i, ent in ipairs(ents) do 
-      result = false 
+      return false
    end
-   return result
+   return true
 end 
 
