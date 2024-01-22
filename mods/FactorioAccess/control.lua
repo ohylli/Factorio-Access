@@ -5783,6 +5783,7 @@ function move_characters(event)
             end
          end
          if not walk then
+            player.player.walking_state = {walking = true, direction= player.player_direction}
             player.player.walking_state = {walking = false}
          end
       elseif player.walk == 2 and not player.cursor and not player.in_menu then
@@ -5991,8 +5992,6 @@ function cursor_mode_move(direction, pindex, single_only)
    
    --Update player direction to face the cursor (after the vanilla move event that turns the character too, and only ends when the movement key is released)
    turn_to_cursor_direction_precise(pindex)
-   schedule(30, "turn_to_cursor_direction_precise", pindex)
-   schedule(60, "turn_to_cursor_direction_precise", pindex)
 end
 
 --Makes the character face the cursor but can be overwriten by vanilla move keys.
@@ -6019,7 +6018,6 @@ function turn_to_cursor_direction_precise(pindex)
    local p = game.get_player(pindex)
    local pex = players[pindex]
    local dir = get_balanced_direction_of_that_from_this(pex.cursor_pos, p.position) 
-   p.character.direction = dir
    pex.player_direction = dir
    --game.print("set precise pindex_dir: " .. direction_lookup(pex.player_direction))--
    --game.print("set precise charct_dir: " .. direction_lookup(p.character.direction))--
