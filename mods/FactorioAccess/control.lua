@@ -9176,7 +9176,7 @@ script.on_event("rotate-building", function(event)--todo**** reverse rotation ha
             end
             players[pindex].lag_building_direction = false
          else
-            printout(stack.name .. " cannot be rotated.", pindex)
+            printout(stack.name .. " never needs rotating.", pindex)
          end
       elseif ent then
          --Rotate selected entity 
@@ -9205,7 +9205,7 @@ script.on_event("rotate-building", function(event)--todo**** reverse rotation ha
                printout("Not a direction...", pindex)
             end
          else
-            printout(ent.name .. " cannot be rotated.", pindex)
+            printout(ent.name .. " never needs rotating.", pindex)
          end               
       else
          printout("Cannot rotate", pindex)
@@ -9396,7 +9396,7 @@ script.on_event("item-info-last-indexed", function(event)
    end
    local ent = players[pindex].last_indexed_ent
    if ent == nil or not ent.valid then
-      printout("Cannot find the scanned item, note that most resources need to be examined from up close",pindex)--laterdo find a workaround for aggregate ents 
+      printout("No description, note that most resources need to be examined from up close",pindex)--laterdo find a workaround for aggregate ents 
       return
    end
    local str = ent.localised_description
@@ -11916,6 +11916,9 @@ function check_and_play_bump_alert_sound(pindex,this_tick)
       return 
    end
    local p = game.get_player(pindex)
+   if p == nil or p.character == nil then
+      return
+   end
    local face_dir = p.character.direction
    
    --Initialize 
