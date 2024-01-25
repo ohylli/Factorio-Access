@@ -10358,6 +10358,22 @@ script.on_event("help-back", function(event)
    tutorial_menu_back(pindex)
 end)
 
+script.on_event("help-chapter-next", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   tutorial_menu_chapter_next(pindex)
+end)
+
+script.on_event("help-chapter-back", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   tutorial_menu_chapter_back(pindex)
+end)
+
 script.on_event("help-toggle-header", function(event)
    local pindex = event.player_index
    if not check_for_player(pindex) then
