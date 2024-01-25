@@ -9527,7 +9527,7 @@ end)
 script.on_event(defines.events.on_player_created, function(event)
    initialize(game.players[event.player_index])
    if not game.is_multiplayer() then
-      printout("Press tab to continue.", 0)
+      printout("Press 'TAB' to continue, and later you can press 'H' for help", 0)--***maybe todo repeated alert every minute until the player presses.
    end
 end)
 
