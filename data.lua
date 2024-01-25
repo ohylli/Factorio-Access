@@ -1384,8 +1384,29 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "help-key",
+    name = "help-read",
     key_sequence = "H",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "help-next",
+    key_sequence = "SHIFT + H",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "help-back",
+    key_sequence = "CONTROL + H",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "help-toggle-header",
+    key_sequence = "CONTROL + SHIFT + H",
     consuming = "none"
 },
 

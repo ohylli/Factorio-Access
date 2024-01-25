@@ -10334,12 +10334,36 @@ script.on_event("launch-rocket", function(event)
 end)
 
 --Help key and tutorial system WIP
-script.on_event("help-key", function(event)
+script.on_event("help-read", function(event)
    local pindex = event.player_index
    if not check_for_player(pindex) then
       return
    end
-   printout("Help system coming soon.",pindex)
+   tutorial_menu_current(pindex)
+end)
+
+script.on_event("help-next", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   tutorial_menu_next(pindex)
+end)
+
+script.on_event("help-back", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   tutorial_menu_back(pindex)
+end)
+
+script.on_event("help-toggle-header", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   tutorial_menu_toggle(pindex)
 end)
 
 --**Use this key to test stuff (ALT-G)
