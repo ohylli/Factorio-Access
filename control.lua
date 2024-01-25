@@ -3288,6 +3288,9 @@ end
 
 --Move the mouse cursor to the correct pixel on the screen **todo figure out how to center mouse cursor on tile during smooth walk (the player and the camera are both not tile aligned. The current solution is to teleport the player to the tile center when cursor mode enables)
 function move_mouse_cursor(position,pindex)
+   if players[pindex].vanilla_mode then
+      return
+   end
    local player = players[pindex]
    local pixels = mult_position( sub_position(position, player.position), 32*player.zoom)
    local screen = game.players[pindex].display_resolution
