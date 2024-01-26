@@ -9114,67 +9114,89 @@ function into_lookup(array)
     return lookup
 end
 
-script.on_event("rotate-building", function(event)--todo**** reverse rotation handler 
+script.on_event("rotate-building", function(event)
+   rotate_building_info_read(event, true)
+end)
+
+script.on_event("reverse-rotate-building", function(event)
+   rotate_building_info_read(event, false)
+end)
+
+function rotate_building_info_read(event, forward)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
+   end
+   local mult = 1
+   if forward == false then 
+      mult = -1
    end
    if not(players[pindex].in_menu) then
       local ent = get_selected_ent(pindex)
       local stack = game.get_player(pindex).cursor_stack
       local build_dir = players[pindex].building_direction
       if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then
-         --Rotate cursor if it has an item
          if stack.prototype.place_result.supports_direction then
+            
+            --Update the assumed hand direction
             if not(players[pindex].lag_building_direction) then
                game.get_player(pindex).play_sound{path="Rotate-Hand-Sound"}
-               build_dir = build_dir + dirs.east
-               if build_dir > dirs.northwest then
-                  build_dir = build_dir % (2 * dirs.south)
-               end
+               build_dir = (build_dir + dirs.east * mult) % (2 * dirs.south)
             end
+            
+            --Exceptions
+            if stack.name == "rail" then 
+               --Bug:This misaligns the preview. Clearing the cursor does not work. We need to track rotation offsets to fix it.
+               --It looks like 4 rotations fully invert it and 8 rotations fix it.
+               local rot_offset = players[pindex].cursor_rotation_offset
+               if rot_offset == nil then
+                  rot_offset = mult
+               else
+                  rot_offset = rot_offset + mult
+                  if rot_offset >= 8 then
+                     rot_offset = rot_offset - 8
+                  elseif rot_offset <= -8 then
+                     rot_offset = rot_offset + 8
+                  end
+               end
+               players[pindex].cursor_rotation_offset = rot_offset
+               
+               --Printout warning
+               if rot_offset > 0 then
+                  printout("Warning: rotate " .. rot_offset .. " times backward to re-align cursor", pindex)
+               elseif rot_offset < 0 then
+                  printout("Warning: rotate " .. rot_offset .. " times forward to re-align cursor", pindex)
+               else
+                  printout("Cursor re-aligned", pindex)
+               end               
+               return 
+            end
+            
+            --Display and read the new direction info
             players[pindex].building_direction = build_dir
             sync_build_cursor_graphics(pindex)
-            
-            if build_dir == dirs.north then
-               printout("North", pindex)
-            elseif build_dir == dirs.east then
-               printout("East", pindex)
-            elseif build_dir == dirs.south then
-               printout("South", pindex)
-            elseif build_dir == dirs.west then
-               printout("West", pindex)
-            end
+            printout(direction_lookup(build_dir), pindex)
             players[pindex].lag_building_direction = false
          else
             printout(stack.name .. " never needs rotating.", pindex)
          end
-      elseif ent then
-         --Rotate selected entity 
+      elseif ent and ent.valid then
+         game.get_player(pindex).selected = ent
+         --**laterdo disable ent selection here or maybe globally, as discussed?
          if ent.supports_direction then
-            if not(players[pindex].lag_building_direction) then
-               local T = {
-                  reverse = false,
-                  by_player = event.player_index
-               }
-                  if not(ent.rotate(T)) then
-                     printout("Cannot rotate this object.", pindex)
-                     return
-                  end
-            else
-               players[pindex].lag_building_direction = false
-            end
-            if ent.direction == dirs.north then
-               printout("North", pindex)
-            elseif ent.direction == dirs.east then
-               printout("East", pindex)
-            elseif ent.direction == dirs.south then
-               printout("South", pindex)
-            elseif ent.direction == dirs.west then
-               printout("West", pindex)
-            else
-               printout("Not a direction...", pindex)
-            end
+
+            --Assuming that the vanilla rotate event will now rotate the ent
+            local new_dir = (ent.direction + dirs.east * mult) % (2 * dirs.south)
+            
+            if ent.name == "steam-engine" or ent.name == "steam-turbine" or ent.name == "rail" or ent.name == "straight-rail" or ent.name == "curved-rail" then
+               --Exception: These ents do not rotate
+               new_dir = (new_dir - dirs.east * mult) % (2 * dirs.south)
+            elseif ent.tile_width ~= ent.tile_height or ent.type == "underground-belt" then
+               --Exceptions: None-square ents rotate 2x , while underground belts simply flip instead
+               new_dir = (new_dir + dirs.east * mult) % (2 * dirs.south)
+            end 
+            
+            printout(direction_lookup(new_dir), pindex)
          else
             printout(ent.name .. " never needs rotating.", pindex)
          end               
@@ -9182,7 +9204,7 @@ script.on_event("rotate-building", function(event)--todo**** reverse rotation ha
          printout("Cannot rotate", pindex)
       end
    end
-end)
+end
 
 script.on_event("inventory-read-weapons-data", function(event)
    pindex = event.player_index
