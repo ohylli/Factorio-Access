@@ -54,6 +54,7 @@ access_radar.max_distance_of_sector_revealed = 32 --Default: 14, now scans up to
 access_radar.max_distance_of_nearby_sector_revealed = 2 --Default: 3
 access_radar.rotation_speed = 0.01 --Default: 0.01
 access_radar.tint = ar_tint
+access_radar.minable.result = "access-radar"
 access_radar.pictures.layers[1].tint = ar_tint--grey
 access_radar.pictures.layers[2].tint = ar_tint--grey
 
