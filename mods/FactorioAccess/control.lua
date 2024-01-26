@@ -774,9 +774,9 @@ function ent_info(pindex, ent, description)
          return k1.count > k2.count
       end)
       if #itemtable == 0 then
-         result = result .. " containing nothing "
+         result = result .. " with nothing "
       else
-         result = result .. " containing " .. itemtable[1].name .. " times " .. itemtable[1].count .. ", "
+         result = result .. " with " .. itemtable[1].name .. " times " .. itemtable[1].count .. ", "
          if #itemtable > 1 then
             result = result .. " and " .. itemtable[2].name .. " times " .. itemtable[2].count .. ", "
          end
@@ -797,15 +797,15 @@ function ent_info(pindex, ent, description)
          return k1.count > k2.count
       end)
       if #fluids > 0 and fluids[1].count ~= nil then
-         result = result .. " containing " .. fluids[1].name .. " times " .. math.ceil(fluids[1].count) .. ", "
+         result = result .. " with " .. fluids[1].name --can check amount by opening the ent menu
 		 if #fluids > 1 and fluids[2].count ~= nil then
-            result = result .. " and " .. fluids[2].name .. " times " .. math.ceil(fluids[2].count) .. ", "
+            result = result .. " and " .. fluids[2].name --(this should not happen because it means different fluids mixed!)
 		 end
 		 if #fluids > 2 then
             result = result .. ", and other fluids "
 		 end
       else
-      result = result .. " containing no fluid "
+      result = result .. " with no fluid "
       end
    end
    --Explain the type and content of a transport belt
@@ -962,14 +962,37 @@ function ent_info(pindex, ent, description)
          result = result .. ", not connected " 
       end
    elseif (ent.name  == "pipe") and ent.neighbours ~= nil then
-      result = result .. ", connected to "
-      for i, v in pairs(ent.neighbours) do
-         for i1, v1 in pairs(v) do
-            result = result .. ", " .. math.floor(distance(ent.position, v1.position)) .. " " .. direction(ent.position, v1.position)
+      --List connected neighbors 
+      result = result .. " connects "
+      local con_counter = 0
+      for i, nbrs in pairs(ent.neighbours) do
+         for j, nbr in pairs(nbrs) do
+            local box = nil
+            local f_name = nil 
+            local dir_from_pos = nil
+            box, f_name, dir_from_pos = get_relevant_fluidbox_and_fluid_name(nbr, ent.position, dirs.north)
+            --Extra checks for pipes to ground 
+            if box == nil or f_name == nil then 
+               box, f_name, dir_from_pos = get_relevant_fluidbox_and_fluid_name(nbr, ent.position, dirs.east)
+            end
+            if box == nil or f_name == nil then 
+               box, f_name, dir_from_pos = get_relevant_fluidbox_and_fluid_name(nbr, ent.position, dirs.south)
+            end
+            if box == nil or f_name == nil then 
+               box, f_name, dir_from_pos = get_relevant_fluidbox_and_fluid_name(nbr, ent.position, dirs.west)
+            end
+            if box ~= nil and f_name ~= nil then --"empty" is a name too
+               result = result .. direction_lookup(dir_from_pos) .. ", " 
+               --game.print("found " .. f_name .. " at " .. nbr.name ,{volume_modifier=0})
+               con_counter = con_counter + 1
+            end
          end
       end
+      if con_counter == 0 then
+         result = result .. " nothing"
+      end
    elseif (ent.name == "pipe-to-ground") and ent.neighbours ~= nil then
-      result = result .. ", connected to "
+      result = result .. " connects "
       local connections = ent.fluidbox.get_pipe_connections(1)
       local at_least_one = false
       for i,con in ipairs(connections) do
@@ -979,7 +1002,7 @@ function ent_info(pindex, ent, description)
             if con.connection_type == "underground" then
                result = result .. " via " .. dist - 1 .. " tiles underground, "
             else
-               result = result .. " by " .. dist .. " tiles, "
+               result = result .. " directly "
             end
             result = result .. ", "
             at_least_one = true
@@ -4035,7 +4058,7 @@ function build_preview_checks_info(stack, pindex)
       end
    end
    
-   --For pipes, read the fluids in fluidboxes of surrounding entities, if any. Also warn if there are multiple fluids, hence a mixing error.
+   --For pipes, read the fluids in fluidboxes of surrounding entities, if any. Also warn if there are multiple fluids, hence a mixing error. Pipe preview
    if stack.name == "pipe" then
       rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = pos.x+0 ,y = pos.y-1}, surface = p.surface, time_to_live = 30}
       rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = pos.x+0 ,y = pos.y+1}, surface = p.surface, time_to_live = 30}
@@ -4049,101 +4072,15 @@ function build_preview_checks_info(stack, pindex)
       local relevant_fluid_east  = nil
       local relevant_fluid_south = nil
       local relevant_fluid_west  = nil
+      local box = nil
+      local dir_from_pos = nil
       
-      if ents_north[1] ~= nil and ents_north[1].valid and ents_north[1].fluidbox ~= nil then
-         rendering.draw_circle{color = {1, 1, 0},radius = 0.2,width = 2,target = ents_north[1].position, surface = p.surface, time_to_live = 30} 
-         --Run checks to see if we have any fluidboxes that are relevant
-         for i = 1, #ents_north[1].fluidbox, 1 do
-            --p.print("box " .. i .. ": " .. ents_north[1].fluidbox[i].name)
-            for j, con in ipairs(ents_north[1].fluidbox.get_pipe_connections(i)) do
-               local target_pos = con.target_position 
-               --p.print("new connection at: " .. target_pos.x .. "," .. target_pos.y)
-               rendering.draw_circle{color = {1, 0, 0},radius = 0.2,width = 2,target = target_pos, surface = p.surface, time_to_live = 30}
-               if util.distance(target_pos, pos) < 0.3 and not (ents_north[1].name == "pipe-to-ground" and ents_north[1].direction == dirs.north) then
-                  rendering.draw_circle{color = {0, 1, 0},radius = 0.3,width = 2,target = target_pos, surface = p.surface, time_to_live = 30}
-                  if ents_north[1].fluidbox[i] ~= nil then
-                     relevant_fluid_north = ents_north[1].fluidbox[i].name
-                  elseif ents_north[1].fluidbox.get_locked_fluid(i) ~= nil then
-                     relevant_fluid_north = ents_north[1].fluidbox.get_locked_fluid(i)
-                  else
-                     relevant_fluid_north = "empty pipe"
-                  end
-               end
-            end
-         end
-      end
-      
-      if ents_south[1] ~= nil and ents_south[1].valid and ents_south[1].fluidbox ~= nil then
-         rendering.draw_circle{color = {1, 1, 0},radius = 0.2,width = 2,target = ents_south[1].position, surface = p.surface, time_to_live = 30} 
-         --Run checks to see if we have any fluidboxes that are relevant
-         for i = 1, #ents_south[1].fluidbox, 1 do
-            --p.print("box " .. i .. ": " .. ents_south[1].fluidbox[i].name)
-            for j, con in ipairs(ents_south[1].fluidbox.get_pipe_connections(i)) do
-               local target_pos = con.target_position 
-               --p.print("new connection at: " .. target_pos.x .. "," .. target_pos.y)
-               rendering.draw_circle{color = {1, 0, 0},radius = 0.2,width = 2,target = target_pos, surface = p.surface, time_to_live = 30}
-               if util.distance(target_pos, pos) < 0.3 and not (ents_south[1].name == "pipe-to-ground" and ents_south[1].direction == dirs.south) then
-                  rendering.draw_circle{color = {0, 1, 0},radius = 0.3,width = 2,target = target_pos, surface = p.surface, time_to_live = 30}
-                  if ents_south[1].fluidbox[i] ~= nil then
-                     relevant_fluid_south = ents_south[1].fluidbox[i].name
-                  elseif ents_south[1].fluidbox.get_locked_fluid(i) ~= nil then
-                     relevant_fluid_south = ents_south[1].fluidbox.get_locked_fluid(i)
-                  else
-                     relevant_fluid_south = "empty pipe"
-                  end
-               end
-            end
-         end
-      end
-      
-      if ents_east[1] ~= nil and ents_east[1].valid and ents_east[1].fluidbox ~= nil then
-         rendering.draw_circle{color = {1, 1, 0},radius = 0.2,width = 2,target = ents_east[1].position, surface = p.surface, time_to_live = 30} 
-         --Run checks to see if we have any fluidboxes that are relevant
-         for i = 1, #ents_east[1].fluidbox, 1 do
-            --p.print("box " .. i .. ": " .. ents_east[1].fluidbox[i].name)
-            for j, con in ipairs(ents_east[1].fluidbox.get_pipe_connections(i)) do
-               local target_pos = con.target_position 
-               --p.print("new connection at: " .. target_pos.x .. "," .. target_pos.y)
-               rendering.draw_circle{color = {1, 0, 0},radius = 0.2,width = 2,target = target_pos, surface = p.surface, time_to_live = 30}
-               if util.distance(target_pos, pos) < 0.3 and not (ents_east[1].name == "pipe-to-ground" and ents_east[1].direction == dirs.east) then
-                  rendering.draw_circle{color = {0, 1, 0},radius = 0.3,width = 2,target = target_pos, surface = p.surface, time_to_live = 30}
-                  if ents_east[1].fluidbox[i] ~= nil then
-                     relevant_fluid_east = ents_east[1].fluidbox[i].name
-                  elseif ents_east[1].fluidbox.get_locked_fluid(i) ~= nil then
-                     relevant_fluid_east = ents_east[1].fluidbox.get_locked_fluid(i)
-                  else
-                     relevant_fluid_east = "empty pipe"
-                  end
-               end
-            end
-         end
-      end
-      
-      if ents_west[1] ~= nil and ents_west[1].valid and ents_west[1].fluidbox ~= nil then
-         rendering.draw_circle{color = {1, 1, 0},radius = 0.2,width = 2,target = ents_west[1].position, surface = p.surface, time_to_live = 30} 
-         --Run checks to see if we have any fluidboxes that are relevant
-         for i = 1, #ents_west[1].fluidbox, 1 do
-            --p.print("box " .. i .. ": " .. ents_west[1].fluidbox[i].name)
-            for j, con in ipairs(ents_west[1].fluidbox.get_pipe_connections(i)) do
-               local target_pos = con.target_position 
-               --p.print("new connection at: " .. target_pos.x .. "," .. target_pos.y)
-               rendering.draw_circle{color = {1, 0, 0},radius = 0.2,width = 2,target = target_pos, surface = p.surface, time_to_live = 30}
-               if util.distance(target_pos, pos) < 0.3 and not (ents_west[1].name == "pipe-to-ground" and ents_west[1].direction == dirs.west) then
-                  rendering.draw_circle{color = {0, 1, 0},radius = 0.3,width = 2,target = target_pos, surface = p.surface, time_to_live = 30}
-                  if ents_west[1].fluidbox[i] ~= nil then
-                     relevant_fluid_west = ents_west[1].fluidbox[i].name
-                  elseif ents_west[1].fluidbox.get_locked_fluid(i) ~= nil then
-                     relevant_fluid_west = ents_west[1].fluidbox.get_locked_fluid(i)
-                  else
-                     relevant_fluid_west = "empty pipe"
-                  end
-               end
-            end
-         end
-      end
-      
-      
-      --Assuming empty fluidboxes return nil, we need to check if all none-nil boxes are equal...
+      box, relevant_fluid_north, dir_from_pos = get_relevant_fluidbox_and_fluid_name(ents_north[1], pos, dirs.north)
+      box, relevant_fluid_south, dir_from_pos = get_relevant_fluidbox_and_fluid_name(ents_south[1], pos, dirs.south)
+      box, relevant_fluid_east, dir_from_pos  = get_relevant_fluidbox_and_fluid_name(ents_east[1], pos, dirs.east)
+      box, relevant_fluid_west, dir_from_pos  = get_relevant_fluidbox_and_fluid_name(ents_west[1], pos, dirs.west)
+ 
+      --Prepare result string 
       if relevant_fluid_north ~= nil or relevant_fluid_east ~= nil or relevant_fluid_south ~= nil or relevant_fluid_west ~= nil then
          local count = 0
          result = result .. ", pipe connects to "
@@ -4165,6 +4102,7 @@ function build_preview_checks_info(stack, pindex)
             count = count + 1
          end
          
+         --Check which fluids are empty or equal (and thus not mixing invalidly). "Empty" counts too because sometimes a pipe itself is empty but it is still part of a network...
          if relevant_fluid_north ~= nil and (relevant_fluid_north == relevant_fluid_south or relevant_fluid_north == relevant_fluid_east or relevant_fluid_north == relevant_fluid_west) then
             count = count - 1
          end
@@ -4339,6 +4277,36 @@ function build_preview_checks_info(stack, pindex)
    return result
 end
 
+function get_relevant_fluidbox_and_fluid_name(building, pos, dir_from_pos)
+   local relevant_box = nil
+   local relevant_fluid_name = nil
+   if building ~= nil and building.valid and building.fluidbox ~= nil then
+      rendering.draw_circle{color = {1, 1, 0},radius = 0.2,width = 2,target = building.position, surface = building.surface, time_to_live = 30} 
+      --Run checks to see if we have any fluidboxes that are relevant
+      for i = 1, #building.fluidbox, 1 do
+         --game.print("box " .. i .. ": " .. building.fluidbox[i].name)
+         for j, con in ipairs(building.fluidbox.get_pipe_connections(i)) do
+            local target_pos = con.target_position 
+            local con_pos = con.position
+            --game.print("new connection at: " .. target_pos.x .. "," .. target_pos.y)
+            rendering.draw_circle{color = {1, 0, 0},radius = 0.2,width = 2,target = target_pos, surface = building.surface, time_to_live = 30}
+            if util.distance(target_pos, pos) < 0.3 and get_direction_of_that_from_this(con_pos,pos) == dir_from_pos 
+            and not (building.name == "pipe-to-ground" and building.direction == dir_from_pos) then--Note: We correctly ignore the backside of a pipe to ground.
+               rendering.draw_circle{color = {0, 1, 0},radius = 0.3,width = 2,target = target_pos, surface = building.surface, time_to_live = 30}
+               relevant_box = building.fluidbox[i]
+               if building.fluidbox[i] ~= nil then
+                  relevant_fluid_name = building.fluidbox[i].name
+               elseif building.fluidbox.get_locked_fluid(i) ~= nil then
+                  relevant_fluid_name = building.fluidbox.get_locked_fluid(i)
+               else
+                  relevant_fluid_name = "empty pipe"
+               end
+            end
+         end
+      end
+   end
+   return relevant_box, relevant_fluid_name, dir_from_pos
+end
 
 --Read the current co-ordinates of the cursor on the map or in a menu. For crafting recipe and technology menus, it reads the ingredients / requirements instead.
 function read_coords(pindex, start_phrase)
