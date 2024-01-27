@@ -1196,6 +1196,46 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "copy-entity-settings-info",
+    key_sequence = "SHIFT + RIGHTBRACKET",
+    linked_game_control = "copy-entity-settings",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "paste-entity-settings-info",
+    key_sequence = "SHIFT + LEFTBRACKET",
+    linked_game_control = "paste-entity-settings",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "fast-entity-transfer-info",
+    key_sequence = "SHIFT + LEFTBRACKET",
+    linked_game_control = "fast-entity-transfer",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "fast-entity-split-info",
+    key_sequence = "SHIFT + RIGHTBRACKET",
+    linked_game_control = "fast-entity-split",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "drop-cursor-info",
+    key_sequence = "Z",
+    linked_game_control = "drop-cursor",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "read-hand",
     key_sequence = "SHIFT + Q",
     consuming = "none"
