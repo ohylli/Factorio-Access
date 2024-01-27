@@ -391,6 +391,9 @@ end
 --Locks the cursor to the nearest enemy within 50 tiles. Also plays a sound if the enemy is within range of the gun in hand.
 function aim_gun_at_nearest_enemy(pindex,enemy_in)
    local p = game.get_player(pindex)
+   if p == nil or p.character == nil or p.character.valid == false then
+      return
+   end
    local gun_index  = p.character.selected_gun_index
    local guns_inv   = p.get_inventory(defines.inventory.character_guns)
    local ammo_inv   = game.get_player(pindex).get_inventory(defines.inventory.character_ammo)
