@@ -3229,7 +3229,7 @@ function locate_hand_in_building_output_inventory(pindex)
       --Hand is empty
       return
    end
-   if players[pindex].in_menu and players[pindex].menu == "building" and pb.sectors and pb.sectors[pb.sector] and pb.sectors[pb.sector].name == "Output" then
+   if players[pindex].in_menu and (players[pindex].menu == "building" or players[pindex].menu == "vehicle") and pb.sectors and pb.sectors[pb.sector] and pb.sectors[pb.sector].name == "Output" then
       inv = p.opened.get_output_inventory()
    else
       --Unsupported menu type
@@ -4327,7 +4327,7 @@ function read_coords(pindex, start_phrase)
    local result = start_phrase
    local ent = players[pindex].building.ent
    local offset = 0
-   if players[pindex].menu == "building" and players[pindex].building.recipe_list ~= nil then
+   if (players[pindex].menu == "building" or players[pindex].menu == "vehicle") and players[pindex].building.recipe_list ~= nil then
       offset = 1
    end
    if not(players[pindex].in_menu) or players[pindex].menu == "structure-travel" or players[pindex].menu == "travel" then
@@ -4394,7 +4394,7 @@ function read_coords(pindex, start_phrase)
          end
          printout(result,pindex)
       end
-   elseif players[pindex].menu == "inventory" or (players[pindex].menu == "building" and players[pindex].building.sector > offset + #players[pindex].building.sectors) then
+   elseif players[pindex].menu == "inventory" or ((players[pindex].menu == "building" or players[pindex].menu == "vehicle") and players[pindex].building.sector > offset + #players[pindex].building.sectors) then
       --Give slot coords (player inventory)
       local x = players[pindex].inventory.index %10
       local y = math.floor(players[pindex].inventory.index/10) + 1
@@ -4403,7 +4403,7 @@ function read_coords(pindex, start_phrase)
          y = y - 1
       end
       printout(result .. x .. ", " .. y, pindex)
-   elseif players[pindex].menu == "building" and players[pindex].building.recipe_selection == false then
+   elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") and players[pindex].building.recipe_selection == false then
       --Give slot coords (chest/building inventory)
       local x = -1 --Col number
       local y = -1 --Row number
@@ -4462,7 +4462,7 @@ function read_coords(pindex, start_phrase)
          printout(result, pindex)
       end
    end
-   if players[pindex].menu == "building" and players[pindex].building.recipe_selection then
+   if (players[pindex].menu == "building" or players[pindex].menu == "vehicle") and players[pindex].building.recipe_selection then
       --Read recipe ingredients / products (building recipe selection)
       local recipe = players[pindex].building.recipe_list[players[pindex].building.category][players[pindex].building.index]
       result = result .. "Ingredients: "
@@ -4850,7 +4850,7 @@ function menu_cursor_up(pindex)
       load_crafting_queue(pindex)
       players[pindex].crafting_queue.index = 1
       read_crafting_queue(pindex)
-   elseif players[pindex].menu == "building" then
+   elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then
       --Move one row up in a building inventory of some kind
       if players[pindex].building.sector <= #players[pindex].building.sectors then
          --Most building sectors, eg. chest rows
@@ -5058,7 +5058,7 @@ function menu_cursor_down(pindex)
       load_crafting_queue(pindex)
       players[pindex].crafting_queue.index = players[pindex].crafting_queue.max
       read_crafting_queue(pindex)
-   elseif players[pindex].menu == "building" then
+   elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then
       --Move one row down in a building inventory of some kind
       if players[pindex].building.sector <= #players[pindex].building.sectors then
          --Most building sectors, eg. chest rows
@@ -5268,7 +5268,7 @@ function menu_cursor_left(pindex)
          players[pindex].crafting_queue.index = players[pindex].crafting_queue.index - 1
       end
       read_crafting_queue(pindex)
-   elseif players[pindex].menu == "building" then
+   elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then
       --Move along a row in a building inventory
       if players[pindex].building.sector <= #players[pindex].building.sectors then
          --Most building sectors, e.g. chest rows
@@ -5410,7 +5410,7 @@ function menu_cursor_right(pindex)
          players[pindex].crafting_queue.index = players[pindex].crafting_queue.index + 1
       end
       read_crafting_queue(pindex)
-   elseif players[pindex].menu == "building" then
+   elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then
       --Move along a row in a building inventory
       if players[pindex].building.sector <= #players[pindex].building.sectors then
          --Most building sectors, e.g. chest inventories
@@ -5708,7 +5708,7 @@ function update_menu_visuals()
          elseif player.menu == "belt" then
             update_overhead_sprite("item.transport-belt",2,1.25,pindex)
             update_custom_GUI_sprite(nil,1,pindex)
-         elseif player.menu == "building" then
+         elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then
             if game.get_player(pindex).opened == nil then
                --Open building menu with no GUI
                update_overhead_sprite("utility.search_white",2,1.25,pindex)
@@ -6232,7 +6232,7 @@ script.on_event("increase-inventory-bar-by-1", function(event)
    if not check_for_player(pindex) then
       return
    end
-   if players[pindex].in_menu and players[pindex].menu == "building" then 
+   if players[pindex].in_menu and (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then 
       --Chest bar setting: Increase
 	  local ent = get_selected_ent(pindex)
 	  local result = increment_inventory_bar(ent, 1)
@@ -6245,7 +6245,7 @@ script.on_event("increase-inventory-bar-by-5", function(event)
    if not check_for_player(pindex) then
       return
    end
-   if players[pindex].in_menu and players[pindex].menu == "building" then 
+   if players[pindex].in_menu and (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then 
       --Chest bar setting: Increase
 	  local ent = get_selected_ent(pindex)
 	  local result = increment_inventory_bar(ent, 1)
@@ -6258,7 +6258,7 @@ script.on_event("increase-inventory-bar-by-100", function(event)
    if not check_for_player(pindex) then
       return
    end
-   if players[pindex].in_menu and players[pindex].menu == "building" then 
+   if players[pindex].in_menu and (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then 
       --Chest bar setting: Increase
 	  local ent = get_selected_ent(pindex)
 	  local result = increment_inventory_bar(ent, 100)
@@ -6271,7 +6271,7 @@ script.on_event("decrease-inventory-bar-by-1", function(event)
    if not check_for_player(pindex) then
       return
    end
-   if players[pindex].in_menu and players[pindex].menu == "building" then 
+   if players[pindex].in_menu and (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then 
       --Chest bar setting: Decrease
 	  local ent = get_selected_ent(pindex)
 	  local result = increment_inventory_bar(ent, -1)
@@ -6284,7 +6284,7 @@ script.on_event("decrease-inventory-bar-by-5", function(event)
    if not check_for_player(pindex) then
       return
    end
-   if players[pindex].in_menu and players[pindex].menu == "building" then 
+   if players[pindex].in_menu and (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then 
       --Chest bar setting: Decrease
 	  local ent = get_selected_ent(pindex)
 	  local result = increment_inventory_bar(ent, -5)
@@ -6297,7 +6297,7 @@ script.on_event("decrease-inventory-bar-by-100", function(event)
    if not check_for_player(pindex) then
       return
    end
-   if players[pindex].in_menu and players[pindex].menu == "building" then 
+   if players[pindex].in_menu and (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then 
       --Chest bar setting: Decrease
 	  local ent = get_selected_ent(pindex)
 	  local result = increment_inventory_bar(ent, -100)
@@ -6982,7 +6982,7 @@ script.on_event("read-menu-name", function(event)--read_menu_name
       menu_name = "no menu"
    elseif players[pindex].menu ~= nil and players[pindex].menu ~= "" then
       menu_name = players[pindex].menu
-      if players[pindex].menu == "building" then
+      if (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then
          --Name the building
          local pb = players[pindex].building 
          menu_name = menu_name .. " " .. pb.ent.name
@@ -7016,7 +7016,7 @@ script.on_event(quickbar_slots, function(event)
    if not check_for_player(pindex) then
       return
    end
-   if players[pindex].menu == "inventory" or players[pindex].menu == "none" or players[pindex].menu == "building" then
+   if players[pindex].menu == "inventory" or players[pindex].menu == "none" or (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then
       local num=tonumber(string.sub(event.input_name,-1))
       if num == 0 then
          num = 10
@@ -7030,7 +7030,7 @@ script.on_event(set_quickbar_names,function(event)--all 10 quickbar setting even
    if not check_for_player(pindex) then
       return
    end
-   if players[pindex].menu == "inventory" or players[pindex].menu == "none" or players[pindex].menu == "building" then
+   if players[pindex].menu == "inventory" or players[pindex].menu == "none" or (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then
       local num=tonumber(string.sub(event.input_name,-1))
       if num == 0 then
          num = 10
@@ -7110,7 +7110,7 @@ script.on_event("switch-menu-or-gun", function(event)
    end
    if players[pindex].in_menu and players[pindex].menu ~= "prompt" then
       game.get_player(pindex).play_sound{path="Change-Menu-Tab-Sound"}
-      if players[pindex].menu == "building" then
+      if (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then
          players[pindex].building.index = 1
          players[pindex].building.category = 1
          players[pindex].building.recipe_selection = false
@@ -7234,7 +7234,7 @@ script.on_event("reverse-switch-menu-or-gun", function(event)
    end
    if players[pindex].in_menu and players[pindex].menu ~= "prompt" then
       game.get_player(pindex).play_sound{path="Change-Menu-Tab-Sound"}
-      if players[pindex].menu == "building" then
+      if (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then
          players[pindex].building.category = 1
          players[pindex].building.recipe_selection = false
          players[pindex].building.index = 1
@@ -7690,7 +7690,7 @@ script.on_event("click-menu", function(event)
             read_crafting_queue(pindex, "cancelled 1, ")
          end
          
-      elseif players[pindex].menu == "building" then
+      elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then
          local sectors_i = players[pindex].building.sectors[players[pindex].building.sector]
          if players[pindex].building.sector <= #players[pindex].building.sectors and #sectors_i.inventory > 0  then
             if sectors_i.name == "Fluid" then
@@ -8088,7 +8088,7 @@ function clicked_on_entity(ent,pindex)
    elseif not ent.valid then
       --Invalid entity clicked
       game.get_player(pindex).print("Invalid entity clicked",{volume_modifier=0})
-   elseif ent.train ~= nil then
+   elseif ent.name == "locomotive" then
       --For a rail vehicle, open train menu
       train_menu_open(pindex)
    elseif ent.name == "train-stop" then
@@ -8100,6 +8100,8 @@ function clicked_on_entity(ent,pindex)
    elseif ent.operable and ent.prototype.is_building then
       --If checking an operable building, open its menu
       open_operable_building(ent,pindex)
+   elseif ent.type == "car" or ent.type == "spider-vehicle" or ent.train ~= nil then
+      open_operable_vehicle(ent,pindex)
    elseif ent.operable then
       printout("No menu for " .. ent.name,pindex)
    else
@@ -8297,11 +8299,11 @@ function open_operable_building(ent,pindex)--open_building
 end
 
 function open_operable_vehicle(ent,pindex)--open_vehicle
-   if ent.operable and ent.prototype.is_building then
+   if ent.valid and ent.operable then
       --Check if within reach
       if util.distance(game.get_player(pindex).position, ent.position) > game.get_player(pindex).reach_distance then
          game.get_player(pindex).play_sound{path = "utility/cannot_build"}
-         printout("Building is out of player reach",pindex)
+         printout("Vehicle is out of player reach",pindex)
          return
       end
       --Open GUI if not already
@@ -8344,17 +8346,32 @@ function open_operable_vehicle(ent,pindex)--open_vehicle
             inventory = ent.get_burnt_result_inventory()})
       end
       
-      if ent.name == "cargo-wagon" then--***disable train menu activation
-         if ent.get_inventory(invs.cargo_wagon) ~= nil and #ent.get_inventory(invs.cargo_wagon) > 0 then
+      --Special inventories
+      local invs = defines.inventory
+      if ent.type == "car" then
+         --Trunk = Output, Fuel = Fuel
+         if ent.get_inventory(invs.car_ammo) ~= nil and #ent.get_inventory(invs.car_ammo) > 0 then
+            table.insert(players[pindex].building.sectors, {
+               name = "Ammo",
+               inventory = ent.get_inventory(invs.car_ammo)})
+         end
+      elseif ent.type == "spider-vehicle" then
+         if ent.get_inventory(invs.spider_trunk) ~= nil and #ent.get_inventory(invs.spider_trunk) > 0 then
             table.insert(players[pindex].building.sectors, {
                name = "Output",
-               inventory = ent.get_inventory(invs.cargo_wagon)})
+               inventory = ent.get_inventory(invs.spider_trunk)})
          end
-      elseif ent.type == "car" then
-         --*** todo fuel, ammo, trunk, tank ammo types test 
+         if ent.get_inventory(invs.spider_trash) ~= nil and #ent.get_inventory(invs.spider_trash) > 0 then
+            table.insert(players[pindex].building.sectors, {
+               name = "Trash",
+               inventory = ent.get_inventory(invs.spider_trash)})
+         end
+         if ent.get_inventory(invs.spider_ammo) ~= nil and #ent.get_inventory(invs.spider_ammo) > 0 then
+            table.insert(players[pindex].building.sectors, {
+               name = "Ammo",
+               inventory = ent.get_inventory(invs.spider_ammo)})
+         end
       end
-      --***spidertrons, artillery wagons (?)
-      
 
       for i1=#players[pindex].building.sectors, 2, -1 do
          for i2 = i1-1, 1, -1 do
@@ -8367,7 +8384,7 @@ function open_operable_vehicle(ent,pindex)--open_vehicle
       if #players[pindex].building.sectors > 0 then
          players[pindex].building.ent = ent
          players[pindex].in_menu = true
-         players[pindex].menu = "building"--***laterdo maybe "vehicle" but not needed
+         players[pindex].menu = "vehicle"
          players[pindex].move_queue = {}
          players[pindex].inventory.index = 1
          players[pindex].building.index = 1
@@ -8693,7 +8710,7 @@ script.on_event("transfer-one-stack", function(event)
       return
    end
    if players[pindex].in_menu then
-      if players[pindex].menu == "building" then
+      if (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then
          if players[pindex].building.sector <= #players[pindex].building.sectors and #players[pindex].building.sectors[players[pindex].building.sector].inventory > 0 and players[pindex].building.sectors[players[pindex].building.sector].name ~= "Fluid" then
             --Transfer stack from building to player inventory
 			local stack = players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index]
@@ -8758,7 +8775,7 @@ script.on_event("equip-item", function(event)
       local stack = game.get_player(pindex).get_main_inventory()[players[pindex].inventory.index]
       result = equip_it(stack,pindex)
       
-   elseif players[pindex].menu == "building" then
+   elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then
       --Something will be smart-inserted so do nothing here
       return
    end
@@ -8831,7 +8848,7 @@ script.on_event("transfer-all-stacks", function(event)
    end
 
    if players[pindex].in_menu then
-      if players[pindex].menu == "building" then
+      if (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then
          do_multi_stack_transfer(1,pindex)
       end
    end
@@ -8868,7 +8885,7 @@ script.on_event("transfer-half-of-all-stacks", function(event)
    end
 
    if players[pindex].in_menu then
-      if players[pindex].menu == "building" then
+      if (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then
          do_multi_stack_transfer(0.5,pindex)
       end
    end
@@ -9020,7 +9037,7 @@ script.on_event("menu-clear-filter", function(event)
    local ent = get_selected_ent(pindex)
    local stack = game.get_player(pindex).cursor_stack
    if players[pindex].in_menu then
-      if players[pindex].menu == "building" then
+      if (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then
          local stack = game.get_player(pindex).cursor_stack
          if players[pindex].building.sector <= #players[pindex].building.sectors then
             if stack and stack.valid_for_read and stack.valid and stack.count > 0 then
@@ -9371,7 +9388,7 @@ script.on_event("item-info", function(event)
       return
    end
    local offset = 0
-   if players[pindex].menu == "building" and players[pindex].building.recipe_list ~= nil then
+   if (players[pindex].menu == "building" or players[pindex].menu == "vehicle") and players[pindex].building.recipe_list ~= nil then
       offset = 1
    end
    if not players[pindex].in_menu then
@@ -9386,7 +9403,7 @@ script.on_event("item-info", function(event)
          printout("Nothing selected, use this key to describe an entity or item that you select.", pindex)
       end
    elseif players[pindex].in_menu then
-      if players[pindex].menu == "inventory" or (players[pindex].menu == "building" and players[pindex].building.sector > offset + #players[pindex].building.sectors) then
+      if players[pindex].menu == "inventory" or ((players[pindex].menu == "building" or players[pindex].menu == "vehicle") and players[pindex].building.sector > offset + #players[pindex].building.sectors) then
          local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
          if stack and stack.valid_for_read and stack.valid == true then
             local str = ""
@@ -9444,7 +9461,7 @@ script.on_event("item-info", function(event)
          else
             printout("No description found, menu error", pindex)
          end
-      elseif players[pindex].menu == "building" then 
+      elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then 
          if players[pindex].building.recipe_selection then
             local recipe = players[pindex].building.recipe_list[players[pindex].building.category][players[pindex].building.index]
             if recipe ~= nil and #recipe.products > 0 then
@@ -9848,7 +9865,7 @@ script.on_event("locate-hand-in-inventory",function(event)
       locate_hand_in_player_inventory(pindex)
    elseif players[pindex].menu == "inventory" then
       locate_hand_in_player_inventory(pindex)
-   elseif players[pindex].menu == "building" then
+   elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then--****test vehicles
       locate_hand_in_building_output_inventory(pindex)
    else
       printout("Cannot locate items in this menu", pindex)
@@ -10268,9 +10285,7 @@ script.on_event("set-splitter-filter", function(event)
    end
 
    if players[pindex].in_menu then
-      if players[pindex].menu == "building" then
-         return
-      end
+      return
    else
       --Not in a menu
       local stack = game.get_player(pindex).cursor_stack
@@ -11764,12 +11779,12 @@ function menu_search_get_next(pindex, str, start_phrase_in)
    if players[pindex].menu == "inventory" then
       inv = game.get_player(pindex).get_main_inventory()
       new_index = inventory_find_index_of_next_name_match(inv, search_index, str, pindex)
-   elseif players[pindex].menu == "building" and pb.sectors and pb.sectors[pb.sector] and pb.sectors[pb.sector].name == "Output" then
+   elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") and pb.sectors and pb.sectors[pb.sector] and pb.sectors[pb.sector].name == "Output" then
       inv = game.get_player(pindex).opened.get_output_inventory()
       new_index = inventory_find_index_of_next_name_match(inv, search_index, str, pindex)
    elseif players[pindex].menu == "crafting" then
       new_index, new_index_2 = crafting_find_index_of_next_name_match(str,pindex, search_index, search_index_2, players[pindex].crafting.lua_recipes)
-   elseif players[pindex].menu == "building" and pb.recipe_selection == true then
+   elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") and pb.recipe_selection == true then
       new_index, new_index_2 = crafting_find_index_of_next_name_match(str,pindex, search_index, search_index_2, players[pindex].building.recipe_list)
    elseif players[pindex].menu == "technology" then
       local techs = {} --Reads the selected tech catagory
@@ -11794,7 +11809,7 @@ function menu_search_get_next(pindex, str, start_phrase_in)
       players[pindex].menu_search_index = new_index
       players[pindex].inventory.index = new_index
       read_inventory_slot(pindex, start_phrase)
-   elseif players[pindex].menu == "building" and pb.sectors and pb.sectors[pb.sector] and pb.sectors[pb.sector].name == "Output" then
+   elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") and pb.sectors and pb.sectors[pb.sector] and pb.sectors[pb.sector].name == "Output" then
       players[pindex].menu_search_index = new_index
       players[pindex].building.index = new_index
       read_building_slot(pindex,false)
@@ -11804,7 +11819,7 @@ function menu_search_get_next(pindex, str, start_phrase_in)
       players[pindex].crafting.category = new_index
       players[pindex].crafting.index = new_index_2
       read_crafting_slot(pindex, start_phrase)
-   elseif players[pindex].menu == "building" and players[pindex].building.recipe_selection == true then
+   elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") and players[pindex].building.recipe_selection == true then
       players[pindex].menu_search_index = new_index
       players[pindex].menu_search_index_2 = new_index_2
       players[pindex].building.category = new_index
@@ -11860,7 +11875,7 @@ function menu_search_get_last(pindex,str)
    if players[pindex].menu == "inventory" then
       inv = game.get_player(pindex).get_main_inventory()
       new_index = inventory_find_index_of_last_name_match(inv, search_index, str, pindex)
-   elseif players[pindex].menu == "building" and pb.sectors and pb.sectors[pb.sector] and pb.sectors[pb.sector].name == "Output" then
+   elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") and pb.sectors and pb.sectors[pb.sector] and pb.sectors[pb.sector].name == "Output" then
       inv = game.get_player(pindex).opened.get_output_inventory()
       new_index = inventory_find_index_of_last_name_match(inv, search_index, str, pindex)
    else
@@ -11875,7 +11890,7 @@ function menu_search_get_last(pindex,str)
       players[pindex].menu_search_index = new_index
       players[pindex].inventory.index = new_index
       read_inventory_slot(pindex)
-   elseif players[pindex].menu == "building" and pb.sectors and pb.sectors[pb.sector] and pb.sectors[pb.sector].name == "Output" then
+   elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") and pb.sectors and pb.sectors[pb.sector] and pb.sectors[pb.sector].name == "Output" then
       players[pindex].menu_search_index = new_index
       players[pindex].building.index = new_index
       read_building_slot(pindex,false)
