@@ -571,7 +571,6 @@ end
 
 --The travel part of the structure travel feature.
 function move_cursor_structure(pindex, dir)
-   game.get_player(pindex).game_view_settings.update_entity_selection = true
    local direction = players[pindex].structure_travel.direction
    local adjusted = {}
    adjusted[0] = "north"
@@ -3781,7 +3780,7 @@ function toggle_cursor(pindex)
    if not players[pindex].cursor and not players[pindex].hide_cursor then
       players[pindex].cursor = true
       players[pindex].build_lock = false
-      
+            
       --Teleport to the center of the nearest tile to align
       local can_port = game.get_player(pindex).surface.can_place_entity{name = "character", position = center_of_tile(game.get_player(pindex).position)}
       local ents = game.get_player(pindex).surface.find_entities_filtered{position = center_of_tile(game.get_player(pindex).position), radius = 0.1, type = {"character"}, invert = true}
@@ -3796,12 +3795,10 @@ function toggle_cursor(pindex)
       players[pindex].position = game.get_player(pindex).position
       players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos)
       move_mouse_cursor(players[pindex].cursor_pos,pindex)
-      if not players[pindex].vanilla_mode then game.get_player(pindex).game_view_settings.update_entity_selection = false end
       read_tile(pindex, "Cursor mode enabled, ")
    else
       --printout("Cursor mode disabled", pindex)
       players[pindex].cursor = false
-      game.get_player(pindex).game_view_settings.update_entity_selection = true
       players[pindex].cursor_pos = offset_position(players[pindex].position,players[pindex].player_direction,1)
       players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos)
       move_mouse_cursor(players[pindex].cursor_pos,pindex)
@@ -3876,10 +3873,7 @@ function read_tile(pindex, start_text)
    else--laterdo tackle the issue here where entities such as tree stumps block preview info 
       result = result .. ent_info(pindex, ent)
       cursor_highlight(pindex, nil, nil)
-      if game.get_player(pindex).game_view_settings.update_entity_selection == false then
-         game.get_player(pindex).game_view_settings.update_entity_selection = true--imperfect fix here for the cursor highlight not updating
-         cursor_highlight(pindex, ent, nil)
-      end
+
       --game.get_player(pindex).print(result)--
       players[pindex].tile.previous = ent
    end
@@ -5740,8 +5734,12 @@ end
 
 script.on_event(defines.events.on_tick,on_initial_joining_tick)
 
+--Called for every player on every tick
 function move_characters(event)
    for pindex, player in pairs(players) do
+      if player.vanilla_mode == true then
+         player.player.game_view_settings.update_entity_selection = true
+      end
       if player.walk ~= 2 or player.cursor or player.in_menu then
          local walk = false
          while #player.move_queue > 0 do
@@ -5758,7 +5756,6 @@ function move_characters(event)
             end
             
             if walk then
-               game.get_player(pindex).game_view_settings.update_entity_selection = true
                break
             else
                table.remove(player.move_queue,1)
@@ -5768,8 +5765,6 @@ function move_characters(event)
             player.player.walking_state = {walking = true, direction= player.player_direction}
             player.player.walking_state = {walking = false}
          end
-      elseif player.walk == 2 and not player.cursor and not player.in_menu then
-         game.get_player(pindex).game_view_settings.update_entity_selection = true
       end
    end
 end
@@ -5916,6 +5911,11 @@ function move_key(direction,event, force_single_tile)
    if not check_for_player(pindex) or players[pindex].menu == "prompt" then
       return 
    end
+   --Stop any enabled mouse entity selection
+   if players[pindex].vanilla_mode ~= true then 
+      game.get_player(pindex).game_view_settings.update_entity_selection = false
+   end
+   
    --Save the key press event
    local pex = players[event.player_index]
    pex.bump.last_dir_key_2nd = pex.bump.last_dir_key_1st
@@ -6115,7 +6115,6 @@ script.on_event("release-cursor", function(event)
    if not check_for_player(pindex) then
       return
    end
-   game.get_player(pindex).game_view_settings.update_entity_selection = true
    printout("cursor released",pindex)
    cursor_highlight(pindex, nil, nil)
 end)
@@ -6932,7 +6931,6 @@ script.on_event("close-menu", function(event)--close_menu, menu closed
 end)
 
 function close_menu_resets(pindex)
-   game.get_player(pindex).game_view_settings.update_entity_selection = true
    if players[pindex].menu == "travel" then
       game.get_player(pindex).gui.screen["travel"].destroy()
       players[pindex].cursor_pos = center_of_tile(players[pindex].position)
@@ -6949,6 +6947,12 @@ function close_menu_resets(pindex)
       roboport_menu_close(pindex)
    end
    
+   --Stop any enabled mouse entity selection
+   if players[pindex].vanilla_mode ~= true then 
+      game.get_player(pindex).game_view_settings.update_entity_selection = false
+   end
+   
+   --Reset menu vars
    players[pindex].in_menu = false
    players[pindex].menu = "none"
    players[pindex].entering_search_term = false
@@ -9680,12 +9684,13 @@ script.on_event(defines.events.on_gui_closed, function(event)
    if not check_for_player(pindex) then
       return
    end
+   
+   --Other resets
    players[pindex].move_queue = {}
    if players[pindex].in_menu == true and players[pindex].menu ~= "prompt"then
       if players[pindex].menu == "inventory" then
          game.get_player(pindex).play_sound{path="Close-Inventory-Sound"}
       elseif players[pindex].menu == "travel" or players[pindex].menu == "structure-travel" and event.element ~= nil then
-         game.get_player(pindex).game_view_settings.update_entity_selection = true
          event.element.destroy()
       end
       players[pindex].in_menu = false
@@ -9865,6 +9870,14 @@ script.on_event("recalibrate-zoom",function(event)
    end
    fix_zoom(pindex)
    sync_build_cursor_graphics(pindex)
+end)
+
+script.on_event("enable-mouse-update-entity-selection",function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   game.get_player(pindex).game_view_settings.update_entity_selection = true
 end)
 
 script.on_event("pipette-tool-info",function(event)
@@ -10055,7 +10068,6 @@ script.on_event("open-fast-travel-menu", function(event)
       return
    end
    if players[pindex].in_menu == false and game.get_player(pindex).driving == false and game.get_player(pindex).opened == nil then
-      game.get_player(pindex).game_view_settings.update_entity_selection = false
       game.get_player(pindex).selected = nil
 
       players[pindex].menu = "travel"
@@ -10168,7 +10180,6 @@ script.on_event("open-structure-travel-menu", function(event)
       return
    end
    if players[pindex].in_menu == false then
-      game.get_player(pindex).game_view_settings.update_entity_selection = false
       game.get_player(pindex).selected = nil
       players[pindex].menu = "structure-travel"
       players[pindex].in_menu = true
@@ -10673,6 +10684,13 @@ script.on_event(defines.events.on_gui_opened, function(event)
    end
    local p = game.get_player(pindex)
    players[pindex].move_queue = {}
+   
+   --Stop any enabled mouse entity selection
+   if players[pindex].vanilla_mode ~= true then 
+      game.get_player(pindex).game_view_settings.update_entity_selection = false
+   end
+   
+   --GUI mismatch checks
    if event.gui_type == defines.gui_type.controller and players[pindex].menu == "none" and event.tick - players[pindex].last_menu_toggle_tick < 5 then
       --If closing another menu toggles the player GUI screen, we close this screen
       p.opened = nil
@@ -11476,10 +11494,8 @@ function sync_build_cursor_graphics(pindex)
             height = temp
          end
          if cursor_position_is_on_screen(pindex) then
-            game.get_player(pindex).game_view_settings.update_entity_selection = true
             move_mouse_cursor({x = (left_top.x + width/2),y = (left_top.y  + height/2)},pindex)
          else 
-            game.get_player(pindex).game_view_settings.update_entity_selection = false
             move_mouse_cursor(players[pindex].position,pindex)
          end
       else
@@ -11556,13 +11572,12 @@ function cursor_highlight(pindex, ent, box_type, skip_mouse_movement)
    
    players[pindex].cursor_ent_highlight_box = h_box
    players[pindex].cursor_tile_highlight_box = h_tile
-   game.get_player(pindex).game_view_settings.update_entity_selection = true
    
    --Recolor cursor boxes if multiplayer
    if game.is_multiplayer() then
       set_cursor_colors_to_player_colors(pindex)
    end
-   
+      
    --Highlight nearby entities by default means (reposition the cursor)
    if players[pindex].vanilla_mode or skip_mouse_movement == true then
       return 
@@ -11574,10 +11589,8 @@ function cursor_highlight(pindex, ent, box_type, skip_mouse_movement)
    
    --Restore the mouse cursor to the player position when it would otherwise be off screen 
    if cursor_position_is_on_screen(pindex) then
-      game.get_player(pindex).game_view_settings.update_entity_selection = true
       move_mouse_cursor(center_of_tile(c_pos),pindex)
    else
-      game.get_player(pindex).game_view_settings.update_entity_selection = false
       move_mouse_cursor(center_of_tile(p.position),pindex)
    end
 end
