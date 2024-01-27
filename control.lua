@@ -2864,6 +2864,10 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
       end
       printout(start_phrase .. players[pindex].building.index .. ", " .. building_sector.inventory[players[pindex].building.index], pindex)
    elseif building_sector.name == "Fluid" then 
+      if players[pindex].building.ent ~= nil and players[pindex].building.ent.valid and players[pindex].building.ent.type == "fluid-turret" and players[pindex].building.index ~= 1then
+         --Prevent fluid turret crashes
+         players[pindex].building.index = 1
+      end
       local box = building_sector.inventory
       local capacity = box.get_capacity(players[pindex].building.index)
       local type = box.get_prototype(players[pindex].building.index).production_type
@@ -2936,7 +2940,8 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
       --Read the fluid found, including amount if any
       printout(start_phrase .. " " .. name, pindex)
    
-   elseif #building_sector.inventory > 0 then
+   elseif #building_sector.inventory > 0 then 
+   --Item inventories 
       local inventory=building_sector.inventory
       local start_phrase = #inventory .. " " .. building_sector.name .. ", "
       if inventory.supports_bar() and #inventory > inventory.get_bar() - 1 then
@@ -2954,6 +2959,9 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
       --Read the slot stack
       stack = building_sector.inventory[players[pindex].building.index]
       if stack and stack.valid_for_read and stack.valid then
+         if stack.health < 1 then
+            start_phrase = start_phrase .. " damaged "
+         end
          printout(start_phrase .. localising.get(stack,pindex) .. " x " .. stack.count, pindex)
       else
          --Read the "empty slot"
@@ -2987,6 +2995,8 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
             result = result .. " reserved for science pack type " .. players[pindex].building.index
          elseif players[pindex].building.ent ~= nil and players[pindex].building.ent.valid and players[pindex].building.ent.type == "roboport" then
             result = result .. " reserved for worker robots " 
+         elseif players[pindex].building.ent ~= nil and players[pindex].building.ent.valid and players[pindex].building.ent.type == "ammo-turret" or players[pindex].building.ent.type == "artillery-turret" then
+            result = result .. " reserved for ammo " 
          end
          printout(start_phrase .. result, pindex)
       end
@@ -3111,6 +3121,9 @@ function read_inventory_slot(pindex, start_phrase_in)
    local start_phrase = start_phrase_in or ""
    local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
    if stack and stack.valid_for_read and stack.valid == true then
+      if stack.health < 1 then
+         start_phrase = start_phrase .. " damaged "
+      end
       printout(start_phrase .. localising.get(stack,pindex) .. " x " .. stack.count .. " " .. stack.prototype.subgroup.name , pindex)
    else
       printout(start_phrase .. "Empty Slot",pindex)
@@ -8171,6 +8184,8 @@ function open_operable_building(ent,pindex)--open_building
       players[pindex].inventory.max = #players[pindex].inventory.lua_inventory
       players[pindex].building.sectors = {}
       players[pindex].building.sector = 1
+      
+      --Inventories as sectors
       if ent.get_output_inventory() ~= nil then
          table.insert(players[pindex].building.sectors, {
             name = "Output",
@@ -8190,10 +8205,10 @@ function open_operable_building(ent,pindex)--open_building
          table.insert(players[pindex].building.sectors, {
             name = "Modules",
             inventory = ent.get_module_inventory()})
-                  end
+      end
       if ent.get_burnt_result_inventory() ~= nil and #ent.get_burnt_result_inventory() > 0 then
          table.insert(players[pindex].building.sectors, {
-            name = "Burned",
+            name = "Burnt result",
             inventory = ent.get_burnt_result_inventory()})
       end
       if ent.fluidbox ~= nil and #ent.fluidbox > 0 then
@@ -8201,6 +8216,16 @@ function open_operable_building(ent,pindex)--open_building
             name = "Fluid",
             inventory = ent.fluidbox})
       end
+      
+      --Special inventories
+      local invs = defines.inventory
+      if ent.type == "rocket-silo" then
+         if ent.get_inventory(invs.rocket_silo_rocket) ~= nil and #ent.get_inventory(invs.rocket_silo_rocket) > 0 then
+            table.insert(players[pindex].building.sectors, {
+               name = "Rocket",
+               inventory = ent.get_inventory(invs.rocket_silo_rocket)})
+         end
+      end 
 
       if ent.filter_slot_count > 0 and ent.type == "inserter" then
          table.insert(players[pindex].building.sectors, {
@@ -8268,6 +8293,95 @@ function open_operable_building(ent,pindex)--open_building
       end
    else
       printout("Not an operable building.", pindex)
+   end
+end
+
+function open_operable_vehicle(ent,pindex)--open_vehicle
+   if ent.operable and ent.prototype.is_building then
+      --Check if within reach
+      if util.distance(game.get_player(pindex).position, ent.position) > game.get_player(pindex).reach_distance then
+         game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+         printout("Building is out of player reach",pindex)
+         return
+      end
+      --Open GUI if not already
+      local p = game.get_player(pindex)
+      if p.opened == nil then 
+         p.opened = ent
+      end
+      --Other stuff...
+      players[pindex].menu_search_index = 0
+      players[pindex].menu_search_index_2 = 0
+      if ent.prototype.ingredient_count ~= nil then
+         players[pindex].building.recipe = ent.get_recipe()
+         players[pindex].building.recipe_list = get_recipes(pindex, ent)
+         players[pindex].building.category = 1
+      else
+         players[pindex].building.recipe = nil
+         players[pindex].building.recipe_list = nil
+         players[pindex].building.category = 0
+      end
+      players[pindex].building.item_selection = false
+      players[pindex].inventory.lua_inventory = game.get_player(pindex).get_main_inventory()
+      players[pindex].inventory.max = #players[pindex].inventory.lua_inventory
+      players[pindex].building.sectors = {}
+      players[pindex].building.sector = 1
+      
+      --Inventories as sectors
+      if ent.get_output_inventory() ~= nil then
+         table.insert(players[pindex].building.sectors, {
+            name = "Output",
+            inventory = ent.get_output_inventory()})
+      end
+      if ent.get_fuel_inventory() ~= nil then
+         table.insert(players[pindex].building.sectors, {
+            name = "Fuel",
+            inventory = ent.get_fuel_inventory()})
+      end
+      if ent.get_burnt_result_inventory() ~= nil and #ent.get_burnt_result_inventory() > 0 then
+         table.insert(players[pindex].building.sectors, {
+            name = "Burnt result",
+            inventory = ent.get_burnt_result_inventory()})
+      end
+      
+      if ent.name == "cargo-wagon" then--***disable train menu activation
+         if ent.get_inventory(invs.cargo_wagon) ~= nil and #ent.get_inventory(invs.cargo_wagon) > 0 then
+            table.insert(players[pindex].building.sectors, {
+               name = "Output",
+               inventory = ent.get_inventory(invs.cargo_wagon)})
+         end
+      elseif ent.type == "car" then
+         --*** todo fuel, ammo, trunk, tank ammo types test 
+      end
+      --***spidertrons, artillery wagons (?)
+      
+
+      for i1=#players[pindex].building.sectors, 2, -1 do
+         for i2 = i1-1, 1, -1 do
+            if players[pindex].building.sectors[i1].inventory == players[pindex].building.sectors[i2].inventory then
+               table.remove(players[pindex].building.sectors, i2)
+               i2 = i2 + 1
+            end
+         end
+      end
+      if #players[pindex].building.sectors > 0 then
+         players[pindex].building.ent = ent
+         players[pindex].in_menu = true
+         players[pindex].menu = "building"--***laterdo maybe "vehicle" but not needed
+         players[pindex].move_queue = {}
+         players[pindex].inventory.index = 1
+         players[pindex].building.index = 1
+         
+         read_building_slot(pindex, true)
+      else
+         if game.get_player(pindex).opened ~= nil then
+            printout(ent.name .. ", this menu has no options ", pindex)
+         else
+            printout(ent.name .. " has no menu ", pindex)
+         end
+      end
+   else
+      printout("Not an operable vehicle.", pindex)
    end
 end
 
