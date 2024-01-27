@@ -3136,7 +3136,7 @@ function read_hand(pindex)
       return
    end
    local cursor_stack=game.get_player(pindex).cursor_stack
-   if cursor_stack and cursor_stack.valid and cursor_stack.valid_for_read then
+   if cursor_stack and cursor_stack.valid_for_read then
       local out={"access.cursor-description"}
       table.insert(out,cursor_stack.prototype.localised_name)
       local build_entity = cursor_stack.prototype.place_result
