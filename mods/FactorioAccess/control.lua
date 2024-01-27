@@ -605,7 +605,7 @@ function move_cursor_structure(pindex, dir)
          end
          local ent = network[network[current][adjusted[(0 + dir) %8]][index].num]
          if ent.ent.valid then
-            cursor_highlight(pindex, nil, nil)
+            cursor_highlight(pindex, ent.ent, nil)
             move_mouse_cursor(ent.ent.position,pindex)
             players[pindex].cursor_pos = ent.ent.position
             --Case 1: Proposing a new structure
@@ -636,7 +636,7 @@ function move_cursor_structure(pindex, dir)
       end
       local ent = network[current]
       if ent.ent.valid then
-         cursor_highlight(pindex, nil, nil)
+         cursor_highlight(pindex, ent.ent, nil)
          move_mouse_cursor(ent.ent.position,pindex)
          players[pindex].cursor_pos = ent.ent.position
          --Case 2: Returning to the current structure
@@ -667,7 +667,7 @@ function move_cursor_structure(pindex, dir)
       end
       local ent = network[current]
      if ent.ent.valid then
-         cursor_highlight(pindex, nil, nil)
+         cursor_highlight(pindex, ent.ent, nil)
          move_mouse_cursor(ent.ent.position,pindex)
          players[pindex].cursor_pos = ent.ent.position
          --Case 3: Moved to the new structure
@@ -703,7 +703,7 @@ function move_cursor_structure(pindex, dir)
       end
       local ent = network[network[current][direction][index].num]
       if ent.ent.valid then
-         cursor_highlight(pindex, nil, nil)
+         cursor_highlight(pindex, ent.ent, nil)
          move_mouse_cursor(ent.ent.position,pindex)
          players[pindex].cursor_pos = ent.ent.position
          --Case 4: Propose a new structure within the same direction
@@ -3321,7 +3321,7 @@ end
 
 --Move the mouse cursor to the correct pixel on the screen **todo figure out how to center mouse cursor on tile during smooth walk (the player and the camera are both not tile aligned. The current solution is to teleport the player to the tile center when cursor mode enables)
 function move_mouse_cursor(position,pindex)
-   if players[pindex].vanilla_mode then
+   if players[pindex].vanilla_mode or game.get_player(pindex).game_view_settings.update_entity_selection == true then
       return
    end
    local player = players[pindex]
@@ -3425,8 +3425,8 @@ function scan_index(pindex)
          local i = 1
          --Remove invalid or unwanted instances of the entity
          while i <= #ents[players[pindex].nearby.index].ents do
-            if ents[players[pindex].nearby.index].ents[i].valid and ents[players[pindex].nearby.index].ents[i].name ~= "highlight-box" 
-               and ents[players[pindex].nearby.index].ents[i].type ~= "flying-text" then
+            local ents_i = ents[players[pindex].nearby.index].ents[i]
+            if ents_i.valid and ents_i.name ~= "highlight-box" and ents_i.type ~= "flying-text" and ents_i.name ~= "rocket-silo-rocket" and ents_i.name ~= "rocket-silo-rocket-shadow" and ents_i.type ~= "spider-leg" then
                i = i + 1
             else
                table.remove(ents[players[pindex].nearby.index].ents, i)
@@ -3461,7 +3461,8 @@ function scan_index(pindex)
             return
          end
          players[pindex].cursor_pos = center_of_tile(ent.position)
-         cursor_highlight(pindex, ent, "train-visualization")
+         cursor_highlight(pindex, ent, "train-visualization")--focus on scanned item 
+         sync_build_cursor_graphics(pindex)
          players[pindex].last_indexed_ent = ent
       else
          --The scan target is an aggregate
@@ -3481,6 +3482,7 @@ function scan_index(pindex)
          ent = {name = name, position = table.deepcopy(entry.position), group = entry.group} --maybe use "aggregate = true" ?
          players[pindex].cursor_pos = center_of_tile(ent.position)
          cursor_highlight(pindex, nil, "train-visualization")
+         sync_build_cursor_graphics(pindex)
          players[pindex].last_indexed_ent = ent
       end
       
@@ -3636,6 +3638,12 @@ function rescan(pindex,filter_dir)
    populate_categories(pindex)
    players[pindex].nearby.index = 1
    players[pindex].nearby.selection = 1
+   
+   if filter_dir == nil then
+      printout("Scan complete.", pindex)
+   else
+      printout(direction_lookup(dir) .. " scan complete.", pindex)
+   end
 end
 
 
@@ -3809,7 +3817,13 @@ function toggle_cursor(pindex)
       read_tile(pindex, "Cursor mode disabled, ")
    end
    if players[pindex].cursor_size < 2 or not players[pindex].cursor then 
-      cursor_highlight(pindex, nil, nil)
+      --Update cursor highlight
+      local ent = get_selected_ent(pindex)
+      if ent and ent.valid then
+         cursor_highlight(pindex, ent, nil)
+      else
+         cursor_highlight(pindex, nil, nil)
+      end
    else
       local scan_left_top = {math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size,math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size}
       local scan_right_bottom = {math.floor(players[pindex].cursor_pos.x)+players[pindex].cursor_size+1,math.floor(players[pindex].cursor_pos.y)+players[pindex].cursor_size+1}
@@ -3864,7 +3878,7 @@ function read_tile(pindex, start_text)
       return
    end
    local ent = get_selected_ent(pindex)
-   if not ent then
+   if not (ent and ent.valid) then
       --If there is no ent, read the tile instead
       players[pindex].tile.previous = nil
       result = result .. players[pindex].tile.tile
@@ -3872,7 +3886,7 @@ function read_tile(pindex, start_text)
 
    else--laterdo tackle the issue here where entities such as tree stumps block preview info 
       result = result .. ent_info(pindex, ent)
-      cursor_highlight(pindex, nil, nil)
+      cursor_highlight(pindex, ent, nil)
 
       --game.get_player(pindex).print(result)--
       players[pindex].tile.previous = ent
@@ -4757,7 +4771,6 @@ script.on_event(defines.events.on_player_changed_position,function(event)
       if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then 
          sync_build_cursor_graphics(pindex)
       end
-      cursor_highlight(pindex, nil, nil)
       
       --Name a detected entity that you can or cannot walk on, or a tile you cannot walk on
       refresh_player_tile(pindex)
@@ -4769,6 +4782,8 @@ script.on_event(defines.events.on_player_changed_position,function(event)
          else
             read_tile(pindex)
          end
+      else
+         cursor_highlight(pindex, nil, nil)
       end
    end
 end)
@@ -5739,6 +5754,18 @@ function move_characters(event)
    for pindex, player in pairs(players) do
       if player.vanilla_mode == true then
          player.player.game_view_settings.update_entity_selection = true
+      elseif player.player.game_view_settings.update_entity_selection == false then
+         --Force the mouse cursor to the mod cursor if there is an item in hand 
+         --(so that the game does not make a mess when you left click while selection is false)
+         local stack = game.get_player(pindex).cursor_stack
+         if players[pindex].in_menu == false and stack and stack.valid_for_read and (stack.prototype.place_result ~= nil or stack.prototype.place_as_tile_result ~= nil) then
+            --Move the mouse cursor to the object on screen or to the player position for objects off screen 
+            if cursor_position_is_on_screen(pindex) then
+               move_mouse_cursor(players[pindex].cursor_pos,pindex)
+            else
+               move_mouse_cursor(players[pindex].position,pindex)
+            end
+         end
       end
       if player.walk ~= 2 or player.cursor or player.in_menu then
          local walk = false
@@ -5848,14 +5875,12 @@ function move(direction,pindex)
          if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then 
             sync_build_cursor_graphics(pindex)
          end
-         cursor_highlight(pindex, nil, nil)
          
          if players[pindex].build_lock then
             build_item_in_hand(pindex, -2)
          end
       else
          printout("Tile Occupied", pindex)
-         target(pindex)
       end
    else
       --New direction: Turn character: --turn
@@ -5873,7 +5898,6 @@ function move(direction,pindex)
       if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then 
          sync_build_cursor_graphics(pindex)
       end
-      cursor_highlight(pindex, nil, nil)
       
       if game.get_player(pindex).driving then
          target(pindex)
@@ -5896,6 +5920,14 @@ function move(direction,pindex)
       if players[pindex].build_lock and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and stack.prototype.place_result.type == "transport-belt" then 
          players[pindex].building_direction = players[pindex].player_direction
       end
+   end
+   
+   --Update cursor highlight
+   local ent = get_selected_ent(pindex)
+   if ent and ent.valid then
+      cursor_highlight(pindex, ent, nil)
+   else
+      cursor_highlight(pindex, nil, nil)
    end
    
    --Unless the cut-paste tool is in hand, restore the reading of flying text 
@@ -5952,13 +5984,19 @@ function cursor_mode_move(direction, pindex, single_only)
       local stack = game.get_player(pindex).cursor_stack
       if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then 
          sync_build_cursor_graphics(pindex)
-      else
-         cursor_highlight(pindex, nil, nil)
       end
       
       --Apply build lock if active
       if players[pindex].build_lock then
          build_item_in_hand(pindex, -1)            
+      end
+      
+      --Update cursor highlight
+      local ent = get_selected_ent(pindex)
+      if ent and ent.valid then
+         cursor_highlight(pindex, ent, nil)
+      else
+         cursor_highlight(pindex, nil, nil)
       end
    elseif not game.get_player(pindex).driving then
       -- Larger cursor sizes: scan area
@@ -6384,9 +6422,8 @@ script.on_event("rescan", function(event)
       return
    end
    if not (players[pindex].in_menu) then
-      rescan(pindex)
-      printout("Scan Complete", pindex)
       run_scanner_effects(pindex)
+      schedule(2,"rescan",pindex)--rescan(pindex)
    end
 end)
 
@@ -6399,9 +6436,8 @@ script.on_event("scan-facing-direction", function(event)
       --Set the filter direction 
       local p = game.get_player(pindex)
       local dir = p.character.direction
-      rescan(pindex,dir)
-      printout("Scanning " .. direction_lookup(dir), pindex)
       run_scanner_effects(pindex)
+      schedule(2,"rescan",pindex)--rescan(pindex)
    end
 end)
 
@@ -7926,12 +7962,19 @@ script.on_event("click-menu", function(event)
             end
             sync_build_cursor_graphics(pindex)
             game.get_player(pindex).opened = nil
-            cursor_highlight(pindex, nil, nil)--laterdo check for ent here for cursor highlight?
+            
             if not refresh_player_tile(pindex) then
                printout("Tile out of range", pindex)
                return
             end
-            target(pindex)
+            
+            --Update cursor highlight
+            local ent = get_selected_ent(pindex)
+            if ent and ent.valid then
+               cursor_highlight(pindex, ent, nil)
+            else
+               cursor_highlight(pindex, nil, nil)
+            end
 
          elseif players[pindex].travel.index.x == 2 then
             printout("Enter a new name for this fast travel point, then press 'ENTER' to confirm.", pindex)
@@ -7978,12 +8021,19 @@ script.on_event("click-menu", function(event)
          end
          sync_build_cursor_graphics(pindex)
          game.get_player(pindex).opened = nil
-         cursor_highlight(pindex, nil, nil)--laterdo check for ent here for cursor highlight?
+         
          if not refresh_player_tile(pindex) then
             printout("Tile out of range", pindex)
             return
          end
-         target(pindex)
+         
+         --Update cursor highlight
+         local ent = get_selected_ent(pindex)
+         if ent and ent.valid then
+            cursor_highlight(pindex, ent, nil)
+         else
+            cursor_highlight(pindex, nil, nil)
+         end
       
       elseif players[pindex].menu == "rail_builder" then
          rail_builder(pindex, true)
@@ -8088,6 +8138,7 @@ function clicked_on_entity(ent,pindex)
       train_menu_open(pindex)
    elseif ent == nil then
       --No entity clicked 
+      p.selected = nil
       return 
    elseif not ent.valid then
       --Invalid entity clicked
@@ -8096,15 +8147,17 @@ function clicked_on_entity(ent,pindex)
          p.print("Opened " .. p.opened.name,{volume_modifier=0})
          ent = p.opened
       else
+         p.selected = nil
          return
       end
    end
-   
-   p.selected = ent
    if p.character and p.character.unit_number == ent.unit_number then
       --Self click
       return 
-   elseif ent.name == "locomotive" then
+   end
+   
+   p.selected = ent
+   if ent.name == "locomotive" then
       --For a rail vehicle, open train menu
       train_menu_open(pindex)
    elseif ent.name == "train-stop" then
@@ -8123,6 +8176,12 @@ function clicked_on_entity(ent,pindex)
       local spiders = ent.surface.find_entities_filtered{position = ent.position, radius = 5, type = "spider-vehicle"}
       if spiders[1] and spiders[1].valid then
          open_operable_vehicle(spiders[1],pindex)
+      end
+   elseif ent.name == "rocket-silo-rocket-shadow" or ent.name == "rocket-silo-rocket" then
+      --Find and open the silo
+      local silos = ent.surface.find_entities_filtered{position = ent.position, radius = 5, type = "rocket-silo"}
+      if silos[1] and silos[1].valid then
+         open_operable_building(silos[1],pindex)
       end
    elseif ent.operable then
       printout("No menu for " .. ent.name,pindex)
@@ -8163,9 +8222,11 @@ end)
 function open_operable_building(ent,pindex)--open_building
    if ent.operable and ent.prototype.is_building then
       --Check if within reach
-      if util.distance(game.get_player(pindex).position, ent.position) > game.get_player(pindex).reach_distance then
+      if util.distance(game.get_player(pindex).position, players[pindex].cursor_pos) > game.get_player(pindex).reach_distance then
          game.get_player(pindex).play_sound{path = "utility/cannot_build"}
          printout("Building is out of player reach",pindex)
+         game.get_player(pindex).selected = nil
+         game.get_player(pindex).opened = nil
          return
       end
       --Open GUI if not already
@@ -8323,8 +8384,10 @@ end
 function open_operable_vehicle(ent,pindex)--open_vehicle
    if ent.valid and ent.operable then
       --Check if within reach
-      if util.distance(game.get_player(pindex).position, ent.position) > game.get_player(pindex).reach_distance then
+      if util.distance(game.get_player(pindex).position, players[pindex].cursor_pos) > game.get_player(pindex).reach_distance then
          game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+         game.get_player(pindex).selected = nil
+         game.get_player(pindex).opened = nil
          printout("Vehicle is out of player reach",pindex)
          return
       end
@@ -8434,6 +8497,7 @@ function build_item_in_hand(pindex, offset_val)
    local stack = game.get_player(pindex).cursor_stack
    local offset = offset_val or 0
    
+   --Valid stack check
    if not (stack and stack.valid and stack.valid_for_read) then
       game.get_player(pindex).play_sound{path = "utility/cannot_build"}
       local message =  "Invalid item in hand!"
@@ -8447,7 +8511,8 @@ function build_item_in_hand(pindex, offset_val)
 	  printout(message,pindex)
       return
    end
-   
+         
+   --Exceptional build cases
    if stack.name == "offshore-pump" then
       build_offshore_pump_in_hand(pindex)
       return
@@ -8462,7 +8527,7 @@ function build_item_in_hand(pindex, offset_val)
 	  printout("You need to use the building menu of a rail.",pindex)
       return
    end
-   
+   --General build cases
    if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then
       local ent = stack.prototype.place_result
       local dimensions = get_tile_dimensions(stack.prototype, players[pindex].building_direction)
@@ -8633,7 +8698,7 @@ function build_item_in_hand(pindex, offset_val)
          end
       end
    elseif stack and stack.valid_for_read and stack.valid and stack.prototype.place_as_tile_result ~= nil then
-      --Place paving tiles 
+   --Tile placement 
 	  local p = game.get_player(pindex)
 	  local t_size = players[pindex].cursor_size * 2 + 1
      local pos = players[pindex].cursor_pos--Center on the cursor in default
@@ -8648,6 +8713,14 @@ function build_item_in_hand(pindex, offset_val)
 	  end 
    else
       game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+   end
+      
+   --Update cursor highlight (end)
+   local ent = get_selected_ent(pindex)
+   if ent and ent.valid then
+      cursor_highlight(pindex, ent, nil)
+   else
+      cursor_highlight(pindex, nil, nil)
    end
 end
 
@@ -11562,8 +11635,11 @@ function cursor_highlight(pindex, ent, box_type, skip_mouse_movement)
          h_box.highlight_box_type = box_type
       else
          h_box.highlight_box_type = "entity"
-      end   
-      p.selected = ent
+      end  
+
+      if ent.unit_number ~= p.character.unit_number then 
+         p.selected = ent
+      end
    end
    
    --Highlight the currently focused ground tile.
@@ -11587,7 +11663,7 @@ function cursor_highlight(pindex, ent, box_type, skip_mouse_movement)
       return
    end
    
-   --Restore the mouse cursor to the player position when it would otherwise be off screen 
+   --Move the mouse cursor to the object on screen or to the player position for objects off screen 
    if cursor_position_is_on_screen(pindex) then
       move_mouse_cursor(center_of_tile(c_pos),pindex)
    else

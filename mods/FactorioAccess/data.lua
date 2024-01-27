@@ -1188,6 +1188,13 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "enable-mouse-update-entity-selection",
+    key_sequence = "mouse-button-3",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "pipette-tool-info",
     key_sequence = "Q",
     linked_game_control = "smart-pipette",
