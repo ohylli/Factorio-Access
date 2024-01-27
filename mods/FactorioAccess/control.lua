@@ -7451,6 +7451,7 @@ script.on_event("mine-access-sounds", function(event)
       local ent = get_selected_ent(pindex)
       --if ent and (ent.prototype.mineable_properties.products == nil or ent.prototype.mineable_properties.products[1].name == ent.name) then
       if ent and ent.valid and (ent.prototype.mineable_properties.products ~= nil) then
+         game.get_player(pindex).selected = ent
          game.get_player(pindex).play_sound{path = "player-mine"}
          schedule(25, "play_mining_sound", pindex)
       elseif ent and ent.valid and ent.name == "character-corpse" then
@@ -8090,9 +8091,12 @@ function clicked_on_entity(ent,pindex)
       if p.opened ~= nil and p.opened.object_name == "LuaEntity" and p.opened.valid then
          p.print("Opened " .. p.opened.name,{volume_modifier=0})
          ent = p.opened
+      else
+         return
       end
    end
    
+   p.selected = ent
    if p.character and p.character.unit_number == ent.unit_number then
       --Self click
       return 
@@ -9408,7 +9412,8 @@ script.on_event("item-info", function(event)
    end
    if not players[pindex].in_menu then
       local ent =  get_selected_ent(pindex)
-      if ent then
+      if ent and ent.valid then
+         game.get_player(pindex).selected = ent 
          local str = ent.localised_description
          if str == nil or str == "" then
             str = "No description for this entity"
@@ -9872,6 +9877,66 @@ script.on_event("pipette-tool-info",function(event)
    if ent and ent.valid then 
       p.selected = ent 
       players[pindex].building_direction = ent.direction
+   end
+end)
+
+script.on_event("copy-entity-settings-info",function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local ent = get_selected_ent(pindex)
+   local p = game.get_player(pindex)
+   if ent and ent.valid then 
+      p.selected = ent 
+   end
+end)
+
+script.on_event("paste-entity-settings-info",function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local ent = get_selected_ent(pindex)
+   local p = game.get_player(pindex)
+   if ent and ent.valid then 
+      p.selected = ent 
+   end
+end)
+
+script.on_event("fast-entity-transfer-info",function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local ent = get_selected_ent(pindex)
+   local p = game.get_player(pindex)
+   if ent and ent.valid then 
+      p.selected = ent 
+   end
+end)
+
+script.on_event("fast-entity-split-info",function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local ent = get_selected_ent(pindex)
+   local p = game.get_player(pindex)
+   if ent and ent.valid then 
+      p.selected = ent 
+   end
+end)
+
+script.on_event("drop-cursor-info",function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local ent = get_selected_ent(pindex)
+   local p = game.get_player(pindex)
+   if ent and ent.valid then 
+      p.selected = ent 
    end
 end)
 
@@ -11481,7 +11546,8 @@ function cursor_highlight(pindex, ent, box_type, skip_mouse_movement)
          h_box.highlight_box_type = box_type
       else
          h_box.highlight_box_type = "entity"
-      end
+      end   
+      p.selected = ent
    end
    
    --Highlight the currently focused ground tile.
