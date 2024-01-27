@@ -2625,8 +2625,6 @@ function scan_sort(pindex)
 
 end
    
-
-
 function center_of_tile(pos)
    return {x = math.floor(pos.x)+0.5, y = math.floor(pos.y)+ 0.5}
 end
@@ -8079,7 +8077,8 @@ script.on_event("click-entity", function(event)
 end)
 
 function clicked_on_entity(ent,pindex)
-   if game.get_player(pindex).vehicle ~= nil and game.get_player(pindex).vehicle.train ~= nil then
+   local p = game.get_player(pindex)
+   if p.vehicle ~= nil and p.vehicle.train ~= nil then
       --If player is on a train, open it
       train_menu_open(pindex)
    elseif ent == nil then
@@ -8087,7 +8086,16 @@ function clicked_on_entity(ent,pindex)
       return 
    elseif not ent.valid then
       --Invalid entity clicked
-      game.get_player(pindex).print("Invalid entity clicked",{volume_modifier=0})
+      p.print("Invalid entity clicked",{volume_modifier=0})
+      if p.opened ~= nil and p.opened.object_name == "LuaEntity" and p.opened.valid then
+         p.print("Opened " .. p.opened.name,{volume_modifier=0})
+         ent = p.opened
+      end
+   end
+   
+   if p.character and p.character.unit_number == ent.unit_number then
+      --Self click
+      return 
    elseif ent.name == "locomotive" then
       --For a rail vehicle, open train menu
       train_menu_open(pindex)
@@ -8102,6 +8110,12 @@ function clicked_on_entity(ent,pindex)
       open_operable_building(ent,pindex)
    elseif ent.type == "car" or ent.type == "spider-vehicle" or ent.train ~= nil then
       open_operable_vehicle(ent,pindex)
+   elseif ent.type == "spider-leg" then
+      --Find and open the spider
+      local spiders = ent.surface.find_entities_filtered{position = ent.position, radius = 5, type = "spider-vehicle"}
+      if spiders[1] and spiders[1].valid then
+         open_operable_vehicle(spiders[1],pindex)
+      end
    elseif ent.operable then
       printout("No menu for " .. ent.name,pindex)
    else
@@ -8355,7 +8369,8 @@ function open_operable_vehicle(ent,pindex)--open_vehicle
                name = "Ammo",
                inventory = ent.get_inventory(invs.car_ammo)})
          end
-      elseif ent.type == "spider-vehicle" then
+      end
+      if ent.type == "spider-vehicle" then
          if ent.get_inventory(invs.spider_trunk) ~= nil and #ent.get_inventory(invs.spider_trunk) > 0 then
             table.insert(players[pindex].building.sectors, {
                name = "Output",
@@ -9845,6 +9860,19 @@ script.on_event("recalibrate-zoom",function(event)
    end
    fix_zoom(pindex)
    sync_build_cursor_graphics(pindex)
+end)
+
+script.on_event("pipette-tool-info",function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local ent = get_selected_ent(pindex)
+   local p = game.get_player(pindex)
+   if ent and ent.valid then 
+      p.selected = ent 
+      players[pindex].building_direction = ent.direction
+   end
 end)
 
 script.on_event("read-hand",function(event)

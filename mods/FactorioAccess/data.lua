@@ -1188,6 +1188,14 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "pipette-tool-info",
+    key_sequence = "Q",
+    linked_game_control = "smart-pipette",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "read-hand",
     key_sequence = "SHIFT + Q",
     consuming = "none"
