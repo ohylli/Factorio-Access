@@ -8815,7 +8815,7 @@ function build_item_in_hand(pindex, offset_val)
       --building.position = game.get_player(pindex).surface.find_non_colliding_position(ent.name, position, .5, .05)--DOES NOT RESPECT DIRECTION
       if building.position ~= nil and game.get_player(pindex).can_build_from_cursor(building) then 
          game.get_player(pindex).build_from_cursor(building)  
---         read_tile(pindex)
+         schedule(2,"read_tile",pindex) 
       else
          if players[pindex].build_lock == true then
             game.get_player(pindex).play_sound{path = "utility/cannot_build"}
