@@ -53,7 +53,7 @@ function load_tutorial(pindex)
          str_count = str_count + 1
       end
    end
-   if err_count >= 0 then
+   if err_count > 0 then
       p.print(err_count .. " errors while preparing ".. str_count .. " tutorial strings",{volume_modifier = 0})
    end
    
@@ -268,10 +268,21 @@ function tutorial_menu(pindex, reading_the_header, clicked)
    local p = game.get_player(pindex)
 	if chap == 0 then
 		--Read out chapter 0 message
-      printout({"tutorial.tutorial-start-message"},pindex)--**
+      printout({"tutorial.tutorial-start-message"},pindex)--***
+      
+      --Give rocket fuel
+      if players[pindex].tutorial.rocket_fuel_provided ~= true then
+         p.insert{name = "rocket-fuel", count = 8}
+      end 
+      
+      --Reload tutorial
+      load_tutorial(pindex)
+      tutorial.rocket_fuel_provided = true
+      
 	elseif chap == -1 and step == -1 then --Example
 		--Do a specific action for this step, e.g. provide an item or run a check
       if clicked == false then
+         --Read this step's header/detail
          if reading_the_header == true then
             tutorial_menu_read_out_header(pindex)--Check step header, e.g. "multiple furnaces check"
          else
@@ -287,19 +298,7 @@ function tutorial_menu(pindex, reading_the_header, clicked)
          else
             --printout(tutorial.check_failed,pindex) --e.g. "Check failed"
          end
-      end
-   elseif chap == 1 and step == 1 then
-      --Read the header/detail
-		if reading_the_header == true then
-			tutorial_menu_read_out_header(pindex)
-		else
-			tutorial_menu_read_out_detail(pindex)
-		end
-      --Give rocket fuel
-      if players[pindex].tutorial.rocket_fuel_provided ~= true then
-         players[pindex].tutorial.rocket_fuel_provided = true
-         p.insert{name = "rocket-fuel", count = 8}
-      end 
+      end      
 	elseif chap > 0 and step > 0 then
 		--All other steps: Just read the header/detail
 		if reading_the_header == true then

@@ -3630,7 +3630,7 @@ function scan_middle(pindex)
    end
  end
 
-function rescan(pindex,filter_dir)
+function rescan(pindex,filter_dir, mute)
    players[pindex].nearby.index = 1
    players[pindex].nearby.selection = 1
    first_player = game.get_player(pindex)
@@ -3639,10 +3639,12 @@ function rescan(pindex,filter_dir)
    players[pindex].nearby.index = 1
    players[pindex].nearby.selection = 1
    
-   if filter_dir == nil then
-      printout("Scan complete.", pindex)
-   else
-      printout(direction_lookup(dir) .. " scan complete.", pindex)
+   if mute ~= true then
+      if filter_dir == nil then
+         printout("Scan complete.", pindex)
+      else
+         printout(direction_lookup(filter_dir) .. " direction scan complete.", pindex)
+      end
    end
 end
 
@@ -5536,18 +5538,46 @@ function menu_cursor_right(pindex)
    end
 end
 
-function schedule(ticks_in_the_future,func_to_call, data_to_pass)
+-- function schedule(ticks_in_the_future,func_to_call, data_to_pass)
+   -- if type(_G[func_to_call]) ~= "function" then
+      -- Crash()
+   -- end
+   -- if ticks_in_the_future <=0 then  
+      -- _G[func_to_call](data_to_pass)
+      -- return
+   -- end
+   -- local tick = game.tick + ticks_in_the_future
+   -- local schedule = global.scheduled_events
+   -- schedule[tick] = schedule[tick] or {}
+   -- table.insert(schedule[tick], {func_to_call,data_to_pass})
+-- end
+
+function schedule(ticks_in_the_future,func_to_call, data_to_pass_1, data_to_pass_2, data_to_pass_3)
    if type(_G[func_to_call]) ~= "function" then
       Crash()
    end
-   if ticks_in_the_future <=0 then
-      _G[func_to_call](data_to_pass)
+   if ticks_in_the_future <=0 then 
+      _G[func_to_call](data_to_pass_1, data_to_pass_2, data_to_pass_3)
       return
    end
    local tick = game.tick + ticks_in_the_future
    local schedule = global.scheduled_events
    schedule[tick] = schedule[tick] or {}
-   table.insert(schedule[tick], {func_to_call,data_to_pass})
+   table.insert(schedule[tick], {func_to_call, data_to_pass_1, data_to_pass_2, data_to_pass_3})
+end
+
+function schedule_3(ticks_in_the_future,func_to_call, data_to_pass_1, data_to_pass_2, data_to_pass_3)
+   if type(_G[func_to_call]) ~= "function" then
+      Crash()
+   end
+   if ticks_in_the_future <=0 then
+      _G[func_to_call](data_to_pass_1, data_to_pass_2, data_to_pass_3)
+      return
+   end
+   local tick = game.tick + ticks_in_the_future
+   local schedule = global.scheduled_events
+   schedule[tick] = schedule[tick] or {}
+   table.insert(schedule[tick], {func_to_call,data_to_pass_1, data_to_pass_2, data_to_pass_3})
 end
 
 function on_player_join(pindex)
@@ -5625,7 +5655,7 @@ end
 function on_tick(event)
    if global.scheduled_events[event.tick] then
       for _, to_call in pairs(global.scheduled_events[event.tick]) do
-         _G[to_call[1]](to_call[2])
+         _G[to_call[1]](to_call[2], to_call[3], to_call[4])
       end
       global.scheduled_events[event.tick] = nil
    end
@@ -6423,7 +6453,7 @@ script.on_event("rescan", function(event)
    end
    if not (players[pindex].in_menu) then
       run_scanner_effects(pindex)
-      schedule(2,"rescan",pindex)--rescan(pindex)
+      schedule(2,"rescan",pindex, nil, false)
    end
 end)
 
@@ -6437,7 +6467,7 @@ script.on_event("scan-facing-direction", function(event)
       local p = game.get_player(pindex)
       local dir = p.character.direction
       run_scanner_effects(pindex)
-      schedule(2,"rescan",pindex)--rescan(pindex)
+      schedule(2,"rescan",pindex, dir, false)--****pass?
    end
 end)
 
@@ -9742,7 +9772,7 @@ script.on_init(ensure_global_structures_are_up_to_date)
 script.on_event(defines.events.on_cutscene_cancelled, function(event)
    pindex = event.player_index
    check_for_player(pindex)
-   rescan(pindex)
+   rescan(pindex, nil, true)
 end)
 
 script.on_event(defines.events.on_player_created, function(event)
