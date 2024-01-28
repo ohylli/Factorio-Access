@@ -7727,9 +7727,58 @@ function clear_obstacles_in_circle(position, radius, pindex)
    return (trees_cleared + rocks_cleared + remnants_cleared + ground_items_cleared), comment
 end
 
---Right click actions in menus (click_menu)****todo add right click stack split 
-
-
+--Right click actions in menus (click_menu)
+script.on_event("click-menu-right", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].last_click_tick == event.tick then
+      return
+   end
+   if players[pindex].in_menu then
+      players[pindex].last_click_tick = event.tick
+      if players[pindex].menu == "inventory" then
+         --Player inventory: Take half
+         local p = game.get_player(pindex)
+         local stack_cur = p.cursor_stack
+         local stack_inv = table.deepcopy(players[pindex].inventory.lua_inventory[players[pindex].inventory.index])
+         p.play_sound{path = "utility/inventory_click"}
+         if not (stack_cur and stack_cur.valid_for_read) and (stack_inv and stack_inv.valid_for_read) then
+            --Take half (sorted inventory)
+            local name = stack_inv.name
+            p.cursor_stack.swap_stack(players[pindex].inventory.lua_inventory[players[pindex].inventory.index])
+            local bigger_half = math.ceil(p.cursor_stack.count/2)
+            local smaller_half = math.floor(p.cursor_stack.count/2)
+            p.cursor_stack.count = smaller_half
+            p.get_main_inventory().insert({name = name, count = bigger_half})
+         end
+         players[pindex].inventory.max = #players[pindex].inventory.lua_inventory
+         
+      elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then
+         local sectors_i = players[pindex].building.sectors[players[pindex].building.sector]
+         if players[pindex].building.sector <= #players[pindex].building.sectors and #sectors_i.inventory > 0 and (sectors_i.name == "Output" or sectors_i.name == "Input" or sectors_i.name == "Fuel")  then
+            --Building invs: Take half**
+         elseif players[pindex].building.recipe_list == nil or #players[pindex].building.recipe_list == 0 then
+            --Player inventory: Take half
+            local p = game.get_player(pindex)
+            local stack_cur = p.cursor_stack
+            local stack_inv = table.deepcopy(players[pindex].inventory.lua_inventory[players[pindex].inventory.index])
+            p.play_sound{path = "utility/inventory_click"}
+            if not (stack_cur and stack_cur.valid_for_read) and (stack_inv and stack_inv.valid_for_read) then
+               --Take half (sorted inventory)
+               local name = stack_inv.name
+               p.cursor_stack.swap_stack(players[pindex].inventory.lua_inventory[players[pindex].inventory.index])
+               local bigger_half = math.ceil(p.cursor_stack.count/2)
+               local smaller_half = math.floor(p.cursor_stack.count/2)
+               p.cursor_stack.count = smaller_half
+               p.get_main_inventory().insert({name = name, count = bigger_half})
+            end
+            players[pindex].inventory.max = #players[pindex].inventory.lua_inventory
+         end
+      end         
+   end
+end)
 
 --Left click actions in menus (click_menu)
 script.on_event("click-menu", function(event)
@@ -8099,6 +8148,32 @@ script.on_event("click-menu", function(event)
       end      
    end
 end)
+
+function player_inventory_click(pindex, click_is_left_in)
+   --****todo finish this to include all interaction cases, then generalize it to building inventories . 
+   --Use code from above and then replace above clutter with calls to this.
+   --Use stack.transfer_stack(other_stack)
+   local click_is_left = click_is_left_in or true
+   local p = game.get_player(pindex)
+   local stack_cur = p.cursor_stack
+   local stack_inv = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
+   
+   if stack_cur and stack_cur.valid_for_read then
+      --Full hand
+      if stack_inv and stack_inv.valid_for_read and stack_inv.name ~= stack_cur.name then
+      else
+      end
+      
+   else
+      --Empty hand
+      
+   end
+   
+   --Play sound and update known inv size
+   p.play_sound{path = "utility/inventory_click"}
+   players[pindex].inventory.max = #players[pindex].inventory.lua_inventory
+   
+end
 
 --Left click actions with items in hand
 script.on_event("click-hand", function(event)
@@ -9198,7 +9273,7 @@ script.on_event("menu-clear-filter", function(event)
                   local building = players[pindex].building
                   local target_stack = building.sectors[building.sector].inventory[building.index]
 
-                  if target_stack and target_stack.transfer_stack{name=stack.name} then
+                  if target_stack and target_stack.transfer_stack{name=stack.name} then--****todo relocate this functionality to Z key.
                       printout("Inserted 1 " .. stack.name, pindex)
                      stack.count = stack.count - 1
                   else
