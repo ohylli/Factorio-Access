@@ -968,6 +968,13 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "click-menu-right",
+    key_sequence = "RIGHTBRACKET",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "click-menu",
     key_sequence = "LEFTBRACKET",
     consuming = "none"

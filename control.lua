@@ -4741,7 +4741,7 @@ script.on_event(defines.events.on_player_changed_position,function(event)
       if p.walking_state.direction ~= players[pindex].player_direction and players[pindex].cursor == false then 
          --Directions mismatch. Turn to new direction --turn (Note, this code handles diagonal turns and other direction changes)
          players[pindex].player_direction = p.character.direction
-         local new_pos = (offset_position(pos,players[pindex].player_direction,1.05))--****
+         local new_pos = (offset_position(pos,players[pindex].player_direction,1.0))
          players[pindex].cursor_pos = new_pos           
 
          --Build lock building + rotate belts in hand unless cursor mode
@@ -4755,9 +4755,6 @@ script.on_event(defines.events.on_player_changed_position,function(event)
          --Directions same: Walk straight
          local new_pos = (offset_position(pos,players[pindex].player_direction,1))
          players[pindex].cursor_pos = new_pos
-         -- if not players[pindex].vanilla_mode then
-            -- target(pindex) 
-         -- end
                      
          --Build lock building + rotate belts in hand unless cursor mode
          if players[pindex].build_lock then
@@ -4788,7 +4785,7 @@ script.on_event(defines.events.on_player_changed_position,function(event)
          end
          
          if ent ~= nil and ent.valid then
-            cursor_highlight(pindex, ent, nil)--****
+            cursor_highlight(pindex, ent, nil)
             p.selected = ent
          else 
             cursor_highlight(pindex, nil, nil)
@@ -6480,7 +6477,7 @@ script.on_event("scan-facing-direction", function(event)
       local p = game.get_player(pindex)
       local dir = p.character.direction
       run_scanner_effects(pindex)
-      schedule(2,"rescan",pindex, dir, false)--****pass?
+      schedule(2,"rescan",pindex, dir, false)
    end
 end)
 
@@ -7730,6 +7727,10 @@ function clear_obstacles_in_circle(position, radius, pindex)
    return (trees_cleared + rocks_cleared + remnants_cleared + ground_items_cleared), comment
 end
 
+--Right click actions in menus (click_menu)****todo add right click stack split 
+
+
+
 --Left click actions in menus (click_menu)
 script.on_event("click-menu", function(event)
    pindex = event.player_index
@@ -7742,12 +7743,14 @@ script.on_event("click-menu", function(event)
    if players[pindex].in_menu then
       players[pindex].last_click_tick = event.tick
       if players[pindex].menu == "inventory" then
+         --Swap stacks
          game.get_player(pindex).play_sound{path = "utility/inventory_click"}
          local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
          game.get_player(pindex).cursor_stack.swap_stack(stack)
             players[pindex].inventory.max = #players[pindex].inventory.lua_inventory
          --read_inventory_slot(pindex)
       elseif players[pindex].menu == "crafting" then
+         --Craft 1
          local T = {
             count = 1,
          recipe = players[pindex].crafting.lua_recipes[players[pindex].crafting.category][players[pindex].crafting.index],
@@ -7761,6 +7764,7 @@ script.on_event("click-menu", function(event)
          end
 
       elseif players[pindex].menu == "crafting_queue" then
+         --Cancel 1
          load_crafting_queue(pindex)
          if players[pindex].crafting_queue.max >= 1 then
             local T = {
@@ -7776,17 +7780,19 @@ script.on_event("click-menu", function(event)
          local sectors_i = players[pindex].building.sectors[players[pindex].building.sector]
          if players[pindex].building.sector <= #players[pindex].building.sectors and #sectors_i.inventory > 0  then
             if sectors_i.name == "Fluid" then
+               --Do nothing
                return
             elseif sectors_i.name == "Filters" then
+               --Set filters
                if players[pindex].building.index == #sectors_i.inventory then
-               if players[pindex].building.ent == nil or not players[pindex].building.ent.valid then
-                  if players[pindex].building.ent == nil then 
-                     printout("Nil entity", pindex)
-                  else
-                     printout("Invalid Entity", pindex)
+                  if players[pindex].building.ent == nil or not players[pindex].building.ent.valid then
+                     if players[pindex].building.ent == nil then 
+                        printout("Nil entity", pindex)
+                     else
+                        printout("Invalid Entity", pindex)
+                     end
+                     return
                   end
-                  return
-               end
                   if players[pindex].building.ent.inserter_filter_mode == "whitelist" then
                      players[pindex].building.ent.inserter_filter_mode = "blacklist"
                   else
@@ -7827,6 +7833,7 @@ script.on_event("click-menu", function(event)
                end
                return
             end
+            --Otherwise, you are working with item stacks
             local stack = sectors_i.inventory[players[pindex].building.index]
             local cursor_stack = game.get_player(pindex).cursor_stack
             --If both stacks have the same item, do a transfer
@@ -7885,6 +7892,7 @@ script.on_event("click-menu", function(event)
                printout("Cannot insert " .. name .. " in this slot", pindex)
             end
          elseif players[pindex].building.recipe_list == nil then
+            --Player inventory: Swap stack
             game.get_player(pindex).play_sound{path = "utility/inventory_click"}
             local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
             game.get_player(pindex).cursor_stack.swap_stack(stack)
@@ -7926,6 +7934,7 @@ script.on_event("click-menu", function(event)
                   printout("No recipes unlocked for this building yet.", pindex)
                end
             else
+               --Player inventory again: swap stack
                game.get_player(pindex).play_sound{path = "utility/inventory_click"}
                local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
                game.get_player(pindex).cursor_stack.swap_stack(stack)
