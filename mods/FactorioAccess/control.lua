@@ -3484,6 +3484,7 @@ function scan_index(pindex)
          cursor_highlight(pindex, nil, "train-visualization")
          sync_build_cursor_graphics(pindex)
          players[pindex].last_indexed_ent = ent
+         game.get_player(pindex).selected = nil
       end
       
       if not ents[players[pindex].nearby.index].aggregate and not ent.valid then
@@ -3885,6 +3886,7 @@ function read_tile(pindex, start_text)
       players[pindex].tile.previous = nil
       result = result .. players[pindex].tile.tile
       cursor_highlight(pindex, nil, nil)
+      game.get_player(pindex).selected = nil
 
    else--laterdo tackle the issue here where entities such as tree stumps block preview info 
       result = result .. ent_info(pindex, ent)
@@ -4739,7 +4741,7 @@ script.on_event(defines.events.on_player_changed_position,function(event)
       if p.walking_state.direction ~= players[pindex].player_direction and players[pindex].cursor == false then 
          --Directions mismatch. Turn to new direction --turn (Note, this code handles diagonal turns and other direction changes)
          players[pindex].player_direction = p.character.direction
-         local new_pos = (offset_position(pos,players[pindex].player_direction,1))
+         local new_pos = (offset_position(pos,players[pindex].player_direction,1.05))--****
          players[pindex].cursor_pos = new_pos           
 
          --Build lock building + rotate belts in hand unless cursor mode
@@ -4753,9 +4755,9 @@ script.on_event(defines.events.on_player_changed_position,function(event)
          --Directions same: Walk straight
          local new_pos = (offset_position(pos,players[pindex].player_direction,1))
          players[pindex].cursor_pos = new_pos
-         if not players[pindex].vanilla_mode then
-            target(pindex) 
-         end
+         -- if not players[pindex].vanilla_mode then
+            -- target(pindex) 
+         -- end
                      
          --Build lock building + rotate belts in hand unless cursor mode
          if players[pindex].build_lock then
@@ -4784,8 +4786,17 @@ script.on_event(defines.events.on_player_changed_position,function(event)
          else
             read_tile(pindex)
          end
+         
+         if ent ~= nil and ent.valid then
+            cursor_highlight(pindex, ent, nil)--****
+            p.selected = ent
+         else 
+            cursor_highlight(pindex, nil, nil)
+            p.selected = nil
+         end 
       else
          cursor_highlight(pindex, nil, nil)
+         p.selected = nil
       end
    end
 end)
@@ -5590,7 +5601,7 @@ function on_player_join(pindex)
    print("playerList " .. game.table_to_json(playerList))
    if game.players[pindex].name == "Crimso" then
       local player = game.get_player(pindex).cutscene_character or game.get_player(pindex).character
-player.force.research_all_technologies()
+      player.force.research_all_technologies()
 
 --game.write_file('map.txt', game.table_to_json(game.parse_map_exchange_string(">>>eNpjZGBksGUAgwZ7EOZgSc5PzIHxgNiBKzm/oCC1SDe/KBVZmDO5qDQlVTc/E1Vxal5qbqVuUmIxsmJ7jsyi/Dx0E1iLS/LzUEVKilJTi5E1cpcWJeZlluai62VgnPIl9HFDixwDCP+vZ1D4/x+EgawHQL+AMANjA0glIyNQDAZYk3My09IYGBQcGRgKnFev0rJjZGSsFlnn/rBqij0jRI2eA5TxASpyIAkm4glj+DnglFKBMUyQzDEGg89IDIilJUAroKo4HBAMiGQLSJKREeZ2xl91WXtKJlfYM3qs3zPr0/UqO6A0O0iCCU7MmgkCO2FeYYCZ+cAeKnXTnvHsGRB4Y8/ICtIhAiIcLIDEAW9mBkYBPiBrQQ+QUJBhgDnNDmaMiANjGhh8g/nkMYxx2R7dH8CAsAEZLgciToAIsIVwl0F95tDvwOggD5OVRCgB6jdiQHZDCsKHJ2HWHkayH80hmBGB7A80ERUHLNHABbIwBU68YIa7BhieF9hhPIf5DozMIAZI1RegGIQHkoEZBaEFHMDBzcyAAMC0cepk2C4A0ySfhQ==<<<")))
    player.insert{name="pipe", count=100}
@@ -5622,12 +5633,12 @@ player.force.research_all_technologies()
 --   player.insert{name="solar-panel", count=100}
 --   player.insert{name="pipe-to-ground", count=100}
 --   player.insert{name="underground-belt", count=100}
-   for i = 0, 10 do
-      for j = 0, 10 do
-         player.surface.create_entity{name = "iron-ore", position = {i + .5, j + .5}}
+      for i = 0, 10 do
+         for j = 0, 10 do
+            player.surface.create_entity{name = "iron-ore", position = {i + .5, j + .5}}
+         end
       end
-   end
---   player.force.research_all_technologies()
+   --   player.force.research_all_technologies()
    end
    
    --Starting inventory boost for easy difficulty 
@@ -6153,7 +6164,7 @@ script.on_event("read-cursor-distance-and-direction", function(event)
    end
    --Read where the cursor is with respect to the player, e.g. "at 5 west"
    local dir_dist = dir_dist_locale(players[pindex].position, players[pindex].cursor_pos)
-   local cursor_location_description = "at"
+   local cursor_location_description = "At"
    local cursor_production = " "
    local cursor_description_of = " "
    local result={"access.thing-producing-listpos-dirdist",cursor_location_description}
@@ -6161,6 +6172,8 @@ script.on_event("read-cursor-distance-and-direction", function(event)
    table.insert(result,cursor_description_of)--listpos
    table.insert(result,dir_dist)
    printout(result,pindex)
+   game.get_player(pindex).print(result,{volume_modifier=0})
+   rendering.draw_circle{color = {1, 0.2, 0}, radius = 0.1, width = 5, target = players[pindex].cursor_pos, surface = game.get_player(pindex).surface, time_to_live = 180}
 end)
 
 --Returns the cursor to the player position.
@@ -6978,7 +6991,7 @@ function open_player_inventory(tick,pindex)
    end
 end
 
-script.on_event("close-menu", function(event)--close_menu, menu closed
+script.on_event("close-menu-access", function(event)--close_menu, menu closed
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -9773,6 +9786,13 @@ script.on_event(defines.events.on_cutscene_cancelled, function(event)
    pindex = event.player_index
    check_for_player(pindex)
    rescan(pindex, nil, true)
+end)
+
+script.on_event(defines.events.on_cutscene_started, function(event)
+   pindex = event.player_index
+   check_for_player(pindex)
+   rescan(pindex, nil, true)
+   printout("Press TAB to continue",pindex)
 end)
 
 script.on_event(defines.events.on_player_created, function(event)
