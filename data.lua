@@ -690,7 +690,7 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "close-menu",
+    name = "close-menu-access",
     key_sequence = "E",
     consuming = "none"
 },
