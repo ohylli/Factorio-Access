@@ -991,6 +991,7 @@ data:extend({
     type = "custom-input",
     name = "click-entity",
     key_sequence = "LEFTBRACKET",
+    alternative_key_sequence = "mouse-button-1",
     consuming = "none"
 },
 

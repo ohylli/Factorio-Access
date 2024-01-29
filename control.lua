@@ -5591,6 +5591,7 @@ end
 function on_player_join(pindex)
    players = players or global.players
    schedule(3, "fix_zoom", pindex)
+   schedule(4, "sync_build_cursor_graphics", pindex)
    local playerList={}
    for _ , p in pairs(game.connected_players) do
       playerList["_" .. p.index]=p.name
@@ -12013,6 +12014,8 @@ script.on_event(defines.events.on_player_display_resolution_changed,function(eve
       players[pindex].display_resolution = new_res
    end
    game.get_player(pindex).print("Display resolution changed: " .. new_res.width .. " x " .. new_res.height ,{volume_modifier = 0})
+   schedule(3, "fix_zoom", pindex)
+   schedule(4, "sync_build_cursor_graphics", pindex)
 end)
 
 script.on_event(defines.events.on_player_display_scale_changed,function(event)
@@ -12025,6 +12028,8 @@ script.on_event(defines.events.on_player_display_scale_changed,function(event)
       players[pindex].display_resolution = new_sc
    end
    game.get_player(pindex).print("Display scale changed: " .. new_sc ,{volume_modifier = 0})
+   schedule(3, "fix_zoom", pindex)
+   schedule(4, "sync_build_cursor_graphics", pindex)
 end)
 
 --Allows searching a menu that has support written for this

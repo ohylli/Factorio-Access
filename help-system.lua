@@ -10,7 +10,7 @@ function load_tutorial(pindex)
    --Load tutorial header and detail strings
    tutorial.step_headers =  {} --2D array of localised strings
    tutorial.step_details =  {} --2D array of localised strings
-   local CHAPTER_1_LENGTH = 26 --Lengths are constants depending on how we write the "en" strings.
+   local CHAPTER_1_LENGTH = 28 --Lengths are constants depending on how we write the "en" strings.
    local CHAPTER_2_LENGTH = 21
    local CHAPTER_3_LENGTH = 07
    local CHAPTER_4_LENGTH = 10
@@ -55,7 +55,10 @@ function load_tutorial(pindex)
       p.print(err_count .. " errors while preparing ".. str_count .. " tutorial strings",{volume_modifier = 0})
    end
    
-   --Load other tutorial strings?
+   --Load Chapter 0 strings
+   tutorial.chapter_0_messages = { {"tutorial.tutorial-chapter-0-message-1"}, {"tutorial.tutorial-chapter-0-message-2"}, {"tutorial.tutorial-chapter-0-message-3"} }
+   
+   --Load other tutorial strings
    --...
    
    --Load other tutorial variables
@@ -133,16 +136,19 @@ function tutorial_menu_back(pindex)
    end
 	tutorial.step_index = tutorial.step_index - 1
 	
-   --Check index
+   --End of the previous chapter
 	if tutorial.step_index == 0 then
 		tutorial.chapter_index = tutorial.chapter_index - 1
 		if tutorial.chapter_index == -1 then
+         --Top of the entire list
 			tutorial.chapter_index = 0
 			tutorial.step_index = 1
 			game.get_player(pindex).play_sound{path = "inventory-edge"}
 		elseif tutorial.chapter_index == 0 then 
-			tutorial.step_index = 1
+         --End of chapter 0
+			tutorial.step_index = #tutorial.chapter_0_messages
 		else
+         --End of another chapter
 			tutorial.step_index = tutorial.chapter_lengths[tutorial.chapter_index]
 		end
 	end
@@ -189,19 +195,21 @@ function tutorial_menu_next(pindex)
 	local tutorial = players[pindex].tutorial
 	tutorial.step_index = tutorial.step_index + 1
    
-   --Chapter 0 exception
-   if tutorial.chapter_index == 0 then
+   --End of Chapter 0
+   if tutorial.chapter_index == 0 and tutorial.step_index > #tutorial.chapter_0_messages then
       tutorial.chapter_index = 1
       tutorial.step_index = 1
 	
-   --Check index
+   --End of another chapter
 	elseif tutorial.step_index > tutorial.chapter_lengths[tutorial.chapter_index] then
 		tutorial.chapter_index = tutorial.chapter_index + 1
 		if tutorial.chapter_index > #tutorial.chapter_lengths or tutorial.chapter_lengths[tutorial.chapter_index] == 0 then
+         --End of the entire list
 			tutorial.chapter_index = tutorial.chapter_index - 1
 			tutorial.step_index = tutorial.step_index - 1
          game.get_player(pindex).play_sound{path = "inventory-edge"}
 		else
+         --start of the next chapter
 			tutorial.step_index = 1
 		end
 	end
@@ -264,11 +272,11 @@ function tutorial_menu(pindex, reading_the_header, clicked)
 	local chap = tutorial.chapter_index
 	local step = tutorial.step_index
    local p = game.get_player(pindex)
-	if chap == 0 then
-		--Read out chapter 0 message
-      printout({"tutorial.tutorial-start-message"},pindex)
-      game.get_player(pindex).print("Tutorial start message : ",{volume_modifier=0})--
-      game.get_player(pindex).print({"tutorial.tutorial-start-message"},{volume_modifier=0})
+	if chap == 0 and step == 1 then
+		--Read out chapter 0 start message
+      printout(tutorial.chapter_0_messages[step],pindex)
+      game.get_player(pindex).print("Tutorial start message " .. step .. ":",{volume_modifier=0})--
+      game.get_player(pindex).print(tutorial.chapter_0_messages[step],{volume_modifier=0})
       
       --Give rocket fuel
       if players[pindex].tutorial.rocket_fuel_provided ~= true then
@@ -279,6 +287,12 @@ function tutorial_menu(pindex, reading_the_header, clicked)
       game.get_player(pindex).play_sound{path = "Open-Inventory-Sound"}  
       load_tutorial(pindex)
       players[pindex].tutorial.rocket_fuel_provided = true
+      
+   elseif chap == 0 and step > 1 then
+      --Read out chapter 0 start message
+      printout(tutorial.chapter_0_messages[step],pindex)
+      game.get_player(pindex).print("Tutorial start message " .. step .. ":",{volume_modifier=0})--
+      game.get_player(pindex).print(tutorial.chapter_0_messages[step],{volume_modifier=0})
       
 	elseif chap == -1 and step == -1 then --Example
 		--Do a specific action for this step, e.g. provide an item or run a check
