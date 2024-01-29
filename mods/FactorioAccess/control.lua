@@ -9832,8 +9832,8 @@ function ensure_global_structures_are_up_to_date()
    global.forces = global.forces or {}
    global.players = global.players or {}
    players = global.players
-   for pindex, player in pairs(game.players) do
-      initialize(player)
+   for pindex, fa_player in pairs(players) do
+      initialize(fa_player.player)
    end
    
    global.entity_types = {}
