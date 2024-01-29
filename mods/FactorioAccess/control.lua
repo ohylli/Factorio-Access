@@ -5814,11 +5814,11 @@ function move_characters(event)
       if player.vanilla_mode == true then
          player.player.game_view_settings.update_entity_selection = true
       elseif player.player.game_view_settings.update_entity_selection == false then
-         --Force the mouse cursor to the mod cursor if there is an item in hand 
-         --(so that the game does not make a mess when you left click while selection is false)
+         --Force the mouse pointer to the mod cursor if there is an item in hand 
+         --(so that the game does not make a mess when you left click while the cursor is actually locked)
          local stack = game.get_player(pindex).cursor_stack
-         if players[pindex].in_menu == false and stack and stack.valid_for_read and (stack.prototype.place_result ~= nil or stack.prototype.place_as_tile_result ~= nil) then
-            --Move the mouse cursor to the object on screen or to the player position for objects off screen 
+         if players[pindex].in_menu == false and stack and stack.valid_for_read then
+            --Move the mouse pointer to the object on screen or to the player position for objects off screen 
             if cursor_position_is_on_screen(pindex) then
                move_mouse_cursor(players[pindex].cursor_pos,pindex)
             else
@@ -8075,7 +8075,7 @@ script.on_event("click-menu", function(event)
             printout("Move towards the right and select Create to get started.", pindex)
          elseif players[pindex].travel.index.y == 0 and players[pindex].travel.index.x < 4 then
             printout("Navigate up and down to select a fast travel point, then press left bracket to get there quickly.", pindex)
-         elseif players[pindex].travel.index.x == 1 then
+         elseif players[pindex].travel.index.x == 1 then --Travel
             local success = teleport_to_closest(pindex, global.players[pindex].travel[players[pindex].travel.index.y].position, false, false)
             if success and players[pindex].cursor then
                players[pindex].cursor_pos = table.deepcopy(global.players[pindex].travel[players[pindex].travel.index.y].position)
@@ -8098,19 +8098,19 @@ script.on_event("click-menu", function(event)
                cursor_highlight(pindex, nil, nil)
             end
 
-         elseif players[pindex].travel.index.x == 2 then
+         elseif players[pindex].travel.index.x == 2 then --Rename
             printout("Enter a new name for this fast travel point, then press 'ENTER' to confirm.", pindex)
             players[pindex].travel.renaming = true
             local frame = game.get_player(pindex).gui.screen["travel"]
             local input = frame.add{type="textfield", name = "input"}
             input.focus()
             input.select(1, 0)
-         elseif players[pindex].travel.index.x == 3 then
+         elseif players[pindex].travel.index.x == 3 then --Delete
             printout("Deleted " .. global.players[pindex].travel[players[pindex].travel.index.y].name, pindex)
             table.remove(global.players[pindex].travel, players[pindex].travel.index.y)
             players[pindex].travel.x = 1
             players[pindex].travel.index.y = players[pindex].travel.index.y - 1
-         elseif players[pindex].travel.index.x == 4 then
+         elseif players[pindex].travel.index.x == 4 then --Create new 
             printout("Enter a name for this fast travel point, then press 'ENTER' to confirm.", pindex)
             players[pindex].travel.creating = true
             local frame = game.get_player(pindex).gui.screen["travel"]
@@ -9286,20 +9286,15 @@ script.on_event("menu-clear-filter", function(event)
          if players[pindex].building.sector <= #players[pindex].building.sectors then
             if stack and stack.valid_for_read and stack.valid and stack.count > 0 then
                local iName = players[pindex].building.sectors[players[pindex].building.sector].name
-               if iName ~= "Fluid" and iName ~= "Filters" then
-                  T = {
-                     name = stack.name,
-                     count = 1
-                  }                  
-                  local building = players[pindex].building
-                  local target_stack = building.sectors[building.sector].inventory[building.index]
-
-                  if target_stack and target_stack.transfer_stack{name=stack.name} then--****todo relocate this functionality to Z key.
-                      printout("Inserted 1 " .. stack.name, pindex)
-                     stack.count = stack.count - 1
-                  else
-                     printout("Cannot insert " .. stack.name .. " into " .. players[pindex].building.sectors[players[pindex].building.sector].name, pindex)
-                  end
+               if iName ~= "Fluid" and iName ~= "Filters" then               
+                  -- local building = players[pindex].building
+                  -- local target_stack = building.sectors[building.sector].inventory[building.index]
+                  -- if target_stack and target_stack.valid_for_read and target_stack.transfer_stack{name=stack.name} then--****todo relocate this transfer functionality to Z key.
+                      -- printout("Inserted 1 " .. stack.name, pindex)
+                     -- stack.count = stack.count - 1
+                  -- else
+                     -- printout("Cannot insert " .. stack.name .. " into " .. players[pindex].building.sectors[players[pindex].building.sector].name, pindex)
+                  -- end
                
                elseif iName == "Filters" and players[pindex].item_selection == false and players[pindex].building.index < #players[pindex].building.sectors[players[pindex].building.sector].inventory then 
                   players[pindex].building.ent.set_filter(players[pindex].building.index, nil)
@@ -10346,14 +10341,18 @@ script.on_event(defines.events.on_gui_confirmed,function(event)
    if players[pindex].menu == "travel" then
       if players[pindex].travel.creating then
          players[pindex].travel.creating = false
-         table.insert(global.players[pindex].travel, {name = event.element.text, position = players[pindex].cursor_pos})
+         local result = event.element.text
+         if result == nil or result == "" then 
+            result = "unknown"
+         end
+         table.insert(global.players[pindex].travel, {name = result, position = players[pindex].position})
          table.sort(global.players[pindex].travel, function(k1, k2)
             return k1.name < k2.name
          end)
-         printout("Fast travel point created at " .. math.floor(players[pindex].cursor_pos.x) .. ", " .. math.floor(players[pindex].cursor_pos.y), pindex)
+         printout("Fast travel point ".. result .. " created at " .. math.floor(players[pindex].position.x) .. ", " .. math.floor(players[pindex].position.y), pindex)
       elseif players[pindex].travel.renaming then
          players[pindex].travel.renaming = false
-         global.players[pindex].travel[players[pindex].travel.index.y].name = event.element.text
+         players[pindex].travel[players[pindex].travel.index.y].name = result
          read_travel_slot(pindex)
       end
       players[pindex].travel.index.x = 1
