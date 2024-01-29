@@ -190,7 +190,7 @@ function get_selected_ent(pindex)
       if not ent then
          print(serpent.line(tile.ents),tile.index,ent)
       end
-      if ent.valid then
+      if ent.valid and ent.unit_number ~= game.get_player(pindex).character.unit_number then
          return ent
       end
       table.remove(tile.ents,tile.index)
@@ -3856,15 +3856,25 @@ function jump_to_player(pindex)
    end
 end
 
---Reads the cursor tile and the entities on it (I'm not sure why these search area params are these -SirFendi)
+--Reads the cursor tile and the entities on it
 function refresh_player_tile(pindex)
    local surf = game.get_player(pindex).surface
-   local search_area = {{x=-0.5,y=-.5},{x=0.29,y=0.29}}
-   local search_center = players[pindex].cursor_pos
-   search_area[1]=add_position(search_area[1],search_center)
-   search_area[2]=add_position(search_area[2],search_center)
+   --local search_area = {{x=-0.5,y=-0.5},{x=0.29,y=0.29}}
+   --local search_center = players[pindex].cursor_pos
+   --search_area[1]=add_position(search_area[1],search_center)
+   --search_area[2]=add_position(search_area[2],search_center)
+   local c_pos = players[pindex].cursor_pos
+   if math.floor(c_pos.x) == math.ceil(c_pos.x) then
+      c_pos.x = c_pos.x - 0.01
+   end 
+   if math.floor(c_pos.y) == math.ceil(c_pos.y) then
+      c_pos.y = c_pos.y - 0.01
+   end 
+   local search_area = {{x = math.floor(c_pos.x)+0.01,y = math.floor(c_pos.y)+0.01} , {x = math.ceil(c_pos.x)-0.01,y = math.ceil(c_pos.y)-0.01}}
+   local excluded_names = {"highlight-box","flying-text"}
+   players[pindex].tile.ents = surf.find_entities_filtered{area = search_area, name  = excluded_names, invert = true}
+   --rendering.draw_rectangle{left_top = search_area[1], right_bottom = search_area[2], color = {1,0,1}, surface = surf, time_to_live = 100}--
    
-   players[pindex].tile.ents = surf.find_entities_filtered{area = search_area, name={"highlight-box","flying-text"},invert = true}
    players[pindex].tile.index = #players[pindex].tile.ents == 0 and 0 or 1
    if not(pcall(function()
       players[pindex].tile.tile =  surf.get_tile(players[pindex].cursor_pos.x, players[pindex].cursor_pos.y).name
@@ -3891,6 +3901,7 @@ function read_tile(pindex, start_text)
    else--laterdo tackle the issue here where entities such as tree stumps block preview info 
       result = result .. ent_info(pindex, ent)
       cursor_highlight(pindex, ent, nil)
+      game.get_player(pindex).selected = ent
 
       --game.get_player(pindex).print(result)--
       players[pindex].tile.previous = ent
@@ -4362,9 +4373,17 @@ function read_coords(pindex, start_phrase)
          if location == nil then
             location = " "
          end
-         result = result .. " " .. location .. ", at " .. math.floor(players[pindex].cursor_pos.x) .. ", " .. math.floor(players[pindex].cursor_pos.y)
-         game.get_player(pindex).print("At " ..  math.floor(players[pindex].cursor_pos.x) .. ", " .. math.floor(players[pindex].cursor_pos.y) , {volume_modifier = 0})
-         rendering.draw_circle{color = {1, 0.2, 0},radius = 0.1,width = 5,target = players[pindex].cursor_pos,surface = game.get_player(pindex).surface,time_to_live = 180}
+         local marked_pos  = {x = players[pindex].cursor_pos.x, y = players[pindex].cursor_pos.y}
+         local printed_pos = {x = math.floor(players[pindex].cursor_pos.x * 10) / 10, y = math.floor(players[pindex].cursor_pos.y * 10) / 10}
+
+         --Floor the marked and read pos for consistency and conciseness
+         marked_pos.x = math.floor(marked_pos.x + 0.0)
+         marked_pos.y = math.floor(marked_pos.y + 0.0)
+         
+         result = result .. " " .. location .. ", at " .. marked_pos.x .. ", " .. marked_pos.y
+         game.get_player(pindex).print("At " ..  printed_pos.x .. ", " .. printed_pos.y , {volume_modifier = 0})
+         rendering.draw_circle{color = {1.0, 0.2, 0.0},radius = 0.1,width = 5, target = players[pindex].cursor_pos,surface = game.get_player(pindex).surface,time_to_live = 180}
+         --rendering.draw_circle{color = {0.2, 0.8, 0.2},radius = 0.2,width = 5, target = marked_pos,surface = game.get_player(pindex).surface,time_to_live = 180}
          
          --If there is a build preview, give its dimensions and which way they extend
          local stack = game.get_player(pindex).cursor_stack
@@ -4773,24 +4792,25 @@ script.on_event(defines.events.on_player_changed_position,function(event)
          sync_build_cursor_graphics(pindex)
       end
       
-      --Name a detected entity that you can or cannot walk on, or a tile you cannot walk on
+      --Name a detected entity that you can or cannot walk on, or a tile you cannot walk on, and play a sound to indicate multiple consecutive detections
       refresh_player_tile(pindex)
       local ent = get_selected_ent(pindex)
       if not players[pindex].vanilla_mode and ((ent ~= nil and ent.valid) or (p.surface.can_place_entity{name = "character", position = players[pindex].cursor_pos} == false)) then
          cursor_highlight(pindex, ent, nil)
          if p.driving then
             return
-         else
-            read_tile(pindex)
          end
          
          if ent ~= nil and ent.valid then
             cursor_highlight(pindex, ent, nil)
             p.selected = ent
+            p.play_sound{path = "Close-Inventory-Sound"}--***laterdo unique sound to note a detected ent 
          else 
             cursor_highlight(pindex, nil, nil)
             p.selected = nil
          end 
+         
+         read_tile(pindex)
       else
          cursor_highlight(pindex, nil, nil)
          p.selected = nil
@@ -11793,6 +11813,12 @@ function cursor_highlight(pindex, ent, box_type, skip_mouse_movement)
    end
    
    --Highlight the currently focused ground tile.
+   if math.floor(c_pos.x) == math.ceil(c_pos.x) then
+      c_pos.x = c_pos.x - 0.01
+   end 
+   if math.floor(c_pos.y) == math.ceil(c_pos.y) then
+      c_pos.y = c_pos.y - 0.01
+   end 
    h_tile = rendering.draw_rectangle{color = {0.75,1,1,0.75}, surface = p.surface, draw_on_ground = true, players = nil,
       left_top = {math.floor(c_pos.x)+0.05,math.floor(c_pos.y)+0.05}, right_bottom = {math.ceil(c_pos.x)-0.05,math.ceil(c_pos.y)-0.05}}
    
