@@ -786,7 +786,7 @@ function ent_info(pindex, ent, description)
       
    end  
    --Explain the contents of a pipe or storage tank or etc.
-   if ent.type == "pipe" or ent.type == "pipe-to-ground" or ent.type == "storage-tank" or ent.type == "pump" or ent.name == "boiler" or ent.name == "heat-exchanger" then
+   if ent.type == "pipe" or ent.type == "pipe-to-ground" or ent.type == "storage-tank" or ent.type == "pump" or ent.name == "boiler" or ent.name == "heat-exchanger" or ent.type == "generator" then
       local dict = ent.get_fluid_contents()
       local fluids = {}
       for name, count in pairs(dict) do
@@ -971,16 +971,16 @@ function ent_info(pindex, ent, description)
             local dir_from_pos = nil
             box, f_name, dir_from_pos = get_relevant_fluidbox_and_fluid_name(nbr, ent.position, dirs.north)
             --Extra checks for pipes to ground 
-            if box == nil or f_name == nil then 
+            if f_name == nil then 
                box, f_name, dir_from_pos = get_relevant_fluidbox_and_fluid_name(nbr, ent.position, dirs.east)
             end
-            if box == nil or f_name == nil then 
+            if f_name == nil then 
                box, f_name, dir_from_pos = get_relevant_fluidbox_and_fluid_name(nbr, ent.position, dirs.south)
             end
-            if box == nil or f_name == nil then 
+            if f_name == nil then 
                box, f_name, dir_from_pos = get_relevant_fluidbox_and_fluid_name(nbr, ent.position, dirs.west)
             end
-            if box ~= nil and f_name ~= nil then --"empty" is a name too
+            if f_name ~= nil then --"empty" is a name too
                result = result .. direction_lookup(dir_from_pos) .. ", " 
                --game.print("found " .. f_name .. " at " .. nbr.name ,{volume_modifier=0})
                con_counter = con_counter + 1
@@ -988,7 +988,7 @@ function ent_info(pindex, ent, description)
          end
       end
       if con_counter == 0 then
-         result = result .. " nothing"
+         result = result .. " to nothing"
       end
    elseif (ent.name == "pipe-to-ground") and ent.neighbours ~= nil then
       result = result .. " connects "
