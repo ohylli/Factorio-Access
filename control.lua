@@ -4533,7 +4533,7 @@ function initialize(player)
       fa_force.mapped = fa_force.mapped or {}
    end
       
-   local character = player.cutscene_character or player.character
+   local character = player.cutscene_character or player.character or player
    faplayer.in_menu = faplayer.in_menu or false
    faplayer.in_item_selector = faplayer.in_item_selector or false
    faplayer.menu = faplayer.menu or "none"
@@ -9832,8 +9832,8 @@ function ensure_global_structures_are_up_to_date()
    global.forces = global.forces or {}
    global.players = global.players or {}
    players = global.players
-   for pindex, fa_player in pairs(players) do
-      initialize(fa_player.player)
+   for pindex, player in pairs(game.players) do
+      initialize(player)
    end
    
    global.entity_types = {}
