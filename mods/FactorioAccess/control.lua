@@ -9564,11 +9564,12 @@ function rotate_building_info_read(event, forward)
             --Assuming that the vanilla rotate event will now rotate the ent
             local new_dir = (ent.direction + dirs.east * mult) % (2 * dirs.south)
             
-            if ent.name == "steam-engine" or ent.name == "steam-turbine" or ent.name == "rail" or ent.name == "straight-rail" or ent.name == "curved-rail" then
+            if ent.name == "steam-engine" or ent.name == "steam-turbine" or ent.name == "rail" or ent.name == "straight-rail" or ent.name == "curved-rail" or ent.name == "character" then
                --Exception: These ents do not rotate
                new_dir = (new_dir - dirs.east * mult) % (2 * dirs.south)
-            elseif ent.tile_width ~= ent.tile_height or ent.type == "underground-belt" then
+            elseif (ent.tile_width ~= ent.tile_height and ent.supports_direction) or ent.type == "underground-belt" then
                --Exceptions: None-square ents rotate 2x , while underground belts simply flip instead
+               --Examples, boiler, pump, flamethrower, heat exchanger, 
                new_dir = (new_dir + dirs.east * mult) % (2 * dirs.south)
             end 
             
