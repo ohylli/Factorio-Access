@@ -2996,6 +2996,7 @@ function build_train_stop(anchor_rail, pindex)
       dir = end_rail_dir
    else
       --Choose the dir based on player direction 
+      turn_to_cursor_direction_cardinal(pindex)
       if anchor_rail.direction == dirs.north or anchor_rail.direction == dirs.south then
          if players[pindex].player_direction == dirs.north or players[pindex].player_direction == dirs.east then
             dir = dirs.north

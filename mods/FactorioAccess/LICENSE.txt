@@ -1,4 +1,4 @@
-Factorio Access Mod Project
+Factorio Access Mod
 MIT License
 
 Copyright (c) 2024 Crimso

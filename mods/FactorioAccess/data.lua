@@ -54,6 +54,7 @@ access_radar.max_distance_of_sector_revealed = 32 --Default: 14, now scans up to
 access_radar.max_distance_of_nearby_sector_revealed = 2 --Default: 3
 access_radar.rotation_speed = 0.01 --Default: 0.01
 access_radar.tint = ar_tint
+access_radar.minable.result = "access-radar"
 access_radar.pictures.layers[1].tint = ar_tint--grey
 access_radar.pictures.layers[2].tint = ar_tint--grey
 
@@ -689,7 +690,7 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "close-menu",
+    name = "close-menu-access",
     key_sequence = "E",
     consuming = "none"
 },
@@ -967,6 +968,13 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "click-menu-right",
+    key_sequence = "RIGHTBRACKET",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "click-menu",
     key_sequence = "LEFTBRACKET",
     consuming = "none"
@@ -983,6 +991,7 @@ data:extend({
     type = "custom-input",
     name = "click-entity",
     key_sequence = "LEFTBRACKET",
+    alternative_key_sequence = "mouse-button-1",
     consuming = "none"
 },
 
@@ -1082,7 +1091,15 @@ data:extend({
     name = "rotate-building",
     key_sequence = "R",
     linked_game_control = "rotate",
-    consuming = "game-only"
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "reverse-rotate-building",
+    key_sequence = "SHIFT + R",
+    linked_game_control = "reverse-rotate",
+    consuming = "none"
 },
 
 {
@@ -1174,6 +1191,61 @@ data:extend({
     name = "recalibrate-zoom",
     key_sequence = "CONTROL + END",
     alternative_key_sequence = "CONTROL + RCTRL",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "enable-mouse-update-entity-selection",
+    key_sequence = "mouse-button-3",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "pipette-tool-info",
+    key_sequence = "Q",
+    linked_game_control = "smart-pipette",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "copy-entity-settings-info",
+    key_sequence = "SHIFT + RIGHTBRACKET",
+    linked_game_control = "copy-entity-settings",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "paste-entity-settings-info",
+    key_sequence = "SHIFT + LEFTBRACKET",
+    linked_game_control = "paste-entity-settings",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "fast-entity-transfer-info",
+    key_sequence = "SHIFT + LEFTBRACKET",
+    linked_game_control = "fast-entity-transfer",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "fast-entity-split-info",
+    key_sequence = "SHIFT + RIGHTBRACKET",
+    linked_game_control = "fast-entity-split",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "drop-cursor-info",
+    key_sequence = "Z",
+    linked_game_control = "drop-cursor",
     consuming = "none"
 },
 
@@ -1376,8 +1448,43 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "help-key",
+    name = "help-read",
     key_sequence = "H",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "help-next",
+    key_sequence = "SHIFT + H",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "help-back",
+    key_sequence = "CONTROL + H",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "help-chapter-next",
+    key_sequence = "SHIFT + ALT + H",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "help-chapter-back",
+    key_sequence = "CONTROL + ALT + H",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "help-toggle-header",
+    key_sequence = "CONTROL + SHIFT + H",
     consuming = "none"
 },
 
