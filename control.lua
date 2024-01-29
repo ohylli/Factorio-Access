@@ -2543,12 +2543,16 @@ function get_scan_summary(scan_left_top, scan_right_bottom, pindex)
    return result
 end
 
-function draw_area_as_cursor(scan_left_top,scan_right_bottom,pindex)
+function draw_area_as_cursor(scan_left_top,scan_right_bottom,pindex, colour_in)
    local h_tile = players[pindex].cursor_tile_highlight_box
    if h_tile ~= nil then
       rendering.destroy(h_tile)
    end
-   h_tile = rendering.draw_rectangle{color = {0.75,1,1},surface = game.get_player(pindex).surface, left_top = scan_left_top, right_bottom = scan_right_bottom, draw_on_ground = true, players = nil}
+   local colour = {0.75,1,1}
+   if colour_in ~= nil then 
+      colour = colour_in
+   end
+   h_tile = rendering.draw_rectangle{color = colour,surface = game.get_player(pindex).surface, left_top = scan_left_top, right_bottom = scan_right_bottom, draw_on_ground = true, players = nil}
    rendering.set_visible(h_tile,true)
    players[pindex].cursor_tile_highlight_box = h_tile 
    
@@ -3819,7 +3823,7 @@ function toggle_cursor(pindex)
       players[pindex].build_lock = false
       read_tile(pindex, "Cursor mode disabled, ")
    end
-   if players[pindex].cursor_size < 2 or not players[pindex].cursor then 
+   if players[pindex].cursor_size < 2 then 
       --Update cursor highlight
       local ent = get_selected_ent(pindex)
       if ent and ent.valid then
@@ -3828,9 +3832,9 @@ function toggle_cursor(pindex)
          cursor_highlight(pindex, nil, nil)
       end
    else
-      local scan_left_top = {math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size,math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size}
-      local scan_right_bottom = {math.floor(players[pindex].cursor_pos.x)+players[pindex].cursor_size+1,math.floor(players[pindex].cursor_pos.y)+players[pindex].cursor_size+1}
-      draw_area_as_cursor(scan_left_top,scan_right_bottom,pindex)
+      local left_top = {math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size,math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size}
+      local right_bottom = {math.floor(players[pindex].cursor_pos.x)+players[pindex].cursor_size+1,math.floor(players[pindex].cursor_pos.y)+players[pindex].cursor_size+1}
+      draw_area_as_cursor(left_top,right_bottom,pindex)
    end
 end
 
@@ -11774,8 +11778,16 @@ function sync_build_cursor_graphics(pindex)
          move_mouse_cursor(pos,pindex)
       end
    else
+      --No footprint
       if dir_indicator ~= nil then rendering.set_visible(dir_indicator,false) end
       if player.building_footprint ~= nil then rendering.set_visible(player.building_footprint,false) end
+      
+      --Tile placement preview
+      if stack and stack.valid_for_read and stack.valid and stack.prototype.place_as_tile_result then 
+         local left_top = {math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size,math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size}
+         local right_bottom = {math.floor(players[pindex].cursor_pos.x)+players[pindex].cursor_size+1,math.floor(players[pindex].cursor_pos.y)+players[pindex].cursor_size+1}
+         draw_area_as_cursor(left_top,right_bottom,pindex, {r = 0.25, b = 0.25, g = 1.0, a = 0.75})
+      end
    end
    
    --Recolor cursor boxes if multiplayer
