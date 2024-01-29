@@ -4538,7 +4538,7 @@ function initialize(player)
       fa_force.mapped = fa_force.mapped or {}
    end
       
-   local character = player.cutscene_character or player.character
+   local character = player.cutscene_character or player.character or player
    faplayer.in_menu = faplayer.in_menu or false
    faplayer.in_item_selector = faplayer.in_item_selector or false
    faplayer.menu = faplayer.menu or "none"
