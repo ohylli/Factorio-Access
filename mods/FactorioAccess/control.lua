@@ -4502,7 +4502,7 @@ function read_coords(pindex, start_phrase)
       for i, v in pairs(recipe.products) do
          result = result .. ", " .. v.name .. " x" .. v.amount
       end
-      result = result .. ", time " .. recipe.energy .. " seconds by default."
+      result = result .. ", craft time " .. recipe.energy .. " seconds at default speed."
       printout(result, pindex)
    end
 end
@@ -5818,13 +5818,19 @@ function move_characters(event)
          --(so that the game does not make a mess when you left click while the cursor is actually locked)
          local stack = game.get_player(pindex).cursor_stack
          if players[pindex].in_menu == false and stack and stack.valid_for_read then
-            --Move the mouse pointer to the object on screen or to the player position for objects off screen 
-            if cursor_position_is_on_screen(pindex) then
-               move_mouse_cursor(players[pindex].cursor_pos,pindex)
+            if stack.prototype.place_result ~= nil or stack.prototype.place_as_tile_result ~= nil then 
+               --Force the pointer to the build preview location
+               sync_build_cursor_graphics(pindex)
             else
-               move_mouse_cursor(players[pindex].position,pindex)
+               --Force the pointer to the cursor location (if on screen)
+               if cursor_position_is_on_screen(pindex) then
+                  move_mouse_cursor(players[pindex].cursor_pos,pindex)
+               else
+                  move_mouse_cursor(players[pindex].position,pindex)
+               end
             end
          end
+         
       end
       if player.walk ~= 2 or player.cursor or player.in_menu then
          local walk = false
@@ -9552,7 +9558,7 @@ function rotate_building_info_read(event, forward)
          end
       elseif ent and ent.valid then
          game.get_player(pindex).selected = ent
-         --**laterdo disable ent selection here or maybe globally, as discussed?
+
          if ent.supports_direction then
 
             --Assuming that the vanilla rotate event will now rotate the ent
@@ -9567,6 +9573,8 @@ function rotate_building_info_read(event, forward)
             end 
             
             printout(direction_lookup(new_dir), pindex)
+            
+            --
          else
             printout(ent.name .. " never needs rotating.", pindex)
          end               
