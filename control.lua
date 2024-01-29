@@ -418,6 +418,11 @@ function extra_info_for_scan_list(ent,pindex,info_comes_after_indexing)
    pcall(function()
       if ent.get_recipe() ~= nil then
          result = result .. " producing " .. ent.get_recipe().name
+      elseif ent.type == "furnace" and #ent.get_output_inventory() > 0 then
+         local output_item = ent.get_output_inventory()[1]
+         if output_item and output_item.valid_for_read then 
+            result = result .. " producing " .. output_item.name
+         end
       end
    end)
    
@@ -9903,12 +9908,22 @@ script.on_event(defines.events.on_cutscene_cancelled, function(event)
    pindex = event.player_index
    check_for_player(pindex)
    rescan(pindex, nil, true)
+   schedule(3, "fix_zoom", pindex)
+   schedule(4, "sync_build_cursor_graphics", pindex)
+end)
+
+script.on_event(defines.events.on_cutscene_finished, function(event)
+   pindex = event.player_index
+   check_for_player(pindex)
+   rescan(pindex, nil, true)
+   schedule(3, "fix_zoom", pindex)
+   schedule(4, "sync_build_cursor_graphics", pindex)
+   printout("Press TAB to continue",pindex)
 end)
 
 script.on_event(defines.events.on_cutscene_started, function(event)
    pindex = event.player_index
    check_for_player(pindex)
-   rescan(pindex, nil, true)
    printout("Press TAB to continue",pindex)
 end)
 
