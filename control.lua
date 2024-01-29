@@ -948,10 +948,11 @@ function ent_info(pindex, ent, description)
       result = result .. ", "
       local power1 = ent.energy_generated_last_tick * 60
       local power2 = ent.prototype.max_energy_production * 60
+      local power_load_pct = math.ceil(power1/power2 * 100)
       if power2 ~= nil then
-         result = result .. "Producing " .. get_power_string(power1) .. " out of " .. get_power_string(power2) .. " capacity, "
+         result = result .. " at " .. power_load_pct .. " percent load, producing " .. get_power_string(power1) .. " out of " .. get_power_string(power2) .. " capacity, "
       else
-         result = result .. "Producing " .. get_power_string(power1) .. " "
+         result = result .. " producing " .. get_power_string(power1) .. " "
       end
    end
    if ent.type == "underground-belt" then
@@ -7843,7 +7844,7 @@ script.on_event("click-menu", function(event)
          if count > 0 then
             printout("Started crafting " .. count .. " " .. T.recipe.name, pindex)
          else
-            printout("Not enough materials", pindex)
+            printout("Not enough ingredients", pindex)
          end
 
       elseif players[pindex].menu == "crafting_queue" then
@@ -10363,7 +10364,7 @@ script.on_event(defines.events.on_gui_confirmed,function(event)
          if result == nil or result == "" then 
             result = "unknown"
          end
-         table.insert(global.players[pindex].travel, {name = result, position = players[pindex].position})
+         table.insert(global.players[pindex].travel, {name = result, position = center_of_tile(players[pindex].position)})
          table.sort(global.players[pindex].travel, function(k1, k2)
             return k1.name < k2.name
          end)
@@ -11688,6 +11689,9 @@ end
 
 function sync_build_cursor_graphics(pindex)
    local player = players[pindex]
+   if player == nil or player.player.character == nil then
+      return 
+   end
    local stack = game.get_player(pindex).cursor_stack
    if player.building_direction == nil then
       player.building_direction = dirs.north

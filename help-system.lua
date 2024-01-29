@@ -11,12 +11,12 @@ function load_tutorial(pindex)
    tutorial.step_headers =  {} --2D array of localised strings
    tutorial.step_details =  {} --2D array of localised strings
    local CHAPTER_1_LENGTH = 28 --Lengths are constants depending on how we write the "en" strings.
-   local CHAPTER_2_LENGTH = 21
-   local CHAPTER_3_LENGTH = 07
-   local CHAPTER_4_LENGTH = 10
-   local CHAPTER_5_LENGTH = 16
+   local CHAPTER_2_LENGTH = 22
+   local CHAPTER_3_LENGTH = 08
+   local CHAPTER_4_LENGTH = 15
+   local CHAPTER_5_LENGTH = 18
    local CHAPTER_6_LENGTH = 21
-   local CHAPTER_7_LENGTH = 17
+   local CHAPTER_7_LENGTH = 18
    local CHAPTER_8_LENGTH = 0
    local CHAPTER_9_LENGTH = 0
 
@@ -196,7 +196,9 @@ function tutorial_menu_next(pindex)
 	tutorial.step_index = tutorial.step_index + 1
    
    --End of Chapter 0
-   if tutorial.chapter_index == 0 and tutorial.step_index > #tutorial.chapter_0_messages then
+   if tutorial.chapter_index == 0 and tutorial.step_index <= #tutorial.chapter_0_messages then
+      --(do nothing)
+   elseif tutorial.chapter_index == 0 and tutorial.step_index > #tutorial.chapter_0_messages then
       tutorial.chapter_index = 1
       tutorial.step_index = 1
 	
@@ -252,7 +254,7 @@ function tutorial_menu_read_out_header(pindex)
 	local j = tutorial.step_index
 	local str = tutorial.step_headers[i][j]
 	printout(str,pindex)
-   game.get_player(pindex).print("Tutorial message summary, chapter " .. players[pindex].tutorial.chapter_index .. " , step " .. players[pindex].tutorial.step_index .. ": ",{volume_modifier=0})--***
+   game.get_player(pindex).print("Tutorial message summary, chapter " .. players[pindex].tutorial.chapter_index .. " , step " .. players[pindex].tutorial.step_index .. ": ",{volume_modifier=0})--
    game.get_player(pindex).print(str,{volume_modifier=0})--
 end
 
@@ -261,8 +263,10 @@ function tutorial_menu_read_out_detail(pindex)
 	local i = tutorial.chapter_index
 	local j = tutorial.step_index
 	local str = tutorial.step_details[i][j]
+   local str_h = tutorial.step_headers[i][j]
 	printout(str,pindex)
    game.get_player(pindex).print("Tutorial message, chapter " .. players[pindex].tutorial.chapter_index .. " , step " .. players[pindex].tutorial.step_index .. ": ",{volume_modifier=0})--
+   game.get_player(pindex).print(str_h,{volume_modifier=0})--
    game.get_player(pindex).print(str,{volume_modifier=0})--
 end
 
