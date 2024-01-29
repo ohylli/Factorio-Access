@@ -5775,6 +5775,9 @@ function update_menu_visuals()
          elseif player.menu == "roboport_menu" then
             update_overhead_sprite("item.roboport",2,1.25,pindex)
             update_custom_GUI_sprite("item.roboport", 3, pindex)
+         elseif player.menu == "pump" then
+            update_overhead_sprite("item.offshore-pump",2,1.25,pindex)
+            update_custom_GUI_sprite("item.offshore-pump", 3, pindex)
          elseif player.menu == "belt" then
             update_overhead_sprite("item.transport-belt",2,1.25,pindex)
             update_custom_GUI_sprite(nil,1,pindex)
