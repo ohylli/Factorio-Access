@@ -10125,7 +10125,9 @@ script.on_event("pipette-tool-info",function(event)
    local p = game.get_player(pindex)
    if ent and ent.valid then 
       p.selected = ent 
-      players[pindex].building_direction = ent.direction
+      if ent.supports_direction then
+         players[pindex].building_direction = ent.direction
+      end
    end
 end)
 
