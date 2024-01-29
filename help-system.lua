@@ -4,20 +4,19 @@
 --Other locales are expected to have the same arrangement of tutorial steps.
 function load_tutorial(pindex)
    local tutorial = players[pindex].tutorial 
-   if tutorial == nil then 
-      tutorial = {}
-   end
+   local p = game.get_player(pindex)
+   tutorial = {}
    
    --Load tutorial header and detail strings
    tutorial.step_headers =  {} --2D array of localised strings
    tutorial.step_details =  {} --2D array of localised strings
-   local CHAPTER_1_LENGTH = 0 --Lengths are constants depending on how we write the "en" strings.
-   local CHAPTER_2_LENGTH = 0
-   local CHAPTER_3_LENGTH = 0
-   local CHAPTER_4_LENGTH = 0
-   local CHAPTER_5_LENGTH = 0
-   local CHAPTER_6_LENGTH = 0
-   local CHAPTER_7_LENGTH = 0
+   local CHAPTER_1_LENGTH = 28 --Lengths are constants depending on how we write the "en" strings.
+   local CHAPTER_2_LENGTH = 22
+   local CHAPTER_3_LENGTH = 08
+   local CHAPTER_4_LENGTH = 15
+   local CHAPTER_5_LENGTH = 19
+   local CHAPTER_6_LENGTH = 21
+   local CHAPTER_7_LENGTH = 19
    local CHAPTER_8_LENGTH = 0
    local CHAPTER_9_LENGTH = 0
 
@@ -26,84 +25,227 @@ function load_tutorial(pindex)
    local str_count = 0
    local err_count = 0
    for i = 1, #tutorial.chapter_lengths, 1 do --for every chapter
-      local chapter_length = tutorial.chapter_lengths[i]   
+      local chapter_length = tutorial.chapter_lengths[i] 
+      tutorial.step_headers[i] = {}
+      tutorial.step_details[i] = {}
+      
       for j = 1, chapter_length, 1 do --for every step
-         local header_str_name = "tutorial-chapter-" .. i .. "-step-" .. j .. "-header"
-         local header_localised_str = {header_str_name}--***maybe here it needs to call localising.get ?
+         local header_str_name = "tutorial.tutorial-chapter-" .. i .. "-step-" .. j .. "-header"
+         local header_localised_str = {header_str_name}
          if header_localised_str ~= nil then
-            table.insert(tutorial.step_headers[i],header_localised_str) --for each step
+            table.insert(tutorial.step_headers[i], j, header_localised_str) --for each step
          else
             err_count = err_count + 1
-            --game.print("error in preparing tutorial header string " .. i .. "-" .. j,{volume_modifier = 0})
+            --p.print("error in preparing tutorial header string " .. i .. "-" .. j,{volume_modifier = 0})
          end
          
-         local detail_str_name = "tutorial-chapter-" .. i .. "-step-" .. j .. "-detail"
-         local detail_localised_str = {detail_str_name}--***maybe here it needs to call localising.get ?
+         local detail_str_name = "tutorial.tutorial-chapter-" .. i .. "-step-" .. j .. "-detail"
+         local detail_localised_str = {detail_str_name}
          if detail_localised_str ~= nil then
-            table.insert(tutorial.step_details[i],detail_localised_str) --for each step
+            table.insert(tutorial.step_details[i], j, detail_localised_str) --for each step
          else
             err_count = err_count + 1
-            --game.print("error in preparing tutorial detail string " .. i .. "-" .. j,{volume_modifier = 0})
+            --p.print("error in preparing tutorial detail string " .. i .. "-" .. j,{volume_modifier = 0})
          end
          
          str_count = str_count + 1
       end
    end
    if err_count > 0 then
-      game.print(err_count .. " errors while preparing ".. str_count .. " tutorial strings",{volume_modifier = 0})
+      p.print(err_count .. " errors while preparing ".. str_count .. " tutorial strings",{volume_modifier = 0})
    end
    
+   --Load Chapter 0 strings
+   tutorial.chapter_0_messages = { {"tutorial.tutorial-chapter-0-message-1"}, {"tutorial.tutorial-chapter-0-message-2"}, {"tutorial.tutorial-chapter-0-message-3"} }
+   
    --Load other tutorial strings
-   --todo*** chapter 0 string(s) 
-   --todo*** check result strings 
+   --...
    
    --Load other tutorial variables
    tutorial.chapter_index = 0
    tutorial.step_index = 1
+   tutorial.reading_the_header = false
+   tutorial.clicked = false
    tutorial.rocket_fuel_provided = false
 
+   --Done
+   players[pindex].tutorial = tutorial
 end
 
-function tutorial_menu_open(pindex)--todo***
+function tutorial_menu_open(pindex)--Note: In the current version we do not open/close a menu, we just progress up and down the steps.
+   if players[pindex].vanilla_mode then
+      return 
+   end
+   
+   --Load the tutorial content
+   if players[pindex].tutorial == nil then
+      load_tutorial(pindex)
+   end
+   
+   --Set the player menu tracker to this menu
+   players[pindex].menu = "tutorial_menu"
+   players[pindex].in_menu = true 
+     
+   --Play sound
+   game.get_player(pindex).play_sound{path = "Open-Inventory-Sound"}  
+   
+   --Load menu 
+   tutorial_menu(pindex, players[pindex].tutorial.reading_the_header, players[pindex].tutorial.clicked)
+end
+
+function tutorial_menu_close(pindex)
+   --Set the player menu tracker to none
+   players[pindex].menu = "none"
+   players[pindex].in_menu = false
+   
+   --play sound
+   game.get_player(pindex).play_sound{path="Close-Inventory-Sound"}
 
 end
 
-function tutorial_menu_close(pindex)--todo***
+function tutorial_menu_current(pindex)
+   local tutorial = players[pindex].tutorial
+   if tutorial == nil then
+      load_tutorial(pindex)
+      tutorial_menu(pindex, players[pindex].tutorial.reading_the_header, players[pindex].tutorial.clicked) 
+      return 
+   end
+   
+   players[pindex].tutorial = tutorial
+   tutorial_menu(pindex, players[pindex].tutorial.reading_the_header, players[pindex].tutorial.clicked) 
+end 
 
-end
+function tutorial_menu_toggle(pindex)
+   local tutorial = players[pindex].tutorial
+   if tutorial == nil then
+      load_tutorial(pindex)
+      tutorial_menu(pindex, players[pindex].tutorial.reading_the_header, players[pindex].tutorial.clicked) 
+      return 
+   end
+   tutorial.reading_the_header = not tutorial.reading_the_header
+   players[pindex].tutorial = tutorial
+   tutorial_menu(pindex, players[pindex].tutorial.reading_the_header, players[pindex].tutorial.clicked) 
+end 
 
-function tutorial_menu_up(pindex)
+function tutorial_menu_back(pindex)
 	local tutorial = players[pindex].tutorial
+   if tutorial == nil then
+      load_tutorial(pindex)
+      tutorial_menu(pindex, players[pindex].tutorial.reading_the_header, players[pindex].tutorial.clicked)
+      return 
+   end
 	tutorial.step_index = tutorial.step_index - 1
-	--play_sound: inv move***
+	
+   --End of the previous chapter
 	if tutorial.step_index == 0 then
 		tutorial.chapter_index = tutorial.chapter_index - 1
 		if tutorial.chapter_index == -1 then
+         --Top of the entire list
 			tutorial.chapter_index = 0
 			tutorial.step_index = 1
-			--play_sound: end of list***
+			game.get_player(pindex).play_sound{path = "inventory-edge"}
 		elseif tutorial.chapter_index == 0 then 
-			tutorial.step_index = 1
+         --End of chapter 0
+			tutorial.step_index = #tutorial.chapter_0_messages
 		else
+         --End of another chapter
 			tutorial.step_index = tutorial.chapter_lengths[tutorial.chapter_index]
 		end
 	end
+   
+   --Play sound
+   game.get_player(pindex).play_sound{path = "Inventory-Move"}
+   
+   --Load menu 
+   players[pindex].tutorial = tutorial
+   tutorial_menu(pindex, players[pindex].tutorial.reading_the_header, players[pindex].tutorial.clicked)
 end
 
-function tutorial_menu_down(pindex)
+function tutorial_menu_chapter_back(pindex)
+	local tutorial = players[pindex].tutorial
+   if tutorial == nil then
+      load_tutorial(pindex)
+      tutorial_menu(pindex, players[pindex].tutorial.reading_the_header, players[pindex].tutorial.clicked)
+      return 
+   end
+	tutorial.step_index = 1
+   tutorial.chapter_index = tutorial.chapter_index - 1
+	
+   --Check index
+	if tutorial.chapter_index < 0 then
+		tutorial.chapter_index = 0
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
+	end
+   
+   --Play sound
+   game.get_player(pindex).play_sound{path = "Inventory-Move"}
+   
+   --Load menu 
+   players[pindex].tutorial = tutorial
+   tutorial_menu(pindex, players[pindex].tutorial.reading_the_header, players[pindex].tutorial.clicked)
+end
+
+function tutorial_menu_next(pindex)
+   local tutorial = players[pindex].tutorial
+   if tutorial == nil then
+      load_tutorial(pindex)
+      tutorial_menu(pindex, players[pindex].tutorial.reading_the_header, players[pindex].tutorial.clicked)
+      return 
+   end
 	local tutorial = players[pindex].tutorial
 	tutorial.step_index = tutorial.step_index + 1
-	--play_sound: inv move***
-	if tutorial.step_index > tutorial.chapter_lengths[tutorial.chapter_index] then
+   
+   --End of Chapter 0
+   if tutorial.chapter_index == 0 and tutorial.step_index <= #tutorial.chapter_0_messages then
+      --(do nothing)
+   elseif tutorial.chapter_index == 0 and tutorial.step_index > #tutorial.chapter_0_messages then
+      tutorial.chapter_index = 1
+      tutorial.step_index = 1
+	
+   --End of another chapter
+	elseif tutorial.step_index > tutorial.chapter_lengths[tutorial.chapter_index] then
 		tutorial.chapter_index = tutorial.chapter_index + 1
 		if tutorial.chapter_index > #tutorial.chapter_lengths or tutorial.chapter_lengths[tutorial.chapter_index] == 0 then
+         --End of the entire list
 			tutorial.chapter_index = tutorial.chapter_index - 1
 			tutorial.step_index = tutorial.step_index - 1
-			--play_sound: end of list***
+         game.get_player(pindex).play_sound{path = "inventory-edge"}
 		else
+         --start of the next chapter
 			tutorial.step_index = 1
 		end
 	end
+   
+   --Play sound
+   game.get_player(pindex).play_sound{path = "Inventory-Move"}
+   
+   --Load menu 
+   players[pindex].tutorial = tutorial
+   tutorial_menu(pindex, players[pindex].tutorial.reading_the_header, players[pindex].tutorial.clicked)
+end
+
+function tutorial_menu_chapter_next(pindex)
+	local tutorial = players[pindex].tutorial
+   if tutorial == nil then
+      load_tutorial(pindex)
+      tutorial_menu(pindex, players[pindex].tutorial.reading_the_header, players[pindex].tutorial.clicked)
+      return 
+   end
+	tutorial.step_index = 1
+   tutorial.chapter_index = tutorial.chapter_index + 1
+	
+   --Check index
+	if tutorial.chapter_index > #tutorial.chapter_lengths or tutorial.chapter_lengths[tutorial.chapter_index] == 0 then
+		tutorial.chapter_index = tutorial.chapter_index - 1
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
+	end
+   
+   --Play sound
+   game.get_player(pindex).play_sound{path = "Inventory-Move"}
+   
+   --Load menu 
+   players[pindex].tutorial = tutorial
+   tutorial_menu(pindex, players[pindex].tutorial.reading_the_header, players[pindex].tutorial.clicked)
 end
 
 function tutorial_menu_read_out_header(pindex)
@@ -112,6 +254,8 @@ function tutorial_menu_read_out_header(pindex)
 	local j = tutorial.step_index
 	local str = tutorial.step_headers[i][j]
 	printout(str,pindex)
+   game.get_player(pindex).print("Tutorial message summary, chapter " .. players[pindex].tutorial.chapter_index .. " , step " .. players[pindex].tutorial.step_index .. ": ",{volume_modifier=0})--
+   game.get_player(pindex).print(str,{volume_modifier=0})--
 end
 
 function tutorial_menu_read_out_detail(pindex)
@@ -119,7 +263,11 @@ function tutorial_menu_read_out_detail(pindex)
 	local i = tutorial.chapter_index
 	local j = tutorial.step_index
 	local str = tutorial.step_details[i][j]
+   local str_h = tutorial.step_headers[i][j]
 	printout(str,pindex)
+   game.get_player(pindex).print("Tutorial message, chapter " .. players[pindex].tutorial.chapter_index .. " , step " .. players[pindex].tutorial.step_index .. ": ",{volume_modifier=0})--
+   game.get_player(pindex).print(str_h,{volume_modifier=0})--
+   game.get_player(pindex).print(str,{volume_modifier=0})--
 end
 
 --For most steps this reads the already-loaded strings
@@ -129,11 +277,31 @@ function tutorial_menu(pindex, reading_the_header, clicked)
 	local step = tutorial.step_index
    local p = game.get_player(pindex)
 	if chap == 0 and step == 1 then
-		--Read out chapter 0 message
-      --printout(tutorial.chapter_0_string,pindex)--***
-	elseif chap == 0 and step == 3 then --Example
+		--Read out chapter 0 start message
+      printout(tutorial.chapter_0_messages[step],pindex)
+      game.get_player(pindex).print("Tutorial start message " .. step .. ":",{volume_modifier=0})--
+      game.get_player(pindex).print(tutorial.chapter_0_messages[step],{volume_modifier=0})
+      
+      --Give rocket fuel
+      if players[pindex].tutorial.rocket_fuel_provided ~= true then
+         p.insert{name = "rocket-fuel", count = 8}
+      end 
+      
+      --Reload tutorial
+      game.get_player(pindex).play_sound{path = "Open-Inventory-Sound"}  
+      load_tutorial(pindex)
+      players[pindex].tutorial.rocket_fuel_provided = true
+      
+   elseif chap == 0 and step > 1 then
+      --Read out chapter 0 start message
+      printout(tutorial.chapter_0_messages[step],pindex)
+      game.get_player(pindex).print("Tutorial start message " .. step .. ":",{volume_modifier=0})--
+      game.get_player(pindex).print(tutorial.chapter_0_messages[step],{volume_modifier=0})
+      
+	elseif chap == -1 and step == -1 then --Example
 		--Do a specific action for this step, e.g. provide an item or run a check
       if clicked == false then
+         --Read this step's header/detail
          if reading_the_header == true then
             tutorial_menu_read_out_header(pindex)--Check step header, e.g. "multiple furnaces check"
          else
@@ -149,7 +317,7 @@ function tutorial_menu(pindex, reading_the_header, clicked)
          else
             --printout(tutorial.check_failed,pindex) --e.g. "Check failed"
          end
-      end
+      end      
 	elseif chap > 0 and step > 0 then
 		--All other steps: Just read the header/detail
 		if reading_the_header == true then
@@ -158,6 +326,6 @@ function tutorial_menu(pindex, reading_the_header, clicked)
 			tutorial_menu_read_out_detail(pindex)
 		end
 	else
-		--printout(tutorial_error_string_1,pindex)--*** "Tutorial error occurred"
+		printout({"tutorial.tutorial-error"},pindex)--**
 	end
 end
