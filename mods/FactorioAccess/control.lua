@@ -11475,35 +11475,50 @@ end
 
 --Reports which part of the selected entity has the cursor. E.g. southwest corner, center...
 function get_entity_part_at_cursor(pindex)
-	 --First check if there is an entity at the cursor
 	 local p = game.get_player(pindex)
 	 local x = players[pindex].cursor_pos.x
 	 local y = players[pindex].cursor_pos.y
-	 local ents = p.surface.find_entities_filtered{position = {x = x,y = y}}
+    local excluded_names = {"character", "flying-text", "highlight-box"}
+	 local ents = p.surface.find_entities_filtered{position = {x = x,y = y}, name = excluded_names, invert = true}
 	 local north_same = false
 	 local south_same = false
 	 local east_same = false
 	 local west_same = false
 	 local location = nil
+    
+    --First check if there is an entity at the cursor
 	 if #ents > 0 then
+      --Choose something else if ore is selected
+      local preferred_ent = ents[1]
+      for i, ent in ipairs(ents) do 
+         if ent.valid and ent.type ~= "resource" then 
+            preferred_ent = ent
+         end
+      end
+      p.selected = preferred_ent
+      
 		--Report which part of the entity the cursor covers.
       rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = x+0 ,y = y-1}, surface = p.surface, time_to_live = 30}
       rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = x+0 ,y = y+1}, surface = p.surface, time_to_live = 30}
       rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = x-1 ,y = y-0}, surface = p.surface, time_to_live = 30}
       rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = x+1 ,y = y-0}, surface = p.surface, time_to_live = 30}
       
-		local ent_north = p.surface.find_entities_filtered{position = {x = x,y = y-1}}
-		if #ent_north > 0 and ent_north[1].unit_number == ents[1].unit_number then north_same = true 
-      elseif #ent_north > 1 and ent_north[2].unit_number == ents[1].unit_number then north_same = true end
-		local ent_south = p.surface.find_entities_filtered{position = {x = x,y = y+1}}
-		if #ent_south > 0 and ent_south[1].unit_number == ents[1].unit_number then south_same = true 
-      elseif #ent_south > 1 and ent_south[2].unit_number == ents[1].unit_number then south_same = true end
-		local ent_east = p.surface.find_entities_filtered{position = {x = x+1,y = y}}
-		if #ent_east > 0 and ent_east[1].unit_number == ents[1].unit_number then east_same = true 
-      elseif #ent_east > 1 and ent_east[2].unit_number == ents[1].unit_number then east_same = true end
-		local ent_west = p.surface.find_entities_filtered{position = {x = x-1,y = y}}
-		if #ent_west > 0 and ent_west[1].unit_number == ents[1].unit_number then west_same = true 
-      elseif #ent_west > 1 and ent_west[2].unit_number == ents[1].unit_number then west_same = true end
+		local ent_north = p.surface.find_entities_filtered{position = {x = x,y = y-1}, name = excluded_names, invert = true}
+		if     #ent_north > 0 and ent_north[1].unit_number == preferred_ent.unit_number then north_same = true 
+      elseif #ent_north > 1 and ent_north[2].unit_number == preferred_ent.unit_number then north_same = true 
+      elseif #ent_north > 2 and ent_north[3].unit_number == preferred_ent.unit_number then north_same = true end
+		local ent_south = p.surface.find_entities_filtered{position = {x = x,y = y+1}, name = excluded_names, invert = true}
+		if     #ent_south > 0 and ent_south[1].unit_number == preferred_ent.unit_number then south_same = true 
+      elseif #ent_south > 1 and ent_south[2].unit_number == preferred_ent.unit_number then south_same = true 
+      elseif #ent_south > 2 and ent_south[3].unit_number == preferred_ent.unit_number then south_same = true end
+		local ent_east = p.surface.find_entities_filtered{position = {x = x+1,y = y}, name = excluded_names, invert = true}
+		if     #ent_east > 0 and ent_east[1].unit_number == preferred_ent.unit_number then east_same = true 
+      elseif #ent_east > 1 and ent_east[2].unit_number == preferred_ent.unit_number then east_same = true 
+      elseif #ent_east > 2 and ent_east[3].unit_number == preferred_ent.unit_number then east_same = true end
+		local ent_west = p.surface.find_entities_filtered{position = {x = x-1,y = y}, name = excluded_names, invert = true}
+		if     #ent_west > 0 and ent_west[1].unit_number == preferred_ent.unit_number then west_same = true 
+      elseif #ent_west > 1 and ent_west[2].unit_number == preferred_ent.unit_number then west_same = true 
+      elseif #ent_west > 2 and ent_west[3].unit_number == preferred_ent.unit_number then west_same = true end
 		
 		if north_same and south_same then
 		   if east_same and west_same then
@@ -11543,7 +11558,7 @@ function get_entity_part_at_cursor(pindex)
 		   elseif not east_same and west_same then
 			  location = "east tip"
 		   elseif not east_same and not west_same then
-			  location = " "
+			  location = "all"
 		   end
 		end
 	 end
