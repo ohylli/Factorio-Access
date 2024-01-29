@@ -5802,8 +5802,15 @@ function update_menu_visuals()
             update_custom_GUI_sprite("utility.expand_dots_white",3,pindex)
          else
             --Other menu type ...
-            update_overhead_sprite("utility.select_icon_white",1,1,pindex)
-            update_custom_GUI_sprite("utility.select_icon_white",1,pindex)
+            if player.vanilla_mode then 
+               --No "missing image"
+               update_overhead_sprite(nil,1,1,pindex)
+               update_custom_GUI_sprite(nil,1,pindex)
+            else
+               --"Missing image"
+               update_overhead_sprite("utility.select_icon_white",1,1,pindex)
+               update_custom_GUI_sprite("utility.select_icon_white",1,pindex)
+            end
          end
       else
          if game.get_player(pindex).opened ~= nil then
@@ -8278,6 +8285,9 @@ script.on_event("click-entity", function(event)
       return
    end
    if players[pindex].last_click_tick == event.tick then
+      return
+   end
+   if players[pindex].vanilla_mode == true then
       return
    end
    if players[pindex].in_menu then
