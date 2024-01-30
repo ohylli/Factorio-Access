@@ -7,14 +7,14 @@ MAX_STACK_COUNT = 10
 --https://lua-api.factorio.com/latest/classes/LuaLogisticCell.html
 --defines.inventory.character_trash
 
---Increments: 0, 1, half-stack, 1 stack, n stacks
+--Increments: nil, 1, half-stack, 1 stack, n stacks
 function increment_logistic_request_min_amount(stack_size, amount_min_in)
    local amount_min = amount_min_in
    
    if amount_min == nil or amount_min == 0 then
       amount_min = 1
    elseif amount_min == 1 then
-      amount_min = math.floor(stack_size/2)
+      amount_min = math.max(math.floor(stack_size/2),2)-- 0 --> 2
    elseif amount_min <= math.floor(stack_size/2) then
       amount_min = stack_size
    elseif amount_min <= stack_size then
@@ -26,7 +26,7 @@ function increment_logistic_request_min_amount(stack_size, amount_min_in)
    return amount_min
 end
 
---Increments: 0, 1, half-stack, 1 stack, n stacks
+--Increments: nil, 1, half-stack, 1 stack, n stacks
 function decrement_logistic_request_min_amount(stack_size, amount_min_in)
    local amount_min = amount_min_in
    
@@ -40,6 +40,10 @@ function decrement_logistic_request_min_amount(stack_size, amount_min_in)
       amount_min = math.floor(stack_size/2)
    elseif amount_min > stack_size then
       amount_min = amount_min - stack_size
+   end
+   
+   if amount_min == 0 then -- 0 --> "0"
+      amount_min = nil
    end
    
    return amount_min
@@ -57,7 +61,7 @@ function increment_logistic_request_max_amount(stack_size, amount_max_in)
    elseif amount_max >= math.floor(stack_size/2) then
       amount_max = stack_size
    elseif amount_max >= 1 then
-      amount_max = math.floor(stack_size/2)
+      amount_max = math.max(math.floor(stack_size/2),2)-- 0 --> 2
    elseif amount_max == nil or amount_max == 0 then
       amount_max = stack_size
    end
@@ -77,6 +81,9 @@ function decrement_logistic_request_max_amount(stack_size, amount_max_in)
       amount_max = math.floor(stack_size/2)
    elseif amount_max >= math.floor(stack_size/2) then
       amount_max = 1
+      if stack_size == 1 then -- 0 --> 0
+         amount_max = 0
+      end
    elseif amount_max >= 1 then
       amount_max = 0
    elseif amount_max >= 0 then
