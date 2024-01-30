@@ -1228,7 +1228,7 @@ data:extend({
 {
     type = "custom-input",
     name = "fast-entity-transfer-info",
-    key_sequence = "SHIFT + LEFTBRACKET",
+    key_sequence = "CONTROL + LEFTBRACKET",
     linked_game_control = "fast-entity-transfer",
     consuming = "none"
 },
@@ -1236,7 +1236,7 @@ data:extend({
 {
     type = "custom-input",
     name = "fast-entity-split-info",
-    key_sequence = "SHIFT + RIGHTBRACKET",
+    key_sequence = "CONTROL + RIGHTBRACKET",
     linked_game_control = "fast-entity-split",
     consuming = "none"
 },
