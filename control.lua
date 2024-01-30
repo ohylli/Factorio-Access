@@ -190,7 +190,7 @@ function get_selected_ent(pindex)
       if not ent then
          print(serpent.line(tile.ents),tile.index,ent)
       end
-      if ent.valid and ent.unit_number ~= game.get_player(pindex).character.unit_number then
+      if ent.valid and (players[pindex].cursor or ent.unit_number ~= game.get_player(pindex).character.unit_number) then
          return ent
       end
       table.remove(tile.ents,tile.index)
@@ -7935,10 +7935,13 @@ script.on_event("click-menu", function(event)
             --If both stacks have the same item, do a transfer
             if cursor_stack.valid_for_read and stack.valid_for_read and cursor_stack.name == stack.name then
                stack.transfer_stack(cursor_stack)
+               cursor_stack = game.get_player(pindex).cursor_stack
                if sectors_i.name == "Modules" and cursor_stack.is_module then
                   printout(" Only one module can be added per module slot " , pindex)
-               else
+               elseif cursor_stack.valid_for_read then
                   printout(" Adding to stack of " .. cursor_stack.name , pindex)
+               else
+                  printout(" Added" , pindex)
                end
                return
             end
@@ -11858,7 +11861,7 @@ function cursor_highlight(pindex, ent, box_type, skip_mouse_movement)
          h_box.highlight_box_type = "entity"
       end  
 
-      if ent.unit_number ~= p.character.unit_number then 
+      if players[pindex].cursor or ent.unit_number ~= p.character.unit_number then 
          p.selected = ent
       end
    end
