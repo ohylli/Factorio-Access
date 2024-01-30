@@ -1340,3 +1340,32 @@ end
 --laterdo add or remove stacks from player trash
 
 --laterdo full personal logistics menu where you can go line by line along requests and edit them, iterate through trash?
+
+
+-------------Blueprints------------
+--Expecting to use these vars:
+--pex.box_selecting (bool)
+--pex.box_selection_point_1
+--pex.box_selection_point_2
+--pex.last_held_blueprint
+
+function get_top_left_and_bottom_right(pos_1, pos_2)
+   local top_left = {x = math.min(pos_1.x, pos_2.x), y = math.min(pos_1.y, pos_2.y)}
+   local bottom_right = {x = math.max(pos_1.x, pos_2.x), y = math.max(pos_1.y, pos_2.y)}
+   return top_left, bottom_right
+end
+
+--Create a blueprint from a rectangle between any two points and give it to the player's hand
+function create_blueprint(pindex, point_1, point_2)
+   local top_left, bottom_right = get_top_left_and_bottom_right(pos_1, pos_2)
+   local p = game.get_player(pindex)
+   local cleared = p.clear_cursor()
+   if not cleared then
+      printout("Error: cursor full.", pindex)
+      return
+   end
+   p.cursor_stack.set_stack({name = "blueprint"})
+   p.cursor_stack.create_blueprint{surface = p.surface, force = p.force, area = {top_left,bottom_right}}
+   printout("Blueprint with " .. p.cursor_stack.get_blueprint_entity_count() .. " entities created in hand.", pindex)
+end 
+
