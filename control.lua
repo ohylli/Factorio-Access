@@ -10890,13 +10890,10 @@ script.on_event("debug-test-key", function(event)
    local ent =  get_selected_ent(pindex)
    local stack = game.get_player(pindex).cursor_stack
    
-   p.print("zoom: " .. pex.zoom,{volume_modifier=0})
-   p.print("scale: " .. p.display_scale,{volume_modifier=0})
-   
-   --Recolor cursor boxes if multiplayer
-   if true then
-      set_cursor_colors_to_player_colors(pindex)
-   end
+   --control + c and then hold B to copy... 
+   p.cursor_stack.set_stack({name = "blueprint"})
+   local bp = p.cursor_stack.create_blueprint{surface = p.surface, force = p.force, area = {p.position,pex.cursor_pos}}
+   --SHIFT + B to clear selection?
 
 end)
 
