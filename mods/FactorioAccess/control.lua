@@ -7829,6 +7829,12 @@ script.on_event("click-menu-right", function(event)
    end
 end)
 
+script.on_event("leftbracket-key-id", function(event)
+end)
+
+script.on_event("rightbracket-key-id", function(event)
+end)
+
 --Left click actions in menus (click_menu)
 script.on_event("click-menu", function(event)
    pindex = event.player_index
