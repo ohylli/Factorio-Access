@@ -4060,22 +4060,24 @@ function build_preview_checks_info(stack, pindex)
 		elseif stack.name == "express-underground-belt" then
 		   check_dist = 9
 		end
-      local candidates = game.get_player(pindex).surface.find_entities_filtered{ name = stack.name, position = pos, radius = check_dist, direction = rotate_180(build_dir) } 
+      local candidates = game.get_player(pindex).surface.find_entities_filtered{ name = stack.name, position = pos, radius = check_dist, direction = build_dir } 
 		if #candidates > 0 then
 		   for i,cand in ipairs(candidates) do
 			   rendering.draw_circle{color = {1, 1, 0},radius = 0.5,width = 3,target = cand.position,surface = cand.surface,time_to_live = 60}
             local dist_x = cand.position.x - pos.x
             local dist_y = cand.position.y - pos.y
-			   if cand.direction == rotate_180(build_dir)
-			   and (get_direction_of_that_from_this(cand.position,pos) == build_dir) and (dist_x == 0 or dist_y == 0) then
+			   if cand.direction == build_dir and cand.neighbours == nil and cand.belt_to_ground_type == "input"
+			   and (get_direction_of_that_from_this(cand.position,pos) == rotate_180(build_dir)) and (dist_x == 0 or dist_y == 0) then
 			      rendering.draw_circle{color = {0, 1, 0},radius = 1.0,width = 3,target = cand.position,surface = cand.surface,time_to_live = 60}
                result = result .. " connects " .. direction_lookup(build_dir) .. " with " .. math.floor(util.distance(cand.position,pos)) - 1 .. " tiles underground, "
                connected = true
+               players[pindex].underground_connects = true
 			   end
          end			
 		end
       if not connected then
          result = result .. " not connected "
+         players[pindex].underground_connects = false
       end
    end
    
@@ -8711,7 +8713,8 @@ function build_item_in_hand(pindex, offset_val)
    if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then
       local ent = stack.prototype.place_result
       local dimensions = get_tile_dimensions(stack.prototype, players[pindex].building_direction)
-      local position = nil
+      local position = nil 
+      local placing_underground_belt = stack.prototype.place_result.type == "underground-belt"
 
       if not(players[pindex].cursor) then
          local old_pos = game.get_player(pindex).position
@@ -8832,7 +8835,7 @@ function build_item_in_hand(pindex, offset_val)
             end
             return
          end 
-       elseif stack.name == "substation" and players[pindex].build_lock == true then
+      elseif stack.name == "substation" and players[pindex].build_lock == true then
          --Place a substation in this position only if it is within 16 to 18 tiles of another medium electric pole
          position = offset_position(position, players[pindex].player_direction, -1)
          local surf = game.get_player(pindex).surface
@@ -8855,7 +8858,10 @@ function build_item_in_hand(pindex, offset_val)
             end
             return
          end 
-	  end
+      elseif placing_underground_belt and players[pindex].underground_connects == true then
+         --Flip the chute
+         players[pindex].building_direction = (players[pindex].building_direction + dirs.south) % (2 * dirs.south)
+      end
 	  --Build it
      if players[pindex].cursor then--In cursor mode, build where the cursor is points.
         position = position
@@ -8867,8 +8873,14 @@ function build_item_in_hand(pindex, offset_val)
       }
       --building.position = game.get_player(pindex).surface.find_non_colliding_position(ent.name, position, .5, .05)--DOES NOT RESPECT DIRECTION
       if building.position ~= nil and game.get_player(pindex).can_build_from_cursor(building) then 
+         --Build it
          game.get_player(pindex).build_from_cursor(building)  
          schedule(2,"read_tile",pindex) 
+         if placing_underground_belt and players[pindex].underground_connects == true then
+            --Restore the original chute preview 
+            players[pindex].building_direction = (players[pindex].building_direction + dirs.south) % (2 * dirs.south)
+            game.get_player(pindex).cursor_stack.set_stack({name = stack.name, count = stack.count})
+         end
       else
          if players[pindex].build_lock == true then
             game.get_player(pindex).play_sound{path = "utility/cannot_build"}
