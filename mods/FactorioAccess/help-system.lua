@@ -15,7 +15,7 @@ function load_tutorial(pindex)
    local CHAPTER_3_LENGTH = 08
    local CHAPTER_4_LENGTH = 15
    local CHAPTER_5_LENGTH = 19
-   local CHAPTER_6_LENGTH = 12
+   local CHAPTER_6_LENGTH = 13
    local CHAPTER_7_LENGTH = 13
    local CHAPTER_8_LENGTH = 19
    local CHAPTER_9_LENGTH = 19
@@ -56,7 +56,8 @@ function load_tutorial(pindex)
    end
    
    --Load Chapter 0 strings
-   tutorial.chapter_0_messages = { {"tutorial.tutorial-chapter-0-message-1"}, {"tutorial.tutorial-chapter-0-message-2"}, {"tutorial.tutorial-chapter-0-message-3"} }
+   tutorial.chapter_0_messages = { {"tutorial.tutorial-chapter-0-message-1"}, {"tutorial.tutorial-chapter-0-message-2"}, 
+                                   {"tutorial.tutorial-chapter-0-message-3"}, {"tutorial.tutorial-chapter-0-message-4"} }
    
    --Load other tutorial strings
    --...
