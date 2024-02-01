@@ -1369,3 +1369,107 @@ function create_blueprint(pindex, point_1, point_2)
    printout("Blueprint with " .. p.cursor_stack.get_blueprint_entity_count() .. " entities created in hand.", pindex)
 end 
 
+--Building function for bluelprints
+function paste_blueprint(pindex)
+   local p = game.get_player(pindex)
+   local bp = p.cursor_stack
+   local pos = players[pindex].cursor_pos
+   
+   --Not a blueprint
+   if stack.is_blueprint == false then
+      return nil
+   end
+   --Empty blueprint
+   if not stack.is_blueprint_setup() then
+      return nil
+   end
+   
+   --Offset to place the cursor at the top left corner todo***
+   local left_top, right_bottom = get_blueprint_corners(pindex, true)--***set to false when done
+   
+   --Build it and check if successful
+   local result = bp.build_blueprint{surface = p.surface, force = p.force, position = build_pos, by_player = p, force_build = true}
+   if result == nil or #result == 0 then
+      return false
+   else
+      return true
+   end
+end
+
+--Returns the left top and right bottom corners of the blueprint
+function get_blueprint_corners(pindex, draw_rect)
+   local p = game.get_player(pindex)
+   local bp = p.cursor_stack
+   local pos = players[pindex].cursor_pos
+   local ents = bp.get_blueprint_entities()
+   local west_most_x = pos.x 
+   local east_most_x = pos.x
+   local north_most_y = pos.y 
+   local south_most_y = pos.y 
+   
+   --Empty blueprint: Just circle the cursor 
+   if not stack.is_blueprint_setup() then
+      local rect = rendering.draw_rectangle{left_top = {x = math.floor(pos.x), y = math.floor(pos.y)}, right_bottom = {x = math.ceil(pos.x), y = math.ceil(pos.y)}, 
+                color = {r = 0.25, b = 0.25, g = 1.0, a = 0.75}, draw_on_ground = true, surface = game.get_player(pindex).surface, players = nil }
+      return rect 
+   end
+   
+   --Find and draw the blueprint borders
+   for i, ent in ipairs(ents) do 
+      if west_most_x > ent.position.x then
+         west_most_x = ent.position.x
+      elseif east_most_x < ent.position.x then 
+         east_most_x = ent.position.x
+      end
+      if north_most_y > ent.position.y then
+         north_most_y = ent.position.y
+      elseif south_most_y < ent.position.y then
+         south_most_y = ent.position.y 
+      end
+   end
+   local left_top = {x = west_most_x, y = north_most_y}
+   local right_bottom = {x = east_most_x, y = south_most_y}
+   if draw_rect == true then
+      --Draw a temporary rectangle for debugging
+      rendering.draw_rectangle{left_top = left_top, right_bottom = right_bottom, color = {r = 0.25, b = 0.25, g = 1.0, a = 0.75}, draw_on_ground = true, surface = p.surface, players = nil, time_to_live = 300}
+   end
+   return left_top, right_bottom 
+end 
+
+--Basic info for when the blueprint item is read.
+function get_blueprint_info(stack)
+   --Not a blueprint
+   if stack.is_blueprint == false then
+      return ""
+   end
+   --Empty blueprint
+   if not stack.is_blueprint_setup() then
+      return "empty"
+   end
+   
+   --Get name
+   local name = get_blueprint_name(stack)
+   local result = name .. ", with "
+   
+   --Use icons as extra info (in case it is not named)
+   local icons = stack.blueprint_icons
+   if icons == nil or #icons == 0 then
+      result = result .. " no details "
+      return result
+   end
+   
+   for i, signal in ipairs(icons) do 
+      if signal.index > 1 then
+         result = result .. " and "
+      end
+      result = result .. signal.signal.name
+   end
+   game.print(result)--****
+   return result
+end
+
+--Check the json format of the exported blueprint to get the name
+function get_blueprint_name(stack)
+   return "no name"
+end
+

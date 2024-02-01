@@ -8868,9 +8868,9 @@ function build_item_in_hand(pindex, offset_val)
          players[pindex].building_direction = (players[pindex].building_direction + dirs.south) % (2 * dirs.south)
       end
 	  --Build it
-     if players[pindex].cursor then--In cursor mode, build where the cursor is points.
-        position = position
-     end
+     -- if players[pindex].cursor then--In cursor mode, build where the cursor points.
+        -- position = position
+     -- end
       local building = {
          position = position,
          direction = players[pindex].building_direction,
@@ -11739,10 +11739,16 @@ function sync_build_cursor_graphics(pindex)
    if player.building_direction == nil then
       player.building_direction = dirs.north
    end
+   turn_to_cursor_direction_cardinal(pindex)
    local dir = player.building_direction
    local dir_indicator = player.building_dir_arrow
-   turn_to_cursor_direction_cardinal(pindex)
    local p_dir = player.player_direction
+   local width = stack.prototype.place_result.tile_width
+   local height = nil
+   local flip = nil
+   local left_top = nil
+   local right_bottom = nil
+   
    if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result then
       --Redraw arrow
       if dir_indicator ~= nil then rendering.destroy(player.building_dir_arrow) end
@@ -11754,15 +11760,15 @@ function sync_build_cursor_graphics(pindex)
          rendering.set_visible(dir_indicator,false)
       end
       
-      --Redraw footprint
+      --Redraw footprint (ent)
       if player.building_footprint ~= nil then 
          rendering.destroy(player.building_footprint) 
       end
-      local width = stack.prototype.place_result.tile_width
-      local height = stack.prototype.place_result.tile_height
-      local flip = false
-      local left_top = {x = math.floor(player.cursor_pos.x),y = math.floor(player.cursor_pos.y)}
-      local right_bottom = {x = (left_top.x + width), y = (left_top.y + height)}
+      width = stack.prototype.place_result.tile_width
+      height = stack.prototype.place_result.tile_height
+      flip = false
+      left_top = {x = math.floor(player.cursor_pos.x),y = math.floor(player.cursor_pos.y)}
+      right_bottom = {x = (left_top.x + width), y = (left_top.y + height)}
       if dir == dirs.east or dir == dirs.west then--Note, does not cover diagonal directions for non-square objects.
          flip = true
       end
@@ -11784,8 +11790,7 @@ function sync_build_cursor_graphics(pindex)
             right_bottom.y = (right_bottom.y - width + 1)
          end
       end
-      player.building_footprint = rendering.draw_rectangle{left_top = left_top, right_bottom = right_bottom , color = {r = 0.25, b = 0.25, g = 1.0, a = 0.75}, draw_on_ground = true, 
-         surface = game.get_player(pindex).surface, players = nil }
+      player.building_footprint = rendering.draw_rectangle{left_top = left_top, right_bottom = right_bottom , color = {r = 0.25, b = 0.25, g = 1.0, a = 0.75}, draw_on_ground = true, surface = game.get_player(pindex).surface, players = nil }
       rendering.set_visible(player.building_footprint,true)
       if players[pindex].hide_cursor or stack.name == "locomotive" or stack.name == "cargo-wagon" or stack.name == "fluid-wagon" or stack.name == "artillery-wagon" then
          rendering.set_visible(player.building_footprint,false)
