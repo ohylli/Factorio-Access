@@ -8881,11 +8881,6 @@ function build_item_in_hand(pindex, offset_val)
          --Build it
          game.get_player(pindex).build_from_cursor(building)  
          schedule(2,"read_tile",pindex) 
-         if placing_underground_belt and players[pindex].underground_connects == true then
-            --Restore the original chute preview 
-            players[pindex].building_direction = (players[pindex].building_direction + dirs.south) % (2 * dirs.south)
-            game.get_player(pindex).cursor_stack.set_stack({name = stack.name, count = stack.count})
-         end
       else
          if players[pindex].build_lock == true then
             game.get_player(pindex).play_sound{path = "utility/cannot_build"}
@@ -8893,6 +8888,11 @@ function build_item_in_hand(pindex, offset_val)
             game.get_player(pindex).play_sound{path = "utility/cannot_build"}
             printout("Cannot place that there.", pindex)
          end
+      end
+      if placing_underground_belt and players[pindex].underground_connects == true then
+         --Restore the original chute preview 
+         players[pindex].building_direction = (players[pindex].building_direction + dirs.south) % (2 * dirs.south)
+         game.get_player(pindex).cursor_stack.set_stack({name = stack.name, count = stack.count})
       end
    elseif stack and stack.valid_for_read and stack.valid and stack.prototype.place_as_tile_result ~= nil then
    --Tile placement 
