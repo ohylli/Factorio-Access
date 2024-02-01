@@ -3798,7 +3798,7 @@ function scan_area(x,y,w,h, pindex, filter_direction)
 end
 
 function toggle_cursor(pindex)
-   if not players[pindex].cursor and not players[pindex].hide_cursor then
+   if (not players[pindex].cursor) and (not players[pindex].hide_cursor) then
       players[pindex].cursor = true
       players[pindex].build_lock = false
             
@@ -3818,7 +3818,6 @@ function toggle_cursor(pindex)
       move_mouse_cursor(players[pindex].cursor_pos,pindex)
       read_tile(pindex, "Cursor mode enabled, ")
    else
-      --printout("Cursor mode disabled", pindex)
       players[pindex].cursor = false
       players[pindex].cursor_pos = offset_position(players[pindex].position,players[pindex].player_direction,1)
       players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos)
@@ -10097,16 +10096,19 @@ script.on_event("toggle-vanilla-mode",function(event)
    if not check_for_player(pindex) then
       return
    end
-   players[pindex].vanilla_mode = not players[pindex].vanilla_mode
    game.get_player(pindex).play_sound{path = "utility/confirm"}
-   if players[pindex].vanilla_mode then
+   if players[pindex].vanilla_mode == false then
       game.get_player(pindex).print("Vanilla mode : ON")
       players[pindex].walk = 2
       game.get_player(pindex).character_running_speed_modifier = 0
       players[pindex].hide_cursor = true
+      printout("Vanilla mode enabled", pindex)
+      players[pindex].vanilla_mode = true
    else
       game.get_player(pindex).print("Vanilla mode : OFF")
       players[pindex].hide_cursor = false
+      players[pindex].vanilla_mode = false
+      printout("Vanilla mode disabled", pindex)
    end
 end)
 
@@ -10117,13 +10119,11 @@ script.on_event("toggle-cursor-hiding",function(event)
    end
    if players[pindex].hide_cursor == nil or players[pindex].hide_cursor == false then
       players[pindex].hide_cursor = true
-   else
-      players[pindex].hide_cursor = false
-   end
-   game.get_player(pindex).play_sound{path = "utility/confirm"}
-   if players[pindex].hide_cursor then
+      printout("Cursor hiding enabled", pindex)
       game.get_player(pindex).print("Cursor hiding : ON")
    else
+      players[pindex].hide_cursor = false
+      printout("Cursor hiding disabled", pindex)
       game.get_player(pindex).print("Cursor hiding : OFF")
    end
 end)
@@ -11750,7 +11750,7 @@ function sync_build_cursor_graphics(pindex)
          surface = game.get_player(pindex).surface, players = nil, target = center_of_tile(player.cursor_pos), orientation = (dir/dirs.east/dirs.south)}
       dir_indicator = player.building_dir_arrow
       rendering.set_visible(dir_indicator,true)
-      if players[pindex].hide_cursor or stack.name == "locomotive" or stack.name == "cargo-wagon" or stack.name == "fluid-wagon" or stack.name == "artillery-wagon" then
+      if stack.name == "locomotive" or stack.name == "cargo-wagon" or stack.name == "fluid-wagon" or stack.name == "artillery-wagon" then
          rendering.set_visible(dir_indicator,false)
       end
       
