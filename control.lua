@@ -168,6 +168,7 @@ end
 function pos2str (pos)
    return pos.x .. " " .. pos.y
 end
+
 function str2pos(str)
    local t = {}
    for s in string.gmatch(str, "([^%s]+)") do
@@ -175,24 +176,6 @@ function str2pos(str)
    end
       return {x = t[1], y = t[2]}
 end
-
-local function get_bp_data_for_edit(stack)
-   return game.json_to_table(game.decode_string(string.sub(stack.export_stack(),2)))
-end
-local function set_stack_bp_from_data(stack,bp_data)
-   stack.import_stack("0"..game.encode_string(game.table_to_json(bp_data)))
-end
-local function set_blueprint_description(stack,description)
-   bp_data=get_bp_data_for_edit(stack)
-   bp_data.blueprint.description = description
-   set_stack_bp_from_data(stack,bp_data)
-end
-local function set_blueprint_label(stack,label)
-   bp_data=get_bp_data_for_edit(stack)
-   bp_data.blueprint.label = label
-   set_stack_bp_from_data(stack,bp_data)
-end
-
 
 function get_selected_ent(pindex)
    local tile=players[pindex].tile
