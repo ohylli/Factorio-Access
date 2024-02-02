@@ -108,9 +108,9 @@ end
 function logistics_request_toggle_spidertron_logistics(spidertron,pindex)
    spidertron.vehicle_logistic_requests_enabled = not spidertron.vehicle_logistic_requests_enabled
    if spidertron.vehicle_logistic_requests_enabled then
-      printout("Resumed personal logistics requests for this spidertron",pindex)
+      printout("Resumed spidertron logistics requests",pindex)
    else
-      printout("Paused personal logistics requests for this spidertron",pindex)
+      printout("Paused spidertron logistics requests",pindex)
    end   
 end
 
@@ -225,7 +225,7 @@ function count_active_spidertron_logistic_slots(spidertron,pindex)
    local current_slot = nil
    local slot_id = 0
    
-   --Find the correct request slot for this item, if any
+   --Find non-empty request slots 
    while slots_nil_counter < slots_max_count  do
       slot_id = slot_id + 1
       current_slot = spidertron.get_vehicle_logistic_slot(slot_id)
@@ -255,7 +255,7 @@ function logistics_info_key_handler(pindex)
          --Logistic chest in front
          local ent = get_selected_ent(pindex)
          if can_make_logistic_requests(ent) then
-            read_chest_requests_summary(ent,pindex)
+            read_entity_requests_summary(ent,pindex)
             return
          elseif can_set_logistic_filter(ent) then
             local filter = ent.storage_filter
@@ -284,7 +284,7 @@ function logistics_info_key_handler(pindex)
          chest_logistic_request_read(stack_inv, chest, pindex)
       else
          --Empty hand, empty inventory slot
-         read_chest_requests_summary(chest,pindex)
+         read_entity_requests_summary(chest,pindex)
       end
    elseif players[pindex].menu == "vehicle" and can_make_logistic_requests(game.get_player(pindex).opened) then
       --spidertron logistics
@@ -295,13 +295,13 @@ function logistics_info_key_handler(pindex)
       --Check item in hand or item in inventory
       if stack ~= nil and stack.valid_for_read and stack.valid then
          --Item in hand
-         spidertron_logistic_request_read(stack, spidertron, pindex,false)
+         spidertron_logistic_request_read(stack, spidertron, pindex, true)
       elseif stack_inv ~= nil and stack_inv.valid_for_read and stack_inv.valid then
          --Item in output inv
-         spidertron_logistic_request_read(stack_inv, spidertron, pindex,false)
+         spidertron_logistic_request_read(stack_inv, spidertron, pindex, true)
       else
          --Empty hand, empty inventory slot
-         read_chest_requests_summary(spidertron,pindex)      
+         read_entity_requests_summary(spidertron,pindex)      
 end
    elseif players[pindex].menu == "building" and can_set_logistic_filter(game.get_player(pindex).opened) then
       local filter = game.get_player(pindex).opened.storage_filter
@@ -542,13 +542,15 @@ function logistics_request_decrement_max_handler(pindex)
 end
 
 function logistics_request_toggle_handler(pindex)
+   local ent = game.get_player(pindex).opened
    if not players[pindex].in_menu or players[pindex].menu == "inventory" then
+      --Player: Toggle enabling requests
       logistics_request_toggle_personal_logistics(pindex)
-   else
-      local ent = game.get_player(pindex).opened
-   if players[pindex].menu == "vehicle" and can_make_logistic_requests(game.get_player(pindex).opened) then
+   elseif players[pindex].menu == "vehicle" and can_make_logistic_requests(ent) then
+      --Vehicles: Toggle enabling requests
       logistics_request_toggle_spidertron_logistics(ent, pindex)
-else
+   elseif players[pindex].menu == "building" then
+      --Requester chests: Toggle requesting from buffers
       if can_make_logistic_requests(ent) then
          ent.request_from_buffers = not ent.request_from_buffers
       else
@@ -560,7 +562,6 @@ else
          printout("Disabled requesting from buffers", pindex)
       end
    end
-end
 end
 
 --Returns summary info string
@@ -883,8 +884,8 @@ function player_logistic_request_decrement_max(item_stack,pindex)
    player_logistic_request_read(item_stack,pindex,false)
 end
 
---Finds or assigns the logistic request slot for the item
-function get_chest_logistic_slot_index(item_stack,chest)
+--Finds or assigns the logistic request slot for the item, for chests or vehicles 
+function get_entity_logistic_slot_index(item_stack,chest)
    local slots_max_count = chest.request_slot_count
    local slot_found = false
    local current_slot = nil
@@ -943,7 +944,7 @@ function chest_logistic_request_read(item_stack,chest,pindex)
    end
    
    --Find the correct request slot for this item
-   local correct_slot_id = get_chest_logistic_slot_index(item_stack,chest)
+   local correct_slot_id = get_entity_logistic_slot_index(item_stack,chest)
    
    if correct_slot_id == -1 then
       printout("Error: No empty slots available for this request",pindex)
@@ -990,7 +991,7 @@ function chest_logistic_request_increment_min(item_stack,chest,pindex)
    end
    
    --Find the correct request slot for this item
-   local correct_slot_id = get_chest_logistic_slot_index(item_stack,chest)
+   local correct_slot_id = get_entity_logistic_slot_index(item_stack,chest)
    
    if correct_slot_id == -1 then
       printout("Error: No empty slots available for this request",pindex)
@@ -1030,7 +1031,7 @@ function chest_logistic_request_decrement_min(item_stack,chest, pindex)
    end
    
    --Find the correct request slot for this item
-   local correct_slot_id = get_chest_logistic_slot_index(item_stack,spidertron)
+   local correct_slot_id = get_entity_logistic_slot_index(item_stack,chest)
    
    if correct_slot_id == -1 then
       printout("Error: No empty slots available for this request",pindex)
@@ -1077,7 +1078,7 @@ function spidertron_logistic_requests_summary_info(spidertron,pindex)
    end
    
    --Check if inside any logistic network or not (simpler than logistics network info)
-   local network = p.surface.find_logistic_network_by_position(p.position, p.force)
+   local network = spidertron.surface.find_logistic_network_by_position(spidertron.position, spidertron.force)
    if network == nil or not network.valid then
       result = result .. "Not in a network, "
    end
@@ -1088,7 +1089,7 @@ function spidertron_logistic_requests_summary_info(spidertron,pindex)
    end
    
    --Count logistics requests
-   result = result .. count_active_spidertron_logistic_slots(pindex) .. " personal logistic requests set, "
+   result = result .. count_active_spidertron_logistic_slots(pindex) .. " spidertron logistic requests set, "
    return result
 end
 
@@ -1108,7 +1109,7 @@ function spidertron_logistic_request_read(item_stack,spidertron,pindex,additiona
    
    if additional_checks then
       --Check if inside any logistic network or not (simpler than logistics network info)
-      local network = p.surface.find_logistic_network_by_position(p.position, p.force)
+      local network = spidertron.surface.find_logistic_network_by_position(spidertron.position, spidertron.force)
       if network == nil or not network.valid then
          result = result .. "Not in a network, "
       end
@@ -1120,7 +1121,7 @@ function spidertron_logistic_request_read(item_stack,spidertron,pindex,additiona
    end
    
    --Find the correct request slot for this item
-   local correct_slot_id = get_chest_logistic_slot_index(item_stack,spidertron)
+   local correct_slot_id = get_entity_logistic_slot_index(item_stack,spidertron)
    
    if correct_slot_id == nil or correct_slot_id < 1 then
       printout(result .. "Error: Invalid slot ID",pindex)
@@ -1153,13 +1154,13 @@ function spidertron_logistic_request_read(item_stack,spidertron,pindex,additiona
          inv_result = get_unit_or_stack_count(inv_count, item_stack.prototype.stack_size, false) .. " in inventory, "
          
          local trash_count = spidertron.get_inventory(defines.inventory.spider_trash).get_item_count(item_stack.name)
-         trash_result = get_unit_or_stack_count(trash_count, item_stack.prototype.stack_size, false) .. " in personal trash, "
+         trash_result = get_unit_or_stack_count(trash_count, item_stack.prototype.stack_size, false) .. " in spidertron trash, "
          
          printout(result .. min_result .. max_result .. " requested for " .. item_stack.name .. ", " .. inv_result .. trash_result .. " use the L key and modifier keys to set requests.",pindex)
          return
       else
          --All requests are nil
-         printout(result .. "No personal logistic requests set for " .. item_stack.name .. ", use the L key and modifier keys to set requests.",pindex)
+         printout(result .. "No spidertron logistic requests set for " .. item_stack.name .. ", use the L key and modifier keys to set requests.",pindex)
          return
       end
    end
@@ -1178,7 +1179,7 @@ function spidertron_logistic_request_increment_min(item_stack,spidertron,pindex)
    end
    
    --Find the correct request slot for this item
-   local correct_slot_id = get_chest_logistic_slot_index(item_stack,spidertron)
+   local correct_slot_id = get_entity_logistic_slot_index(item_stack,spidertron)
    
    if correct_slot_id == -1 then
       printout("Error: No empty slots available for this request",pindex)
@@ -1222,7 +1223,7 @@ function spidertron_logistic_request_decrement_min(item_stack,spidertron,pindex)
    end
    
    --Find the correct request slot for this item
-   local correct_slot_id = get_chest_logistic_slot_index(item_stack,spidertron)
+   local correct_slot_id = get_entity_logistic_slot_index(item_stack,spidertron)
    
    if correct_slot_id == -1 then
       printout("Error: No empty slots available for this request",pindex)
@@ -1266,7 +1267,7 @@ function spidertron_logistic_request_increment_max(item_stack,spidertron,pindex)
    end
    
    --Find the correct request slot for this item
-   local correct_slot_id = get_chest_logistic_slot_index(item_stack,spidertron)
+   local correct_slot_id = get_entity_logistic_slot_index(item_stack,spidertron)
    
    if correct_slot_id == -1 then
       printout("Error: No empty slots available for this request",pindex)
@@ -1310,7 +1311,7 @@ function spidertron_logistic_request_decrement_max(item_stack,spidertron,pindex)
    end
    
    --Find the correct request slot for this item
-   local correct_slot_id = get_chest_logistic_slot_index(item_stack,spidertron)
+   local correct_slot_id = get_entity_logistic_slot_index(item_stack,spidertron)
    
    if correct_slot_id == -1 then
       printout("Error: No empty slots available for this request",pindex)
@@ -1341,10 +1342,13 @@ function spidertron_logistic_request_decrement_max(item_stack,spidertron,pindex)
    spidertron_logistic_request_read(item_stack,spidertron,pindex,false)
 end
 
---Checks logistic roles
+--Logistic requests can be made by chests or spidertrons
 function can_make_logistic_requests(ent)
    if ent == nil or ent.valid == false then
       return false
+   end
+   if ent.type == "spider-vehicle" then
+      return true
    end
    local point = ent.get_logistic_point(defines.logistic_member_index.logistic_container)
    if point == nil or point.valid == false then 
@@ -1357,13 +1361,11 @@ function can_make_logistic_requests(ent)
    end
 end
 
+--Logistic filters are set by storage chests
 function can_set_logistic_filter(ent)
    if ent == nil or ent.valid == false then
       return false
    end
-if ent.type == "spider-vehicle" then
-return true
-end
    local point = ent.get_logistic_point(defines.logistic_member_index.logistic_container)
    if point == nil or point.valid == false then 
       return false
@@ -1391,12 +1393,12 @@ function set_logistic_filter(stack, ent, pindex)
    end
 end
 
-function read_chest_requests_summary(ent,pindex)--***todo improve
-if ent.type == "spider-vehicle" then
-   printout(ent.request_slot_count .. " spidertron logistic requests set", pindex)
-else
-   printout(ent.request_slot_count .. " chest logistic requests set", pindex)
-end
+function read_entity_requests_summary(ent,pindex)--***todo improve
+   if ent.type == "spider-vehicle" then
+      printout(ent.request_slot_count .. " spidertron logistic requests set", pindex)
+   else
+      printout(ent.request_slot_count .. " chest logistic requests set", pindex)
+   end
 end
 
 --Finds the nearest roboport
