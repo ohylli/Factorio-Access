@@ -1758,6 +1758,36 @@ end
 --pex.box_selection_point_2
 --pex.last_held_blueprint
 
+local function get_bp_data_for_edit(stack)
+   return game.json_to_table(game.decode_string(string.sub(stack.export_stack(),2)))
+end
+
+local function set_stack_bp_from_data(stack,bp_data)
+   stack.import_stack("0"..game.encode_string(game.table_to_json(bp_data)))
+end
+
+function set_blueprint_description(stack,description)
+   local bp_data=get_bp_data_for_edit(stack)
+   bp_data.blueprint.description = description
+   set_stack_bp_from_data(stack,bp_data)
+end
+
+function get_blueprint_description(stack)
+   local bp_data = get_bp_data_for_edit(stack)
+   return bp_data.blueprint.description
+end
+
+function set_blueprint_label(stack,label)
+   bp_data=get_bp_data_for_edit(stack)
+   bp_data.blueprint.label = label
+   set_stack_bp_from_data(stack,bp_data)
+end
+
+function get_blueprint_label(stack)
+   local bp_data = get_bp_data_for_edit(stack)
+   return bp_data.blueprint.label
+end
+
 function get_top_left_and_bottom_right(pos_1, pos_2)
    local top_left = {x = math.min(pos_1.x, pos_2.x), y = math.min(pos_1.y, pos_2.y)}
    local bottom_right = {x = math.max(pos_1.x, pos_2.x), y = math.max(pos_1.y, pos_2.y)}
@@ -1857,7 +1887,7 @@ function get_blueprint_info(stack)
    end
    
    --Get name
-   local name = get_blueprint_name(stack)
+   local name = get_blueprint_label(stack)
    local result = name .. ", with "
    
    --Use icons as extra info (in case it is not named)
@@ -1875,10 +1905,5 @@ function get_blueprint_info(stack)
    end
    game.print(result)--****
    return result
-end
-
---Check the json format of the exported blueprint to get the name
-function get_blueprint_name(stack)
-   return "no name"
 end
 
