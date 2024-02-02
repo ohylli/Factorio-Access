@@ -1,5 +1,5 @@
 --Here: Functions relating worker robots, roboports, logistic systems, blueprints
---Does not include event handlers
+--Does not include event handlers directly, but can have functions called by them.
 
 dirs = defines.direction
 MAX_STACK_COUNT = 10
@@ -188,14 +188,14 @@ function get_personal_logistic_slot_index(item_stack,pindex)
    return correct_slot_id
 end
 
-function count_active_personal_logistic_slots(pindex) --***laterdo count fulfilled ones in the same loop
+function count_active_personal_logistic_slots(pindex) --***laterdo count fulfilled ones in the same loop ; also try p.character.request_slot_count
    local p = game.get_player(pindex)
    local slots_nil_counter = 0
    local slots_found = 0
    local current_slot = nil
    local slot_id = 0
    
-   --Find the correct request slot for this item, if any
+   --Find non-empty request slots 
    while slots_nil_counter < 250 do
       slot_id = slot_id + 1
       current_slot = p.get_personal_logistic_slot(slot_id)
