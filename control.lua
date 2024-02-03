@@ -9932,7 +9932,14 @@ script.on_load(function()
 end)
 
 script.on_configuration_changed(ensure_global_structures_are_up_to_date)
-script.on_init(ensure_global_structures_are_up_to_date)
+script.on_init(function()
+   local skip_intro_message = remote.interfaces["freeplay"]
+   skip_intro_message = skip_intro_message and skip_intro_message["set_skip_intro"]
+   if skip_intro_message then
+      remote.call("freeplay","set_skip_intro",true)
+   end
+   ensure_global_structures_are_up_to_date()
+end)
 
 
 script.on_event(defines.events.on_cutscene_cancelled, function(event)
