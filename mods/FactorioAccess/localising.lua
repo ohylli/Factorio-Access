@@ -64,7 +64,7 @@ function localising.handler(event)
       else
          players[pindex].translation_issue_counter = players[pindex].translation_issue_counter + 1
       end
-      print("translation request ".. event.id .. " failed, request: [" .. serpent.line(event.localised_string) ..  "] for:" .. translated_thing[1] .. ":" .. translated_thing[2] .. ", total issues: " .. players[pindex].translation_issue_counter)
+      --print("translation request ".. event.id .. " failed, request: [" .. serpent.line(event.localised_string) ..  "] for:" .. translated_thing[1] .. ":" .. translated_thing[2] .. ", total issues: " .. players[pindex].translation_issue_counter)
       return
    end
    local localised = players[pindex].localisations
