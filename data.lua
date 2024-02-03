@@ -141,7 +141,7 @@ data:extend({
    type = "sound",
    name = "alert-enemy-presence-high",
    filename = "__FactorioAccess__/Audio/alert-enemy-presence-high-zapsplat-trimmed-science_fiction_alarm_fast_high_pitched_warning_tone_emergency_003_60104.wav",
-   volume = 1,
+   volume = 0.75,
    preload = true
 },
 
@@ -149,7 +149,7 @@ data:extend({
    type = "sound",
    name = "alert-enemy-presence-low",
    filename = "__FactorioAccess__/Audio/alert-enemy-presence-low-zapsplat-modified_multimedia_game_tone_short_bright_futuristic_beep_action_tone_002_59161.wav",
-   volume = 1,
+   volume = 0.75,
    preload = true
 },
 
@@ -213,7 +213,7 @@ data:extend({
    type = "sound",
    name = "player-aim-locked",
    filename = "__FactorioAccess__/Audio/player-aim-locked-zapsplat_multimedia_game_beep_high_pitched_generic_002_25862.wav", 
-   volume = 1,
+   volume = 0.75,
    preload = true
 },
 
@@ -221,7 +221,7 @@ data:extend({
    type = "sound",
    name = "player-bump-alert",
    filename = "__FactorioAccess__/Audio/player-bump-alert-zapsplat-trimmed_multimedia_game_sound_synth_digital_tone_beep_001_38533.wav", 
-   volume = 1,
+   volume = 0.75,
    preload = true
 },
 
@@ -229,7 +229,7 @@ data:extend({
    type = "sound",
    name = "player-bump-stuck-alert",
    filename = "__FactorioAccess__/Audio/player-bump-stuck-alert-zapsplat_multimedia_game_sound_synth_digital_tone_beep_005_38537.wav", 
-   volume = 1,
+   volume = 0.75,
    preload = true
 },
 
@@ -253,7 +253,7 @@ data:extend({
    type = "sound",
    name = "player-damaged-character",
    filename = "__FactorioAccess__/Audio/player-damaged-character-zapsplat-modified_multimedia_beep_harsh_synth_single_high_pitched_87498.wav",
-   volume = 1,
+   volume = 0.75,
    preload = true
 },
 
@@ -261,7 +261,7 @@ data:extend({
    type = "sound",
    name = "player-damaged-shield",
    filename = "__FactorioAccess__/Audio/player-damaged-shield-zapsplat_multimedia_game_sound_sci_fi_futuristic_beep_action_tone_001_64989.wav",
-   volume = 1,
+   volume = 0.75,
    preload = true
 },
 
@@ -277,7 +277,7 @@ data:extend({
    type = "sound",
    name = "player-teleported",
    filename = "__FactorioAccess__/Audio/player-teleported-zapsplat_science_fiction_computer_alarm_single_medium_ring_beep_fast_004_84296.wav",
-   volume = 1,
+   volume = 0.75,
    preload = true
 },
 
