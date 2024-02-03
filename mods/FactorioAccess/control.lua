@@ -8324,6 +8324,7 @@ function clicked_on_entity(ent,pindex)
    if p.vehicle ~= nil and p.vehicle.train ~= nil then
       --If player is on a train, open it
       train_menu_open(pindex)
+      return 
    elseif ent == nil then
       --No entity clicked 
       p.selected = nil
@@ -8334,6 +8335,7 @@ function clicked_on_entity(ent,pindex)
       if p.opened ~= nil and p.opened.object_name == "LuaEntity" and p.opened.valid then
          p.print("Opened " .. p.opened.name,{volume_modifier=0})
          ent = p.opened
+         return 
       else
          p.selected = nil
          return
