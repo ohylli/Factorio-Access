@@ -6074,7 +6074,7 @@ function cursor_mode_move(direction, pindex, single_only)
       
       --Apply build lock if active
       if players[pindex].build_lock then
-         build_item_in_hand(pindex, -1)            
+         build_item_in_hand(pindex, 0)            
       end
       
       --Update cursor highlight
@@ -8321,8 +8321,7 @@ script.on_event("click-hand", function(event)
       --If something is in hand...     
       if stack.prototype ~= nil and (stack.prototype.place_result ~= nil or stack.prototype.place_as_tile_result ~= nil) and stack.name ~= "offshore-pump" then
          --If holding a preview of a building/tile, try to place it here
-         local offset = 0
-         build_item_in_hand(pindex, offset)
+         build_item_in_hand(pindex, 0)
       elseif stack.name == "offshore-pump" then
          --If holding an offshore pump, open the offshore pump builder
          build_offshore_pump_in_hand(pindex)
@@ -8746,7 +8745,7 @@ end
 * If the item is an offshore pump, calls a different, special function for it.
 * You can offset the building with respect to the direction the player is facing. The offset is multiplied by the placed building width.
 ]]
-function build_item_in_hand(pindex, offset_val)
+function build_item_in_hand(pindex, offset_val, free_place_straight_rail)
    local stack = game.get_player(pindex).cursor_stack
    local offset = offset_val or 0
    
@@ -8770,7 +8769,8 @@ function build_item_in_hand(pindex, offset_val)
       build_offshore_pump_in_hand(pindex)
       return
    elseif stack.name == "rail" then 
-      if offset_val ~= 1.337 then --only when sentinel value, it allows free building rails
+      if not (free_place_straight_rail == true) then
+         --Append rails unless otherwise stated
          local pos = players[pindex].cursor_pos
          append_rail(pos, pindex)
          return
@@ -9248,7 +9248,7 @@ script.on_event("free-place-straight-rail", function(event)
       local ent =  get_selected_ent(pindex)
       if stack and stack.valid_for_read and stack.valid and stack.name == "rail" then
          --Straight rail free placement
-         build_item_in_hand(pindex, 1.337)--Uses sentinel value
+         build_item_in_hand(pindex, 0, true)
       end
    end
 end)
