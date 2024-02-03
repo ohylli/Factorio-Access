@@ -7722,6 +7722,8 @@ function try_to_mine_with_sound(ent,pindex)
    end
 end
 
+REMNANT_OBSTACLES = {"tree-01-stump","tree-02-stump","tree-03-stump","tree-04-stump","tree-05-stump","tree-06-stump","tree-07-stump","tree-08-stump","tree-09-stump","small-scorchmark","small-scorchmark-tintable","medium-scorchmark","medium-scorchmark-tintable","big-scorchmark","big-scorchmark-tintable","huge-scorchmark","huge-scorchmark-tintable","rock-big","rock-huge","sand-rock-big"}
+
 --Mines all trees and rocks and ground items in a selected circular area. Useful when placing structures. Forces mining. laterdo add deleting stumps maybe but they do fade away eventually 
 function clear_obstacles_in_circle(position, radius, pindex)
    local surf = game.get_player(pindex).surface
@@ -7751,11 +7753,11 @@ function clear_obstacles_in_circle(position, radius, pindex)
    end
    
    --Find and mine corpse entities such as building remnants
-   local corpse_ents = surf.find_entities_filtered{position = position, radius = radius, name = {"tree-01-stump","tree-02-stump","tree-03-stump","tree-04-stump","tree-05-stump","tree-06-stump","tree-07-stump","tree-08-stump","tree-09-stump","small-scorchmark","small-scorchmark-tintable","medium-scorchmark","medium-scorchmark-tintable","big-scorchmark","big-scorchmark-tintable","huge-scorchmark","huge-scorchmark-tintable"}}
-   for i,corpse_ent in ipairs(corpse_ents) do
-      if corpse_ent ~= nil and corpse_ent.valid then
-         rendering.draw_circle{color = {1, 0, 0},radius = 2,width = 2,target = corpse_ent.position,surface = corpse_ent.surface,time_to_live = 60}
-         corpse_ent.destroy{}
+   local remnant_ents = surf.find_entities_filtered{position = position, radius = radius, name = REMNANT_OBSTACLES}
+   for i,remnant_ent in ipairs(remnant_ents) do
+      if remnant_ent ~= nil and remnant_ent.valid then
+         rendering.draw_circle{color = {1, 0, 0},radius = 2,width = 2,target = remnant_ent.position,surface = remnant_ent.surface,time_to_live = 60}
+         remnant_ent.destroy{}
          remnants_cleared = remnants_cleared + 1
       end
    end
@@ -7773,6 +7775,65 @@ function clear_obstacles_in_circle(position, radius, pindex)
       comment = "cleared " .. trees_cleared .. " trees and " .. rocks_cleared .. " rocks and " .. remnants_cleared .. " remnants and " .. ground_items_cleared .. " ground items "
    end
    rendering.draw_circle{color = {0, 1, 0},radius = radius,width = radius,target = position,surface = surf,time_to_live = 60}
+   return (trees_cleared + rocks_cleared + remnants_cleared + ground_items_cleared), comment
+end
+
+--Same as function above for a circle, but the area is defined differently
+function clear_obstacles_in_rectangle(left_top, right_bottom, pindex)
+   local surf = game.get_player(pindex).surface
+   local comment = ""
+   local trees_cleared = 0
+   local rocks_cleared = 0
+   local remnants_cleared = 0
+   local ground_items_cleared = 0
+   players[pindex].allow_reading_flying_text = false
+   
+   --Check for valid positions
+   if left_top == nil or right_bottom == nil then
+      return 
+   end
+   
+   --Find and mine trees
+   local trees = surf.find_entities_filtered{area = {left_top, right_bottom}, type = "tree"}
+   for i,tree_ent in ipairs(trees) do
+      rendering.draw_circle{color = {1, 0, 0},radius = 1,width = 1,target = tree_ent.position,surface = tree_ent.surface,time_to_live = 60}
+      game.get_player(pindex).mine_entity(tree_ent,true)
+	  trees_cleared = trees_cleared + 1
+   end
+   
+   --Find and mine rocks. Note that they are resource entities with specific names
+   local resources = surf.find_entities_filtered{area = {left_top, right_bottom}, name = {"rock-big","rock-huge","sand-rock-big"}}
+   for i,resource_ent in ipairs(resources) do
+      if resource_ent ~= nil and resource_ent.valid then
+         rendering.draw_circle{color = {1, 0, 0},radius = 2,width = 2,target = resource_ent.position,surface = resource_ent.surface,time_to_live = 60}
+         game.get_player(pindex).mine_entity(resource_ent,true) 
+         rocks_cleared = rocks_cleared + 1
+      end
+   end
+   
+   --Find and mine corpse entities such as building remnants
+   local remnant_ents = surf.find_entities_filtered{area = {left_top, right_bottom}, name = REMNANT_OBSTACLES}
+   for i,remnant_ent in ipairs(remnant_ents) do
+      if remnant_ent ~= nil and remnant_ent.valid then
+         rendering.draw_circle{color = {1, 0, 0},radius = 2,width = 2,target = remnant_ent.position,surface = remnant_ent.surface,time_to_live = 60}
+         remnant_ent.destroy{}
+         remnants_cleared = remnants_cleared + 1
+      end
+   end
+   --game.get_player(pindex).print("remnants cleared: " .. remnants_cleared)--debug
+   
+   --Find and mine items on the ground
+   local ground_items = surf.find_entities_filtered{area = {left_top, right_bottom}, name = "item-on-ground"}
+   for i,ground_item in ipairs(ground_items) do
+      rendering.draw_circle{color = {1, 0, 0},radius = 0.25,width = 2,target = ground_item.position,surface = surf,time_to_live = 60}
+      game.get_player(pindex).mine_entity(ground_item,true)
+      ground_items_cleared = ground_items_cleared + 1
+   end
+         
+   if trees_cleared + rocks_cleared + ground_items_cleared + remnants_cleared > 0 then
+      comment = "cleared " .. trees_cleared .. " trees and " .. rocks_cleared .. " rocks and " .. remnants_cleared .. " remnants and " .. ground_items_cleared .. " ground items "
+   end
+   rendering.draw_rectangle{color = {0, 1, 0}, left_top = left_top, right_bottom = right_bottom, width = 1, surface = surf, time_to_live = 60}
    return (trees_cleared + rocks_cleared + remnants_cleared + ground_items_cleared), comment
 end
 
@@ -8870,21 +8931,22 @@ function build_item_in_hand(pindex, offset_val)
          --Flip the chute
          players[pindex].building_direction = (players[pindex].building_direction + dirs.south) % (2 * dirs.south)
       end
-	  --Build it
-     -- if players[pindex].cursor then--In cursor mode, build where the cursor points.
-        -- position = position
-     -- end
+      
+      --Clear build area obstacles 
+      clear_obstacles_in_rectangle(players[pindex].building_footprint_left_top, players[pindex].building_footprint_right_bottom, pindex)
+      
+	  --Try to build it
       local building = {
          position = position,
          direction = players[pindex].building_direction,
          alt = false
       }
-      --building.position = game.get_player(pindex).surface.find_non_colliding_position(ent.name, position, .5, .05)--DOES NOT RESPECT DIRECTION
       if building.position ~= nil and game.get_player(pindex).can_build_from_cursor(building) then 
          --Build it
          game.get_player(pindex).build_from_cursor(building)  
          schedule(2,"read_tile",pindex) 
       else
+         --Report errors
          if players[pindex].build_lock == true then
             game.get_player(pindex).play_sound{path = "utility/cannot_build"}
          else
@@ -8892,8 +8954,8 @@ function build_item_in_hand(pindex, offset_val)
             printout("Cannot place that there.", pindex)
          end
       end
+      --Restore the original underground belt chute preview 
       if placing_underground_belt and players[pindex].underground_connects == true then
-         --Restore the original chute preview 
          players[pindex].building_direction = (players[pindex].building_direction + dirs.south) % (2 * dirs.south)
          game.get_player(pindex).cursor_stack.set_stack({name = stack.name, count = stack.count})
       end
@@ -11806,12 +11868,18 @@ function sync_build_cursor_graphics(pindex)
             right_bottom.y = (right_bottom.y - width + 1)
          end
       end
+      
+      --Update the footprint info and draw it 
+      player.building_footprint_left_top = left_top
+      player.building_footprint_right_bottom = right_bottom
       player.building_footprint = rendering.draw_rectangle{left_top = left_top, right_bottom = right_bottom , color = {r = 0.25, b = 0.25, g = 1.0, a = 0.75}, draw_on_ground = true, surface = game.get_player(pindex).surface, players = nil }
       rendering.set_visible(player.building_footprint,true)
+      
+      --Hide the drawing in the desired cases
       if players[pindex].hide_cursor or stack.name == "locomotive" or stack.name == "cargo-wagon" or stack.name == "fluid-wagon" or stack.name == "artillery-wagon" then
          rendering.set_visible(player.building_footprint,false)
       end
-      
+            
       --Move mouse cursor according to building box
       if player.cursor then
          --Adjust for cursor
