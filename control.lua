@@ -8270,6 +8270,7 @@ script.on_event("click-menu", function(event)
    end
 end)
 
+--Different behavior when you click on an inventory slot depending on the item in hand and the item in the slot (WIP)
 function player_inventory_click(pindex, click_is_left_in)
    --****todo finish this to include all interaction cases, then generalize it to building inventories . 
    --Use code from above and then replace above clutter with calls to this.
