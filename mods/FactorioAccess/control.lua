@@ -4758,8 +4758,7 @@ function initialize(player)
 end
 
 
---Update the position info and cursor info during smooth walking 
---***todo fix reading bug: there is no read if more of same ent is being detected, until releasing the move key or the end changes. This is despite event firing successfully.
+--Update the position info and cursor info during smooth walking.
 script.on_event(defines.events.on_player_changed_position,function(event)
    local pindex = event.player_index
    local p = game.get_player(pindex)
@@ -4816,7 +4815,7 @@ script.on_event(defines.events.on_player_changed_position,function(event)
          if ent ~= nil and ent.valid then
             cursor_highlight(pindex, ent, nil)
             p.selected = ent
-            p.play_sound{path = "Close-Inventory-Sound"}--***laterdo unique sound to note a detected ent 
+            p.play_sound{path = "Close-Inventory-Sound", volume_modifier = 0.75}--***laterdo unique sound to note a detected ent 
          else 
             cursor_highlight(pindex, nil, nil)
             p.selected = nil
@@ -6994,6 +6993,7 @@ end)
 --Sets up mod character menus. Cannot actually open the character GUI.
 function open_player_inventory(tick,pindex)
    game.get_player(pindex).play_sound{path = "Open-Inventory-Sound"}
+   game.get_player(pindex).selected = nil 
    players[pindex].last_menu_toggle_tick = tick 
    players[pindex].in_menu = true
    players[pindex].menu="inventory"
@@ -9583,9 +9583,9 @@ function rotate_building_info_read(event, forward)
                
                --Printout warning
                if rot_offset > 0 then
-                  printout("Warning: rotate " .. rot_offset .. " times backward to re-align cursor", pindex)
+                  printout("Rail warning: rotate " .. rot_offset .. " times backward to re-align cursor, and then rotate another item in hand to select the direction you want", pindex)
                elseif rot_offset < 0 then
-                  printout("Warning: rotate " .. rot_offset .. " times forward to re-align cursor", pindex)
+                  printout("Rail warning: rotate " .. rot_offset .. " times forward to re-align cursor, and then rotate another item in hand to select the direction you want", pindex)
                else
                   printout("Cursor re-aligned", pindex)
                end               
@@ -10185,6 +10185,7 @@ script.on_event("pipette-tool-info",function(event)
       p.selected = ent 
       if ent.supports_direction then
          players[pindex].building_direction = ent.direction
+         players[pindex].cursor_rotation_offset = 0
       end
    end
 end)
@@ -10351,6 +10352,7 @@ script.on_event("open-warnings-menu", function(event)
       players[pindex].menu = "warnings"
       players[pindex].in_menu = true
       players[pindex].move_queue = {}
+      game.get_player(pindex).selected = nil 
       game.get_player(pindex).play_sound{path = "Open-Inventory-Sound"}
       printout("Short Range: " .. players[pindex].warnings.short.summary, pindex)
    else
@@ -10378,6 +10380,7 @@ script.on_event("open-fast-travel-menu", function(event)
       frame.force_auto_center()
       frame.focus()
       game.get_player(pindex).opened = frame      
+      game.get_player(pindex).selected = nil 
    elseif players[pindex].in_menu or game.get_player(pindex).opened ~= nil then
       printout("Another menu is open.", pindex)
    elseif game.get_player(pindex).driving then
@@ -10986,6 +10989,9 @@ script.on_event(defines.events.on_gui_opened, function(event)
    if players[pindex].vanilla_mode ~= true then 
       game.get_player(pindex).game_view_settings.update_entity_selection = false
    end
+   
+   --Deselect to prevent multiple interactions
+   p.selected = nil 
    
    --GUI mismatch checks
    if event.gui_type == defines.gui_type.controller and players[pindex].menu == "none" and event.tick - players[pindex].last_menu_toggle_tick < 5 then
@@ -11751,7 +11757,7 @@ function sync_build_cursor_graphics(pindex)
    local dir = player.building_direction
    local dir_indicator = player.building_dir_arrow
    local p_dir = player.player_direction
-   local width = nil
+   local width = nil 
    local height = nil
    local flip = nil
    local left_top = nil

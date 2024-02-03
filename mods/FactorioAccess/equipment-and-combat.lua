@@ -436,7 +436,7 @@ function aim_gun_at_nearest_enemy(pindex,enemy_in)
    --If in range, move the cursor onto the enemy to aim the gun
    if dist < range then 
       players[pindex].cursor_pos = enemy.position
-      move_cursor_map(enemy.position,pindex)
+      move_mouse_cursor(enemy.position,pindex)
       cursor_highlight(pindex,nil,nil,true)
    end
    return true
