@@ -9630,6 +9630,7 @@ function rotate_building_info_read(event, forward)
             
             --Exceptions
             if stack.name == "rail" then 
+               --The actual rotation is by 45 degrees only.
                --Bug:This misaligns the preview. Clearing the cursor does not work. We need to track rotation offsets to fix it.
                --It looks like 4 rotations fully invert it and 8 rotations fix it.
                local rot_offset = players[pindex].cursor_rotation_offset
@@ -9644,14 +9645,17 @@ function rotate_building_info_read(event, forward)
                   end
                end
                players[pindex].cursor_rotation_offset = rot_offset
+               if rot_offset ~= 0 then
+                  build_dir = (build_dir - dirs.northeast * mult) % (2 * dirs.south)
+               end
                
                --Printout warning
                if rot_offset > 0 then
-                  printout("Rail warning: rotate " .. rot_offset .. " times backward to re-align cursor, and then rotate another item in hand to select the direction you want", pindex)
+                  printout(direction_lookup(build_dir) .. " rail rotation warning: rotate a rail " .. rot_offset .. " times backward to re-align cursor, and then rotate a different item in hand to select the rotation you want before placing a rail", pindex)
                elseif rot_offset < 0 then
-                  printout("Rail warning: rotate " .. rot_offset .. " times forward to re-align cursor, and then rotate another item in hand to select the direction you want", pindex)
+                  printout(direction_lookup(build_dir) .. " rail rotation warning: rotate a rail " .. -rot_offset .. " times forward to re-align cursor, and then rotate a different item in hand to select the rotation you want before placing a rail", pindex)
                else
-                  printout("Cursor re-aligned", pindex)
+                  printout(direction_lookup(build_dir) .. ", cursor rotation is aligned", pindex)
                end               
                return 
             end
