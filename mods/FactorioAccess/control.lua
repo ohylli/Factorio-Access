@@ -7834,7 +7834,7 @@ function clear_obstacles_in_rectangle(left_top, right_bottom, pindex)
       comment = "cleared " .. trees_cleared .. " trees and " .. rocks_cleared .. " rocks and " .. remnants_cleared .. " remnants and " .. ground_items_cleared .. " ground items "
    end
    if not players[pindex].hide_cursor then
-      rendering.draw_rectangle{color = {0, 1, 0, 0.5}, left_top = left_top, right_bottom = right_bottom, width = 4, surface = surf, time_to_live = 10, draw_on_ground = true}
+      --rendering.draw_rectangle{color = {0, 1, 0, 0.5}, left_top = left_top, right_bottom = right_bottom, width = 4, surface = surf, time_to_live = 60, draw_on_ground = true}
    end 
    return (trees_cleared + rocks_cleared + remnants_cleared + ground_items_cleared), comment
 end
@@ -8747,6 +8747,7 @@ end
 ]]
 function build_item_in_hand(pindex, free_place_straight_rail)
    local stack = game.get_player(pindex).cursor_stack
+   local p = game.get_player(pindex)
 
    --Valid stack check
    if not (stack and stack.valid and stack.valid_for_read) then
@@ -8949,7 +8950,7 @@ function build_item_in_hand(pindex, free_place_straight_rail)
          --Flip the chute
          players[pindex].building_direction = (players[pindex].building_direction + dirs.south) % (2 * dirs.south)
       end
-      
+            
       --Clear build area obstacles 
       clear_obstacles_in_rectangle(players[pindex].building_footprint_left_top, players[pindex].building_footprint_right_bottom, pindex)
       
@@ -11853,8 +11854,12 @@ function sync_build_cursor_graphics(pindex)
    if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result then
       --Redraw arrow
       if dir_indicator ~= nil then rendering.destroy(player.building_dir_arrow) end
+      local arrow_pos = player.cursor_pos
+      if players[pindex].build_lock and not players[pindex].cursor then
+         arrow_pos = center_of_tile(offset_position(arrow_pos, players[pindex].player_direction, -2))
+      end
       player.building_dir_arrow = rendering.draw_sprite{sprite = "fluid.crude-oil", tint = {r = 0.25, b = 0.25, g = 1.0, a = 0.75}, render_layer = 254, 
-         surface = game.get_player(pindex).surface, players = nil, target = center_of_tile(player.cursor_pos), orientation = (dir/dirs.east/dirs.south)}
+         surface = game.get_player(pindex).surface, players = nil, target = arrow_pos, orientation = (dir/dirs.east/dirs.south)}
       dir_indicator = player.building_dir_arrow
       rendering.set_visible(dir_indicator,true)
       if stack.name == "locomotive" or stack.name == "cargo-wagon" or stack.name == "fluid-wagon" or stack.name == "artillery-wagon" then
