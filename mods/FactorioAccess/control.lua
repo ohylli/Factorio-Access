@@ -7833,7 +7833,9 @@ function clear_obstacles_in_rectangle(left_top, right_bottom, pindex)
    if trees_cleared + rocks_cleared + ground_items_cleared + remnants_cleared > 0 then
       comment = "cleared " .. trees_cleared .. " trees and " .. rocks_cleared .. " rocks and " .. remnants_cleared .. " remnants and " .. ground_items_cleared .. " ground items "
    end
-   rendering.draw_rectangle{color = {0, 1, 0}, left_top = left_top, right_bottom = right_bottom, width = 1, surface = surf, time_to_live = 60}
+   if not players[pindex].hide_cursor then
+      rendering.draw_rectangle{color = {0, 1, 0, 0.5}, left_top = left_top, right_bottom = right_bottom, width = 4, surface = surf, time_to_live = 30, draw_on_ground = true}
+   end 
    return (trees_cleared + rocks_cleared + remnants_cleared + ground_items_cleared), comment
 end
 
@@ -8786,56 +8788,74 @@ function build_item_in_hand(pindex, offset_val)
       local placing_underground_belt = stack.prototype.place_result.type == "underground-belt"
 
       if not(players[pindex].cursor) then
+         --Not in cursor mode 
          local old_pos = game.get_player(pindex).position
-         local adjusted_offset = offset
+         local extra_offset = offset
          if stack.name == "locomotive" or stack.name == "cargo-wagon" or stack.name == "fluid-wagon" or stack.name == "artillery-wagon" then
-            --Allow easy placement onto rails.
-            adjusted_offset = 2.5
-            position = offset_position(old_pos, players[pindex].player_direction, adjusted_offset)
+            --Allow easy placement onto rails by simply offsetting to the faced direction.
+            extra_offset = 2.5
+            position = offset_position(old_pos, players[pindex].player_direction, extra_offset)
          else
+            --Apply offsets according to building direction and player direction
             local width = stack.prototype.place_result.tile_width
             local height = stack.prototype.place_result.tile_height
             local left_top = {x = math.floor(players[pindex].cursor_pos.x),y = math.floor(players[pindex].cursor_pos.y)}
             local right_bottom = {x = left_top.x + width, y = left_top.y + height}
-            local flip = false
             local dir = players[pindex].building_direction
             turn_to_cursor_direction_cardinal(pindex)
             local p_dir = players[pindex].player_direction
             
-            if dir == dirs.east or dir == dirs.west then--Note, does not cover diagonal directions for non-square objects.
-               flip = true
+            --Flip height and width if the object is rotated sideways
+            if dir == dirs.east or dir == dirs.west then--Note, diagonal cases are rounded to north/south cases 
+               local temp = height
+               height = width
+               width = temp
+               right_bottom = {x = left_top.x + width, y = left_top.y + height}
             end
-
-            if p_dir == dirs.west and not flip then
+            
+            --Apply offsets when facing west or north so that items can be placed in front of the character
+            if p_dir == dirs.west then
                left_top.x = (left_top.x - width + 1)
                right_bottom.x = (right_bottom.x - width + 1)
-            elseif p_dir == dirs.west and flip then
-               left_top.x = (left_top.x - height + 1)
-               right_bottom.x = (right_bottom.x - height + 1)
-            elseif p_dir == dirs.north and not flip then
+            elseif p_dir == dirs.north then
                left_top.y = (left_top.y - height + 1)
                right_bottom.y = (right_bottom.y - height + 1)
-            elseif p_dir == dirs.north and flip then
-               left_top.y = (left_top.y - width + 1)
-               right_bottom.y = (right_bottom.y - width + 1)
             end
 
             position = {x = left_top.x + math.floor(width/2),y = left_top.y + math.floor(height/2)}
-            if flip then
-               position = {x = left_top.x + math.floor(height/2),y = left_top.y + math.floor(width/2)}
-            end
             
-            --Apply extra offsets if Any
-            position = offset_position(position, players[pindex].player_direction, adjusted_offset)
+            --Apply extra offsets if any (including by building size for negative offsets)
+            local size_offset = 0
+            if p_dir == dirs.north or p_dir == dirs.south then
+               size_offset = height
+            elseif p_dir == dirs.east or p_dir == dirs.west then
+               size_offset = width
+            end
+            if extra_offset < 0 then 
+               extra_offset = extra_offset - size_offset + 1
+            end
+            position = offset_position(position, players[pindex].player_direction, extra_offset)
          end
          
       else
-         --Cursor offset
-         local old_pos = players[pindex].cursor_pos
-         local adjusted_position = offset_position(old_pos, dirs.south, dimensions.y/2 - .5 )
-         local adjusted_position = offset_position(adjusted_position, dirs.east, dimensions.x/2 - .5 )
-         local adjusted_offset = offset
-         position = offset_position(adjusted_position, players[pindex].player_direction, adjusted_offset)
+         --Cursor mode offset: to the top left corner, according to building direction
+            local width = stack.prototype.place_result.tile_width
+            local height = stack.prototype.place_result.tile_height
+            local left_top = {x = math.floor(players[pindex].cursor_pos.x),y = math.floor(players[pindex].cursor_pos.y)}
+            local right_bottom = {x = left_top.x + width, y = left_top.y + height}
+            local dir = players[pindex].building_direction
+            turn_to_cursor_direction_cardinal(pindex)
+            local p_dir = players[pindex].player_direction
+            
+            --Flip height and width if the object is rotated
+            if dir == dirs.east or dir == dirs.west then--Note, does not cover diagonal directions for non-square objects.
+               local temp = height
+               height = width
+               width = temp
+               right_bottom = {x = left_top.x + width, y = left_top.y + height}
+            end
+
+            position = {x = left_top.x + math.floor(width/2),y = left_top.y + math.floor(height/2)}
       end
       if stack.name == "small-electric-pole" and players[pindex].build_lock == true then
          --Place a small electric pole in this position only if it is within 6.5 to 7.5 tiles of another small electric pole
@@ -8941,6 +8961,7 @@ function build_item_in_hand(pindex, offset_val)
          direction = players[pindex].building_direction,
          alt = false
       }
+      --game.print("pos = " .. position.x .. " , " .. position.y,{volume_modifier=0})
       if building.position ~= nil and game.get_player(pindex).can_build_from_cursor(building) then 
          --Build it
          game.get_player(pindex).build_from_cursor(building)  
@@ -11851,25 +11872,23 @@ function sync_build_cursor_graphics(pindex)
       flip = false
       left_top = {x = math.floor(player.cursor_pos.x),y = math.floor(player.cursor_pos.y)}
       right_bottom = {x = (left_top.x + width), y = (left_top.y + height)}
-      if dir == dirs.east or dir == dirs.west then--Note, does not cover diagonal directions for non-square objects.
-         flip = true
+      
+      --Flip height and width if the object is rotated sideways
+      if dir == dirs.east or dir == dirs.west then--Note, diagonal cases are rounded to north/south cases 
+         local temp = height
+         height = width
+         width = temp
+         right_bottom = {x = left_top.x + width, y = left_top.y + height}
       end
-      if flip then
-         right_bottom = {x = (left_top.x + height), y = (left_top.y + width)}
-      end
+      
       if not player.cursor then
-         if p_dir == dirs.west and not flip then
+         --Apply offsets when facing west or north so that items can be placed in front of the character
+         if p_dir == dirs.west then
             left_top.x = (left_top.x - width + 1)
             right_bottom.x = (right_bottom.x - width + 1)
-         elseif p_dir == dirs.west and flip then
-            left_top.x = (left_top.x - height + 1)
-            right_bottom.x = (right_bottom.x - height + 1)
-         elseif p_dir == dirs.north and not flip then
+         elseif p_dir == dirs.north then
             left_top.y = (left_top.y - height + 1)
             right_bottom.y = (right_bottom.y - height + 1)
-         elseif p_dir == dirs.north and flip then
-            left_top.y = (left_top.y - width + 1)
-            right_bottom.y = (right_bottom.y - width + 1)
          end
       end
       
