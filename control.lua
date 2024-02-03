@@ -4779,7 +4779,7 @@ script.on_event(defines.events.on_player_changed_position,function(event)
          if players[pindex].build_lock and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and stack.prototype.place_result.type == "transport-belt" then 
             turn_to_cursor_direction_cardinal(pindex)
             players[pindex].building_direction = players[pindex].player_direction
-            build_item_in_hand(pindex, -2)--build extra belt when turning
+            build_item_in_hand(pindex)--build extra belt when turning
          end
       elseif players[pindex].cursor == false then 
          --Directions same: Walk straight
@@ -4793,7 +4793,7 @@ script.on_event(defines.events.on_player_changed_position,function(event)
                turn_to_cursor_direction_cardinal(pindex)
                players[pindex].building_direction = players[pindex].player_direction
             end
-            build_item_in_hand(pindex, -2)
+            build_item_in_hand(pindex)
          end
       end
       
@@ -5963,7 +5963,7 @@ function move(direction,pindex)
          end
          
          if players[pindex].build_lock then
-            build_item_in_hand(pindex, -2)
+            build_item_in_hand(pindex)
          end
       else
          printout("Tile Occupied", pindex)
@@ -6074,7 +6074,7 @@ function cursor_mode_move(direction, pindex, single_only)
       
       --Apply build lock if active
       if players[pindex].build_lock then
-         build_item_in_hand(pindex, 0)            
+         build_item_in_hand(pindex)            
       end
       
       --Update cursor highlight
@@ -7834,7 +7834,7 @@ function clear_obstacles_in_rectangle(left_top, right_bottom, pindex)
       comment = "cleared " .. trees_cleared .. " trees and " .. rocks_cleared .. " rocks and " .. remnants_cleared .. " remnants and " .. ground_items_cleared .. " ground items "
    end
    if not players[pindex].hide_cursor then
-      rendering.draw_rectangle{color = {0, 1, 0, 0.5}, left_top = left_top, right_bottom = right_bottom, width = 4, surface = surf, time_to_live = 30, draw_on_ground = true}
+      rendering.draw_rectangle{color = {0, 1, 0, 0.5}, left_top = left_top, right_bottom = right_bottom, width = 4, surface = surf, time_to_live = 10, draw_on_ground = true}
    end 
    return (trees_cleared + rocks_cleared + remnants_cleared + ground_items_cleared), comment
 end
@@ -8321,7 +8321,7 @@ script.on_event("click-hand", function(event)
       --If something is in hand...     
       if stack.prototype ~= nil and (stack.prototype.place_result ~= nil or stack.prototype.place_as_tile_result ~= nil) and stack.name ~= "offshore-pump" then
          --If holding a preview of a building/tile, try to place it here
-         build_item_in_hand(pindex, 0)
+         build_item_in_hand(pindex)
       elseif stack.name == "offshore-pump" then
          --If holding an offshore pump, open the offshore pump builder
          build_offshore_pump_in_hand(pindex)
@@ -8745,10 +8745,9 @@ end
 * If the item is an offshore pump, calls a different, special function for it.
 * You can offset the building with respect to the direction the player is facing. The offset is multiplied by the placed building width.
 ]]
-function build_item_in_hand(pindex, offset_val, free_place_straight_rail)
+function build_item_in_hand(pindex, free_place_straight_rail)
    local stack = game.get_player(pindex).cursor_stack
-   local offset = offset_val or 0
-   
+
    --Valid stack check
    if not (stack and stack.valid and stack.valid_for_read) then
       game.get_player(pindex).play_sound{path = "utility/cannot_build"}
@@ -8790,11 +8789,10 @@ function build_item_in_hand(pindex, offset_val, free_place_straight_rail)
       if not(players[pindex].cursor) then
          --Not in cursor mode 
          local old_pos = game.get_player(pindex).position
-         local extra_offset = offset
          if stack.name == "locomotive" or stack.name == "cargo-wagon" or stack.name == "fluid-wagon" or stack.name == "artillery-wagon" then
             --Allow easy placement onto rails by simply offsetting to the faced direction.
-            extra_offset = 2.5
-            position = offset_position(old_pos, players[pindex].player_direction, extra_offset)
+            local rail_vehicle_offset = 2.5
+            position = offset_position(old_pos, players[pindex].player_direction, rail_vehicle_offset)
          else
             --Apply offsets according to building direction and player direction
             local width = stack.prototype.place_result.tile_width
@@ -8824,17 +8822,17 @@ function build_item_in_hand(pindex, offset_val, free_place_straight_rail)
 
             position = {x = left_top.x + math.floor(width/2),y = left_top.y + math.floor(height/2)}
             
-            --Apply extra offsets if any (including by building size for negative offsets)
-            local size_offset = 0
-            if p_dir == dirs.north or p_dir == dirs.south then
-               size_offset = height
-            elseif p_dir == dirs.east or p_dir == dirs.west then
-               size_offset = width
-            end
-            if extra_offset < 0 then 
-               extra_offset = extra_offset - size_offset + 1
-            end
-            position = offset_position(position, players[pindex].player_direction, extra_offset)
+            --In build lock mode and outside cursor mode, build from behind the player
+            if players[pindex].build_lock and not players[pindex].cursor then
+               local base_offset = -2
+               local size_offset = 0
+               if p_dir == dirs.north or p_dir == dirs.south then
+                  size_offset = -height + 1
+               elseif p_dir == dirs.east or p_dir == dirs.west then
+                  size_offset = -width + 1
+               end
+               position = offset_position(position, players[pindex].player_direction, base_offset + size_offset)
+            end 
          end
          
       else
@@ -9248,7 +9246,7 @@ script.on_event("free-place-straight-rail", function(event)
       local ent =  get_selected_ent(pindex)
       if stack and stack.valid_for_read and stack.valid and stack.name == "rail" then
          --Straight rail free placement
-         build_item_in_hand(pindex, 0, true)
+         build_item_in_hand(pindex, true)
       end
    end
 end)
@@ -11890,6 +11888,19 @@ function sync_build_cursor_graphics(pindex)
             left_top.y = (left_top.y - height + 1)
             right_bottom.y = (right_bottom.y - height + 1)
          end
+         
+         --In build lock mode and outside cursor mode, build from behind the player
+         if players[pindex].build_lock and not players[pindex].cursor then
+            local base_offset = -2
+            local size_offset = 0
+            if p_dir == dirs.north or p_dir == dirs.south then
+               size_offset = -height + 1
+            elseif p_dir == dirs.east or p_dir == dirs.west then
+               size_offset = -width + 1
+            end
+            left_top = offset_position(left_top, players[pindex].player_direction, base_offset + size_offset)
+            right_bottom = offset_position(right_bottom, players[pindex].player_direction, base_offset + size_offset)
+         end
       end
       
       --Update the footprint info and draw it 
@@ -11913,7 +11924,8 @@ function sync_build_cursor_graphics(pindex)
             height = temp
          end
          if cursor_position_is_on_screen(pindex) then
-            move_mouse_cursor({x = (left_top.x + width/2),y = (left_top.y  + height/2)},pindex)
+            local new_pos = {x = (left_top.x + width/2),y = (left_top.y  + height/2)}
+            move_mouse_cursor(new_pos,pindex)
          else 
             move_mouse_cursor(players[pindex].position,pindex)
          end
@@ -11938,6 +11950,18 @@ function sync_build_cursor_graphics(pindex)
          elseif p_dir == dirs.west then
             pos = offset_position(pos, dirs.south, height/2 - 0.5)
             pos = offset_position(pos, dirs.west, width/2 - 0.5)
+         end
+         
+         --In build lock mode and outside cursor mode, build from behind the player
+         if players[pindex].build_lock and not players[pindex].cursor then
+            local base_offset = -2
+            local size_offset = 0
+            if p_dir == dirs.north or p_dir == dirs.south then
+               size_offset = -height + 1
+            elseif p_dir == dirs.east or p_dir == dirs.west then
+               size_offset = -width + 1
+            end
+            pos = offset_position(pos, players[pindex].player_direction, base_offset + size_offset)
          end
          move_mouse_cursor(pos,pindex)
       end
