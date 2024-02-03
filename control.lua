@@ -8824,7 +8824,7 @@ function build_item_in_hand(pindex, free_place_straight_rail)
             position = {x = left_top.x + math.floor(width/2),y = left_top.y + math.floor(height/2)}
             
             --In build lock mode and outside cursor mode, build from behind the player
-            if players[pindex].build_lock and not players[pindex].cursor then
+            if players[pindex].build_lock and not players[pindex].cursor and stack.name ~= "rail" then
                local base_offset = -2
                local size_offset = 0
                if p_dir == dirs.north or p_dir == dirs.south then
@@ -8857,17 +8857,17 @@ function build_item_in_hand(pindex, free_place_straight_rail)
             position = {x = left_top.x + math.floor(width/2),y = left_top.y + math.floor(height/2)}
       end
       if stack.name == "small-electric-pole" and players[pindex].build_lock == true then
-         --Place a small electric pole in this position only if it is within 6.5 to 7.5 tiles of another small electric pole
+         --Place a small electric pole in this position only if it is within 6.5 to 7.6 tiles of another small electric pole
          local surf = game.get_player(pindex).surface
-         local small_poles = surf.find_entities_filtered{position = position, radius = 7.5, name = "small-electric-pole"}
+         local small_poles = surf.find_entities_filtered{position = position, radius = 7.6, name = "small-electric-pole"}
          local all_beyond_6_5 = true
          local any_connects = false
          local any_found = false
          for i,pole in ipairs(small_poles) do
             any_found = true
-            if util.distance(position, pole.position) < 6.5 then
+            if util.distance(center_of_tile(position), pole.position) < 6.5 then
                all_beyond_6_5 = false
-            elseif util.distance(position, pole.position) >= 6.5 then
+            elseif util.distance(center_of_tile(position), pole.position) >= 6.5 then
                any_connects = true
             end
          end
@@ -8879,17 +8879,17 @@ function build_item_in_hand(pindex, free_place_straight_rail)
             return
          end
 	  elseif stack.name == "medium-electric-pole" and players[pindex].build_lock == true then
-         --Place a medium electric pole in this position only if it is within 6.5 to 7.5 tiles of another medium electric pole
+         --Place a medium electric pole in this position only if it is within 6.5 to 8 tiles of another medium electric pole
          local surf = game.get_player(pindex).surface
-         local med_poles = surf.find_entities_filtered{position = position, radius = 7.5, name = "medium-electric-pole"}
+         local med_poles = surf.find_entities_filtered{position = position, radius = 8, name = "medium-electric-pole"}
          local all_beyond_6_5 = true
          local any_connects = false
          local any_found = false
          for i,pole in ipairs(med_poles) do
             any_found = true
-            if util.distance(position, pole.position) < 6.5 then
+            if util.distance(center_of_tile(position), pole.position) < 6.5 then
                all_beyond_6_5 = false
-            elseif util.distance(position, pole.position) >= 6.5 then
+            elseif util.distance(center_of_tile(position), pole.position) >= 6.5 then
                any_connects = true
             end
          end
@@ -8957,6 +8957,7 @@ function build_item_in_hand(pindex, free_place_straight_rail)
 	  --Try to build it
       local building = {
          position = position,
+         --position = center_of_tile(position),
          direction = players[pindex].building_direction,
          alt = false
       }
@@ -11855,7 +11856,7 @@ function sync_build_cursor_graphics(pindex)
       --Redraw arrow
       if dir_indicator ~= nil then rendering.destroy(player.building_dir_arrow) end
       local arrow_pos = player.cursor_pos
-      if players[pindex].build_lock and not players[pindex].cursor then
+      if players[pindex].build_lock and not players[pindex].cursor and stack.name ~= "rail" then
          arrow_pos = center_of_tile(offset_position(arrow_pos, players[pindex].player_direction, -2))
       end
       player.building_dir_arrow = rendering.draw_sprite{sprite = "fluid.crude-oil", tint = {r = 0.25, b = 0.25, g = 1.0, a = 0.75}, render_layer = 254, 
@@ -11895,7 +11896,7 @@ function sync_build_cursor_graphics(pindex)
          end
          
          --In build lock mode and outside cursor mode, build from behind the player
-         if players[pindex].build_lock and not players[pindex].cursor then
+         if players[pindex].build_lock and not players[pindex].cursor and stack.name ~= "rail" then
             local base_offset = -2
             local size_offset = 0
             if p_dir == dirs.north or p_dir == dirs.south then
@@ -11958,7 +11959,7 @@ function sync_build_cursor_graphics(pindex)
          end
          
          --In build lock mode and outside cursor mode, build from behind the player
-         if players[pindex].build_lock and not players[pindex].cursor then
+         if players[pindex].build_lock and not players[pindex].cursor and stack.name ~= "rail" then
             local base_offset = -2
             local size_offset = 0
             if p_dir == dirs.north or p_dir == dirs.south then
