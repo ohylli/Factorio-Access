@@ -337,51 +337,46 @@ function check_and_play_enemy_alert_sound(mode_in)
          local diffx = nearest_enemy.position.x - p.position.x
          local diffy = nearest_enemy.position.y - p.position.y
          local x_offset = 0
-         if math.abs(diffx) > 3 * math.abs(diffy) then
+         if math.abs(diffx) > 2 * math.abs(diffy) then
             --Counts as east or west
             if diffx > 0 then 
-               x_offset = 2
+               x_offset = 7
             elseif diffx < 0 then
-               x_offset = -2
+               x_offset = -7
             end
          end
+         local pos = {x = p.position.x + x_offset, y = p.position.y } 
          
          --Play sounds according to mode
          if mode == 1 then     -- Nearest enemy is far (lowest freq)
             if dist < 100 then
-               local pos = p.position
-               pos.x = pos.x + x_offset
-               p.play_sound{path = "alert-enemy-presence-low", position = pos, volume_modifier = 0.5}
+               p.play_sound{path = "alert-enemy-presence-low", position = pos}
             end
             --Additional alert if there are more than 5 enemies nearby
             local enemies = p.surface.find_enemy_units(p.position, 25, p.force)
             if #enemies > 5 then
-               p.play_sound{path = "alert-enemy-presence-high", volume_modifier = 1.0}
+               p.play_sound{path = "alert-enemy-presence-high", position = pos}
             else
                for i, enemy in ipairs(enemies) do 
                   --Also check for strong enemies: big/huge biters, huge spitters, medium or larger worms, not spawners
                   if enemy.prototype.max_health > 360 then
-                     p.play_sound{path = "alert-enemy-presence-high", volume_modifier = 1.0}
+                     p.play_sound{path = "alert-enemy-presence-high", position = pos}
                      return
                   end
                end
             end
          elseif mode == 2 then -- Nearest enemy is closer (medium freq)
             if dist < 50 then
-               local pos = p.position
-               pos.x = pos.x + x_offset
-               p.play_sound{path = "alert-enemy-presence-low", position = pos, volume_modifier = 1.0}
+               p.play_sound{path = "alert-enemy-presence-low", position = pos}
             end
             --Additional alert if there are more than 10 enemies nearby
             local enemies = p.surface.find_enemy_units(p.position, 25, p.force)
             if #enemies > 10 then
-               p.play_sound{path = "alert-enemy-presence-high", volume_modifier = 1.0}
+               p.play_sound{path = "alert-enemy-presence-high", position = pos}
             end
          elseif mode == 3 then -- Nearest enemy is too close (highest freq)
             if dist < 25 then
-               local pos = p.position
-               pos.x = pos.x + x_offset
-               p.play_sound{path = "alert-enemy-presence-low", position = pos, volume_modifier = 0.5}
+               p.play_sound{path = "alert-enemy-presence-low", position = pos}
             end
          end
       end
