@@ -1929,3 +1929,4 @@ function get_blueprint_info(stack, in_hand)
    return result
 end
 
+

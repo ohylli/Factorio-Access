@@ -8336,6 +8336,7 @@ script.on_event("click-hand", function(event)
    if not check_for_player(pindex) then
       return
    end
+   local p = game.get_player(pindex)
    if players[pindex].last_click_tick == event.tick then
       return
    end
@@ -8377,9 +8378,47 @@ script.on_event("click-hand", function(event)
             create_blueprint(pindex, pex.bp_select_point_1, pex.bp_select_point_2)
          end
       elseif stack.is_deconstruction_item then
-         --todo****
+         local pex = players[pindex]
+         if pex.bp_selecting ~= true then
+            pex.bp_selecting = true
+            pex.bp_select_point_1 = pex.cursor_pos
+            printout("Started deconstruction selection at " .. math.floor(pex.cursor_pos.x) .. "," .. math.floor(pex.cursor_pos.y) , pindex)
+         else
+            pex.bp_selecting = false
+            pex.bp_select_point_2 = pex.cursor_pos
+            --Mark area for deconstruction
+            local left_top, right_bottom = get_top_left_and_bottom_right(pex.bp_select_point_1, pex.bp_select_point_2)
+            p.surface.deconstruct_area{area={left_top, right_bottom}, force=p.force, player=p, item=p.cursor_stack}
+            local ents = p.surface.find_entities_filtered{area={left_top, right_bottom}}
+            local decon_counter = 0
+            for i, ent in ipairs(ents) do 
+               if ent.valid and ent.to_be_deconstructed() then
+                  decon_counter = decon_counter + 1
+               end
+            end
+            printout(decon_counter .. " entities marked to be deconstructed.", pindex)
+         end
       elseif stack.is_upgrade_item then
-         --todo****
+         local pex = players[pindex]
+         if pex.bp_selecting ~= true then
+            pex.bp_selecting = true
+            pex.bp_select_point_1 = pex.cursor_pos
+            printout("Started upgrading selection at " .. math.floor(pex.cursor_pos.x) .. "," .. math.floor(pex.cursor_pos.y) , pindex)
+         else
+            pex.bp_selecting = false
+            pex.bp_select_point_2 = pex.cursor_pos
+            --Mark area for upgrading
+            local left_top, right_bottom = get_top_left_and_bottom_right(pex.bp_select_point_1, pex.bp_select_point_2)
+            p.surface.upgrade_area{area={left_top, right_bottom}, force=p.force, player=p, item=p.cursor_stack}
+            local ents = p.surface.find_entities_filtered{area={left_top, right_bottom}}
+            local ent_counter = 0
+            for i, ent in ipairs(ents) do 
+               if ent.valid and ent.to_be_upgraded() then
+                  ent_counter = ent_counter + 1
+               end
+            end
+            printout(ent_counter .. " entities marked to be upgraded.", pindex) --****upgrade cancel and decon cancel how?
+         end
       elseif stack.prototype ~= nil and (stack.prototype.name == "capsule" or stack.prototype.type == "capsule") then
          --If holding a capsule type, e.g. cliff explosives or robot capsules, or remotes, try to use it at the cursor position (no feedback about successful usage)
          local range = 20
@@ -12037,7 +12076,7 @@ function sync_build_cursor_graphics(pindex)
          local left_top = {math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size,math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size}
          local right_bottom = {math.floor(players[pindex].cursor_pos.x)+players[pindex].cursor_size+1,math.floor(players[pindex].cursor_pos.y)+players[pindex].cursor_size+1}
          draw_area_as_cursor(left_top,right_bottom,pindex, {r = 0.25, b = 0.25, g = 1.0, a = 0.75})
-      elseif stack.is_blueprint or stack.is_deconstruction_item or stack.is_upgrade_item and players[pindex].bp_selecting then
+      elseif (stack.is_blueprint or stack.is_deconstruction_item or stack.is_upgrade_item) and players[pindex].bp_selecting then
          --Draw planner rectangles
          local top_left, bottom_right = get_top_left_and_bottom_right(players[pindex].bp_select_point_1, players[pindex].cursor_pos)
          local color = {1,1,1}
