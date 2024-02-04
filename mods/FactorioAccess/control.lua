@@ -5854,7 +5854,7 @@ function move_characters(event)
          --(so that the game does not make a mess when you left click while the cursor is actually locked)
          local stack = game.get_player(pindex).cursor_stack
          if players[pindex].in_menu == false and stack and stack.valid_for_read then
-            if stack.prototype.place_result ~= nil or stack.prototype.place_as_tile_result ~= nil then 
+            if stack.prototype.place_result ~= nil or stack.prototype.place_as_tile_result ~= nil or stack.is_blueprint or stack.is_deconstruction_item or stack.is_upgrade_item then 
                --Force the pointer to the build preview location
                sync_build_cursor_graphics(pindex)
             else
@@ -8376,6 +8376,10 @@ script.on_event("click-hand", function(event)
             pex.bp_select_point_2 = pex.cursor_pos
             create_blueprint(pindex, pex.bp_select_point_1, pex.bp_select_point_2)
          end
+      elseif stack.is_deconstruction_item then
+         --todo****
+      elseif stack.is_upgrade_item then
+         --todo****
       elseif stack.prototype ~= nil and (stack.prototype.name == "capsule" or stack.prototype.type == "capsule") then
          --If holding a capsule type, e.g. cliff explosives or robot capsules, or remotes, try to use it at the cursor position (no feedback about successful usage)
          local range = 20
@@ -12019,19 +12023,32 @@ function sync_build_cursor_graphics(pindex)
          end
          move_mouse_cursor(pos,pindex)
       end
+   elseif stack == nil or not stack.valid_for_read then
+      --Hide the objects
+      if dir_indicator ~= nil then rendering.set_visible(dir_indicator,false) end
+      if player.building_footprint ~= nil then rendering.set_visible(player.building_footprint,false) end
    else
-      --No footprint
+      --Hide the objects
       if dir_indicator ~= nil then rendering.set_visible(dir_indicator,false) end
       if player.building_footprint ~= nil then rendering.set_visible(player.building_footprint,false) end
       
       --Tile placement preview
-      if stack and stack.valid_for_read and stack.valid and stack.prototype.place_as_tile_result then 
+      if stack.valid and stack.prototype.place_as_tile_result then 
          local left_top = {math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size,math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size}
          local right_bottom = {math.floor(players[pindex].cursor_pos.x)+players[pindex].cursor_size+1,math.floor(players[pindex].cursor_pos.y)+players[pindex].cursor_size+1}
          draw_area_as_cursor(left_top,right_bottom,pindex, {r = 0.25, b = 0.25, g = 1.0, a = 0.75})
-      elseif stack and stack.valid_for_read and stack.is_blueprint and players[pindex].bp_selecting then
+      elseif stack.is_blueprint or stack.is_deconstruction_item or stack.is_upgrade_item and players[pindex].bp_selecting then
+         --Draw planner rectangles
          local top_left, bottom_right = get_top_left_and_bottom_right(players[pindex].bp_select_point_1, players[pindex].cursor_pos)
-         player.building_footprint = rendering.draw_rectangle{color = {r = 0.25, b = 1.00, g = 0.5, a = 0.75}, width = 2, surface = game.get_player(pindex).surface, left_top = top_left, right_bottom = bottom_right, draw_on_ground = false, players = nil}
+         local color = {1,1,1}
+         if stack.is_blueprint then
+            color = {r = 0.25, b = 1.00, g = 0.50, a = 0.75}
+         elseif stack.is_deconstruction_item then
+            color = {r = 1.00, b = 0.25, g = 0.50, a = 0.75}
+         elseif stack.is_upgrade_item then
+            color = {r = 0.25, b = 0.25, g = 1.00, a = 0.75}
+         end
+         player.building_footprint = rendering.draw_rectangle{color = color, width = 2, surface = game.get_player(pindex).surface, left_top = top_left, right_bottom = bottom_right, draw_on_ground = false, players = nil}
          rendering.set_visible(player.building_footprint,true)
       end
    end
