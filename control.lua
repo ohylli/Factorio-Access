@@ -7662,14 +7662,30 @@ script.on_event("mine-area", function(event)
          game.get_player(pindex).play_sound{path = "player-mine"}
          cleared_count, comment = clear_obstacles_in_circle(pos, 5, pindex)
       elseif ent.name == "straight-rail" or ent.name == "curved-rail" then
-         --Rails within 5 tiles (and their signals)
-         local rails = surf.find_entities_filtered{position = pos, radius = 7, name = {"straight-rail","curved-rail"}}
-         for i,rail in ipairs(rails) do
-            mine_signals(rail,pindex)
+         --Railway objects within 10 tiles (and their signals)
+         local rail_ents = surf.find_entities_filtered{position = pos, radius = 10, name = {"straight-rail", "curved-rail", "rail-signal", "rail-chain-signal", "train-stop"}}
+         for i,rail_ent in ipairs(rail_ents) do
+            if rail_ent.name == "straight-rail" or rail_ent.name == "curved-rail" then 
+               mine_signals(rail_ent,pindex)
+            end
             game.get_player(pindex).play_sound{path = "entity-mined/straight-rail"}
-            game.get_player(pindex).mine_entity(rail,true)
+            game.get_player(pindex).mine_entity(rail_ent,true)
             cleared_count = cleared_count + 1
          end
+         rendering.draw_circle{color = {0, 1, 0}, radius = 10, width = 2, target = pos, surface = surf,time_to_live = 60}
+         printout(" Cleared away " .. cleared_count .. " railway objects within 10 tiles. ", pindex)
+         return
+      elseif ent.name == "entity-ghost" then 
+         --Ghosts within 10 tiles
+         local ghosts = surf.find_entities_filtered{position = pos, radius = 10, name = {"entity-ghost"}}
+         for i,ghost in ipairs(ghosts) do
+            game.get_player(pindex).mine_entity(ghost,true)
+            cleared_count = cleared_count + 1
+         end
+         game.get_player(pindex).play_sound{path = "utility/item_deleted"}
+         rendering.draw_circle{color = {0, 1, 0}, radius = 10, width = 2, target = pos, surface = surf,time_to_live = 60}
+         printout(" Cleared away " .. cleared_count .. " entity ghosts within 10 tiles. ", pindex)
+         return
       else
          --Check if it is a remnant ent, clear obstacles
          local ent_is_remnant = false
