@@ -734,7 +734,7 @@ function ent_info(pindex, ent, description)
       result = result .. ", x " .. ent.amount
    end
    if ent.name == "entity-ghost" then
-      result = result .. " for a " .. ent.ghost_name .. ", "
+      result = result .. " for " .. ent.ghost_name .. ", "
    elseif ent.name == "straight-rail" or ent.name == "curved-rail" then
       return rail_ent_info(pindex, ent, description)
    end
@@ -6065,6 +6065,11 @@ function move_key(direction,event, force_single_tile)
       -- General case: Move character
       move(direction,pindex)
    end
+   
+   --Play a sound to indicate ongoing selection
+   if pex.bp_selecting then
+      game.get_player(pindex).play_sound{path = "utility/upgrade_selection_started"}
+   end
 end
 
 --Move the cursor, and conduct area scans for larger cursors
@@ -9780,6 +9785,14 @@ function rotate_building_info_read(event, forward)
          else
             printout(stack.name .. " never needs rotating.", pindex)
          end
+      elseif stack.valid_for_read and stack.is_blueprint and stack.is_blueprint_setup() then
+         --issue*** every blueprint appears to track its own rotation separately, 
+         --maybe you can read a bp ent to check if its direction is same as on paper, which would mean it faces "north" 
+         if forward then
+            printout("Rotated forward", pindex)
+         else
+            printout("Rotated backward", pindex)
+         end 
       elseif ent and ent.valid then
          game.get_player(pindex).selected = ent
 
@@ -11103,10 +11116,7 @@ script.on_event("debug-test-key", function(event)
    local ent =  get_selected_ent(pindex)
    local stack = game.get_player(pindex).cursor_stack
    
-   --control + c and then hold B to copy... 
-   p.cursor_stack.set_stack({name = "blueprint"})
-   local bp = p.cursor_stack.create_blueprint{surface = p.surface, force = p.force, area = {p.position,pex.cursor_pos}}
-   --SHIFT + B to clear selection?
+   get_blueprint_corners(pindex, true)
 
 end)
 
