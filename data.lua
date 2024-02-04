@@ -141,7 +141,7 @@ data:extend({
    type = "sound",
    name = "alert-enemy-presence-high",
    filename = "__FactorioAccess__/Audio/alert-enemy-presence-high-zapsplat-trimmed-science_fiction_alarm_fast_high_pitched_warning_tone_emergency_003_60104.wav",
-   volume = 0.75,
+   volume = 0.4,
    preload = true
 },
 
@@ -149,7 +149,7 @@ data:extend({
    type = "sound",
    name = "alert-enemy-presence-low",
    filename = "__FactorioAccess__/Audio/alert-enemy-presence-low-zapsplat-modified_multimedia_game_tone_short_bright_futuristic_beep_action_tone_002_59161.wav",
-   volume = 0.75,
+   volume = 0.4,
    preload = true
 },
 
@@ -213,7 +213,7 @@ data:extend({
    type = "sound",
    name = "player-aim-locked",
    filename = "__FactorioAccess__/Audio/player-aim-locked-zapsplat_multimedia_game_beep_high_pitched_generic_002_25862.wav", 
-   volume = 0.75,
+   volume = 0.5,
    preload = true
 },
 
@@ -309,7 +309,7 @@ data:extend({
    type = "sound",
    name = "train-alert-high",
    filename = "__FactorioAccess__/Audio/train-alert-high-zapsplat-trimmed_science_fiction_alarm_warning_buzz_harsh_large_reverb_60111.wav",
-   volume = 1,
+   volume = 0.3,
    preload = true
 },
 
@@ -317,7 +317,7 @@ data:extend({
    type = "sound",
    name = "train-alert-low",
    filename = "__FactorioAccess__/Audio/train-alert-low-zapsplat_multimedia_beep_digital_high_tech_electronic_001_87483.wav",
-   volume = 1,
+   volume = 0.3,
    preload = true
 },
 
