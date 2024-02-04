@@ -2967,10 +2967,14 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
       --Read the slot stack
       stack = building_sector.inventory[players[pindex].building.index]
       if stack and stack.valid_for_read and stack.valid then
-         if stack.health < 1 then
-            start_phrase = start_phrase .. " damaged "
+         if stack.is_blueprint then
+            printout(get_blueprint_info(stack,false),pindex)
+         else
+            if stack.health < 1 then
+               start_phrase = start_phrase .. " damaged "
+            end
+            printout(start_phrase .. localising.get(stack,pindex) .. " x " .. stack.count, pindex)
          end
-         printout(start_phrase .. localising.get(stack,pindex) .. " x " .. stack.count, pindex)
       else
          --Read the "empty slot"
          local result = "Empty slot" 
@@ -3128,7 +3132,12 @@ end
 function read_inventory_slot(pindex, start_phrase_in)
    local start_phrase = start_phrase_in or ""
    local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
-   if stack and stack.valid_for_read and stack.valid == true then
+   if stack == nil or not stack.valid_for_read then
+      return 
+   end
+   if stack.is_blueprint then
+      printout(get_blueprint_info(stack,false),pindex)
+   elseif stack.valid then
       if stack.health < 1 then
          start_phrase = start_phrase .. " damaged "
       end
@@ -3145,24 +3154,30 @@ function read_hand(pindex)
    end
    local cursor_stack=game.get_player(pindex).cursor_stack
    if cursor_stack and cursor_stack.valid_for_read then
-      local out={"access.cursor-description"}
-      table.insert(out,cursor_stack.prototype.localised_name)
-      local build_entity = cursor_stack.prototype.place_result
-      if build_entity and build_entity.supports_direction then
-         table.insert(out,1)
-         table.insert(out,{"access.facing-direction",players[pindex].building_direction})
+      if cursor_stack.is_blueprint then
+         --Blueprint extra info 
+         printout(get_blueprint_info(cursor_stack,true),pindex)
       else
-         table.insert(out,0)
-         table.insert(out,"")
+         --Any other valid item
+         local out={"access.cursor-description"}
+         table.insert(out,cursor_stack.prototype.localised_name)
+         local build_entity = cursor_stack.prototype.place_result
+         if build_entity and build_entity.supports_direction then
+            table.insert(out,1)
+            table.insert(out,{"access.facing-direction",players[pindex].building_direction})
+         else
+            table.insert(out,0)
+            table.insert(out,"")
+         end
+         table.insert(out,cursor_stack.count)
+         local extra = game.get_player(pindex).get_main_inventory().get_item_count(cursor_stack.name)
+         if extra > 0 then
+            table.insert(out,cursor_stack.count+extra)
+         else
+            table.insert(out,0)
+         end
+         printout(out, pindex)
       end
-      table.insert(out,cursor_stack.count)
-      local extra = game.get_player(pindex).get_main_inventory().get_item_count(cursor_stack.name)
-      if extra > 0 then
-         table.insert(out,cursor_stack.count+extra)
-      else
-         table.insert(out,0)
-      end
-      printout(out, pindex)
    else
       printout({"access.empty_cursor"}, pindex)
    end
@@ -4799,7 +4814,7 @@ script.on_event(defines.events.on_player_changed_position,function(event)
       
       --Update cursor graphics
       local stack = p.cursor_stack
-      if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then 
+      if stack and stack.valid_for_read and stack.valid then 
          sync_build_cursor_graphics(pindex)
       end
       
@@ -7658,7 +7673,7 @@ script.on_event("mine-area", function(event)
       else
          --Check if it is a remnant ent, clear obstacles
          local ent_is_remnant = false
-         local remnant_names = {"tree-01-stump","tree-02-stump","tree-03-stump","tree-04-stump","tree-05-stump","tree-06-stump","tree-07-stump","tree-08-stump","tree-09-stump","small-scorchmark","small-scorchmark-tintable","medium-scorchmark","medium-scorchmark-tintable","big-scorchmark","big-scorchmark-tintable","huge-scorchmark","huge-scorchmark-tintable"}
+         local remnant_names = REMNANT_OBSTACLES
          for i,name in ipairs(remnant_names) do 
             if ent.name == name then
                ent_is_remnant = true
@@ -7668,6 +7683,8 @@ script.on_event("mine-area", function(event)
             game.get_player(pindex).play_sound{path = "player-mine"}
             cleared_count, comment = clear_obstacles_in_circle(players[pindex].cursor_pos, 5, pindex) 
          end
+         
+         --(For other valid ents, do nothing)
       end
    else
       --For empty tiles, clear obstacles
@@ -8329,6 +8346,20 @@ script.on_event("click-hand", function(event)
       elseif stack.is_repair_tool then
          --If holding a repair pack, try to use it (will not work on enemies)
          repair_pack_used(ent,pindex)
+      elseif stack.is_blueprint and stack.is_blueprint_setup() then
+         players[pindex].last_held_blueprint = stack
+         paste_blueprint(pindex)
+      elseif stack.is_blueprint and not stack.is_blueprint_setup() then
+         local pex = players[pindex]
+         if pex.bp_selecting ~= true then
+            pex.bp_selecting = true
+            pex.bp_select_point_1 = pex.cursor_pos
+            printout("Started blueprint selection at " .. math.floor(pex.cursor_pos.x) .. "," .. math.floor(pex.cursor_pos.y) , pindex)
+         else
+            pex.bp_selecting = false
+            pex.bp_select_point_2 = pex.cursor_pos
+            create_blueprint(pindex, pex.bp_select_point_1, pex.bp_select_point_2)
+         end
       elseif stack.prototype ~= nil and (stack.prototype.name == "capsule" or stack.prototype.type == "capsule") then
          --If holding a capsule type, e.g. cliff explosives or robot capsules, or remotes, try to use it at the cursor position (no feedback about successful usage)
          local range = 20
@@ -9950,6 +9981,7 @@ script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
       --players[pindex].lag_building_direction = true
       read_hand(pindex)
    end
+   players[pindex].bp_selecting = false
    sync_build_cursor_graphics(pindex)
 end)
 
@@ -11852,7 +11884,6 @@ function sync_build_cursor_graphics(pindex)
    local flip = nil
    local left_top = nil
    local right_bottom = nil
-   
    if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result then
       --Redraw arrow
       if dir_indicator ~= nil then rendering.destroy(player.building_dir_arrow) end
@@ -11864,7 +11895,7 @@ function sync_build_cursor_graphics(pindex)
          surface = game.get_player(pindex).surface, players = nil, target = arrow_pos, orientation = (dir/dirs.east/dirs.south)}
       dir_indicator = player.building_dir_arrow
       rendering.set_visible(dir_indicator,true)
-      if stack.name == "locomotive" or stack.name == "cargo-wagon" or stack.name == "fluid-wagon" or stack.name == "artillery-wagon" then
+      if players[pindex].hide_cursor or stack.name == "locomotive" or stack.name == "cargo-wagon" or stack.name == "fluid-wagon" or stack.name == "artillery-wagon" then
          rendering.set_visible(dir_indicator,false)
       end
       
@@ -11982,6 +12013,10 @@ function sync_build_cursor_graphics(pindex)
          local left_top = {math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size,math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size}
          local right_bottom = {math.floor(players[pindex].cursor_pos.x)+players[pindex].cursor_size+1,math.floor(players[pindex].cursor_pos.y)+players[pindex].cursor_size+1}
          draw_area_as_cursor(left_top,right_bottom,pindex, {r = 0.25, b = 0.25, g = 1.0, a = 0.75})
+      elseif stack and stack.valid_for_read and stack.is_blueprint and players[pindex].bp_selecting then
+         local top_left, bottom_right = get_top_left_and_bottom_right(players[pindex].bp_select_point_1, players[pindex].cursor_pos)
+         player.building_footprint = rendering.draw_rectangle{color = {r = 0.25, b = 1.00, g = 0.5, a = 0.75}, width = 2, surface = game.get_player(pindex).surface, left_top = top_left, right_bottom = bottom_right, draw_on_ground = false, players = nil}
+         rendering.set_visible(player.building_footprint,true)
       end
    end
    

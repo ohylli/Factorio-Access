@@ -1796,16 +1796,26 @@ end
 
 --Create a blueprint from a rectangle between any two points and give it to the player's hand
 function create_blueprint(pindex, point_1, point_2)
-   local top_left, bottom_right = get_top_left_and_bottom_right(pos_1, pos_2)
+   local top_left, bottom_right = get_top_left_and_bottom_right(point_1, point_2)
    local p = game.get_player(pindex)
-   local cleared = p.clear_cursor()
-   if not cleared then
-      printout("Error: cursor full.", pindex)
-      return
+   if not p.cursor_stack.valid_for_read or p.cursor_stack.valid_for_read and not (p.cursor_stack.is_blueprint and p.cursor_stack.is_blueprint_setup() == false) then
+      local cleared = p.clear_cursor()
+      if not cleared then
+         printout("Error: cursor full.", pindex)
+         return
+      end
    end
    p.cursor_stack.set_stack({name = "blueprint"})
    p.cursor_stack.create_blueprint{surface = p.surface, force = p.force, area = {top_left,bottom_right}}
-   printout("Blueprint with " .. p.cursor_stack.get_blueprint_entity_count() .. " entities created in hand.", pindex)
+   
+   --Avoid empty blueprints 
+   local ent_count = p.cursor_stack.get_blueprint_entity_count()
+   if ent_count == 0 then
+      p.cursor_stack.set_stack({name = "blueprint"})
+      printout("Blueprint selection area was empty.", pindex)
+   else
+      printout("Blueprint with " .. ent_count .. " entities created in hand.", pindex)
+   end
 end 
 
 --Building function for bluelprints
@@ -1815,22 +1825,27 @@ function paste_blueprint(pindex)
    local pos = players[pindex].cursor_pos
    
    --Not a blueprint
-   if stack.is_blueprint == false then
+   if bp.is_blueprint == false then
       return nil
    end
    --Empty blueprint
-   if not stack.is_blueprint_setup() then
+   if not bp.is_blueprint_setup() then
       return nil
    end
    
    --Offset to place the cursor at the top left corner todo***
    local left_top, right_bottom = get_blueprint_corners(pindex, true)--***set to false when done
+   local build_pos = pos 
    
    --Build it and check if successful
-   local result = bp.build_blueprint{surface = p.surface, force = p.force, position = build_pos, by_player = p, force_build = true}
+   local result = bp.build_blueprint{surface = p.surface, force = p.force, position = build_pos, by_player = p, force_build = false}
    if result == nil or #result == 0 then
+      p.play_sound{path = "utility/cannot_build"}
+      --printout("Cannot place that there.", pindex)
       return false
    else
+      p.play_sound{path = "Close-Inventory-Sound"}--***laterdo better sound
+      --printout("Cannot place that there.", pindex)
       return true
    end
 end
@@ -1847,10 +1862,11 @@ function get_blueprint_corners(pindex, draw_rect)
    local south_most_y = pos.y 
    
    --Empty blueprint: Just circle the cursor 
-   if not stack.is_blueprint_setup() then
-      local rect = rendering.draw_rectangle{left_top = {x = math.floor(pos.x), y = math.floor(pos.y)}, right_bottom = {x = math.ceil(pos.x), y = math.ceil(pos.y)}, 
-                color = {r = 0.25, b = 0.25, g = 1.0, a = 0.75}, draw_on_ground = true, surface = game.get_player(pindex).surface, players = nil }
-      return rect 
+   if not bp.is_blueprint_setup() then
+      local left_top = {x = math.floor(pos.x), y = math.floor(pos.y)}
+      local right_bottom = {x = math.ceil(pos.x), y = math.ceil(pos.y)}
+      local rect = rendering.draw_rectangle{left_top = left_top, right_bottom = right_bottom, color = {r = 0.25, b = 0.25, g = 1.0, a = 0.75}, draw_on_ground = true, surface = game.get_player(pindex).surface, players = nil }
+      return left_top, right_bottom 
    end
    
    --Find and draw the blueprint borders
@@ -1876,20 +1892,26 @@ function get_blueprint_corners(pindex, draw_rect)
 end 
 
 --Basic info for when the blueprint item is read.
-function get_blueprint_info(stack)
+function get_blueprint_info(stack, in_hand)
    --Not a blueprint
    if stack.is_blueprint == false then
       return ""
    end
    --Empty blueprint
    if not stack.is_blueprint_setup() then
-      return "empty"
+      return "Blueprint empty"
    end
    
    --Get name
    local name = get_blueprint_label(stack)
-   local result = name .. ", with "
-   
+   if name == nil then
+      name = ""
+   end
+   --Construct result 
+   local result = "Blueprint " .. name .. " features "
+   if in_hand then
+      result = "Blueprint " .. name .. "in hand, features "
+   end
    --Use icons as extra info (in case it is not named)
    local icons = stack.blueprint_icons
    if icons == nil or #icons == 0 then
@@ -1903,7 +1925,7 @@ function get_blueprint_info(stack)
       end
       result = result .. signal.signal.name
    end
-   game.print(result)--****
+   --game.print(result)
    return result
 end
 
