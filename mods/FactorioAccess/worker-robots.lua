@@ -1752,11 +1752,6 @@ end
 
 
 -------------Blueprints------------
---Expecting to use these vars:
---pex.box_selecting (bool)
---pex.box_selection_point_1
---pex.box_selection_point_2
---pex.last_held_blueprint
 
 local function get_bp_data_for_edit(stack)
    return game.json_to_table(game.decode_string(string.sub(stack.export_stack(),2)))
@@ -1854,39 +1849,54 @@ end
 function get_blueprint_corners(pindex, draw_rect)
    local p = game.get_player(pindex)
    local bp = p.cursor_stack
+   if bp == nil or bp.valid_for_read == false or bp.is_blueprint == false then
+      return nil, nil
+   end
    local pos = players[pindex].cursor_pos
    local ents = bp.get_blueprint_entities()
-   local west_most_x = pos.x 
-   local east_most_x = pos.x
-   local north_most_y = pos.y 
-   local south_most_y = pos.y 
+   local west_most_x = nil 
+   local east_most_x = nil
+   local north_most_y = nil
+   local south_most_y = nil
    
    --Empty blueprint: Just circle the cursor 
-   if not bp.is_blueprint_setup() then
+   if bp.is_blueprint_setup() == false then
       local left_top = {x = math.floor(pos.x), y = math.floor(pos.y)}
       local right_bottom = {x = math.ceil(pos.x), y = math.ceil(pos.y)}
       local rect = rendering.draw_rectangle{left_top = left_top, right_bottom = right_bottom, color = {r = 0.25, b = 0.25, g = 1.0, a = 0.75}, draw_on_ground = true, surface = game.get_player(pindex).surface, players = nil }
       return left_top, right_bottom 
    end
    
-   --Find and draw the blueprint borders
+   --Find and draw the blueprint borders (it uses entity centers as references, and having no ent size info makes things difficult to guess.
    for i, ent in ipairs(ents) do 
+      if west_most_x == nil then
+         west_most_x = ent.position.x 
+         east_most_x = ent.position.x
+         north_most_y = ent.position.y
+         south_most_y = ent.position.y
+      end
       if west_most_x > ent.position.x then
          west_most_x = ent.position.x
-      elseif east_most_x < ent.position.x then 
+      end
+      if east_most_x < ent.position.x then 
          east_most_x = ent.position.x
       end
       if north_most_y > ent.position.y then
          north_most_y = ent.position.y
-      elseif south_most_y < ent.position.y then
+      end
+      if south_most_y < ent.position.y then
          south_most_y = ent.position.y 
       end
    end
-   local left_top = {x = west_most_x, y = north_most_y}
-   local right_bottom = {x = east_most_x, y = south_most_y}
+   local bp_left_top = {x = west_most_x - 2, y = north_most_y - 2}    --assume edge ents are 4 by 4
+   local bp_right_bottom = {x = east_most_x + 2, y = south_most_y + 2}--assume edge ents are 4 by 4
+   local bp_width = bp_right_bottom.x - bp_left_top.x 
+   local bp_height = bp_right_bottom.y - bp_left_top.y 
+   local left_top = {x = pos.x - bp_width/2, y = pos.y - bp_height/2}
+   local right_bottom = {x = pos.x + bp_width/2, y = pos.y + bp_height/2}
    if draw_rect == true then
       --Draw a temporary rectangle for debugging
-      rendering.draw_rectangle{left_top = left_top, right_bottom = right_bottom, color = {r = 0.25, b = 0.25, g = 1.0, a = 0.75}, draw_on_ground = true, surface = p.surface, players = nil, time_to_live = 300}
+      rendering.draw_rectangle{left_top = left_top, right_bottom = right_bottom, color = {r = 0.25, b = 0.25, g = 1.0, a = 0.75}, draw_on_ground = true, surface = p.surface, players = nil, time_to_live = 100}
    end
    return left_top, right_bottom 
 end 
@@ -1929,4 +1939,6 @@ function get_blueprint_info(stack, in_hand)
    return result
 end
 
+--todo*** press a key to get the selection start location
+--todo*** press something to cancel selection, maybe just shift-click 
 
