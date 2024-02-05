@@ -340,7 +340,7 @@ data:extend({
 {
     type = "custom-input",
     name = "pause-game-fa",
-    key_sequence = "ESC",
+    key_sequence = "ESCAPE",
     linked_game_control = "toggle-menu",
     consuming = "none"
 },
