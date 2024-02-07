@@ -9074,7 +9074,10 @@ function build_item_in_hand(pindex, free_place_straight_rail)
       --Restore the original underground belt chute preview 
       if placing_underground_belt and players[pindex].underground_connects == true then
          players[pindex].building_direction = (players[pindex].building_direction + dirs.south) % (2 * dirs.south)
-         game.get_player(pindex).cursor_stack.set_stack({name = stack.name, count = stack.count})
+         local stack = game.get_player(pindex).cursor_stack
+         if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result.type == "underground-belt" then
+            stack.set_stack({name = stack.name, count = stack.count})
+         end
       end
    elseif stack and stack.valid_for_read and stack.valid and stack.prototype.place_as_tile_result ~= nil then
    --Tile placement 
