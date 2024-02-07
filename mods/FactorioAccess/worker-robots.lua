@@ -1829,8 +1829,8 @@ function paste_blueprint(pindex)
    end
    
    --Offset to place the cursor at the top left corner todo***
-   local left_top, right_bottom = get_blueprint_corners(pindex, true)--***set to false when done
-   local build_pos = pos 
+   local build_pos = get_blueprint_corners(pindex, true)--***set to false when done
+   --local build_pos = pos 
    
    --Build it and check if successful
    local result = bp.build_blueprint{surface = p.surface, force = p.force, position = build_pos, by_player = p, force_build = false}
@@ -1867,38 +1867,59 @@ function get_blueprint_corners(pindex, draw_rect)
       return left_top, right_bottom 
    end
    
-   --Find and draw the blueprint borders (it uses entity centers as references, and having no ent size info makes things difficult to guess.
+   --Find the blueprint borders and corners 
    for i, ent in ipairs(ents) do 
+      local ent_width = game.entity_prototypes[ent.name].tile_width
+      local ent_height = game.entity_prototypes[ent.name].tile_height
+      if ent.direction == dirs.east or ent.direction == dirs.west then
+         ent_width = game.entity_prototypes[ent.name].tile_height
+         ent_height = game.entity_prototypes[ent.name].tile_width
+      end
+      local ent_north = ent.position.y - math.floor(ent_height/2)
+      local ent_east  = ent.position.x + math.floor(ent_width/2)
+      local ent_south = ent.position.y + math.floor(ent_height/2)
+      local ent_west  = ent.position.x - math.floor(ent_width/2)
       if west_most_x == nil then
-         west_most_x = ent.position.x 
-         east_most_x = ent.position.x
-         north_most_y = ent.position.y
-         south_most_y = ent.position.y
+         west_most_x = ent_west 
+         east_most_x = ent_east
+         north_most_y = ent_north
+         south_most_y = ent_south
       end
-      if west_most_x > ent.position.x then
-         west_most_x = ent.position.x
+      if west_most_x > ent_west then
+         west_most_x = ent_west
       end
-      if east_most_x < ent.position.x then 
-         east_most_x = ent.position.x
+      if east_most_x < ent_east then 
+         east_most_x = ent_east
       end
-      if north_most_y > ent.position.y then
-         north_most_y = ent.position.y
+      if north_most_y > ent_north then
+         north_most_y = ent_north
       end
-      if south_most_y < ent.position.y then
-         south_most_y = ent.position.y 
+      if south_most_y < ent_south then
+         south_most_y = ent_south 
       end
    end
-   local bp_left_top = {x = west_most_x - 2, y = north_most_y - 2}    --assume edge ents are 4 by 4
-   local bp_right_bottom = {x = east_most_x + 2, y = south_most_y + 2}--assume edge ents are 4 by 4
-   local bp_width = bp_right_bottom.x - bp_left_top.x 
-   local bp_height = bp_right_bottom.y - bp_left_top.y 
-   local left_top = {x = pos.x - bp_width/2, y = pos.y - bp_height/2}
-   local right_bottom = {x = pos.x + bp_width/2, y = pos.y + bp_height/2}
+   local bp_left_top = {x = math.floor(west_most_x), y = math.floor(north_most_y)}
+   local bp_right_bottom = {x = math.ceil(east_most_x), y = math.ceil(south_most_y)}
+   local bp_width = bp_right_bottom.x - bp_left_top.x - 1
+   local bp_height = bp_right_bottom.y - bp_left_top.y - 1
+   local left_top = {x = math.floor(pos.x), y = math.floor(pos.y)}
+   local right_bottom = {x = math.ceil(pos.x + bp_width), y = math.ceil(pos.y + bp_height)}
+   
+   --Draw the build preview (temp)
    if draw_rect == true then
       --Draw a temporary rectangle for debugging
-      rendering.draw_rectangle{left_top = left_top, right_bottom = right_bottom, color = {r = 0.25, b = 0.25, g = 1.0, a = 0.75}, draw_on_ground = true, surface = p.surface, players = nil, time_to_live = 100}
+      rendering.draw_rectangle{left_top = left_top, right_bottom = right_bottom, color = {r = 0.25, b = 0.25, g = 1.0, a = 0.75}, width = 2, draw_on_ground = true, surface = p.surface, players = nil, time_to_live = 100}
    end
-   return left_top, right_bottom 
+   
+   --Move the mouse pointer (temp)
+   local mouse_pos = {x = pos.x + bp_width/2, y = pos.y + bp_height/2}
+   if cursor_position_is_on_screen(pindex) then
+      move_mouse_cursor(mouse_pos,pindex)
+   else 
+      move_mouse_cursor(players[pindex].position,pindex)
+   end
+   
+   return mouse_pos
 end 
 
 --Basic info for when the blueprint item is read.
