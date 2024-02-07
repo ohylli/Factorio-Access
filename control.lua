@@ -1,5 +1,6 @@
 require('zoom')
 require('rails-and-trains')
+require('spidertron')
 require('worker-robots')
 local localising=require('localising')
 require('equipment-and-combat')
@@ -4741,6 +4742,12 @@ function initialize(player)
       selecting_station = false
    }
    
+   faplayer.spider_menu = faplayer.spider_menu or {
+      index = 0,
+      renaming = false,
+spider = nil
+   }
+
    faplayer.train_stop_menu = faplayer.train_stop_menu or {
       index = 0,
       renaming = false,
@@ -5800,6 +5807,9 @@ function update_menu_visuals()
          elseif player.menu == "train_menu" then
             update_overhead_sprite("item.locomotive",2,1.25,pindex)
             update_custom_GUI_sprite("item.locomotive", 3, pindex)
+         elseif player.menu == "spider_menu" then
+            update_overhead_sprite("item.locomotive",2,1.25,pindex)
+            update_custom_GUI_sprite("item.locomotive", 3, pindex)
          elseif player.menu == "train_stop_menu" then
             update_overhead_sprite("item.train-stop",2,1.25,pindex)
             update_custom_GUI_sprite("item.train-stop", 3, pindex)
@@ -6180,6 +6190,9 @@ script.on_event(defines.events.on_player_driving_changed_state, function(event)
       teleport_to_closest(pindex, players[pindex].last_vehicle.position, true, true)
       if players[pindex].menu == "train_menu" then
          train_menu_close(pindex, false)
+      end
+      if players[pindex].menu == "spider_menu" then
+         spider_menu_close(pindex, false)
       end
    else
       printout("Driving state changed." ,pindex)
@@ -7095,6 +7108,8 @@ function close_menu_resets(pindex)
       rail_builder_close(pindex, false)
    elseif players[pindex].menu == "train_menu" then
       train_menu_close(pindex, false)
+   elseif players[pindex].menu == "spider_menu" then
+      spider_menu_close(pindex, false)
    elseif players[pindex].menu == "train_stop_menu" then
       train_stop_menu_close(pindex, false)
    elseif players[pindex].menu == "roboport_menu" then
@@ -8309,6 +8324,8 @@ script.on_event("click-menu", function(event)
          rail_builder_close(pindex,false)
       elseif players[pindex].menu == "train_menu" then
          train_menu(players[pindex].train_menu.index, pindex, true)
+      elseif players[pindex].menu == "spider_menu" then
+         spider_menu(players[pindex].spider_menu.index, pindex, game.get_player(pindex).cursor_stack, true)
       elseif players[pindex].menu == "train_stop_menu" then
          train_stop_menu(players[pindex].train_stop_menu.index, pindex, true)
       elseif players[pindex].menu == "roboport_menu" then
@@ -8374,6 +8391,9 @@ script.on_event("click-hand", function(event)
       elseif stack.name == "offshore-pump" then
          --If holding an offshore pump, open the offshore pump builder
          build_offshore_pump_in_hand(pindex)
+      elseif stack.name == "spidertron-remote" then
+--open spidermenu with the remote in hand
+      spider_menu_open(pindex, stack)
       elseif stack.is_repair_tool then
          --If holding a repair pack, try to use it (will not work on enemies)
          repair_pack_used(ent,pindex)
@@ -10731,6 +10751,16 @@ script.on_event(defines.events.on_gui_confirmed,function(event)
       printout("Train renamed to " .. result .. ", menu closed.", pindex)
       event.element.destroy()
       train_menu_close(pindex, false)
+   elseif players[pindex].spider_menu.renaming == true then
+      players[pindex].spider_menu.renaming = false
+      local result = event.element.text
+      if result == nil or result == "" then 
+         result = "unknown"
+      end
+players[pindex].game.get_player(pindex).cursor_stack.connected_entity.entity_label =  result
+      printout("spidertron renamed to " .. result .. ", menu closed.", pindex)
+      event.element.destroy()
+      spider_menu_close(pindex, false)
    elseif players[pindex].train_stop_menu.renaming == true then
       players[pindex].train_stop_menu.renaming = false
       local result = event.element.text
@@ -10841,6 +10871,8 @@ script.on_event("train-menu-up", function(event)
    end
    if players[pindex].in_menu and players[pindex].menu == "train_menu" then
       train_menu_up(pindex)
+   elseif players[pindex].in_menu and players[pindex].menu == "spider_menu" then
+      spider_menu_up(pindex)
    end
 end)
 
@@ -10851,6 +10883,8 @@ script.on_event("train-menu-down", function(event)
    end
    if players[pindex].in_menu and players[pindex].menu == "train_menu" then
       train_menu_down(pindex)
+   elseif players[pindex].in_menu and players[pindex].menu == "spider_menu" then
+      spider_menu_down(pindex)
    end
 end)
 
