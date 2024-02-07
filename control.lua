@@ -734,7 +734,7 @@ function ent_info(pindex, ent, description)
       result = result .. ", x " .. ent.amount
    end
    if ent.name == "entity-ghost" then
-      result = result .. " for " .. ent.ghost_name .. ", "
+      result = localising.get(ent.ghost_prototype, pindex) .. " " .. localising.get(ent, pindex)
    elseif ent.name == "straight-rail" or ent.name == "curved-rail" then
       return rail_ent_info(pindex, ent, description)
    end
@@ -8378,9 +8378,11 @@ script.on_event("click-hand", function(event)
          --If holding a repair pack, try to use it (will not work on enemies)
          repair_pack_used(ent,pindex)
       elseif stack.is_blueprint and stack.is_blueprint_setup() then
+         --Paste a ready blueprint 
          players[pindex].last_held_blueprint = stack
          paste_blueprint(pindex)
       elseif stack.is_blueprint and not stack.is_blueprint_setup() then
+         --Select blueprint 
          local pex = players[pindex]
          if pex.bp_selecting ~= true then
             pex.bp_selecting = true
@@ -8392,6 +8394,7 @@ script.on_event("click-hand", function(event)
             create_blueprint(pindex, pex.bp_select_point_1, pex.bp_select_point_2)
          end
       elseif stack.is_deconstruction_item then
+         --Mark deconstruction
          local pex = players[pindex]
          if pex.bp_selecting ~= true then
             pex.bp_selecting = true
@@ -8413,6 +8416,7 @@ script.on_event("click-hand", function(event)
             printout(decon_counter .. " entities marked to be deconstructed.", pindex)
          end
       elseif stack.is_upgrade_item then
+         --Mark upgrade 
          local pex = players[pindex]
          if pex.bp_selecting ~= true then
             pex.bp_selecting = true
@@ -8431,7 +8435,7 @@ script.on_event("click-hand", function(event)
                   ent_counter = ent_counter + 1
                end
             end
-            printout(ent_counter .. " entities marked to be upgraded.", pindex) --****upgrade cancel and decon cancel how?
+            printout(ent_counter .. " entities marked to be upgraded.", pindex) 
          end
       elseif stack.prototype ~= nil and (stack.prototype.name == "capsule" or stack.prototype.type == "capsule") then
          --If holding a capsule type, e.g. cliff explosives or robot capsules, or remotes, try to use it at the cursor position (no feedback about successful usage)
@@ -8453,6 +8457,81 @@ script.on_event("click-hand", function(event)
       else
          printout("No actions for " .. stack.name .. " in hand",pindex)
       end
+   end
+end)
+
+--Right click actions with items in hand
+script.on_event("click-hand-right", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local p = game.get_player(pindex)
+   if players[pindex].last_click_tick == event.tick then
+      return
+   end
+   if players[pindex].in_menu then
+      return
+   else
+      --Not in a menu
+      local stack = game.get_player(pindex).cursor_stack
+      local ent = get_selected_ent(pindex)
+
+      if stack and stack.valid_for_read and stack.valid then
+         players[pindex].last_click_tick = event.tick
+      else
+         return
+      end
+      
+      --If something is in hand...     
+      if stack.prototype ~= nil and (stack.prototype.place_result ~= nil or stack.prototype.place_as_tile_result ~= nil) and stack.name ~= "offshore-pump" then
+         --Laterdo here: build as ghost 
+      elseif stack.is_blueprint and stack.is_blueprint_setup() then
+         --Paste blueprint 
+         players[pindex].last_held_blueprint = stack
+         paste_blueprint(pindex)
+      elseif stack.is_blueprint and not stack.is_blueprint_setup() then
+         --Select blueprint
+         local pex = players[pindex]
+         if pex.bp_selecting ~= true then
+            pex.bp_selecting = true
+            pex.bp_select_point_1 = pex.cursor_pos
+            printout("Started blueprint selection at " .. math.floor(pex.cursor_pos.x) .. "," .. math.floor(pex.cursor_pos.y) , pindex)
+         else
+            pex.bp_selecting = false
+            pex.bp_select_point_2 = pex.cursor_pos
+            create_blueprint(pindex, pex.bp_select_point_1, pex.bp_select_point_2)
+         end
+      elseif stack.is_deconstruction_item then
+         --Cancel deconstruction 
+         local pex = players[pindex]
+         if pex.bp_selecting ~= true then
+            pex.bp_selecting = true
+            pex.bp_select_point_1 = pex.cursor_pos
+            printout("Started deconstruction selection at " .. math.floor(pex.cursor_pos.x) .. "," .. math.floor(pex.cursor_pos.y) , pindex)
+         else
+            pex.bp_selecting = false
+            pex.bp_select_point_2 = pex.cursor_pos
+            --Cancel area for deconstruction
+            local left_top, right_bottom = get_top_left_and_bottom_right(pex.bp_select_point_1, pex.bp_select_point_2)
+            p.surface.cancel_deconstruct_area{area={left_top, right_bottom}, force=p.force, player=p, item=p.cursor_stack}
+            printout("Canceled deconstruction in selected area", pindex)
+         end
+      elseif stack.is_upgrade_item then
+         local pex = players[pindex]
+         if pex.bp_selecting ~= true then
+            pex.bp_selecting = true
+            pex.bp_select_point_1 = pex.cursor_pos
+            printout("Started upgrading selection at " .. math.floor(pex.cursor_pos.x) .. "," .. math.floor(pex.cursor_pos.y) , pindex)
+         else
+            pex.bp_selecting = false
+            pex.bp_select_point_2 = pex.cursor_pos
+            --Cancel area for upgrading
+            local left_top, right_bottom = get_top_left_and_bottom_right(pex.bp_select_point_1, pex.bp_select_point_2)
+            p.surface.cancel_upgrade_area{area={left_top, right_bottom}, force=p.force, player=p, item=p.cursor_stack}
+            printout("Canceled upgrading in selected area", pindex) 
+         end
+      end 
    end
 end)
 

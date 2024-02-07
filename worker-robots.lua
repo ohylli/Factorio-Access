@@ -1971,6 +1971,8 @@ function get_blueprint_info(stack, in_hand)
       end
       result = result .. signal.signal.name
    end
+   
+   result = result .. ", " .. stack.get_blueprint_entity_count() .. " entities in total "
    --game.print(result)
    return result
 end
