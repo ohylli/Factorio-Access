@@ -1828,12 +1828,17 @@ function paste_blueprint(pindex)
       return nil
    end
    
-   --Offset to place the cursor at the top left corner todo***
-   local lt, rb, build_pos = get_blueprint_corners(pindex, true)--***set to false when done
-   --local build_pos = pos 
+   --Get the offset blueprint positions
+   local left_top, right_bottom, build_pos = get_blueprint_corners(pindex, false)
+   
+   --Clear build area (if not far away)
+   if util.distance(p.position, build_pos) < 2 * p.reach_distance then
+      clear_obstacles_in_rectangle(left_top, right_bottom, pindex)
+   end
    
    --Build it and check if successful
-   local result = bp.build_blueprint{surface = p.surface, force = p.force, position = build_pos, by_player = p, force_build = false}
+   local dir = players[pindex].blueprint_hand_direction
+   local result = bp.build_blueprint{surface = p.surface, force = p.force, position = build_pos, direction = dir, by_player = p, force_build = false}
    if result == nil or #result == 0 then
       p.play_sound{path = "utility/cannot_build"}
       --printout("Cannot place that there.", pindex)
@@ -1863,7 +1868,7 @@ function get_blueprint_corners(pindex, draw_rect)
    if bp.is_blueprint_setup() == false then
       local left_top = {x = math.floor(pos.x), y = math.floor(pos.y)}
       local right_bottom = {x = math.ceil(pos.x), y = math.ceil(pos.y)}
-      local rect = rendering.draw_rectangle{left_top = left_top, right_bottom = right_bottom, color = {r = 0.25, b = 0.25, g = 1.0, a = 0.75}, draw_on_ground = true, surface = game.get_player(pindex).surface, players = nil }
+      --local rect = rendering.draw_rectangle{left_top = left_top, right_bottom = right_bottom, color = {r = 0.25, b = 0.25, g = 1.0, a = 0.75}, draw_on_ground = true, surface = game.get_player(pindex).surface, players = nil }
       return left_top, right_bottom, pos
    end
    
@@ -1902,25 +1907,35 @@ function get_blueprint_corners(pindex, draw_rect)
    local bp_right_bottom = {x = math.ceil(east_most_x), y = math.ceil(south_most_y)}
    local bp_width = bp_right_bottom.x - bp_left_top.x - 1
    local bp_height = bp_right_bottom.y - bp_left_top.y - 1
+   if players[pindex].blueprint_hand_direction == dirs.east or players[pindex].blueprint_hand_direction == dirs.west then
+      --Flip width and height
+      bp_width = bp_right_bottom.y - bp_left_top.y - 1
+      bp_height = bp_right_bottom.x - bp_left_top.x - 1
+   end
    local left_top = {x = math.floor(pos.x), y = math.floor(pos.y)}
    local right_bottom = {x = math.ceil(pos.x + bp_width), y = math.ceil(pos.y + bp_height)}
    
-   --Draw the build preview (temp)
+   --Draw the build preview (default is false)
    if draw_rect == true then
       --Draw a temporary rectangle for debugging
       rendering.draw_rectangle{left_top = left_top, right_bottom = right_bottom, color = {r = 0.25, b = 0.25, g = 1.0, a = 0.75}, width = 2, draw_on_ground = true, surface = p.surface, players = nil, time_to_live = 100}
    end
    
-   --Move the mouse pointer (temp)
+   --Get the mouse pointer position
    local mouse_pos = {x = pos.x + bp_width/2, y = pos.y + bp_height/2}
-   if cursor_position_is_on_screen(pindex) then
-      move_mouse_cursor(mouse_pos,pindex)
-   else 
-      move_mouse_cursor(players[pindex].position,pindex)
-   end
    
    return left_top, right_bottom, mouse_pos
 end 
+
+--Export and import the same blueprint so that its parameters reset, e.g. rotation.
+function refresh_blueprint_in_hand(pindex)
+   local p = game.get_player(pindex)
+   if p.cursor_stack.is_blueprint_setup() == false then 
+      return 
+   end
+   local bp_data = get_bp_data_for_edit(p.cursor_stack)
+   set_stack_bp_from_data(p.cursor_stack, bp_data)
+end
 
 --Basic info for when the blueprint item is read.
 function get_blueprint_info(stack, in_hand)
@@ -1960,6 +1975,4 @@ function get_blueprint_info(stack, in_hand)
    return result
 end
 
---todo*** press a key to get the selection start location
---todo*** press something to cancel selection, maybe just shift-click 
 

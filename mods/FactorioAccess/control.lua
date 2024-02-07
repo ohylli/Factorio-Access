@@ -4426,9 +4426,9 @@ function read_coords(pindex, start_phrase)
                preview_str = preview_str .. stack.prototype.place_result.tile_height .. " wide " 
             end
             if players[pindex].cursor or p_dir == dirs.east or p_dir == dirs.south or p_dir == dirs.north then
-               preview_str = preview_str .. " to the east "
+               preview_str = preview_str .. " to the East "
             elseif not players[pindex].cursor and p_dir == dirs.west then
-               preview_str = preview_str .. " to the west "
+               preview_str = preview_str .. " to the West "
             end
             if dir == dirs.north or dir == dirs.south then 
                preview_str = preview_str .. " and " .. stack.prototype.place_result.tile_height .. " high " 
@@ -4436,16 +4436,17 @@ function read_coords(pindex, start_phrase)
                preview_str = preview_str .. " and " .. stack.prototype.place_result.tile_width .. " high " 
             end
             if players[pindex].cursor or p_dir == dirs.east or p_dir == dirs.south or p_dir == dirs.west then
-               preview_str = preview_str .. " to the south "
+               preview_str = preview_str .. " to the South "
             elseif not players[pindex].cursor and p_dir == dirs.north then
-               preview_str = preview_str .. " to the north "
+               preview_str = preview_str .. " to the North "
             end
             result = result .. preview_str
-         elseif stack and stack.valid_for_read and stack.valid and stack.is_blueprint and stack.is_blueprint_setup() then   
+         elseif stack and stack.valid_for_read and stack.valid and stack.is_blueprint and stack.is_blueprint_setup() then
+            --Blueprints have their own data 
             local left_top, right_bottom, build_pos = get_blueprint_corners(pindex, false)
             local bp_dim_1 = right_bottom.x - left_top.x 
             local bp_dim_2 = right_bottom.y - left_top.y
-            local preview_str = ", blueprint preview extends " .. bp_dim_1 .. " or " .. bp_dim_2 .. ", to the East or the South, depending on the rotation" 
+            local preview_str = ", blueprint preview is " .. bp_dim_1 .. " wide to the East and " .. bp_dim_2 .. " high to the South" 
             result = result .. preview_str
          elseif stack and stack.valid_for_read and stack.valid and stack.prototype.place_as_tile_result ~= nil then
             --Paving preview size
@@ -6096,7 +6097,7 @@ function cursor_mode_move(direction, pindex, single_only)
       
       --Update drawn cursor
       local stack = game.get_player(pindex).cursor_stack
-      if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then 
+      if stack and stack.valid_for_read and stack.valid and (stack.prototype.place_result ~= nil or stack.is_blueprint) then 
          sync_build_cursor_graphics(pindex)
       end
       
@@ -9797,13 +9798,11 @@ function rotate_building_info_read(event, forward)
             printout(stack.name .. " never needs rotating.", pindex)
          end
       elseif stack.valid_for_read and stack.is_blueprint and stack.is_blueprint_setup() then
-         --issue*** every blueprint appears to track its own rotation separately, 
-         --maybe you can read a bp ent to check if its direction is same as on paper, which would mean it faces "north" 
-         if forward then
-            printout("Rotated forward", pindex)
-         else
-            printout("Rotated backward", pindex)
-         end 
+         --Rotate blueprints: They are tracked separately, and we reset them to north when cursor stack changes 
+         game.get_player(pindex).play_sound{path="Rotate-Hand-Sound"}
+         players[pindex].blueprint_hand_direction = (players[pindex].blueprint_hand_direction + dirs.east * mult) % (2 * dirs.south)
+         printout(direction_lookup(players[pindex].blueprint_hand_direction), pindex) 
+         sync_build_cursor_graphics(pindex)
       elseif ent and ent.valid then
          game.get_player(pindex).selected = ent
 
@@ -10058,6 +10057,11 @@ script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
    local new_item_name = ""
    if stack and stack.valid_for_read then 
       new_item_name = stack.name
+      if stack.is_blueprint and players[pindex].blueprint_hand_direction ~= dirs.north then
+         --Reset blueprint rotation 
+         players[pindex].blueprint_hand_direction = dirs.north
+         refresh_blueprint_in_hand(pindex)
+      end
    end
    if players[pindex].previous_hand_item_name ~= new_item_name then
       players[pindex].previous_hand_item_name = new_item_name
@@ -11958,6 +11962,7 @@ function sync_build_cursor_graphics(pindex)
    if player == nil or player.player.character == nil then
       return 
    end
+   local p = game.get_player(pindex)
    local stack = game.get_player(pindex).cursor_stack
    if player.building_direction == nil then
       player.building_direction = dirs.north
@@ -11971,14 +11976,14 @@ function sync_build_cursor_graphics(pindex)
    local left_top = nil
    local right_bottom = nil
    if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result then
-      --Redraw arrow
+      --Redraw direction indicator arrow
       if dir_indicator ~= nil then rendering.destroy(player.building_dir_arrow) end
       local arrow_pos = player.cursor_pos
       if players[pindex].build_lock and not players[pindex].cursor and stack.name ~= "rail" then
          arrow_pos = center_of_tile(offset_position(arrow_pos, players[pindex].player_direction, -2))
       end
       player.building_dir_arrow = rendering.draw_sprite{sprite = "fluid.crude-oil", tint = {r = 0.25, b = 0.25, g = 1.0, a = 0.75}, render_layer = 254, 
-         surface = game.get_player(pindex).surface, players = nil, target = arrow_pos, orientation = (dir/dirs.east/dirs.south)}
+         surface = game.get_player(pindex).surface, players = nil, target = arrow_pos, orientation = dir/(2 * dirs.south)}
       dir_indicator = player.building_dir_arrow
       rendering.set_visible(dir_indicator,true)
       if players[pindex].hide_cursor or stack.name == "locomotive" or stack.name == "cargo-wagon" or stack.name == "fluid-wagon" or stack.name == "artillery-wagon" then
@@ -12077,9 +12082,34 @@ function sync_build_cursor_graphics(pindex)
          move_mouse_cursor(pos,pindex)
       end
    elseif stack == nil or not stack.valid_for_read then
-      --Hide the objects
+      --Invalid stack: Hide the objects
       if dir_indicator ~= nil then rendering.set_visible(dir_indicator,false) end
       if player.building_footprint ~= nil then rendering.set_visible(player.building_footprint,false) end
+   elseif stack and stack.valid_for_read and stack.is_blueprint and stack.is_blueprint_setup() then
+      --Blueprints have their own data:
+      --Redraw the direction indicator arrow
+      if dir_indicator ~= nil then rendering.destroy(player.building_dir_arrow) end
+      local arrow_pos = player.cursor_pos
+      local dir = players[pindex].blueprint_hand_direction
+      player.building_dir_arrow = rendering.draw_sprite{sprite = "fluid.crude-oil", tint = {r = 0.25, b = 0.25, g = 1.0, a = 0.75}, render_layer = 254, 
+         surface = game.get_player(pindex).surface, players = nil, target = arrow_pos, orientation = dir/(2 * dirs.south)}
+      dir_indicator = player.building_dir_arrow
+      rendering.set_visible(dir_indicator,true)
+      
+      --Redraw the bp footprint
+      if player.building_footprint ~= nil then 
+         rendering.destroy(player.building_footprint) 
+      end
+      local left_top, right_bottom, center_pos = get_blueprint_corners(pindex, false)
+      player.building_footprint = rendering.draw_rectangle{left_top = left_top, right_bottom = right_bottom, color = {r = 0.25, b = 0.25, g = 1.0, a = 0.75}, width = 2, draw_on_ground = true, surface = p.surface, players = nil}
+      rendering.set_visible(player.building_footprint,true)
+      
+      --Move the mouse pointer
+      if cursor_position_is_on_screen(pindex) then
+         move_mouse_cursor(center_pos,pindex)
+      else 
+         move_mouse_cursor(players[pindex].position,pindex)
+      end
    else
       --Hide the objects
       if dir_indicator ~= nil then rendering.set_visible(dir_indicator,false) end
@@ -12171,7 +12201,7 @@ function cursor_highlight(pindex, ent, box_type, skip_mouse_movement)
       return 
    end 
    local stack = game.get_player(pindex).cursor_stack
-   if stack ~= nil and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then 
+   if stack ~= nil and stack.valid_for_read and stack.valid and (stack.prototype.place_result ~= nil or stack.is_blueprint) then 
       return
    end
    
