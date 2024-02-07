@@ -2937,6 +2937,120 @@ function place_chain_signal_pair(rail,pindex)
    return successful, build_comment
 end
 
+--Places a rail signal pair around a rail depending on its direction. May fail if the spots are full. Copy of chain signal function
+function place_rail_signal_pair(rail,pindex)
+   local stack = game.get_player(pindex).cursor_stack
+   local stack2 = nil
+   local build_comment = "no comment"
+   local successful = true
+   local dir = rail.direction
+   local pos = rail.position
+   local surf = rail.surface
+   local can_place_all = true
+   
+   --1. Check if signals can be placed, based on direction
+   if dir == dirs.north or dir == dirs.south then
+      can_place_all = can_place_all and surf.can_place_entity{name = "rail-signal", position = {pos.x+1, pos.y}, direction = dirs.south, force = game.forces.player}
+      can_place_all = can_place_all and surf.can_place_entity{name = "rail-signal", position = {pos.x-2, pos.y}, direction = dirs.north, force = game.forces.player}
+   elseif dir == dirs.east or dir == dirs.west then
+      can_place_all = can_place_all and surf.can_place_entity{name = "rail-signal", position = {pos.x, pos.y-2}, direction = dirs.east, force = game.forces.player}
+      can_place_all = can_place_all and surf.can_place_entity{name = "rail-signal", position = {pos.x, pos.y+1}, direction = dirs.west, force = game.forces.player}
+   elseif dir == dirs.northeast then
+      can_place_all = can_place_all and surf.can_place_entity{name = "rail-signal", position = {pos.x-1, pos.y-0}, direction = dirs.northwest, force = game.forces.player}
+      can_place_all = can_place_all and surf.can_place_entity{name = "rail-signal", position = {pos.x+1, pos.y-2}, direction = dirs.southeast, force = game.forces.player}
+   elseif dir == dirs.southwest then
+      can_place_all = can_place_all and surf.can_place_entity{name = "rail-signal", position = {pos.x-2, pos.y+1}, direction = dirs.northwest, force = game.forces.player}
+      can_place_all = can_place_all and surf.can_place_entity{name = "rail-signal", position = {pos.x+0, pos.y-1}, direction = dirs.southeast, force = game.forces.player}
+   elseif dir == dirs.southeast then
+      can_place_all = can_place_all and surf.can_place_entity{name = "rail-signal", position = {pos.x-1, pos.y-1}, direction = dirs.northeast, force = game.forces.player}
+      can_place_all = can_place_all and surf.can_place_entity{name = "rail-signal", position = {pos.x+1, pos.y+1}, direction = dirs.southwest, force = game.forces.player}
+   elseif dir == dirs.northwest then
+      can_place_all = can_place_all and surf.can_place_entity{name = "rail-signal", position = {pos.x-2, pos.y-2}, direction = dirs.northeast, force = game.forces.player}
+      can_place_all = can_place_all and surf.can_place_entity{name = "rail-signal", position = {pos.x+0, pos.y+0}, direction = dirs.southwest, force = game.forces.player}
+   else
+      successful = false
+      game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+      build_comment = "direction error"
+      return successful, build_comment
+   end
+   
+   if not can_place_all then
+      successful = false
+	  game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+	  build_comment = "cannot place"
+	  return successful, build_comment
+   end
+   
+   --2. Check if there are already chain signals or rail signals nearby. If yes, stop.
+   local signals_found = 0
+   local signals = surf.find_entities_filtered{position = pos, radius = 3, name="rail-chain-signal"}
+   for i,signal in ipairs(signals) do
+      signals_found = signals_found + 1
+   end
+   local signals = surf.find_entities_filtered{position = pos, radius = 3, name="rail-signal"}
+   for i,signal in ipairs(signals) do
+      signals_found = signals_found + 1
+   end
+   if signals_found > 0 then
+      successful = false
+	  game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+	  build_comment = "Too close to existing signals."
+	  return successful, build_comment
+   end
+   
+   --3. Check whether the player has enough rail chain signals.
+   if not (stack.valid and stack.valid_for_read and stack.name == "rail-signal" and stack.count >= 2) then
+      --Check if the inventory has one instead
+      if players[pindex].inventory.lua_inventory.get_item_count("rail-signal") < 2 then
+         game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+         build_comment = "You need to have at least 2 rail signals on you."
+		 successful = false
+		 game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+         return successful, build_comment
+      else
+         --Take from the inventory.
+         stack2 = players[pindex].inventory.lua_inventory.find_item_stack("rail-signal")
+         game.get_player(pindex).cursor_stack.swap_stack(stack2)
+         stack = game.get_player(pindex).cursor_stack
+         players[pindex].inventory.max = #players[pindex].inventory.lua_inventory
+      end
+   end
+   
+   --4. Place the signals.
+   if dir == dirs.north or dir == dirs.south then
+      surf.create_entity{name = "rail-signal", position = {pos.x+1, pos.y}, direction = dirs.south, force = game.forces.player}
+      surf.create_entity{name = "rail-signal", position = {pos.x-2, pos.y}, direction = dirs.north, force = game.forces.player}
+   elseif dir == dirs.east or dir == dirs.west then
+      surf.create_entity{name = "rail-signal", position = {pos.x, pos.y-2}, direction = dirs.east, force = game.forces.player}
+      surf.create_entity{name = "rail-signal", position = {pos.x, pos.y+1}, direction = dirs.west, force = game.forces.player}
+   elseif dir == dirs.northeast then
+      surf.create_entity{name = "rail-signal", position = {pos.x-1, pos.y-0}, direction = dirs.northwest, force = game.forces.player}
+      surf.create_entity{name = "rail-signal", position = {pos.x+1, pos.y-2}, direction = dirs.southeast, force = game.forces.player}
+   elseif dir == dirs.southwest then
+      surf.create_entity{name = "rail-signal", position = {pos.x-2, pos.y+1}, direction = dirs.northwest, force = game.forces.player}
+      surf.create_entity{name = "rail-signal", position = {pos.x+0, pos.y-1}, direction = dirs.southeast, force = game.forces.player} 
+   elseif dir == dirs.southeast then
+      surf.create_entity{name = "rail-signal", position = {pos.x-1, pos.y-1}, direction = dirs.northeast, force = game.forces.player}
+      surf.create_entity{name = "rail-signal", position = {pos.x+1, pos.y+1}, direction = dirs.southwest, force = game.forces.player}
+   elseif dir == dirs.northwest then
+      surf.create_entity{name = "rail-signal", position = {pos.x-2, pos.y-2}, direction = dirs.northeast, force = game.forces.player}
+      surf.create_entity{name = "rail-signal", position = {pos.x+0, pos.y+0}, direction = dirs.southwest, force = game.forces.player}
+   else
+      successful = false
+      game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+      build_comment = "direction error"
+      return successful, build_comment
+   end
+   
+   --Reduce the signal count and restore the cursor and wrap up
+   game.get_player(pindex).cursor_stack.count = game.get_player(pindex).cursor_stack.count - 2
+   game.get_player(pindex).clear_cursor()
+   
+   game.get_player(pindex).play_sound{path = "entity-build/rail-signal"}
+   game.get_player(pindex).play_sound{path = "entity-build/rail-signal"}
+   return successful, build_comment
+end
+
 --Deletes rail signals around a rail.
 function destroy_signals(rail)
    local chains = rail.surface.find_entities_filtered{position = rail.position, radius = 2, name = "rail-chain-signal"}
@@ -3127,11 +3241,11 @@ function rail_builder_open(pindex, rail)
       if dir == dirs.north or dir == dirs.east or dir == dirs.south or dir == dirs.west then 
          --Straight mid rails
          players[pindex].rail_builder.rail_type = 3
-         players[pindex].rail_builder.index_max = 2
+         players[pindex].rail_builder.index_max = 3
       else
          --Diagonal mid rails
          players[pindex].rail_builder.rail_type = 4
-         players[pindex].rail_builder.index_max = 2
+         players[pindex].rail_builder.index_max = 3
       end
    end
    
@@ -3311,14 +3425,27 @@ function rail_builder(pindex, clicked_in)
             printout(comment,pindex)
          else
             local success, build_comment = place_chain_signal_pair(rail,pindex)
-			if success then
-			   comment = "Signals placed."
-			else
-			   comment = comment .. build_comment
-			end
+            if success then
+               comment = "Chain signals placed."
+            else
+               comment = comment .. build_comment
+            end
+               printout(comment,pindex)
+            end
+	  elseif menu_line == 2 then
+         if not clicked then
+            comment = comment .. "Pair of regular rail signals, warning: do not use regular rail signals unless you are sure about what you are doing because trains can easily get deadlocked at them"
+            printout(comment,pindex)
+         else
+            local success, build_comment = place_rail_signal_pair(rail,pindex)
+            if success then
+               comment = "Rail signals placed, warning: do not use regular rail signals unless you are sure about what you are doing because trains can easily get deadlocked at them"
+            else
+               comment = comment .. build_comment
+            end
             printout(comment,pindex)
          end
-	  elseif menu_line == 2 then
+     elseif menu_line == 3 then
          if not clicked then
             comment = comment .. "Clear rail signals"
             printout(comment,pindex)
@@ -3327,16 +3454,6 @@ function rail_builder(pindex, clicked_in)
             printout("Signals cleared.",pindex)
          end
       end
-      --After implementing junctions we will allow building mid rail train stops. This is commented out for now.
-      --if menu_line == 3 then 
-      --   if not clicked then
-      --      comment = comment .. "Train stop facing the player direction"
-      --      printout(comment,pindex)
-      --   else
-      --      --Build it here
-      --      build_train_stop(rail, pindex)
-      --   end
-      --end
    elseif rail_type == 4 then
       --Diagonal mid rails
       if menu_line == 1 then
@@ -3345,14 +3462,27 @@ function rail_builder(pindex, clicked_in)
             printout(comment,pindex)
          else
             local success, build_comment = place_chain_signal_pair(rail,pindex)
-			if success then
-			   comment = "Signals placed."
-			else
-			   comment = comment .. build_comment
-			end
+            if success then
+               comment = "Chain signals placed."
+            else
+               comment = comment .. build_comment
+            end
+               printout(comment,pindex)
+            end
+      elseif menu_line == 2 then
+         if not clicked then
+            comment = comment .. "Pair of regular rail signals, warning: do not use regular rail signals unless you are sure about what you are doing because trains can easily get deadlocked at them"
+            printout(comment,pindex)
+         else
+            local success, build_comment = place_rail_signal_pair(rail,pindex)
+            if success then
+               comment = "Rail signals placed, warning: do not use regular rail signals unless you are sure about what you are doing because trains can easily get deadlocked at them"
+            else
+               comment = comment .. build_comment
+            end
             printout(comment,pindex)
          end
-	  elseif menu_line == 2 then
+	   elseif menu_line == 3 then
          if not clicked then
             comment = comment .. "Clear rail signals"
             printout(comment,pindex)
