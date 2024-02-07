@@ -10757,7 +10757,7 @@ script.on_event(defines.events.on_gui_confirmed,function(event)
       if result == nil or result == "" then 
          result = "unknown"
       end
-players[pindex].game.get_player(pindex).cursor_stack.connected_entity.entity_label =  result
+      game.get_player(pindex).cursor_stack.connected_entity.entity_label = result
       printout("spidertron renamed to " .. result .. ", menu closed.", pindex)
       event.element.destroy()
       spider_menu_close(pindex, false)

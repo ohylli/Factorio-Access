@@ -77,7 +77,7 @@ function spider_menu(menu_index, pindex, spiderin, clicked, other_input)
          else
             printout("Enter a new name for this spidertron, then press ENTER to confirm.", pindex)
             players[pindex].spider_menu.renaming = true
-            local frame = game.get_player(pindex).gui.screen.add{type = "frame", name = "train-rename"}
+            local frame = game.get_player(pindex).gui.screen.add{type = "frame", name = "spider-rename"}
             frame.bring_to_front()
             frame.force_auto_center()
             frame.focus()
@@ -131,7 +131,7 @@ function spider_menu(menu_index, pindex, spiderin, clicked, other_input)
             else
                targetstate = "disabled"
             end
-            printout("auto target enemies without gunner inside, currently" .. targetstate, pindex)
+            printout(targetstate .. " auto target enemies without gunner inside ", pindex)
          end
       end
    elseif index == 6 then
@@ -155,7 +155,7 @@ function spider_menu(menu_index, pindex, spiderin, clicked, other_input)
             else
                targetstate = "disabled"
             end
-            printout("auto target enemies with gunner inside, currently" .. targetstate, pindex)
+            printout(targetstate .. " auto target enemies with gunner inside ", pindex)
          end
       end
    elseif index == 7 then
@@ -210,7 +210,7 @@ function spider_menu_close(pindex, mute_in)
    
    --Destroy GUI
    if game.get_player(pindex).gui.screen["spider-rename"] ~= nil then
-      game.get_player(pindex).gui.screen["train-rename"].destroy()
+      game.get_player(pindex).gui.screen["spider-rename"].destroy()
    end
    if game.get_player(pindex).opened ~= nil then
       game.get_player(pindex).opened = nil
