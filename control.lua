@@ -11617,31 +11617,35 @@ end
 function direction_lookup(dir)
    local reading = "unknown"
    if dir < 0 then
-      return "direction error 1"
+      return "unknown direction ID " .. dir
    end
-   
-   if dir == dirs.north then
-      reading = "North"
-   elseif dir == dirs.northeast then
-      reading = "Northeast"
-   elseif dir == dirs.east then
-      reading = "East"
-   elseif dir == dirs.southeast then
-      reading = "Southeast"
-   elseif dir == dirs.south then
-      reading = "South"
-   elseif dir == dirs.southwest then
-      reading = "Southwest"
-   elseif dir == dirs.west then
-      reading = "West"
-   elseif dir == dirs.northwest then
-      reading = "Northwest"
-   elseif dir == 99 then --Internally defined
-      reading = "Here"
+   if dir >= dirs.north and dir <= dirs.northwest then
+      return game.direction_to_string(dir)
    else
-      reading = "unknown direction ID " .. dir
-   end      
-   return reading
+      -- if dir == dirs.north then
+         -- reading = "North"
+      -- elseif dir == dirs.northeast then
+         -- reading = "Northeast"
+      -- elseif dir == dirs.east then
+         -- reading = "East"
+      -- elseif dir == dirs.southeast then
+         -- reading = "Southeast"
+      -- elseif dir == dirs.south then
+         -- reading = "South"
+      -- elseif dir == dirs.southwest then
+         -- reading = "Southwest"
+      -- elseif dir == dirs.west then
+         -- reading = "West"
+      -- elseif dir == dirs.northwest then
+         -- reading = "Northwest"
+      -- end
+      if dir == 99 then --Defined by mod 
+         reading = "Here"
+      else
+         reading = "unknown direction ID " .. dir
+      end      
+      return reading
+   end
 end
 
 --Spawns a lamp at the electric pole and uses its energy level to approximate the network satisfaction percentage with high accuracy
