@@ -5808,8 +5808,8 @@ function update_menu_visuals()
             update_overhead_sprite("item.locomotive",2,1.25,pindex)
             update_custom_GUI_sprite("item.locomotive", 3, pindex)
          elseif player.menu == "spider_menu" then
-            update_overhead_sprite("item.locomotive",2,1.25,pindex)
-            update_custom_GUI_sprite("item.locomotive", 3, pindex)
+            update_overhead_sprite("item.spidertron",2,1.25,pindex)
+            update_custom_GUI_sprite("item.spidertron", 3, pindex)
          elseif player.menu == "train_stop_menu" then
             update_overhead_sprite("item.train-stop",2,1.25,pindex)
             update_custom_GUI_sprite("item.train-stop", 3, pindex)
