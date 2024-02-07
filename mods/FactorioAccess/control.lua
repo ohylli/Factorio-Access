@@ -4441,12 +4441,19 @@ function read_coords(pindex, start_phrase)
                preview_str = preview_str .. " to the north "
             end
             result = result .. preview_str
+         elseif stack and stack.valid_for_read and stack.valid and stack.is_blueprint and stack.is_blueprint_setup() then   
+            local left_top, right_bottom, build_pos = get_blueprint_corners(pindex, false)
+            local bp_dim_1 = right_bottom.x - left_top.x 
+            local bp_dim_2 = right_bottom.y - left_top.y
+            local preview_str = ", blueprint preview extends " .. bp_dim_1 .. " or " .. bp_dim_2 .. ", to the East or the South, depending on the rotation" 
+            result = result .. preview_str
          elseif stack and stack.valid_for_read and stack.valid and stack.prototype.place_as_tile_result ~= nil then
+            --Paving preview size
             local preview_str = ", paving preview " 
             local player = players[pindex]
             preview_str = ", paving preview is " .. (player.cursor_size * 2 + 1) .. " by " .. (player.cursor_size * 2 + 1) .. " tiles, centered on this tile. "
-            if player.cursor then
-               --preview_str = ", paving preview extends " .. (player.cursor_size * 2 + 1) .. " east and " .. (player.cursor_size * 2 + 1) .. " south, starting from this tile. "
+            if players[pindex].cursor and players[pindex].preferences.tiles_placed_from_northwest_corner then
+               preview_str = ", paving preview extends " .. (player.cursor_size * 2 + 1) .. " east and " .. (player.cursor_size * 2 + 1) .. " south, starting from this tile. "
             end
          end
          printout(result,pindex)
