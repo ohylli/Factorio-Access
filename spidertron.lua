@@ -1,176 +1,176 @@
 function spider_menu(menu_index, pindex, spiderin, clicked, other_input)
    local index = menu_index
-local spider
-local remote =  game.get_player(pindex).cursor_stack
+   local spider
+   local remote =  game.get_player(pindex).cursor_stack
    local other = other_input or -1
    local cursortarget = get_selected_ent(pindex)
-local spidertron = game.get_player(pindex).cursor_stack.connected_entity
-if spiderin ~= nil then
-spider = spiderin
-end
+   local spidertron = game.get_player(pindex).cursor_stack.connected_entity
+   if spiderin ~= nil then
+      spider = spiderin
+   end
    if index == 0 then
       --Give basic info about this spider, such as its name and ID.
-local res
+      local res
       if remote.connected_entity ~= nil then
-if spidertron.entity_label ~= nil then
-res = spidertron.entity_label .. "connected to this remote. "
-else 
-res = "unlabelled spidertron connected"
-end
-else
-res = "this remote is not connected to a spidertron"
-end
+         if spidertron.entity_label ~= nil then
+            res = spidertron.entity_label .. "connected to this remote. "
+         else 
+            res = "unlabelled spidertron connected"
+         end
+      else
+         res = "this remote is not connected to a spidertron"
+      end
       printout(res
       .. ", Press UP ARROW and DOWN ARROW to navigate options, press LEFT BRACKET to select an option or press E to exit this menu.", pindex)
    elseif index == 1 then
       --spidertron linking and unlinking from the remote
       if not clicked then
-      if remote.connected_entity ~= nil then
-         local spidername
-if game.get_player(pindex).cursor_stack.connected_entity.entity_label~= nil  then
-spidername = game.get_player(pindex).cursor_stack.connected_entity.entity_label
-else
-spidername = "an unlabelled spidertron"
-end
-local          result = "the remote is connected to " .. spidername
-         result = result .. ", press LEFT BRACKET to unlink it. "
-         printout(result, pindex)
-else
-         local result = "the remote is not connected. "
-         result = result .. ", press LEFT BRACKET to link it to the focused spidertron. "
-         printout(result, pindex)
-end
+         if remote.connected_entity ~= nil then
+            local spidername
+            if game.get_player(pindex).cursor_stack.connected_entity.entity_label~= nil  then
+               spidername = game.get_player(pindex).cursor_stack.connected_entity.entity_label
+            else
+               spidername = "an unlabelled spidertron"
+            end
+            local result = "the remote is connected to " .. spidername
+            result = result .. ", press LEFT BRACKET to unlink it. "
+            printout(result, pindex)
+         else
+            local result = "the remote is not connected. "
+            result = result .. ", press LEFT BRACKET to link it to the focused spidertron. "
+            printout(result, pindex)
+         end
       else
-      if remote.connected_entity ~= nil then
-remote.connected_entity = nil
-         printout("remote link severed.", pindex)
-else
-local result 
-if cursortarget == nil or (cursortarget.type ~= "spider-vehicle" and cursortarget.type ~= "spider-leg") then
-result = "Invalid object to link to this remote. "
-else
-if cursortarget.type == "spider-vehicle" then
-remote.connected_entity = cursortarget
-else
-      local spiders = cursortarget.surface.find_entities_filtered{position = cursortarget.position, radius = 5, type = "spider-vehicle"}
-      if spiders[1] and spiders[1].valid then
-remote.connected_entity = spiders[1]
-end
-end
-result = "remote connected to "
-if game.get_player(pindex).cursor_stack.connected_entity.entity_label ~= nil then
-result = result .. game.get_player(pindex).cursor_stack.connected_entity.entity_label
-else
-result = result .. "an unlabelled spidertron."
-end
-end
-         printout(result, pindex)
+         if remote.connected_entity ~= nil then
+            remote.connected_entity = nil
+            printout("remote link severed.", pindex)
+         else
+            local result 
+            if cursortarget == nil or (cursortarget.type ~= "spider-vehicle" and cursortarget.type ~= "spider-leg") then
+               result = "Invalid object to link to this remote. "
+            else
+               if cursortarget.type == "spider-vehicle" then
+                  remote.connected_entity = cursortarget
+               else
+                  local spiders = cursortarget.surface.find_entities_filtered{position = cursortarget.position, radius = 5, type = "spider-vehicle"}
+                  if spiders[1] and spiders[1].valid then
+                     remote.connected_entity = spiders[1]
+                  end
+               end
+               result = "remote connected to "
+               if game.get_player(pindex).cursor_stack.connected_entity.entity_label ~= nil then
+                  result = result .. game.get_player(pindex).cursor_stack.connected_entity.entity_label
+               else
+                  result = result .. "an unlabelled spidertron."
+               end
+            end
+            printout(result, pindex)
+         end
       end
-end
    elseif index == 2 then
       --Rename the connected spidertron
       if not clicked then
          printout("Rename this spidertron, press LEFT BRACKET.", pindex)
       else
-if remote.connected_entity == nil then
-         printout("To rename a spidertron, link it to this remote first. ", pindex)
-else
-         printout("Enter a new name for this spidertron, then press ENTER to confirm.", pindex)
-         players[pindex].spider_menu.renaming = true
-         local frame = game.get_player(pindex).gui.screen.add{type = "frame", name = "train-rename"}
-         frame.bring_to_front()
-         frame.force_auto_center()
-         frame.focus()
-         game.get_player(pindex).opened = frame
-         local input = frame.add{type="textfield", name = "input"}
-         input.focus()
+         if remote.connected_entity == nil then
+            printout("To rename a spidertron, link it to this remote first. ", pindex)
+         else
+            printout("Enter a new name for this spidertron, then press ENTER to confirm.", pindex)
+            players[pindex].spider_menu.renaming = true
+            local frame = game.get_player(pindex).gui.screen.add{type = "frame", name = "train-rename"}
+            frame.bring_to_front()
+            frame.force_auto_center()
+            frame.focus()
+            game.get_player(pindex).opened = frame
+            local input = frame.add{type="textfield", name = "input"}
+            input.focus()
+         end
       end
-end
    elseif index == 3 then
       if not clicked then
          printout("move spidertron to cursor", pindex)
-else
-if remote.connected_entity == nil then
-         printout("To move a spidertron, link it to this remote first.", pindex)
-else
-cursor = players[pindex].cursor_pos
-game.get_player(pindex).cursor_stack.connected_entity.autopilot_destination = cursor
-         printout("Spidertron sent to coordinates" .. cursor.x .. ", " .. cursor.y, pindex)
-end
-end
+      else
+         if remote.connected_entity == nil then
+            printout("To move a spidertron, link it to this remote first.", pindex)
+         else
+            cursor = players[pindex].cursor_pos
+            game.get_player(pindex).cursor_stack.connected_entity.autopilot_destination = cursor
+            printout("Spidertron sent to coordinates" .. cursor.x .. ", " .. cursor.y, pindex)
+         end
+      end
    elseif index == 4 then
       if not clicked then
          printout("add cursor position to spidertron autopilot queue", pindex)
-else
-if remote.connected_entity == nil then
-         printout("To move a spidertron, link it to this remote first.", pindex)
-else
-cursor = players[pindex].cursor_pos
-game.get_player(pindex).cursor_stack.connected_entity.add_autopilot_destination(cursor)
-         printout("Coordinates " .. cursor.x .. ", " .. cursor.y .. "added to this spidertron's autopilot queue.", pindex)
-end
-end
+      else
+         if remote.connected_entity == nil then
+            printout("To move a spidertron, link it to this remote first.", pindex)
+         else
+            cursor = players[pindex].cursor_pos
+            game.get_player(pindex).cursor_stack.connected_entity.add_autopilot_destination(cursor)
+            printout("Coordinates " .. cursor.x .. ", " .. cursor.y .. "added to this spidertron's autopilot queue.", pindex)
+         end
+      end
    elseif index == 5 then
-if remote.connected_entity == nil then
+      if remote.connected_entity == nil then
          printout("No linked spidertron.", pindex)
-else
-      if not clicked then
-local targetstate
-if game.get_player(pindex).cursor_stack.connected_entity.vehicle_automatic_targeting_parameters.auto_target_without_gunner == true then
-targetstate = "enabled"
-else
-targetstate = "disabled"
-end
-         printout("auto target enemies without gunner inside, currently" .. targetstate, pindex)
-else
-local switch = {auto_target_without_gunner = not game.get_player(pindex).cursor_stack.connected_entity.vehicle_automatic_targeting_parameters.auto_target_without_gunner, auto_target_with_gunner = game.get_player(pindex).cursor_stack.connected_entity.vehicle_automatic_targeting_parameters.auto_target_with_gunner}
-game.get_player(pindex).cursor_stack.connected_entity.vehicle_automatic_targeting_parameters = switch
-local targetstate
-if game.get_player(pindex).cursor_stack.connected_entity.vehicle_automatic_targeting_parameters.auto_target_without_gunner == true then
-targetstate = "enabled"
-else
-targetstate = "disabled"
-end
-         printout("auto target enemies without gunner inside, currently" .. targetstate, pindex)
-end
-end
+      else
+         if not clicked then
+            local targetstate
+            if game.get_player(pindex).cursor_stack.connected_entity.vehicle_automatic_targeting_parameters.auto_target_without_gunner == true then
+               targetstate = "enabled"
+            else
+               targetstate = "disabled"
+            end
+            printout("auto target enemies without gunner inside, currently" .. targetstate, pindex)
+         else
+            local switch = {auto_target_without_gunner = not game.get_player(pindex).cursor_stack.connected_entity.vehicle_automatic_targeting_parameters.auto_target_without_gunner, auto_target_with_gunner = game.get_player(pindex).cursor_stack.connected_entity.vehicle_automatic_targeting_parameters.auto_target_with_gunner}
+            game.get_player(pindex).cursor_stack.connected_entity.vehicle_automatic_targeting_parameters = switch
+            local targetstate
+            if game.get_player(pindex).cursor_stack.connected_entity.vehicle_automatic_targeting_parameters.auto_target_without_gunner == true then
+               targetstate = "enabled"
+            else
+               targetstate = "disabled"
+            end
+            printout("auto target enemies without gunner inside, currently" .. targetstate, pindex)
+         end
+      end
    elseif index == 6 then
-if remote.connected_entity == nil then
+      if remote.connected_entity == nil then
          printout("No linked spidertron.", pindex)
-else
-      if not clicked then
-local targetstate
-if game.get_player(pindex).cursor_stack.connected_entity.vehicle_automatic_targeting_parameters.auto_target_with_gunner == true then
-targetstate = "enabled"
-else
-targetstate = "disabled"
-end
-         printout("auto target enemies with gunner inside, currently" .. targetstate, pindex)
-else
-local switch = {auto_target_without_gunner = game.get_player(pindex).cursor_stack.connected_entity.vehicle_automatic_targeting_parameters.auto_target_without_gunner, auto_target_with_gunner = not game.get_player(pindex).cursor_stack.connected_entity.vehicle_automatic_targeting_parameters.auto_target_with_gunner}
-game.get_player(pindex).cursor_stack.connected_entity.vehicle_automatic_targeting_parameters = switch
-local targetstate
-if game.get_player(pindex).cursor_stack.connected_entity.vehicle_automatic_targeting_parameters.auto_target_with_gunner == true then
-targetstate = "enabled"
-else
-targetstate = "disabled"
-end
-         printout("auto target enemies with gunner inside, currently" .. targetstate, pindex)
-end
-end
+      else
+         if not clicked then
+            local targetstate
+            if game.get_player(pindex).cursor_stack.connected_entity.vehicle_automatic_targeting_parameters.auto_target_with_gunner == true then
+               targetstate = "enabled"
+            else
+               targetstate = "disabled"
+            end
+            printout("auto target enemies with gunner inside, currently" .. targetstate, pindex)
+         else
+            local switch = {auto_target_without_gunner = game.get_player(pindex).cursor_stack.connected_entity.vehicle_automatic_targeting_parameters.auto_target_without_gunner, auto_target_with_gunner = not game.get_player(pindex).cursor_stack.connected_entity.vehicle_automatic_targeting_parameters.auto_target_with_gunner}
+            game.get_player(pindex).cursor_stack.connected_entity.vehicle_automatic_targeting_parameters = switch
+            local targetstate
+            if game.get_player(pindex).cursor_stack.connected_entity.vehicle_automatic_targeting_parameters.auto_target_with_gunner == true then
+               targetstate = "enabled"
+            else
+               targetstate = "disabled"
+            end
+            printout("auto target enemies with gunner inside, currently" .. targetstate, pindex)
+         end
+      end
    elseif index == 7 then
       if not clicked then
          printout("follow unit", pindex)
-else
-      if remote.connected_entity ~= nil then
-game.get_player(pindex).cursor_stack.connected_entity.follow_target = cursortarget
-         printout("spider started to follow the unit.", pindex)
-else
-         printout("To use this menu item, link a spidertron to this remote.", pindex)
-end
-end
+      else
+         if remote.connected_entity ~= nil then
+            game.get_player(pindex).cursor_stack.connected_entity.follow_target = cursortarget
+            printout("spider started to follow the unit.", pindex)
+         else
+            printout("To use this menu item, link a spidertron to this remote.", pindex)
+         end
+      end
 
-end
+   end
 end
 SPIDER_MENU_LENGTH = 7
 
