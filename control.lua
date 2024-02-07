@@ -2406,12 +2406,13 @@ function get_substring_before_dash(str)
 end
 
 function get_ent_area_from_name(ent_name,pindex)
-   local ents = game.get_player(pindex).surface.find_entities_filtered{name = ent_name, limit = 1}
-   if #ents == 0 then
-      return -1
-   else
-      return ents[1].tile_height * ents[1].tile_width
-   end
+   -- local ents = game.get_player(pindex).surface.find_entities_filtered{name = ent_name, limit = 1}
+   -- if #ents == 0 then
+      -- return -1
+   -- else
+      -- return ents[1].tile_height * ents[1].tile_width
+   -- end
+   return game.entity_prototypes[ent_name].tile_width * game.entity_prototypes[ent_name].tile_height
 end
 
 function confirm_ent_is_in_area(ent_name, area_left_top, area_right_bottom, pindex)
@@ -8901,10 +8902,10 @@ function build_item_in_hand(pindex, free_place_straight_rail)
             local p_dir = players[pindex].player_direction
             
             --Flip height and width if the object is rotated sideways
-            if dir == dirs.east or dir == dirs.west then--Note, diagonal cases are rounded to north/south cases 
-               local temp = height
-               height = width
-               width = temp
+            if dir == dirs.east or dir == dirs.west then
+               --Note, diagonal cases are rounded to north/south cases 
+               height = stack.prototype.place_result.tile_width
+               width = stack.prototype.place_result.tile_height
                right_bottom = {x = left_top.x + width, y = left_top.y + height}
             end
             
@@ -11120,6 +11121,9 @@ script.on_event("debug-test-key", function(event)
    local stack = game.get_player(pindex).cursor_stack
    
    get_blueprint_corners(pindex, true)
+   if ent and ent.valid then
+      game.print("tile width: " .. game.entity_prototypes[ent.name].tile_width)
+   end
 
 end)
 
@@ -11953,7 +11957,6 @@ function sync_build_cursor_graphics(pindex)
    local p_dir = player.player_direction
    local width = nil 
    local height = nil
-   local flip = nil
    local left_top = nil
    local right_bottom = nil
    if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result then
@@ -11975,19 +11978,18 @@ function sync_build_cursor_graphics(pindex)
       if player.building_footprint ~= nil then 
          rendering.destroy(player.building_footprint) 
       end
+      
+      --Get correct width and height
       width = stack.prototype.place_result.tile_width
       height = stack.prototype.place_result.tile_height
-      flip = false
+      if dir == dirs.east or dir == dirs.west then
+         --Flip width and height. Note: diagonal cases are rounded to north/south cases 
+         height = stack.prototype.place_result.tile_width
+         width = stack.prototype.place_result.tile_height
+      end
+      
       left_top = {x = math.floor(player.cursor_pos.x),y = math.floor(player.cursor_pos.y)}
       right_bottom = {x = (left_top.x + width), y = (left_top.y + height)}
-      
-      --Flip height and width if the object is rotated sideways
-      if dir == dirs.east or dir == dirs.west then--Note, diagonal cases are rounded to north/south cases 
-         local temp = height
-         height = width
-         width = temp
-         right_bottom = {x = left_top.x + width, y = left_top.y + height}
-      end
       
       if not player.cursor then
          --Apply offsets when facing west or north so that items can be placed in front of the character
@@ -12027,12 +12029,6 @@ function sync_build_cursor_graphics(pindex)
       --Move mouse cursor according to building box
       if player.cursor then
          --Adjust for cursor
-         if flip then
-            --Flip width and height
-            local temp = width
-            width = height
-            height = temp
-         end
          if cursor_position_is_on_screen(pindex) then
             local new_pos = {x = (left_top.x + width/2),y = (left_top.y  + height/2)}
             move_mouse_cursor(new_pos,pindex)
@@ -12041,12 +12037,6 @@ function sync_build_cursor_graphics(pindex)
          end
       else
          --Adjust for direct placement
-         if flip then
-            --Flip width and height
-            local temp = width
-            width = height
-            height = temp
-         end
          local pos = player.cursor_pos
          if p_dir == dirs.north then
             pos = offset_position(pos, dirs.north, height/2 - 0.5)
