@@ -12629,7 +12629,8 @@ function menu_search_get_next(pindex, str, start_phrase_in)
    elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") and pb.recipe_selection == true then
       new_index, new_index_2 = crafting_find_index_of_next_name_match(str,pindex, search_index, search_index_2, players[pindex].building.recipe_list)
    elseif players[pindex].menu == "technology" then
-      local techs = {} --Reads the selected tech catagory
+      --Search the selected tech catagory
+      local techs = {}
       if players[pindex].technology.category == 1 then
          techs = players[pindex].technology.lua_researchable
       elseif players[pindex].technology.category == 2 then
@@ -12638,6 +12639,43 @@ function menu_search_get_next(pindex, str, start_phrase_in)
          techs = players[pindex].technology.lua_unlocked
       end
       new_index = inventory_find_index_of_next_name_match(techs, search_index, str, pindex)
+      --Search the second tech category 
+      if new_index <= 0 then
+         players[pindex].technology.category = players[pindex].technology.category + 1
+         if players[pindex].technology.category > 3 then 
+            players[pindex].technology.category = 1
+         end
+         if players[pindex].technology.category == 1 then
+            techs = players[pindex].technology.lua_researchable
+         elseif players[pindex].technology.category == 2 then
+            techs = players[pindex].technology.lua_locked
+         elseif players[pindex].technology.category == 3 then
+            techs = players[pindex].technology.lua_unlocked
+         end
+         new_index = inventory_find_index_of_next_name_match(techs, search_index, str, pindex)
+      end
+      --Search the third tech category 
+      if new_index <= 0 then
+         players[pindex].technology.category = players[pindex].technology.category + 1
+         if players[pindex].technology.category > 3 then 
+            players[pindex].technology.category = 1
+         end
+         if players[pindex].technology.category == 1 then
+            techs = players[pindex].technology.lua_researchable
+         elseif players[pindex].technology.category == 2 then
+            techs = players[pindex].technology.lua_locked
+         elseif players[pindex].technology.category == 3 then
+            techs = players[pindex].technology.lua_unlocked
+         end
+         new_index = inventory_find_index_of_next_name_match(techs, search_index, str, pindex)
+      end
+      --Circle back to the original category if nothing found 
+      if new_index <= 0 then
+         players[pindex].technology.category = players[pindex].technology.category + 1
+         if players[pindex].technology.category > 3 then 
+            players[pindex].technology.category = 1
+         end
+      end
    else
       printout("This menu or building sector does not support searching.",pindex)
       return
