@@ -2970,11 +2970,18 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
       end
       printout(start_phrase .. players[pindex].building.index .. ", " .. building_sector.inventory[players[pindex].building.index], pindex)
    elseif building_sector.name == "Fluid" then 
-      if players[pindex].building.ent ~= nil and players[pindex].building.ent.valid and players[pindex].building.ent.type == "fluid-turret" and players[pindex].building.index ~= 1then
+      if players[pindex].building.ent ~= nil and players[pindex].building.ent.valid and players[pindex].building.ent.type == "fluid-turret" and players[pindex].building.index ~= 1 then
          --Prevent fluid turret crashes
          players[pindex].building.index = 1
       end
       local box = building_sector.inventory
+      if #box == 0 then
+         printout(start_phrase .. "No fluid" , pindex)
+         return
+      elseif players[pindex].building.index > #box or players[pindex].building.index == 0 then
+         players[pindex].building.index = 1
+         game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
+      end
       local capacity = box.get_capacity(players[pindex].building.index)
       local type = box.get_prototype(players[pindex].building.index).production_type
       local fluid = box[players[pindex].building.index]
