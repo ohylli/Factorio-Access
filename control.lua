@@ -9854,6 +9854,12 @@ script.on_event("read-entity-status", function(event)
       elseif ent_status_id ~= nil then
          --Print status if it exists
          ent_status_text = status_lookup[ent_status_id]
+         if ent_status_text == nil then
+            ent_status_text = "error, unknown status ID " .. ent.status 
+            if ent.status == defines.entity_status.full_burnt_result_output or ent.status == 23 then
+               ent_status_text = "burnt output full"
+            end
+         end
          result =  " " .. ent_status_text
       else--There is no status
 	      --When there is no status, for entities with fuel inventories, read that out instead. This is typical for vehicles.
