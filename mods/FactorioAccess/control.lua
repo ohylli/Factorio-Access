@@ -4901,6 +4901,14 @@ spider = nil
       index = 0,
       renaming = false
    }
+   
+   faplayer.blueprint_menu = faplayer.blueprint_menu or {
+      index = 0,
+      edit_label = false,
+      edit_description = false,
+      edit_export = false,
+      edit_import = false
+   }
 
    if table_size(faplayer.mapped) == 0 then
       player.force.rechart()
@@ -5214,6 +5222,8 @@ function menu_cursor_up(pindex)
       train_stop_menu_up(pindex)
    elseif players[pindex].menu == "roboport_menu" then
       roboport_menu_up(pindex)
+   elseif players[pindex].menu == "blueprint_menu" then
+      blueprint_menu_up(pindex)
    end
 end
 
@@ -5440,6 +5450,8 @@ function menu_cursor_down(pindex)
       train_stop_menu_down(pindex)
    elseif players[pindex].menu == "roboport_menu" then
       roboport_menu_down(pindex)
+   elseif players[pindex].menu == "blueprint_menu" then
+      blueprint_menu_down(pindex)
    end
 end
 
@@ -5953,6 +5965,9 @@ function update_menu_visuals()
          elseif player.menu == "roboport_menu" then
             update_overhead_sprite("item.roboport",2,1.25,pindex)
             update_custom_GUI_sprite("item.roboport", 3, pindex)
+         elseif player.menu == "blueprint_menu" then
+            update_overhead_sprite("item.blueprint",2,1.25,pindex)
+            update_custom_GUI_sprite("item.blueprint", 3, pindex)
          elseif player.menu == "pump" then
             update_overhead_sprite("item.offshore-pump",2,1.25,pindex)
             update_custom_GUI_sprite("item.offshore-pump", 3, pindex)
@@ -7251,6 +7266,8 @@ function close_menu_resets(pindex)
       train_stop_menu_close(pindex, false)
    elseif players[pindex].menu == "roboport_menu" then
       roboport_menu_close(pindex)
+   elseif players[pindex].menu == "blueprint_menu" then
+      blueprint_menu_close(pindex)
    end
    
    --Stop any enabled mouse entity selection
@@ -8467,6 +8484,8 @@ script.on_event("click-menu", function(event)
          train_stop_menu(players[pindex].train_stop_menu.index, pindex, true)
       elseif players[pindex].menu == "roboport_menu" then
          roboport_menu(players[pindex].roboport_menu.index, pindex, true)
+      elseif players[pindex].menu == "blueprint_menu" then
+         blueprint_menu(players[pindex].blueprint_menu.index, pindex, true)
       end      
    end
 end)
@@ -8643,22 +8662,8 @@ script.on_event("click-hand-right", function(event)
       --If something is in hand...     
       if stack.prototype ~= nil and (stack.prototype.place_result ~= nil or stack.prototype.place_as_tile_result ~= nil) and stack.name ~= "offshore-pump" then
          --Laterdo here: build as ghost 
-      elseif stack.is_blueprint and stack.is_blueprint_setup() then
-         --Paste blueprint 
-         players[pindex].last_held_blueprint = stack
-         paste_blueprint(pindex)
-      elseif stack.is_blueprint and not stack.is_blueprint_setup() then
-         --Select blueprint
-         local pex = players[pindex]
-         if pex.bp_selecting ~= true then
-            pex.bp_selecting = true
-            pex.bp_select_point_1 = pex.cursor_pos
-            printout("Started blueprint selection at " .. math.floor(pex.cursor_pos.x) .. "," .. math.floor(pex.cursor_pos.y) , pindex)
-         else
-            pex.bp_selecting = false
-            pex.bp_select_point_2 = pex.cursor_pos
-            create_blueprint(pindex, pex.bp_select_point_1, pex.bp_select_point_2)
-         end
+      elseif stack.is_blueprint then
+         blueprint_menu_open(pindex)
       elseif stack.is_deconstruction_item then
          --Cancel deconstruction 
          local pex = players[pindex]
@@ -10928,6 +10933,14 @@ script.on_event(defines.events.on_gui_confirmed,function(event)
       event.element.destroy()
       players[pindex].menu_search_frame.destroy()
       players[pindex].menu_search_frame = nil
+   elseif players[pindex].blueprint_menu.edit_label == true then
+      --Apply the new label ****
+   elseif players[pindex].blueprint_menu.edit_description == true then
+      --Apply the new desc 
+   elseif players[pindex].blueprint_menu.edit_import == true then
+      --Apply the new import
+   elseif players[pindex].blueprint_menu.edit_export == true then
+      --Instruct export ****
    end
    players[pindex].last_menu_search_tick = event.tick
 end)   
