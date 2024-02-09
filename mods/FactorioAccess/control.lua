@@ -4944,7 +4944,7 @@ script.on_event(defines.events.on_player_changed_position,function(event)
 
          --Build lock building + rotate belts in hand unless cursor mode
          local stack = p.cursor_stack
-         if players[pindex].build_lock and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and stack.prototype.place_result.type == "transport-belt" then 
+         if players[pindex].build_lock and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and stack.prototype.place_result.type == "transport-belt" or stack.name == "rail" then 
             turn_to_cursor_direction_cardinal(pindex)
             players[pindex].building_direction = players[pindex].player_direction
             build_item_in_hand(pindex)--build extra belt when turning
