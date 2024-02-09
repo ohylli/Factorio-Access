@@ -1744,8 +1744,6 @@ function logistic_network_items_info(port)
    return result
 end
 
---laterdo vehicle logistic requests...
-
 --laterdo add or remove stacks from player trash
 
 --laterdo full personal logistics menu where you can go line by line along requests and edit them, iterate through trash?
@@ -1977,4 +1975,189 @@ function get_blueprint_info(stack, in_hand)
    return result
 end
 
+--[[ Blueprint menu options summary
+   0. name, menu instructions
+   1. List all components of this blueprint
+   2. List all components missing from your inventory
+   3. Edit this blueprint's label
+   4. Edit this blueprint's description
+   5. Create a copy of this blueprint
+   6. Destroy this blueprint item 
+   7. Export this blueprint as a text string
+   8. Import a text string to save into this blueprint
 
+   This menu opens when you press RIGHT BRACKET on a blueprint in hand 
+]]
+function blueprint_menu(menu_index, pindex, clicked, other_input)
+   local index = menu_index
+   local other = other_input or -1
+   local p = game.get_player(pindex)
+   local bp = p.cursor_stack
+   
+   if index == 0 then
+      --Give basic info ...
+      printout("Blueprint " .. name 
+      .. ", Press 'W' and 'S' to navigate options, press 'LEFT BRACKET' to select an option or press 'E' to exit this menu.", pindex)
+   elseif index == 1 then
+      --List all components of this blueprint
+      if not clicked then
+         local result = "List all components of this blueprint"
+         printout(result, pindex)
+      else
+         --***todo
+         local result = ""
+         printout(result, pindex)
+      end
+   elseif index == 2 then
+      --List all components missing from your inventory
+      if not clicked then
+         local result = "List all components missing from your inventory"
+         printout(result, pindex)
+      else
+         --***todo
+         local result = ""
+         printout(result, pindex)
+      end
+   elseif index == 3 then
+      --Edit this blueprint's label
+      if not clicked then
+         local result = "Edit this blueprint's label"
+         printout(result, pindex)
+      else
+         players[pindex].blueprint_menu.edit_label = true
+         local frame = game.get_player(pindex).gui.screen.add{type = "frame", name = "blueprint-edit-label"}
+         frame.bring_to_front()
+         frame.force_auto_center()
+         frame.focus()
+         local input = frame.add{type="textfield", name = "input"}
+         input.focus()
+         local result = "Type a new label for this blueprint and press ENTER to confirm"
+         printout(result, pindex)
+      end
+   elseif index == 4 then
+      --Edit this blueprint's description
+      if not clicked then
+         local result = "Edit this blueprint's description"
+         printout(result, pindex)
+      else
+         --***todo
+         local result = ""
+         printout(result, pindex)
+      end
+   elseif index == 5 then
+      --Create a copy of this blueprint
+      if not clicked then
+         local result = "Create a copy of this blueprint"
+         printout(result, pindex)
+      else
+         --***todo
+         local result = ""
+         printout(result, pindex)
+      end
+   elseif index == 6 then
+      --Destroy this blueprint item
+      if not clicked then
+         local result = "Destroy this blueprint item"
+         printout(result, pindex)
+      else
+         --***todo
+         local result = ""
+         printout(result, pindex)
+      end
+   elseif index == 7 then
+      --Export this blueprint as a text string
+      if not clicked then
+         local result = "Export this blueprint as a text string"
+         printout(result, pindex)
+      else
+         --***todo
+         local result = ""
+         printout(result, pindex)
+      end
+   elseif index == 8 then
+      --Import a text string to save into this blueprint
+      if not clicked then
+         local result = "Import a text string to save into this blueprint"
+         printout(result, pindex)
+      else
+         --***todo
+         local result = ""
+         printout(result, pindex)
+      end
+   end
+end
+BLUEPRINT_MENU_LENGTH = 8
+
+function blueprint_menu_open(pindex)
+   if players[pindex].vanilla_mode then
+      return 
+   end
+   --Set the player menu tracker to this menu
+   players[pindex].menu = "blueprint_menu"
+   players[pindex].in_menu = true
+   players[pindex].move_queue = {}
+   
+   --Set the menu line counter to 0
+   players[pindex].blueprint_menu = {
+      index = 0,
+      edit_label = false,
+      edit_description = false,
+      edit_export = false,
+      edit_import = false
+      }
+   
+   --Play sound
+   game.get_player(pindex).play_sound{path = "Open-Inventory-Sound"}
+   
+   --Load menu 
+   blueprint_menu(players[pindex].blueprint_menu.index, pindex, false)
+end
+
+function blueprint_menu_close(pindex, mute_in)
+   local mute = mute_in
+   --Set the player menu tracker to none
+   players[pindex].menu = "none"
+   players[pindex].in_menu = false
+
+   --Set the menu line counter to 0
+   players[pindex].blueprint_menu.index = 0
+   
+   --play sound
+   if not mute then
+      game.get_player(pindex).play_sound{path="Close-Inventory-Sound"}
+   end
+   
+   --Destroy GUI
+   if game.get_player(pindex).gui.screen["blueprint-rename"] ~= nil then --*****close others
+      game.get_player(pindex).gui.screen["blueprint-rename"].destroy()
+   end
+   if game.get_player(pindex).opened ~= nil then
+      game.get_player(pindex).opened = nil
+   end
+end
+
+function blueprint_menu_up(pindex)
+   players[pindex].blueprint_menu.index = players[pindex].blueprint_menu.index - 1
+   if players[pindex].blueprint_menu.index < 0 then
+      players[pindex].blueprint_menu.index = 0
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
+   else
+      --Play sound
+      game.get_player(pindex).play_sound{path = "Inventory-Move"}
+   end
+   --Load menu
+   blueprint_menu(players[pindex].blueprint_menu.index, pindex, false)
+end
+
+function blueprint_menu_down(pindex)
+   players[pindex].blueprint_menu.index = players[pindex].train_menu.index + 1
+   if players[pindex].blueprint_menu.index > BLUEPRINT_MENU_LENGTH then
+      players[pindex].blueprint_menu.index = BLUEPRINT_MENU_LENGTH
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
+   else
+      --Play sound
+      game.get_player(pindex).play_sound{path = "Inventory-Move"}
+   end
+   --Load menu
+   blueprint_menu(players[pindex].blueprint_menu.index, pindex, false)
+end
