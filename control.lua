@@ -723,6 +723,7 @@ end
 
 --Usually called when the cursor find an entity, gives its name and key information.
 function ent_info(pindex, ent, description)
+   local p = game.get_player(pindex)
    local result = ent.name
    if game.players[pindex].name == "Crimso" then
       result = result .. " " .. ent.type .. " "
@@ -1270,7 +1271,7 @@ function ent_info(pindex, ent, description)
          result = result .. ", Out of Fuel "
       end
    end
-
+   --Explain connected status 
    if ent.prototype.electric_energy_source_prototype ~= nil and ent.is_connected_to_electric_network() == false then
       result = result .. " Not Connected"
    elseif ent.prototype.electric_energy_source_prototype ~= nil and ent.energy == 0 and ent.type ~= "solar-panel" then
@@ -1310,7 +1311,7 @@ function ent_info(pindex, ent, description)
       elseif modules.get_item_count() > 2 then
 	     result = result .. " with " .. modules[1].name .. " and " .. modules[2].name .. " and other modules "
       end
-   elseif ent.name == "nuclear-reactor" or ent.name == "heat-pipe" or ent.name == "heat-exchanger" then
+   elseif ent.temperature ~= nil and ent.name ~= "heat-pipe" then --ent.name == "nuclear-reactor" or ent.name == "heat-pipe" or ent.name == "heat-exchanger" then
       result = result .. ", temperature " .. math.floor(ent.temperature) .. " degrees C "
 	  if ent.name == "nuclear-reactor" then
 	     if ent.temperature > 900 then
@@ -1324,7 +1325,102 @@ function ent_info(pindex, ent, description)
    elseif ent.name == "item-on-ground" then
       result = result .. ", " .. ent.stack.name 
    end
+   --Explain heat connection neighbors
+   if ent.prototype.heat_buffer_prototype ~= nil then
+      result = result .. " connects "
+      local con_targets = get_heat_connection_target_positions(ent.name, ent.position, ent.direction)
+      local con_count = 0
+      local con_counts = {0,0,0,0,0,0,0,0}
+      con_counts[dirs.north+1] = 0
+      con_counts[dirs.south+1] = 0
+      con_counts[dirs.east+1]  = 0
+      con_counts[dirs.west+1]  = 0
+      if #con_targets > 0 then
+         for i, con_target_pos in ipairs(con_targets) do 
+            --For each heat connection target position
+            rendering.draw_circle{color = {1.0, 0.0, 0.5},radius = 0.1,width = 2,target = con_target_pos, surface = ent.surface, time_to_live = 30}
+            local target_ents = ent.surface.find_entities_filtered{position = con_target_pos}
+            for j, target_ent in ipairs(target_ents) do 
+               if target_ent.valid and #get_heat_connection_positions(target_ent.name, target_ent.position, target_ent.direction) > 0 then
+                  for k, spot in ipairs(get_heat_connection_positions(target_ent.name, target_ent.position, target_ent.direction)) do 
+                     --For each heat connection of the found target entity 
+                     rendering.draw_circle{color = {1.0, 1.0, 0.5},radius = 0.2,width = 2,target = spot, surface = ent.surface, time_to_live = 30}
+                     if util.distance(con_target_pos,spot) < 0.2 then
+                        --For each match
+                        rendering.draw_circle{color = {0.5, 1.0, 0.5},radius = 0.3,width = 2,target = spot, surface = ent.surface, time_to_live = 30}
+                        con_count = con_count + 1
+                        local con_dir = get_direction_of_that_from_this(con_target_pos,ent.position)
+                        if con_count > 1 then
+                           result = result .. " and "
+                        end
+                        result = result .. direction_lookup(con_dir) 
+                     end
+                  end 
+               end
+            end
+         end
+      end
+      if con_count == 0 then
+         result = result .. " to nothing "
+      end
+      if ent.name == "heat-pipe" then --For this ent in particular, read temp after direction
+         result = result .. ", temperature " .. math.floor(ent.temperature) .. " degrees C "
+      end
+   end 
    return result
+end
+
+function get_heat_connection_positions(ent_name, ent_position, ent_direction)
+   local pos = ent_position
+   local positions = {}
+   if ent_name == "heat-pipe" then
+      table.insert(positions, {x = pos.x, y = pos.y})
+   elseif ent_name == "heat-exchanger" then
+      table.insert(positions, offset_position(pos, rotate_180(ent_direction), 0.5))
+   elseif ent_name == "nuclear-reactor" then
+      table.insert(positions, {x = pos.x-2, y = pos.y-2})
+      table.insert(positions, {x = pos.x-0, y = pos.y-2})
+      table.insert(positions, {x = pos.x+2, y = pos.y-2})
+      
+      table.insert(positions, {x = pos.x-2, y = pos.y-0})
+      table.insert(positions, {x = pos.x+2, y = pos.y-0})
+      
+      table.insert(positions, {x = pos.x-2, y = pos.y+2})
+      table.insert(positions, {x = pos.x-0, y = pos.y+2})
+      table.insert(positions, {x = pos.x+2, y = pos.y+2})
+   end 
+   return positions 
+end
+
+function get_heat_connection_target_positions(ent_name, ent_position, ent_direction)
+   local pos = ent_position
+   local positions = {}
+   if ent_name == "heat-pipe" then
+      table.insert(positions, {x = pos.x-1, y = pos.y-0})
+      table.insert(positions, {x = pos.x+1, y = pos.y-0})
+      table.insert(positions, {x = pos.x-0, y = pos.y-1})
+      table.insert(positions, {x = pos.x-0, y = pos.y+1})
+   elseif ent_name == "heat-exchanger" then
+      table.insert(positions, offset_position(pos, rotate_180(ent_direction), 1.5))
+   elseif ent_name == "nuclear-reactor" then
+      table.insert(positions, {x = pos.x-2, y = pos.y-3})
+      table.insert(positions, {x = pos.x-0, y = pos.y-3})
+      table.insert(positions, {x = pos.x+2, y = pos.y-3})
+      
+      table.insert(positions, {x = pos.x-3, y = pos.y-2})
+      table.insert(positions, {x = pos.x+3, y = pos.y-2})
+      
+      table.insert(positions, {x = pos.x-3, y = pos.y-0})
+      table.insert(positions, {x = pos.x+3, y = pos.y-0})
+      
+      table.insert(positions, {x = pos.x-3, y = pos.y+2})
+      table.insert(positions, {x = pos.x+3, y = pos.y+2})
+      
+      table.insert(positions, {x = pos.x-2, y = pos.y+3})
+      table.insert(positions, {x = pos.x-0, y = pos.y+3})
+      table.insert(positions, {x = pos.x+2, y = pos.y+3}) 
+   end 
+   return positions 
 end
 
 --Explain whether the belt is some type of corner or sideloading junction or etc.
@@ -4146,7 +4242,7 @@ function build_preview_checks_info(stack, pindex)
       --Prepare result string 
       if relevant_fluid_north ~= nil or relevant_fluid_east ~= nil or relevant_fluid_south ~= nil or relevant_fluid_west ~= nil then
          local count = 0
-         result = result .. ", pipe connects to "
+         result = result .. ", pipe can connect to "
          
          if relevant_fluid_north ~= nil then
             result = result .. relevant_fluid_north .. " at north, "
@@ -4183,6 +4279,40 @@ function build_preview_checks_info(stack, pindex)
       
    end
    
+   --For heat pipes, preview the connection directions
+   if ent_p.type == "heat-pipe" then 
+      result = result .. " heat pipe can connect "
+      local con_targets = get_heat_connection_target_positions("heat-pipe", pos, dirs.north)
+      local con_count = 0
+      if #con_targets > 0 then
+         for i, con_target_pos in ipairs(con_targets) do 
+            --For each heat connection target position
+            rendering.draw_circle{color = {1.0, 0.0, 0.5},radius = 0.1,width = 2,target = con_target_pos, surface = p.surface, time_to_live = 30}
+            local target_ents = p.surface.find_entities_filtered{position = con_target_pos}
+            for j, target_ent in ipairs(target_ents) do 
+               if target_ent.valid and #get_heat_connection_positions(target_ent.name, target_ent.position, target_ent.direction) > 0 then
+                  for k, spot in ipairs(get_heat_connection_positions(target_ent.name, target_ent.position, target_ent.direction)) do 
+                     --For each heat connection of the found target entity 
+                     rendering.draw_circle{color = {1.0, 1.0, 0.5},radius = 0.2,width = 2,target = spot, surface = p.surface, time_to_live = 30}
+                     if util.distance(con_target_pos,spot) < 0.2 then
+                        --For each match
+                        rendering.draw_circle{color = {0.5, 1.0, 0.5},radius = 0.3,width = 2,target = spot, surface = p.surface, time_to_live = 30}
+                        con_count = con_count + 1
+                        local con_dir = get_direction_of_that_from_this(con_target_pos,pos)
+                        if con_count > 1 then
+                           result = result .. " and "
+                        end
+                        result = result .. direction_lookup(con_dir) 
+                     end
+                  end 
+               end
+            end
+         end
+      end
+      if con_count == 0 then
+         result = result .. " to nothing "
+      end
+   end 
    --For electric poles, report the directions of up to 5 wire-connectible electric poles that can connect
    if ent_p.type == "electric-pole" then
      local pole_dict = surf.find_entities_filtered{type = "electric-pole", position = pos, radius = ent_p.max_wire_distance}
