@@ -9836,167 +9836,172 @@ script.on_event("read-entity-status", function(event)
       return
    end
    local ent = get_selected_ent(pindex)
+   if not ent then
+      return
+   end
    local stack = game.get_player(pindex).cursor_stack
    if players[pindex].in_menu then
       return
-   elseif ent then
-      --Print out the status of a machine, if it exists.
-      local result = ""
-      local ent_status_id = ent.status
-      local ent_status_text = ""
-      local status_lookup = into_lookup(defines.entity_status)
-      if ent.name == "cargo-wagon" then
-         --Instead of status, read contents   
-         result = " " .. cargo_wagon_top_contents_info(ent)
-      elseif ent.name == "fluid-wagon" then
-         --Instead of status, read contents   
-         result =  " " .. fluid_contents_info(ent)
-      elseif ent_status_id ~= nil then
-         --Print status if it exists
-         ent_status_text = status_lookup[ent_status_id]
-         if ent_status_text == nil then
-            ent_status_text = "error, unknown status ID " .. ent.status 
-            if ent.status == defines.entity_status.full_burnt_result_output or ent.status == 23 then
-               ent_status_text = "burnt output full"
-            end
-         end
-         result =  " " .. ent_status_text
-      else--There is no status
-	      --When there is no status, for entities with fuel inventories, read that out instead. This is typical for vehicles.
-	      if ent.get_fuel_inventory() ~= nil then
-		      result = " " .. fuel_inventory_info(ent)
-		   elseif ent.type == "electric-pole" then
-		    --For electric poles with no power flow, report the nearest electric pole with a power flow.
-            if get_electricity_satisfaction(ent) > 0 then
-               result = get_electricity_satisfaction(ent) .. " percent network satisfaction, with " .. get_electricity_flow_info(ent)
-            else
-               result = "No power, " .. report_nearest_supplied_electric_pole(ent)
-            end
-         else
-            result = "No status."
-         end
-      end
-      --For working or normal entities, give some extra info about specific entities.
-      if result == "" then
-         result = "result error"
-      end
-      
-      --For working or normal entities, give some extra info about specific entities in terms of speeds or bonuses.
-      local list = defines.entity_status
-      if ent.status ~= nil and ent.status ~= list.no_power and ent.status ~= list.no_power and ent.status ~= list.no_fuel then
-         if ent.type == "inserter" then --items per minute based on rotation speed and the STATED hand capacity
-            local cap = ent.force.inserter_stack_size_bonus + 1
-            if ent.name == "stack-inserter" or ent.name == "stack-filter-inserter" then
-               cap = ent.force.stack_inserter_capacity_bonus + 1
-            end
-            local rate = string.format(" %.1f ", cap * ent.prototype.inserter_rotation_speed * 57.5) 
-            result = result .. ", can move " .. rate .. " items per second, with a hand capacity of " .. cap
-         end
-         if ent.prototype ~= nil and ent.prototype.belt_speed ~= nil and ent.prototype.belt_speed > 0 then --items per minute by simple reading
-            if ent.name == "splitter" or ent.name == "fast-splitter" or ent.name == "express splitter" then
-               result = result .. ", can process " .. math.floor(ent.prototype.belt_speed * 480 * 2) .. " items per second"
-            else 
-               result = result .. ", can move " .. math.floor(ent.prototype.belt_speed * 480) .. " items per second"
-            end
-         end
-         if ent.type == "assembling-machine" or ent.type == "furnace" then --Crafting cycles per minute based on recipe time and the STATED craft speed ; laterdo maybe extend this to all "crafting machine" types?
-            local progress = ent.crafting_progress
-            local speed = ent.crafting_speed
-            local recipe_time = 0
-            local cycles = 0-- crafting cycles completed per minute for this recipe
-            if ent.get_recipe() ~= nil and ent.get_recipe().valid then
-               recipe_time = ent.get_recipe().energy
-               cycles = 60 / recipe_time * speed
-            end
-            local cycles_string = string.format(" %.2f ", cycles)
-            if cycles == math.floor(cycles) then
-               cycles_string = math.floor(cycles)
-            end
-            local speed_string = string.format(" %.2f ", speed)
-            if speed == math.floor(speed) then
-               speed_string = math.floor(speed)
-            end
-            if cycles < 10 then --more than 6 seconds to craft
-               result = result .. ", recipe progress " .. math.floor(progress * 100) .. " percent "
-            end
-            if cycles > 0 then
-               result = result .. ", can complete " .. cycles_string .. " recipe cycles per minute "
-            end
-            result = result .. ", with a crafting speed of " .. speed_string .. ", at " .. math.floor(100 * (1 + ent.speed_bonus) + 0.5) .. " percent "
-            if ent.productivity_bonus ~= 0 then
-               result = result .. ", with productivity bonus " .. math.floor(100 * (0 + ent.productivity_bonus) + 0.5) .. " percent "
-            end
-         elseif ent.type == "mining-drill" then
-            result = result .. ", producing " .. string.format(" %.2f ",ent.prototype.mining_speed * 60 * (1 + ent.speed_bonus)) .. " items per minute "
-            if ent.speed_bonus ~= 0 then
-               result = result .. ", with speed " .. math.floor(100 * (1 + ent.speed_bonus) + 0.5) .. " percent " 
-            end
-            if ent.productivity_bonus ~= 0 then
-               result = result .. ", with productivity bonus " .. math.floor(100 * (0 + ent.productivity_bonus) + 0.5) .. " percent "
-            end 
-         elseif ent.name == "lab" then
-            if ent.speed_bonus ~= 0 then
-               result = result .. ", with speed " .. math.floor(100 * (1 + ent.force.laboratory_speed_modifier * (1 + (ent.speed_bonus - ent.force.laboratory_speed_modifier))) + 0.5) .. " percent " --laterdo fix bug**
-               --game.get_player(pindex).print(result)
-            end
-            if ent.productivity_bonus ~= 0 then
-               result = result .. ", with productivity bonus " .. math.floor(100 * (0 + ent.productivity_bonus + ent.force.laboratory_productivity_bonus) + 0.5) .. " percent "
-            end
-         else --All other entities with the an applicable status
-            if ent.speed_bonus ~= 0 then
-               result = result .. ", with speed " .. math.floor(100 * (1 + ent.speed_bonus) + 0.5) .. " percent "
-            end
-            if ent.productivity_bonus ~= 0 then
-               result = result .. ", with productivity bonus " .. math.floor(100 * (0 + ent.productivity_bonus) + 0.5) .. " percent "
-            end
-         end
-         --laterdo maybe pump speed?
-      end
-            
-      --Entity power usage
-      local power_rate = (1 + ent.consumption_bonus)
-      local drain = ent.electric_drain
-      if drain ~= nil then
-         drain = drain * 60
-      else
-         drain = 0
-      end
-      local uses_energy = false
-      if drain > 0 or (ent.prototype ~= nil and ent.prototype.max_energy_usage ~= nil and ent.prototype.max_energy_usage > 0) then
-         uses_energy = true
-      end
-      if ent.status ~= nil and uses_energy and ent.status == list.working then
-         result = result .. ", consuming " .. get_power_string(ent.prototype.max_energy_usage * 60 * power_rate + drain)
-      elseif ent.status ~= nil and uses_energy and ent.status == list.no_power or ent.status == list.low_power then
-         result = result .. ", consuming less than " .. get_power_string(ent.prototype.max_energy_usage * 60 * power_rate + drain)
-      elseif ent.status ~= nil and uses_energy or (ent.prototype ~= nil and ent.prototype.max_energy_usage ~= nil and ent.prototype.max_energy_usage > 0) then
-         result = result .. ", idle and consuming " .. get_power_string(drain)
-      end
-      if uses_energy and ent.prototype.burner_prototype ~= nil then
-         result = result .. " as burner fuel "
-      end
-      
-      --Entity Health 
-      if ent.is_entity_with_health and ent.get_health_ratio() == 1 then
-         result = result .. ", full health "
-      elseif ent.is_entity_with_health then
-         result = result .. ", " .. math.floor(ent.get_health_ratio() * 100) .. " percent health"
-      end
-      
-      if ent.name == "straight-rail" then
-         -- Report nearest rail intersection position -- laterdo find better keybind
-         local nearest, dist = find_nearest_intersection(ent, pindex)
-         if nearest == nil then
-            result = result .. ", no rail intersections within " .. dist .. " tiles " 
-         else
-            result = result .. ", nearest rail intersection at " .. dist .. " " .. direction_lookup(get_direction_of_that_from_this(nearest.position,ent.position))
-         end
-      end
-      
-      printout(result ,pindex)
-      --game.get_player(pindex).print(result)--**
-      
    end
+   --Print out the status of a machine, if it exists.
+   local result = {""}
+   local ent_status_id = ent.status
+   local ent_status_text = ""
+   local status_lookup = into_lookup(defines.entity_status)
+   if ent.name == "cargo-wagon" then
+      --Instead of status, read contents   
+      table.insert(result, cargo_wagon_top_contents_info(ent))
+   elseif ent.name == "fluid-wagon" then
+      --Instead of status, read contents   
+      table.insert(result, fluid_contents_info(ent))
+   elseif ent_status_id ~= nil then
+      --Print status if it exists
+      ent_status_text = status_lookup[ent_status_id]
+      if ent_status_text == nil then
+         print("Weird no entity status lookup".. ent.name .. '-' .. ent.type .. '-' .. ent.status)
+         --I don't think the stuff below is nessiary? but I don't know why it's here
+         ent_status_text = "error, unknown status ID " .. ent.status 
+         if ent.status == defines.entity_status.full_burnt_result_output or ent.status == 23 then
+            ent_status_text = "burnt output full"
+         end
+         -- end of stuff I don't understand
+      end
+      table.insert(result, {"entity-status."..ent_status_text:gsub("_","-")})
+   else--There is no status
+      --When there is no status, for entities with fuel inventories, read that out instead. This is typical for vehicles.
+      if ent.get_fuel_inventory() ~= nil then
+         table.insert(result,  fuel_inventory_info(ent))
+      elseif ent.type == "electric-pole" then
+         --For electric poles with no power flow, report the nearest electric pole with a power flow.
+         if get_electricity_satisfaction(ent) > 0 then
+            table.insert(result,  get_electricity_satisfaction(ent) .. " percent network satisfaction, with " .. get_electricity_flow_info(ent))
+         else
+            table.insert(result,  "No power, " .. report_nearest_supplied_electric_pole(ent))
+         end
+      else
+         table.insert(result,  "No status.")
+      end
+   end
+   --For working or normal entities, give some extra info about specific entities.
+   if #result == 1 then
+      table.insert(result,  "result error")
+   end
+   
+   --For working or normal entities, give some extra info about specific entities in terms of speeds or bonuses.
+   local list = defines.entity_status
+   if ent.status ~= nil and ent.status ~= list.no_power and ent.status ~= list.no_power and ent.status ~= list.no_fuel then
+      if ent.type == "inserter" then --items per minute based on rotation speed and the STATED hand capacity
+         local cap = ent.force.inserter_stack_size_bonus + 1
+         if ent.name == "stack-inserter" or ent.name == "stack-filter-inserter" then
+            cap = ent.force.stack_inserter_capacity_bonus + 1
+         end
+         local rate = string.format(" %.1f ", cap * ent.prototype.inserter_rotation_speed * 57.5) 
+         table.insert(result, ", can move " .. rate .. " items per second, with a hand capacity of " .. cap)
+      end
+      if ent.prototype ~= nil and ent.prototype.belt_speed ~= nil and ent.prototype.belt_speed > 0 then --items per minute by simple reading
+         if ent.name == "splitter" or ent.name == "fast-splitter" or ent.name == "express splitter" then
+            table.insert(result, ", can process " .. math.floor(ent.prototype.belt_speed * 480 * 2) .. " items per second")
+         else 
+            table.insert(result, ", can move " .. math.floor(ent.prototype.belt_speed * 480) .. " items per second")
+         end
+      end
+      if ent.type == "assembling-machine" or ent.type == "furnace" then --Crafting cycles per minute based on recipe time and the STATED craft speed ; laterdo maybe extend this to all "crafting machine" types?
+         local progress = ent.crafting_progress
+         local speed = ent.crafting_speed
+         local recipe_time = 0
+         local cycles = 0-- crafting cycles completed per minute for this recipe
+         if ent.get_recipe() ~= nil and ent.get_recipe().valid then
+            recipe_time = ent.get_recipe().energy
+            cycles = 60 / recipe_time * speed
+         end
+         local cycles_string = string.format(" %.2f ", cycles)
+         if cycles == math.floor(cycles) then
+            cycles_string = math.floor(cycles)
+         end
+         local speed_string = string.format(" %.2f ", speed)
+         if speed == math.floor(speed) then
+            speed_string = math.floor(speed)
+         end
+         if cycles < 10 then --more than 6 seconds to craft
+            table.insert(result, ", recipe progress " .. math.floor(progress * 100) .. " percent ")
+         end
+         if cycles > 0 then
+            table.insert(result, ", can complete " .. cycles_string .. " recipe cycles per minute ")
+         end
+         table.insert(result, ", with a crafting speed of " .. speed_string .. ", at " .. math.floor(100 * (1 + ent.speed_bonus) + 0.5) .. " percent ")
+         if ent.productivity_bonus ~= 0 then
+            table.insert(result, ", with productivity bonus " .. math.floor(100 * (0 + ent.productivity_bonus) + 0.5) .. " percent ")
+         end
+      elseif ent.type == "mining-drill" then
+         table.insert(result, ", producing " .. string.format(" %.2f ",ent.prototype.mining_speed * 60 * (1 + ent.speed_bonus)) .. " items per minute ")
+         if ent.speed_bonus ~= 0 then
+            table.insert(result, ", with speed " .. math.floor(100 * (1 + ent.speed_bonus) + 0.5) .. " percent " )
+         end
+         if ent.productivity_bonus ~= 0 then
+            table.insert(result, ", with productivity bonus " .. math.floor(100 * (0 + ent.productivity_bonus) + 0.5) .. " percent ")
+         end 
+      elseif ent.name == "lab" then
+         if ent.speed_bonus ~= 0 then
+            table.insert(result, ", with speed " .. math.floor(100 * (1 + ent.force.laboratory_speed_modifier * (1 + (ent.speed_bonus - ent.force.laboratory_speed_modifier))) + 0.5) .. " percent " )--laterdo fix bug**
+            --game.get_player(pindex).print(result)
+         end
+         if ent.productivity_bonus ~= 0 then
+            table.insert(result, ", with productivity bonus " .. math.floor(100 * (0 + ent.productivity_bonus + ent.force.laboratory_productivity_bonus) + 0.5) .. " percent ")
+         end
+      else --All other entities with the an applicable status
+         if ent.speed_bonus ~= 0 then
+            table.insert(result, ", with speed " .. math.floor(100 * (1 + ent.speed_bonus) + 0.5) .. " percent ")
+         end
+         if ent.productivity_bonus ~= 0 then
+            table.insert(result, ", with productivity bonus " .. math.floor(100 * (0 + ent.productivity_bonus) + 0.5) .. " percent ")
+         end
+      end
+      --laterdo maybe pump speed?
+   end
+         
+   --Entity power usage
+   local power_rate = (1 + ent.consumption_bonus)
+   local drain = ent.electric_drain
+   if drain ~= nil then
+      drain = drain * 60
+   else
+      drain = 0
+   end
+   local uses_energy = false
+   if drain > 0 or (ent.prototype ~= nil and ent.prototype.max_energy_usage ~= nil and ent.prototype.max_energy_usage > 0) then
+      uses_energy = true
+   end
+   if ent.status ~= nil and uses_energy and ent.status == list.working then
+      table.insert(result, ", consuming " .. get_power_string(ent.prototype.max_energy_usage * 60 * power_rate + drain))
+   elseif ent.status ~= nil and uses_energy and ent.status == list.no_power or ent.status == list.low_power then
+      table.insert(result, ", consuming less than " .. get_power_string(ent.prototype.max_energy_usage * 60 * power_rate + drain))
+   elseif ent.status ~= nil and uses_energy or (ent.prototype ~= nil and ent.prototype.max_energy_usage ~= nil and ent.prototype.max_energy_usage > 0) then
+      table.insert(result, ", idle and consuming " .. get_power_string(drain))
+   end
+   if uses_energy and ent.prototype.burner_prototype ~= nil then
+      table.insert(result, " as burner fuel ")
+   end
+   
+   --Entity Health 
+   if ent.is_entity_with_health and ent.get_health_ratio() == 1 then
+      table.insert(result, {"access.full-health"})
+   elseif ent.is_entity_with_health then
+      table.insert(result, {"access.percent-health",  math.floor(ent.get_health_ratio() * 100) })
+   end
+   
+   if ent.name == "straight-rail" then
+      -- Report nearest rail intersection position -- laterdo find better keybind
+      local nearest, dist = find_nearest_intersection(ent, pindex)
+      if nearest == nil then
+         table.insert(result, ", no rail intersections within " .. dist .. " tiles " )
+      else
+         table.insert(result, ", nearest rail intersection at " .. dist .. " " .. direction_lookup(get_direction_of_that_from_this(nearest.position,ent.position)))
+      end
+   end
+   
+   printout(result ,pindex)
+   --game.get_player(pindex).print(result)--**
+   
 end)
 
 function into_lookup(array)
