@@ -791,7 +791,22 @@ function ent_info(pindex, ent, description)
             result = result .. "and other items "
          end
       end
-      
+      if ent.type == "logistic-container" then
+         local network = ent.surface.find_logistic_network_by_position(ent.position, ent.force)
+         if network == nil then
+            local nearest_roboport = find_nearest_roboport(ent.surface, ent.position, 5000)
+            if nearest_roboport == nil then
+               result = result .. ", not in a network, no networks found within 5000 tiles"
+            else
+               local dist = math.ceil(util.distance(ent.position, nearest_roboport.position) - 25)
+               local dir = direction_lookup(get_direction_of_that_from_this(nearest_roboport.position, ent.position))
+               result = result .. ", not in a network, nearest network " .. nearest_roboport.backer_name .. " is about " .. dist .. " to the " .. dir
+            end
+         else
+            local network_name = network.cells[1].owner.backer_name 
+            result = result .. ", in network" .. network_name
+         end
+      end 
    end  
    --Explain the contents of a pipe or storage tank or etc.
    if ent.type == "pipe" or ent.type == "pipe-to-ground" or ent.type == "storage-tank" or ent.type == "pump" or ent.name == "boiler" or ent.name == "heat-exchanger" or ent.type == "generator" then
@@ -4386,6 +4401,24 @@ function build_preview_checks_info(stack, pindex)
       end
    end
    
+   --For logistic chests, list whether there is a network nearby
+   if ent_p.type == "logistic-container" then
+      local network = p.surface.find_logistic_network_by_position(pos, p.force)
+      if network == nil then
+         local nearest_roboport = find_nearest_roboport(p.surface, pos, 5000)
+         if nearest_roboport == nil then
+            result = result .. ", not in a network, no networks found within 5000 tiles"
+         else
+            local dist = math.ceil(util.distance(pos, nearest_roboport.position) - 25)
+            local dir = direction_lookup(get_direction_of_that_from_this(nearest_roboport.position, pos))
+            result = result .. ", not in a network, nearest network " .. nearest_roboport.backer_name .. " is about " .. dist .. " to the " .. dir
+         end
+      else
+         local network_name = network.cells[1].owner.backer_name 
+         result = result .. ", in network" .. network_name
+      end
+   end 
+   
    --For all electric powered entities, note whether powered, and from which direction. Otherwise report the nearest power pole.
    if ent_p.electric_energy_source_prototype ~= nil then
          local position = pos
@@ -4952,7 +4985,7 @@ script.on_event(defines.events.on_player_changed_position,function(event)
 
          --Build lock building + rotate belts in hand unless cursor mode
          local stack = p.cursor_stack
-         if players[pindex].build_lock and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and stack.prototype.place_result.type == "transport-belt" or stack.name == "rail" then 
+         if players[pindex].build_lock and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and (stack.prototype.place_result.type == "transport-belt" or stack.name == "rail") then 
             turn_to_cursor_direction_cardinal(pindex)
             players[pindex].building_direction = players[pindex].player_direction
             build_item_in_hand(pindex)--build extra belt when turning
