@@ -9848,6 +9848,7 @@ script.on_event("read-entity-status", function(event)
    local ent_status_id = ent.status
    local ent_status_text = ""
    local status_lookup = into_lookup(defines.entity_status)
+   status_lookup[23] = "Full burnt result output"--weird exception 
    if ent.name == "cargo-wagon" then
       --Instead of status, read contents   
       table.insert(result, cargo_wagon_top_contents_info(ent))
@@ -9859,12 +9860,6 @@ script.on_event("read-entity-status", function(event)
       ent_status_text = status_lookup[ent_status_id]
       if ent_status_text == nil then
          print("Weird no entity status lookup".. ent.name .. '-' .. ent.type .. '-' .. ent.status)
-         --I don't think the stuff below is nessiary? but I don't know why it's here
-         ent_status_text = "error, unknown status ID " .. ent.status 
-         if ent.status == defines.entity_status.full_burnt_result_output or ent.status == 23 then
-            ent_status_text = "burnt output full"
-         end
-         -- end of stuff I don't understand
       end
       table.insert(result, {"entity-status."..ent_status_text:gsub("_","-")})
    else--There is no status
