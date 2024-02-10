@@ -393,8 +393,9 @@ end
 --Brief extra entity info is given here. If the parameter info_comes_after_indexing is false, then this info distinguishes the entity with its description as a new line of the scanner list, such as how assembling machines with different recipes are listed separately.
 function extra_info_for_scan_list(ent,pindex,info_comes_after_indexing)
    local result = ""
-   --Drills
+
    if ent.name ~= "water" and ent.type == "mining-drill"  then
+   --Mining drill products
       local pos = ent.position
       local radius = ent.prototype.mining_drill_radius
       local area = {{pos.x - radius, pos.y - radius}, {pos.x + radius, pos.y + radius}}
@@ -428,7 +429,13 @@ function extra_info_for_scan_list(ent,pindex,info_comes_after_indexing)
       end
    end)
    
-   if ent.type == "container" or ent.type == "logistic-container" then --Chests are identified by whether they contain nothing a specific item, or simply various items
+   if ent.name == "entity-ghost" then
+   --Ghost names
+      result = " of " .. ent.ghost_name
+   end
+   
+   if ent.type == "container" or ent.type == "logistic-container" then 
+   --Chests are identified by whether they contain nothing a specific item, or simply various items
       local itemset = ent.get_inventory(defines.inventory.chest).get_contents()
       local itemtable = {}
       for name, count in pairs(itemset) do
@@ -445,7 +452,7 @@ function extra_info_for_scan_list(ent,pindex,info_comes_after_indexing)
          result = result .. " with various items "
       end
    elseif ent.type == "unit-spawner" then
-      --Group by pollution level
+   --Group spawners by pollution level
       if ent.absorbed_pollution > 0 then
          result = " polluted lightly "
          if ent.absorbed_pollution > 99 then
@@ -468,8 +475,10 @@ function extra_info_for_scan_list(ent,pindex,info_comes_after_indexing)
    end
    
    if info_comes_after_indexing == true and ent.train ~= nil and ent.train.valid then
+   --Train name for train vehicles
       result = result .. " of train " .. get_train_name(ent.train)
    elseif ent.name == "character" then
+   --Character names 
       local p = ent.player
       local p2 = ent.associated_player
       if p ~= nil and p.valid and p.name ~= nil and p.name ~= "" then
@@ -484,16 +493,20 @@ function extra_info_for_scan_list(ent,pindex,info_comes_after_indexing)
          result = result .. " X "
       end
    elseif ent.name == "character-corpse" then
+   --Character corpse info
       if ent.character_corpse_player_index == pindex then
          result = result .. " of your character "
       elseif ent.character_corpse_player_index ~= nil then
          result = result .. " of another character "
       end
    elseif info_comes_after_indexing == true and ent.name == "train-stop" then
+   --Train stop name 
       result = result .. " " .. ent.backer_name
    elseif ent.name == "forest" then
+   --Forest type by density
       result = result .. classify_forest(ent.position,pindex,true)
    elseif ent.name == "roboport" then
+   --Roboport network name 
       result = result .. " of network " .. get_network_name(ent)
    end
    
