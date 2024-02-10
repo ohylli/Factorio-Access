@@ -1765,7 +1765,11 @@ end
 
 function get_blueprint_description(stack)
    local bp_data = get_bp_data_for_edit(stack)
-   return bp_data.blueprint.description
+   local desc = bp_data.blueprint.description
+   if desc == nil then
+      desc = ""
+   end
+   return desc
 end
 
 function set_blueprint_label(stack,label)
@@ -1776,7 +1780,11 @@ end
 
 function get_blueprint_label(stack)
    local bp_data = get_bp_data_for_edit(stack)
-   return bp_data.blueprint.label
+   local label = bp_data.blueprint.label
+   if label == nil then
+      label = ""
+   end
+   return label
 end
 
 function get_top_left_and_bottom_right(pos_1, pos_2)
@@ -1994,7 +2002,7 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
    
    if index == 0 then
       --Give basic info ...
-      printout("Blueprint " .. name 
+      printout("Blueprint " .. get_blueprint_label(bp) 
       .. ", Press 'W' and 'S' to navigate options, press 'LEFT BRACKET' to select an option or press 'E' to exit this menu.", pindex)
    elseif index == 1 then
       --List all components of this blueprint
@@ -2002,8 +2010,29 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
          local result = "List all components of this blueprint"
          printout(result, pindex)
       else
-         --***todo
-         local result = ""
+         --Create a table of entity counts
+         local ents = bp.get_blueprint_entities()
+         local ent_counts = {}
+         for i, ent in ipairs(ents) do 
+            if ent_counts[ent.name] == nil then
+               ent_counts[ent.name] = 1
+            else
+               ent_counts[ent.name] = ent_counts[ent.name] + 1
+            end
+         end
+         --Sort by count
+         table.sort(ent_counts, function(a,b)
+            --return a < b
+            return ent_counts[a] < ent_counts[b]
+         end)
+         --List results
+         local result = "Blueprint contains "
+         for ent, count in ipairs(ent_counts) do 
+            result = result .. count .. " " .. ent .. ", "
+         end
+         if #ent_counts == 0 then
+            result = result .. "nothing"
+         end
          printout(result, pindex)
       end
    elseif index == 2 then
@@ -2027,9 +2056,9 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
          frame.bring_to_front()
          frame.force_auto_center()
          frame.focus()
-         local input = frame.add{type="textfield", name = "input"}
+         local input = frame.add{type="textfield", name = "input", text = get_blueprint_label(bp)}
          input.focus()
-         local result = "Type a new label for this blueprint and press ENTER to confirm"
+         local result = "Edit the label text box for this blueprint and press ENTER to confirm"
          printout(result, pindex)
       end
    elseif index == 4 then
@@ -2038,8 +2067,14 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
          local result = "Edit this blueprint's description"
          printout(result, pindex)
       else
-         --***todo
-         local result = ""
+         players[pindex].blueprint_menu.edit_description = true
+         local frame = game.get_player(pindex).gui.screen.add{type = "frame", name = "blueprint-edit-description"}
+         frame.bring_to_front()
+         frame.force_auto_center()
+         frame.focus()
+         local input = frame.add{type="textfield", name = "input", text = get_blueprint_description(bp)}
+         input.focus()
+         local result = "Edit the description text box for this blueprint and press ENTER to confirm"
          printout(result, pindex)
       end
    elseif index == 5 then
@@ -2048,8 +2083,8 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
          local result = "Create a copy of this blueprint"
          printout(result, pindex)
       else
-         --***todo
-         local result = ""
+         p.insert(table.deepcopy(bp))
+         local result = "Blue print copy inserted to inventory"
          printout(result, pindex)
       end
    elseif index == 6 then
@@ -2058,8 +2093,9 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
          local result = "Destroy this blueprint item"
          printout(result, pindex)
       else
-         --***todo
-         local result = ""
+         bp.set_stack({name = "blueprint", count = 0})
+         bp.set_stack(nil)
+         local result = "Blueprint destroyed"
          printout(result, pindex)
       end
    elseif index == 7 then
@@ -2068,8 +2104,14 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
          local result = "Export this blueprint as a text string"
          printout(result, pindex)
       else
-         --***todo
-         local result = ""
+         players[pindex].blueprint_menu.edit_export = true
+         local frame = game.get_player(pindex).gui.screen.add{type = "frame", name = "blueprint-edit-export"}
+         frame.bring_to_front()
+         frame.force_auto_center()
+         frame.focus()
+         local input = frame.add{type="textfield", name = "input", text = string.sub(stack.export_stack(),2)}
+         input.focus()
+         local result = "Copy the text from this boz using 'CONTROL + A' and then 'CONTROL + C' and then press ENTER to exit"
          printout(result, pindex)
       end
    elseif index == 8 then
@@ -2078,8 +2120,14 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
          local result = "Import a text string to save into this blueprint"
          printout(result, pindex)
       else
-         --***todo
-         local result = ""
+         players[pindex].blueprint_menu.edit_import = true
+         local frame = game.get_player(pindex).gui.screen.add{type = "frame", name = "blueprint-edit-import"}
+         frame.bring_to_front()
+         frame.force_auto_center()
+         frame.focus()
+         local input = frame.add{type="textfield", name = "input"}
+         input.focus()
+         local result = "Paste a copied blueprint text string in this box and then press ENTER to load it"
          printout(result, pindex)
       end
    end
