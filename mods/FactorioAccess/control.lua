@@ -3478,7 +3478,7 @@ function target(pindex)
    end
 end
 
---Move the mouse cursor to the correct pixel on the screen **todo figure out how to center mouse cursor on tile during smooth walk (the player and the camera are both not tile aligned. The current solution is to teleport the player to the tile center when cursor mode enables)
+--Move the mouse cursor to the correct pixel on the screen 
 function move_mouse_cursor(position,pindex)
    if players[pindex].vanilla_mode or game.get_player(pindex).game_view_settings.update_entity_selection == true then
       return
@@ -4799,6 +4799,7 @@ function initialize(player)
    faplayer.last_pickup_tick = faplayer.last_pickup_tick or 1
    faplayer.last_item_picked_up = faplayer.last_item_picked_up or nil
    faplayer.skip_read_hand = faplayer.skip_read_hand or false
+   faplayer.tutorial = faplayer.tutorial or nil 
 
    faplayer.preferences = {
       building_inventory_row_length = building_inventory_row_length or 8,
@@ -5963,12 +5964,18 @@ function on_tick(event)
             aim_gun_at_nearest_enemy(pindex,enemy)
          end
       end
-   elseif event.tick % 300 == 13 then
+   elseif event.tick % 90 == 13 then
       for pindex, player in pairs(players) do
-         --Fix running speed bug (toggle walk aldo fixes it)
+         --Fix running speed bug (toggle walk also fixes it)
          fix_walk(pindex)
       end
-   elseif event.tick % 1200 == 14 then --todo**** help reminders every 20 seconds
+   elseif event.tick % 1200 == 14 then
+      for pindex, player in pairs(players) do
+         --Tutorial reminder every 20 seconds until you open it
+         if players[pindex].tutorial == nil then
+            printout("Press 'H' to open the tutorial", pindex)
+         end
+      end
    end
 end
 

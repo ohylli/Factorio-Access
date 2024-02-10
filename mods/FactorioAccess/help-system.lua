@@ -79,7 +79,7 @@ function tutorial_menu_open(pindex)--Note: In the current version we do not open
    end
    
    --Load the tutorial content
-   if players[pindex].tutorial == nil then
+   if players[pindex].tutorial == nil or players[pindex].tutorial == {} then
       load_tutorial(pindex)
    end
    
