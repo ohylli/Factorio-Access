@@ -10911,6 +10911,7 @@ end)
 --GUI action confirmed, such as by pressing ENTER
 script.on_event(defines.events.on_gui_confirmed,function(event)
    local pindex = event.player_index
+   local p = game.get_player(pindex)
    if not check_for_player(pindex) then
       return
    end
@@ -10984,13 +10985,55 @@ script.on_event(defines.events.on_gui_confirmed,function(event)
       players[pindex].menu_search_frame.destroy()
       players[pindex].menu_search_frame = nil
    elseif players[pindex].blueprint_menu.edit_label == true then
-      --Apply the new label ****
+      --Apply the new label
+      players[pindex].blueprint_menu.edit_label = false
+      local result = event.element.text
+      if result == nil or result == "" then 
+         result = "unknown"
+      end
+      set_blueprint_label(p.cursor_stack,result)
+      printout("Blueprint label changed to " .. result , pindex)
+      event.element.destroy()
+      if p.gui.screen["blueprint-edit-label"] ~= nil then
+         p.gui.screen["blueprint-edit-label"].destroy()
+      end
    elseif players[pindex].blueprint_menu.edit_description == true then
       --Apply the new desc 
+      players[pindex].blueprint_menu.edit_description = false
+      local result = event.element.text
+      if result == nil or result == "" then 
+         result = "unknown"
+      end
+      set_blueprint_description(p.cursor_stack,result)
+      printout("Blueprint description changed.", pindex)
+      event.element.destroy()
+      if p.gui.screen["blueprint-edit-description"] ~= nil then
+         p.gui.screen["blueprint-edit-description"].destroy()
+      end
    elseif players[pindex].blueprint_menu.edit_import == true then
       --Apply the new import
+      players[pindex].blueprint_menu.edit_import = false
+      local result = event.element.text
+      if result == nil or result == "" then 
+         result = "unknown"
+      end
+      apply_blueprint_import(pindex, result)
+      event.element.destroy()
+      if p.gui.screen["blueprint-edit-import"] ~= nil then
+         p.gui.screen["blueprint-edit-import"].destroy()
+      end
    elseif players[pindex].blueprint_menu.edit_export == true then
-      --Instruct export ****
+      --Instruct export
+      players[pindex].blueprint_menu.edit_export = false
+      local result = event.element.text
+      if result == nil or result == "" then 
+         result = "unknown"
+      end
+      printout("Text box closed" , pindex)
+      event.element.destroy()
+      if p.gui.screen["blueprint-edit-export"] ~= nil then
+         p.gui.screen["blueprint-edit-export"].destroy()
+      end
    end
    players[pindex].last_menu_search_tick = event.tick
 end)   
@@ -12635,7 +12678,8 @@ function update_custom_GUI_sprite(sprite, scale_in, pindex, sprite_2)
             else
                s2 = player.custom_GUI_sprite_2
                if s2 ~= nil and s2.valid then
-                  player.custom_GUI_sprite_2.visible = false
+                  s2.visible = false
+                  s2 = nil
                end
             end
             --Icon 2
@@ -12656,7 +12700,8 @@ function update_custom_GUI_sprite(sprite, scale_in, pindex, sprite_2)
             else
                s3 = player.custom_GUI_sprite_3
                if s3 ~= nil and s3.valid then
-                  player.custom_GUI_sprite_3.visible = false
+                  s3.visible = false
+                  s3 = nil
                end
             end
             --Icon 3
@@ -12677,7 +12722,8 @@ function update_custom_GUI_sprite(sprite, scale_in, pindex, sprite_2)
             else
                s4 = player.custom_GUI_sprite_4
                if s4 ~= nil and s4.valid then
-                  player.custom_GUI_sprite_4.visible = false
+                  s4.visible = false
+                  s4 = nil
                end
             end
             --Icon 4
@@ -12698,22 +12744,27 @@ function update_custom_GUI_sprite(sprite, scale_in, pindex, sprite_2)
             else
                s5 = player.custom_GUI_sprite_5
                if s5 ~= nil and s5.valid then
-                  player.custom_GUI_sprite_5.visible = false
+                  s5.visible = false
+                  s5 = nil
                end
             end
          end
       else
          if s2 ~= nil and s2.valid and sprite_2 == nil then
             player.custom_GUI_sprite_2.visible = false
+            s2 = nil
          end
          if s3 ~= nil and s3.valid then
             player.custom_GUI_sprite_3.visible = false
+            s3 = nil
          end
          if s4 ~= nil and s4.valid then
             player.custom_GUI_sprite_4.visible = false
+            s4 = nil
          end
          if s5 ~= nil and s5.valid then
             player.custom_GUI_sprite_5.visible = false
+            s5 = nil
          end
       end
       
