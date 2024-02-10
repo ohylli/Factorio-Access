@@ -5997,7 +5997,7 @@ function update_menu_visuals()
             update_custom_GUI_sprite("item.repair-pack", 3, pindex)
          elseif player.menu == "crafting_queue" then
             update_overhead_sprite("item.repair-pack",2,1.25,pindex)
-            update_custom_GUI_sprite("item.repair-pack", 3, pindex)
+            update_custom_GUI_sprite("item.repair-pack", 3, pindex, "utility.clock")
          elseif player.menu == "travel" then
             update_overhead_sprite("utility.downloading_white",4,1.25,pindex)
             update_custom_GUI_sprite("utility.downloading_white", 3, pindex)
@@ -12569,7 +12569,7 @@ function update_overhead_sprite(sprite, scale_in, radius_in, pindex)
 end
 
 --Draws a custom GUI with a sprite in the middle of the screen. Set it to nil to clear it.
-function update_custom_GUI_sprite(sprite, scale_in, pindex)
+function update_custom_GUI_sprite(sprite, scale_in, pindex, sprite_2)
    local player = players[pindex]
    local p = game.get_player(pindex)
    local scale = scale_in
@@ -12579,20 +12579,152 @@ function update_custom_GUI_sprite(sprite, scale_in, pindex)
    else
       local f = player.custom_GUI_frame
       local s1 = player.custom_GUI_sprite
+      local s2 = player.custom_GUI_sprite_2
+      local s3 = player.custom_GUI_sprite_3
+      local s4 = player.custom_GUI_sprite_4
+      local s5 = player.custom_GUI_sprite_5
+      --Set the frame
       if f == nil or not f.valid then
          f = game.get_player(pindex).gui.screen.add{type="frame"}
          f.force_auto_center()
          f.bring_to_front()
       end
+      --Set the main sprite
       if s1 == nil or not s1.valid then
          s1 = f.add{type="sprite",caption = "custom menu"}
       end
       if s1.sprite ~= sprite then 
          s1.sprite = sprite
       end
+      --Set the secondary sprite
+      if sprite_2 == nil and s2 ~= nil and s2.valid then
+         player.custom_GUI_sprite_2.visible = false
+      elseif sprite_2 ~= nil then
+         if s2 == nil or not s2.valid then
+            s2 = f.add{type="sprite",caption = "custom menu"}
+         end
+         if s2.sprite ~= sprite_2 then 
+            s2.sprite = sprite_2
+         end
+         player.custom_GUI_sprite_2 = s2
+         player.custom_GUI_sprite_2.visible = true
+      end
+      --If a blueprint is in hand, set the blueprint sprites
+      if players[pindex].menu == "blueprint_menu" and p.cursor_stack and p.cursor_stack.valid_for_read and p.cursor_stack.is_blueprint then
+         local bp = p.cursor_stack
+         local sprite_2_name = nil
+         local sprite_3_name = nil
+         local sprite_4_name = nil
+         local sprite_5_name = nil
+         if bp.blueprint_icons and #bp.blueprint_icons > 0 then
+            --Icon 1
+            if bp.blueprint_icons[1] ~= nil then
+               local icon_1 = bp.blueprint_icons[1].signal
+               sprite_2_name = icon_1.type .. "." .. icon_1.name
+               s2 = player.custom_GUI_sprite_2
+               if sprite_2_name ~= nil then
+                  if s2 == nil or not s2.valid then
+                     s2 = f.add{type="sprite",caption = "custom menu"}
+                  end
+                  if s2.sprite ~= sprite_2_name then 
+                     s2.sprite = sprite_2_name
+                  end
+                  player.custom_GUI_sprite_2 = s2
+                  player.custom_GUI_sprite_2.visible = true
+               end
+            else
+               s2 = player.custom_GUI_sprite_2
+               if s2 ~= nil and s2.valid then
+                  player.custom_GUI_sprite_2.visible = false
+               end
+            end
+            --Icon 2
+            if bp.blueprint_icons[2] ~= nil then
+               local icon_2 = bp.blueprint_icons[2].signal
+               sprite_3_name = icon_2.type .. "." .. icon_2.name
+               s3 = player.custom_GUI_sprite_3
+               if sprite_3_name ~= nil then
+                  if s3 == nil or not s3.valid then
+                     s3 = f.add{type="sprite",caption = "custom menu"}
+                  end
+                  if s3.sprite ~= sprite_3_name then 
+                     s3.sprite = sprite_3_name
+                  end
+                  player.custom_GUI_sprite_3 = s3
+                  player.custom_GUI_sprite_3.visible = true
+               end
+            else
+               s3 = player.custom_GUI_sprite_3
+               if s3 ~= nil and s3.valid then
+                  player.custom_GUI_sprite_3.visible = false
+               end
+            end
+            --Icon 3
+            if bp.blueprint_icons[3] ~= nil then
+               local icon_3 = bp.blueprint_icons[3].signal
+               sprite_4_name = icon_3.type .. "." .. icon_3.name
+               s4 = player.custom_GUI_sprite_4
+               if sprite_4_name ~= nil then
+                  if s4 == nil or not s4.valid then
+                     s4 = f.add{type="sprite",caption = "custom menu"}
+                  end
+                  if s4.sprite ~= sprite_4_name then 
+                     s4.sprite = sprite_4_name
+                  end
+                  player.custom_GUI_sprite_4 = s4
+                  player.custom_GUI_sprite_4.visible = true
+               end
+            else
+               s4 = player.custom_GUI_sprite_4
+               if s4 ~= nil and s4.valid then
+                  player.custom_GUI_sprite_4.visible = false
+               end
+            end
+            --Icon 4
+            if bp.blueprint_icons[4] ~= nil then
+               local icon_4 = bp.blueprint_icons[4].signal
+               sprite_5_name = icon_4.type .. "." .. icon_4.name
+               s5 = player.custom_GUI_sprite_5
+               if sprite_5_name ~= nil then
+                  if s5 == nil or not s5.valid then
+                     s5 = f.add{type="sprite",caption = "custom menu"}
+                  end
+                  if s5.sprite ~= sprite_5_name then 
+                     s5.sprite = sprite_5_name
+                  end
+                  player.custom_GUI_sprite_5 = s5
+                  player.custom_GUI_sprite_5.visible = true
+               end
+            else
+               s5 = player.custom_GUI_sprite_5
+               if s5 ~= nil and s5.valid then
+                  player.custom_GUI_sprite_5.visible = false
+               end
+            end
+         end
+      else
+         if s2 ~= nil and s2.valid and sprite_2 == nil then
+            player.custom_GUI_sprite_2.visible = false
+         end
+         if s3 ~= nil and s3.valid then
+            player.custom_GUI_sprite_3.visible = false
+         end
+         if s4 ~= nil and s4.valid then
+            player.custom_GUI_sprite_4.visible = false
+         end
+         if s5 ~= nil and s5.valid then
+            player.custom_GUI_sprite_5.visible = false
+         end
+      end
+      
+      --Finalize
       f.visible = true
       player.custom_GUI_frame = f
       player.custom_GUI_sprite = s1
+      player.custom_GUI_sprite_2 = s2
+      player.custom_GUI_sprite_3 = s3
+      player.custom_GUI_sprite_4 = s4
+      player.custom_GUI_sprite_5 = s5
       f.bring_to_front()
    end
 end
