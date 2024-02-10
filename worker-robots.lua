@@ -1981,16 +1981,32 @@ function get_blueprint_info(stack, in_hand)
    return result
 end
 
+function apply_blueprint_import(pindex, text)
+   local bp = game.get_player(pindex).cursor_stack
+   --local result = bp.import_stack("0"..text)
+   local result = bp.import_stack(text)
+   if result == 0 then
+      printout("Successfully imported blueprint " .. get_blueprint_label(bp), pindex)
+   elseif result == -1 then 
+      printout("Imported with errors, blueprint " .. get_blueprint_label(bp), pindex)
+   else
+      printout("Failed to import blueprint ", pindex)
+   end
+end
+
 --[[ Blueprint menu options summary
    0. name, menu instructions
-   1. List all components of this blueprint
-   2. List all components missing from your inventory
-   3. Edit this blueprint's label
-   4. Edit this blueprint's description
-   5. Create a copy of this blueprint
-   6. Destroy this blueprint item 
-   7. Export this blueprint as a text string
-   8. Import a text string to save into this blueprint
+   1. Read the description of this blueprint
+   2. Read the icons of this blueprint, which are its features components
+   3. List all components of this blueprint
+   4. List all missing components for building this blueprint 
+   5. Edit the label of this blueprint
+   6. Edit the description of this blueprint
+   7. Create a copy of this blueprint
+   8. Clear this blueprint 
+   9. Export this blueprint as a text string
+   10. Import a text string to overwrite this blueprint
+   11. Use the last selected area to reselect this blueprint --todo add****
 
    This menu opens when you press RIGHT BRACKET on a blueprint in hand 
 ]]
@@ -2000,11 +2016,79 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
    local p = game.get_player(pindex)
    local bp = p.cursor_stack
    
+   if bp.is_blueprint_setup() == false then
+      if index == 0 then
+         --Give basic info ...
+         printout("Empty blueprint with limited options" 
+         .. ", Press 'W' and 'S' to navigate options, press 'LEFT BRACKET' to select an option or press 'E' to exit this menu.", pindex)
+      elseif index == 1 then 
+         --Import a text string to save into this blueprint
+         if not clicked then
+            local result = "Empty blueprint, press 'LEFT BRACKET' to import a text string to overwrite this blueprint"
+            printout(result, pindex)
+         else
+            players[pindex].blueprint_menu.edit_import = true
+            local frame = game.get_player(pindex).gui.screen.add{type = "frame", name = "blueprint-edit-import"}
+            frame.bring_to_front()
+            frame.force_auto_center()
+            frame.focus()
+            local input = frame.add{type="textfield", name = "input"}
+            input.focus()
+            local result = "Paste a copied blueprint text string in this box and then press ENTER to load it"
+            printout(result, pindex)
+         end
+      else 
+         players[pindex].blueprint_menu.index = 0
+         p.play_sound{path = "inventory-wrap-around"}
+         printout("Empty blueprint with limited options" 
+         .. ", Press 'W' and 'S' to navigate options, press 'LEFT BRACKET' to select an option or press 'E' to exit this menu.", pindex)
+      end
+      return
+   end
+   
    if index == 0 then
       --Give basic info ...
       printout("Blueprint " .. get_blueprint_label(bp) 
       .. ", Press 'W' and 'S' to navigate options, press 'LEFT BRACKET' to select an option or press 'E' to exit this menu.", pindex)
    elseif index == 1 then
+      --Read the description of this blueprint
+      if not clicked then
+         local result = "Read the description of this blueprint"
+         printout(result, pindex)
+      else
+         local result = get_blueprint_description(bp)
+         if result == nil or result == "" then
+            result = "no description"
+         end
+         printout(result, pindex)
+      end
+   elseif index == 2 then
+      --Read the icons of this blueprint, which are its features components
+      if not clicked then
+         local result = "Read the icons of this blueprint, which are its features components"
+         printout(result, pindex)
+      else
+         local result = "This blueprint features "
+         if bp.blueprint_icons and #bp.blueprint_icons > 0 then
+            --Icon 1
+            if bp.blueprint_icons[1] ~= nil then
+               result = result .. bp.blueprint_icons[1].signal.name .. ", "
+            end
+            if bp.blueprint_icons[2] ~= nil then
+               result = result .. bp.blueprint_icons[2].signal.name .. ", "
+            end
+            if bp.blueprint_icons[3] ~= nil then
+               result = result .. bp.blueprint_icons[3].signal.name .. ", "
+            end
+            if bp.blueprint_icons[4] ~= nil then
+               result = result .. bp.blueprint_icons[4].signal.name .. ", "
+            end
+         else
+            result = result .. "nothing"
+         end
+         printout(result, pindex)
+      end
+   elseif index == 3 then
       --List all components of this blueprint
       if not clicked then
          local result = "List all components of this blueprint"
@@ -2013,42 +2097,92 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
          --Create a table of entity counts
          local ents = bp.get_blueprint_entities()
          local ent_counts = {}
+         local unique_ent_count = 0
+         --p.print("blueprint total entity count: " .. #ents)--
          for i, ent in ipairs(ents) do 
-            if ent_counts[ent.name] == nil then
-               ent_counts[ent.name] = 1
+            local str = ent.name
+            if ent_counts[str] == nil then
+               ent_counts[str] = 1
+               --p.print("adding " .. str)--
+               unique_ent_count = unique_ent_count + 1
             else
-               ent_counts[ent.name] = ent_counts[ent.name] + 1
+               ent_counts[str] = ent_counts[str] + 1
+               --p.print(str .. " x " .. ent_counts[str])--
             end
          end
+         --p.print("blueprint unique entity count: " .. unique_ent_count)
          --Sort by count
          table.sort(ent_counts, function(a,b)
-            --return a < b
             return ent_counts[a] < ent_counts[b]
          end)
          --List results
          local result = "Blueprint contains "
-         for ent, count in ipairs(ent_counts) do 
-            result = result .. count .. " " .. ent .. ", "
+         for name, count in pairs(ent_counts) do 
+            result = result .. count .. " " .. name .. ", "
          end
-         if #ent_counts == 0 then
+         if unique_ent_count == 0 then
             result = result .. "nothing"
          end
          printout(result, pindex)
+         --p.print(result)--
       end
-   elseif index == 2 then
-      --List all components missing from your inventory
+   elseif index == 4 then
+      --List all missing components for building this blueprint from your inventory
       if not clicked then
-         local result = "List all missing components from your inventory"
+         local result = "List all missing components for building this blueprint from your inventory"
          printout(result, pindex)
       else
-         --***todo
-         local result = ""
+         --Create a table of entity counts
+         local ents = bp.get_blueprint_entities()
+         local ent_counts = {}
+         local unique_ent_count = 0
+         --p.print("blueprint total entity count: " .. #ents)--
+         for i, ent in ipairs(ents) do 
+            local str = ent.name
+            if ent_counts[str] == nil then
+               ent_counts[str] = 1
+               --p.print("adding " .. str)--
+               unique_ent_count = unique_ent_count + 1
+            else
+               ent_counts[str] = ent_counts[str] + 1
+               --p.print(str .. " x " .. ent_counts[str])--
+            end
+         end
+         --p.print("blueprint unique entity count: " .. unique_ent_count)
+         --Subtract inventory amounts
+         local result = "Blueprint contains "
+         for name, count in pairs(ent_counts) do 
+            local inv_count = p.get_main_inventory().get_item_count(name)
+            if inv_count >= count then
+               ent_counts[name] = 0
+            else
+               ent_counts[name] = ent_counts[name] - inv_count
+            end
+         end
+         --Sort by count
+         table.sort(ent_counts, function(a,b)
+            return ent_counts[a] < ent_counts[b]
+         end)
+         --Read results
+         local result = "You are missing "
+         unique_ent_count = 0
+         for name, count in pairs(ent_counts) do 
+            if count > 0 then
+               result = result .. count .. " " .. name .. ", "
+               unique_ent_count = unique_ent_count + 1
+            end
+         end
+         if unique_ent_count == 0 then
+            result = result .. "nothing"
+         end
+         result = result .. " to build this blueprint "
          printout(result, pindex)
+         --p.print(result)--
       end
-   elseif index == 3 then
-      --Edit this blueprint's label
+   elseif index == 5 then
+      --Edit the label of this blueprint
       if not clicked then
-         local result = "Edit this blueprint's label"
+         local result = "Edit the label of this blueprint"
          printout(result, pindex)
       else
          players[pindex].blueprint_menu.edit_label = true
@@ -2061,10 +2195,10 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
          local result = "Edit the label text box for this blueprint and press ENTER to confirm"
          printout(result, pindex)
       end
-   elseif index == 4 then
-      --Edit this blueprint's description
+   elseif index == 6 then
+      --Edit the description of this blueprint
       if not clicked then
-         local result = "Edit this blueprint's description"
+         local result = "Edit the description of this blueprint"
          printout(result, pindex)
       else
          players[pindex].blueprint_menu.edit_description = true
@@ -2077,7 +2211,7 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
          local result = "Edit the description text box for this blueprint and press ENTER to confirm"
          printout(result, pindex)
       end
-   elseif index == 5 then
+   elseif index == 7 then
       --Create a copy of this blueprint
       if not clicked then
          local result = "Create a copy of this blueprint"
@@ -2087,18 +2221,19 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
          local result = "Blue print copy inserted to inventory"
          printout(result, pindex)
       end
-   elseif index == 6 then
+   elseif index == 8 then
       --Clear this blueprint
       if not clicked then
          local result = "Clear this blueprint"
          printout(result, pindex)
       else
          bp.set_stack({name = "blueprint", count = 1})
-         bp.set_stack(nil)
-         local result = "Blueprint destroyed"
+         --bp.set_stack(nil)
+         local result = "Blueprint cleared and menu closed"
          printout(result, pindex)
+         blueprint_menu_close(pindex)
       end
-   elseif index == 7 then
+   elseif index == 9 then
       --Export this blueprint as a text string
       if not clicked then
          local result = "Export this blueprint as a text string"
@@ -2114,7 +2249,7 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
          local result = "Copy the text from this boz using 'CONTROL + A' and then 'CONTROL + C' and then press ENTER to exit"
          printout(result, pindex)
       end
-   elseif index == 8 then
+   elseif index == 10 then
       --Import a text string to save into this blueprint
       if not clicked then
          local result = "Import a text string to save into this blueprint"
@@ -2132,7 +2267,7 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
       end
    end
 end
-BLUEPRINT_MENU_LENGTH = 8
+BLUEPRINT_MENU_LENGTH = 10
 
 function blueprint_menu_open(pindex)
    if players[pindex].vanilla_mode then
@@ -2173,9 +2308,18 @@ function blueprint_menu_close(pindex, mute_in)
       game.get_player(pindex).play_sound{path="Close-Inventory-Sound"}
    end
    
-   --Destroy GUI
-   if game.get_player(pindex).gui.screen["blueprint-rename"] ~= nil then --*****close others
-      game.get_player(pindex).gui.screen["blueprint-rename"].destroy()
+   --Destroy text fields
+   if game.get_player(pindex).gui.screen["blueprint-edit-label"] ~= nil then 
+      game.get_player(pindex).gui.screen["blueprint-edit-label"].destroy()
+   end
+   if game.get_player(pindex).gui.screen["blueprint-edit-description"] ~= nil then 
+      game.get_player(pindex).gui.screen["blueprint-edit-description"].destroy()
+   end
+   if game.get_player(pindex).gui.screen["blueprint-edit-export"] ~= nil then 
+      game.get_player(pindex).gui.screen["blueprint-edit-export"].destroy()
+   end
+   if game.get_player(pindex).gui.screen["blueprint-edit-import"] ~= nil then
+      game.get_player(pindex).gui.screen["blueprint-edit-import"].destroy()
    end
    if game.get_player(pindex).opened ~= nil then
       game.get_player(pindex).opened = nil
