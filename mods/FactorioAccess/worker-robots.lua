@@ -118,7 +118,7 @@ end
 function is_this_player_logistic_request_fulfilled(item_stack,pindex,slot_index_in)
    local result = false
    local slot_index = slot_index_in or nil
-   --todo ***
+   --todo**
    return result
 end
 
@@ -197,7 +197,7 @@ function get_personal_logistic_slot_index(item_stack,pindex)
    return correct_slot_id
 end
 
-function count_active_personal_logistic_slots(pindex) --***laterdo count fulfilled ones in the same loop ; also try p.character.request_slot_count
+function count_active_personal_logistic_slots(pindex) --**laterdo count fulfilled ones in the same loop ; also try p.character.request_slot_count
    local p = game.get_player(pindex)
    local slots_nil_counter = 0
    local slots_found = 0
@@ -566,8 +566,7 @@ end
 
 --Returns summary info string
 function player_logistic_requests_summary_info(pindex)
-   --***maybe use logistics_networks_info(ent,pos_in)
-   --***todo "y of z personal logistic requests fulfilled, x items in trash, missing items include [3], take an item in hand and press L to check its request status."
+   --***todo improve: "y of z personal logistic requests fulfilled, x items in trash, missing items include [3], take an item in hand and press L to check its request status." maybe use logistics_networks_info(ent,pos_in)
    local p = game.get_player(pindex)
    local current_slot = nil
    local correct_slot_id = nil
@@ -1062,8 +1061,7 @@ function chest_logistic_request_decrement_min(item_stack,chest, pindex)
 end
 
 function spidertron_logistic_requests_summary_info(spidertron,pindex)
-   --***maybe use logistics_networks_info(ent,pos_in)
-   --***todo "y of z personal logistic requests fulfilled, x items in trash, missing items include [3], take an item in hand and press L to check its request status."
+   --***todo improve: "y of z personal logistic requests fulfilled, x items in trash, missing items include [3], take an item in hand and press L to check its request status." maybe use logistics_networks_info(ent,pos_in)
    local p = game.get_player(pindex)
    local current_slot = nil
    local correct_slot_id = nil
@@ -1393,7 +1391,7 @@ function set_logistic_filter(stack, ent, pindex)
    end
 end
 
-function read_entity_requests_summary(ent,pindex)--***todo improve
+function read_entity_requests_summary(ent,pindex)--**laterdo improve
    if ent.type == "spider-vehicle" then
       printout(ent.request_slot_count .. " spidertron logistic requests set", pindex)
    else
@@ -1484,7 +1482,7 @@ end
 
    This menu opens when you click on a roboport.
 ]]
-function roboport_menu(menu_index, pindex, clicked)--****
+function roboport_menu(menu_index, pindex, clicked)
    local index = menu_index
    local port = nil
    local ent = get_selected_ent(pindex)
@@ -1707,7 +1705,7 @@ function logistic_network_chests_info(port)
             passive_provider_chest_count .. " passive provider chests, " .. 
             active_provider_chest_count .. " active provider chests, " .. 
             requester_chest_count .. " requester chests or buffer chests, "
-   --game.print(result,{volume_modifier=0})--***
+   --game.print(result,{volume_modifier=0})--
    return result
 end
 
@@ -1842,7 +1840,7 @@ function paste_blueprint(pindex)
       --printout("Cannot place that there.", pindex)
       return false
    else
-      p.play_sound{path = "Close-Inventory-Sound"}--***laterdo better sound
+      p.play_sound{path = "Close-Inventory-Sound"}--laterdo maybe better blueprint placement sound
       --printout("Cannot place that there.", pindex)
       return true
    end
