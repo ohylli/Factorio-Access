@@ -2038,7 +2038,7 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
    elseif index == 2 then
       --List all components missing from your inventory
       if not clicked then
-         local result = "List all components missing from your inventory"
+         local result = "List all missing components from your inventory"
          printout(result, pindex)
       else
          --***todo
@@ -2088,12 +2088,12 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
          printout(result, pindex)
       end
    elseif index == 6 then
-      --Destroy this blueprint item
+      --Clear this blueprint
       if not clicked then
-         local result = "Destroy this blueprint item"
+         local result = "Clear this blueprint"
          printout(result, pindex)
       else
-         bp.set_stack({name = "blueprint", count = 0})
+         bp.set_stack({name = "blueprint", count = 1})
          bp.set_stack(nil)
          local result = "Blueprint destroyed"
          printout(result, pindex)
@@ -2196,7 +2196,7 @@ function blueprint_menu_up(pindex)
 end
 
 function blueprint_menu_down(pindex)
-   players[pindex].blueprint_menu.index = players[pindex].train_menu.index + 1
+   players[pindex].blueprint_menu.index = players[pindex].blueprint_menu.index + 1
    if players[pindex].blueprint_menu.index > BLUEPRINT_MENU_LENGTH then
       players[pindex].blueprint_menu.index = BLUEPRINT_MENU_LENGTH
       game.get_player(pindex).play_sound{path = "inventory-edge"}
