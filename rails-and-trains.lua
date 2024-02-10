@@ -2931,7 +2931,7 @@ function append_rail(pos, pindex)
             -- other_rails_present = true
          -- end
       -- end
-      -- if game.get_player(pindex).can_build_from_cursor({name = "straight-rail", position = append_rail_pos, direction = append_rail_dir}) then--****maybe thisll work
+      -- if game.get_player(pindex).can_build_from_cursor({name = "straight-rail", position = append_rail_pos, direction = append_rail_dir}) then--**maybe thisll work
          -- game.get_player(pindex).print("Can build from hand",{volume_modifier = 0})
       -- end
       -- if other_rails_present == true then

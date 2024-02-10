@@ -5037,7 +5037,7 @@ script.on_event(defines.events.on_player_changed_position,function(event)
          if ent ~= nil and ent.valid then
             cursor_highlight(pindex, ent, nil)
             p.selected = ent
-            p.play_sound{path = "Close-Inventory-Sound", volume_modifier = 0.75}--***laterdo unique sound to note a detected ent 
+            p.play_sound{path = "Close-Inventory-Sound", volume_modifier = 0.75}
          else 
             cursor_highlight(pindex, nil, nil)
             p.selected = nil
@@ -5963,11 +5963,12 @@ function on_tick(event)
             aim_gun_at_nearest_enemy(pindex,enemy)
          end
       end
-   elseif event.tick % 300 == 14 then
+   elseif event.tick % 300 == 13 then
       for pindex, player in pairs(players) do
          --Fix running speed bug (toggle walk aldo fixes it)
          fix_walk(pindex)
       end
+   elseif event.tick % 1200 == 14 then --todo**** help reminders every 20 seconds
    end
 end
 
@@ -8537,11 +8538,11 @@ script.on_event("click-menu", function(event)
 end)
 
 --Different behavior when you click on an inventory slot depending on the item in hand and the item in the slot (WIP)
-function player_inventory_click(pindex, click_is_left_in)
+function player_inventory_click(pindex, left_click)
    --****todo finish this to include all interaction cases, then generalize it to building inventories . 
    --Use code from above and then replace above clutter with calls to this.
    --Use stack.transfer_stack(other_stack)
-   local click_is_left = click_is_left_in or true
+   local click_is_left = left_click or true
    local p = game.get_player(pindex)
    local stack_cur = p.cursor_stack
    local stack_inv = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
@@ -9816,17 +9817,7 @@ script.on_event("menu-clear-filter", function(event)
          if players[pindex].building.sector <= #players[pindex].building.sectors then
             if stack and stack.valid_for_read and stack.valid and stack.count > 0 then
                local iName = players[pindex].building.sectors[players[pindex].building.sector].name
-               if iName ~= "Fluid" and iName ~= "Filters" then               
-                  -- local building = players[pindex].building
-                  -- local target_stack = building.sectors[building.sector].inventory[building.index]
-                  -- if target_stack and target_stack.valid_for_read and target_stack.transfer_stack{name=stack.name} then--****todo relocate this transfer functionality to Z key.
-                      -- printout("Inserted 1 " .. stack.name, pindex)
-                     -- stack.count = stack.count - 1
-                  -- else
-                     -- printout("Cannot insert " .. stack.name .. " into " .. players[pindex].building.sectors[players[pindex].building.sector].name, pindex)
-                  -- end
-               
-               elseif iName == "Filters" and players[pindex].item_selection == false and players[pindex].building.index < #players[pindex].building.sectors[players[pindex].building.sector].inventory then 
+               if iName == "Filters" and players[pindex].item_selection == false and players[pindex].building.index < #players[pindex].building.sectors[players[pindex].building.sector].inventory then 
                   players[pindex].building.ent.set_filter(players[pindex].building.index, nil)
                   players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index] = "No filter selected."
                   printout("Filter cleared", pindex)
@@ -10470,7 +10461,7 @@ end)
 script.on_event(defines.events.on_player_created, function(event)
    initialize(game.players[event.player_index])
    if not game.is_multiplayer() then
-      printout("Press 'TAB' to continue, and later you can press 'H' for help", 0)--***maybe todo repeated alert every minute until the player presses.
+      printout("Press 'TAB' to continue", pindex)
    end
 end)
 
@@ -10770,7 +10761,7 @@ script.on_event("locate-hand-in-inventory",function(event)
       locate_hand_in_player_inventory(pindex)
    elseif players[pindex].menu == "inventory" then
       locate_hand_in_player_inventory(pindex)
-   elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then--****test vehicles
+   elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then
       locate_hand_in_building_output_inventory(pindex)
    else
       printout("Cannot locate items in this menu", pindex)
