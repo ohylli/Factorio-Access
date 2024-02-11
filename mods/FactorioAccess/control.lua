@@ -495,6 +495,8 @@ function extra_info_for_scan_list(ent,pindex,info_comes_after_indexing)
       result = result .. classify_forest(ent.position,pindex,true)
    elseif ent.name == "roboport" then
       result = result .. " of network " .. get_network_name(ent)
+   elseif ent.type == "spider-vehicle" then
+      result = result .. " labelled " .. ent.entity_label
    end
    
    return result
@@ -1199,6 +1201,8 @@ function ent_info(pindex, ent, description)
       local cell = ent.logistic_cell
       local network = ent.logistic_cell.logistic_network
       result = result .. " of network " .. get_network_name(ent) .. "," .. roboport_contents_info(ent)
+   elseif ent.type == "spider-vehicle" then
+      result = result .. " labelled " .. ent.entity_label
    end
    --Give drop position (like for inserters)
    if ent.drop_position ~= nil then
