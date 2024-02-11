@@ -3143,6 +3143,17 @@ function read_inventory_slot(pindex, start_phrase_in)
       if stack.health < 1 then
          start_phrase = start_phrase .. " damaged "
       end
+      if stack.name == "spidertron-remote" then
+if stack.connected_entity == nil then
+         start_phrase = start_phrase .. " unlinked "
+else
+if stack.connected_entity.entity_label == nil then
+         start_phrase = start_phrase .. " an unlabelled "
+else
+         start_phrase = start_phrase .. stack.connected_entity.entity_label 
+end
+      end
+end
       printout(start_phrase .. localising.get(stack,pindex) .. " x " .. stack.count .. " " .. stack.prototype.subgroup.name , pindex)
    else
       printout(start_phrase .. "Empty Slot",pindex)
@@ -3159,6 +3170,18 @@ function read_hand(pindex)
       if cursor_stack.is_blueprint then
          --Blueprint extra info 
          printout(get_blueprint_info(cursor_stack,true),pindex)
+      elseif cursor_stack.name == "spidertron-remote" then
+local start_phrase = ""
+if cursor_stack.connected_entity == nil then
+         start_phrase = start_phrase .. " unlinked "
+else
+if cursor_stack.connected_entity.entity_label == nil then
+         start_phrase = start_phrase .. " an unlabelled "
+else
+         start_phrase = start_phrase .. cursor_stack.connected_entity.entity_label 
+end
+      end
+      printout(start_phrase .. localising.get(cursor_stack,pindex) .. " x " .. cursor_stack.count .. " " .. cursor_stack.prototype.subgroup.name , pindex)
       else
          --Any other valid item
          local out={"access.cursor-description"}
@@ -9360,7 +9383,12 @@ script.on_event("equip-item", function(event)
       --Equip the selected item from its inventory slot directly
       local stack = game.get_player(pindex).get_main_inventory()[players[pindex].inventory.index]
       result = equip_it(stack,pindex)
-      
+         elseif players[pindex].menu == "vehicle" and game.get_player(pindex).opened.type == "spider-vehicle" then
+      --Equip the selected item from its inventory slot directly
+      local invs = defines.inventory
+      local stack = game.get_player(pindex).opened.get_inventory(invs.spider_trunk)[players[pindex].building.index]
+      result = equip_it(stack,pindex)
+
    elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then
       --Something will be smart-inserted so do nothing here
       return
@@ -10650,7 +10678,7 @@ script.on_event("open-warnings-menu", function(event)
    if not check_for_player(pindex) or players[pindex].vanilla_mode then
       return
    end
-   if players[pindex].in_menu == false or game.get_player(pindex).opened_gui_type == defines.gui_type.production then
+   if players[pindex].in_menu == false or game.get_player(pindex)._gui_type == defines.gui_type.production then
       players[pindex].warnings.short = scan_for_warnings(30, 30, pindex)
       players[pindex].warnings.medium = scan_for_warnings(100, 100, pindex)
       players[pindex].warnings.long = scan_for_warnings(500, 500, pindex)
@@ -11124,7 +11152,7 @@ script.on_event("inventory-read-armor-stats", function(event)
    if not check_for_player(pindex) or not players[pindex].in_menu then
       return
    end
-   if players[pindex].in_menu and players[pindex].menu == "inventory" then
+   if (players[pindex].in_menu and players[pindex].menu == "inventory") or (players[pindex].menu == "vehicle" and game.get_player(pindex).opened.type == "spider-vehicle") then
 	  local result = read_armor_stats(pindex)
 	  --game.get_player(pindex).print(result)--
 	  printout(result,pindex)
@@ -11137,7 +11165,7 @@ script.on_event("inventory-read-equipment-list", function(event)
    if not check_for_player(pindex) or not players[pindex].in_menu then
       return
    end
-   if players[pindex].in_menu and players[pindex].menu == "inventory" then
+   if (players[pindex].in_menu and players[pindex].menu == "inventory") or (players[pindex].menu == "vehicle" and game.get_player(pindex).opened.type == "spider-vehicle") then
 	  local result = read_equipment_list(pindex)
 	  --game.get_player(pindex).print(result)--
 	  printout(result,pindex)
@@ -11151,7 +11179,7 @@ script.on_event("inventory-remove-all-equipment-and-armor", function(event)
       return
    end
    
-   if players[pindex].in_menu and players[pindex].menu == "inventory" then
+   if (players[pindex].in_menu and players[pindex].menu == "inventory") or (players[pindex].menu == "vehicle" and game.get_player(pindex).opened.type == "spider-vehicle") then
 	  local result = remove_equipment_and_armor(pindex)
 	  --game.get_player(pindex).print(result)--
 	  printout(result,pindex)
