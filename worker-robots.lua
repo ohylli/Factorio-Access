@@ -118,7 +118,7 @@ end
 function is_this_player_logistic_request_fulfilled(item_stack,pindex,slot_index_in)
    local result = false
    local slot_index = slot_index_in or nil
-   --todo ***
+   --todo**
    return result
 end
 
@@ -197,7 +197,7 @@ function get_personal_logistic_slot_index(item_stack,pindex)
    return correct_slot_id
 end
 
-function count_active_personal_logistic_slots(pindex) --***laterdo count fulfilled ones in the same loop ; also try p.character.request_slot_count
+function count_active_personal_logistic_slots(pindex) --**laterdo count fulfilled ones in the same loop ; also try p.character.request_slot_count
    local p = game.get_player(pindex)
    local slots_nil_counter = 0
    local slots_found = 0
@@ -566,8 +566,7 @@ end
 
 --Returns summary info string
 function player_logistic_requests_summary_info(pindex)
-   --***maybe use logistics_networks_info(ent,pos_in)
-   --***todo "y of z personal logistic requests fulfilled, x items in trash, missing items include [3], take an item in hand and press L to check its request status."
+   --***todo improve: "y of z personal logistic requests fulfilled, x items in trash, missing items include [3], take an item in hand and press L to check its request status." maybe use logistics_networks_info(ent,pos_in)
    local p = game.get_player(pindex)
    local current_slot = nil
    local correct_slot_id = nil
@@ -1062,8 +1061,7 @@ function chest_logistic_request_decrement_min(item_stack,chest, pindex)
 end
 
 function spidertron_logistic_requests_summary_info(spidertron,pindex)
-   --***maybe use logistics_networks_info(ent,pos_in)
-   --***todo "y of z personal logistic requests fulfilled, x items in trash, missing items include [3], take an item in hand and press L to check its request status."
+   --***todo improve: "y of z personal logistic requests fulfilled, x items in trash, missing items include [3], take an item in hand and press L to check its request status." maybe use logistics_networks_info(ent,pos_in)
    local p = game.get_player(pindex)
    local current_slot = nil
    local correct_slot_id = nil
@@ -1393,7 +1391,7 @@ function set_logistic_filter(stack, ent, pindex)
    end
 end
 
-function read_entity_requests_summary(ent,pindex)--***todo improve
+function read_entity_requests_summary(ent,pindex)--**laterdo improve
    if ent.type == "spider-vehicle" then
       printout(ent.request_slot_count .. " spidertron logistic requests set", pindex)
    else
@@ -1484,7 +1482,7 @@ end
 
    This menu opens when you click on a roboport.
 ]]
-function roboport_menu(menu_index, pindex, clicked)--****
+function roboport_menu(menu_index, pindex, clicked)
    local index = menu_index
    local port = nil
    local ent = get_selected_ent(pindex)
@@ -1707,7 +1705,7 @@ function logistic_network_chests_info(port)
             passive_provider_chest_count .. " passive provider chests, " .. 
             active_provider_chest_count .. " active provider chests, " .. 
             requester_chest_count .. " requester chests or buffer chests, "
-   --game.print(result,{volume_modifier=0})--***
+   --game.print(result,{volume_modifier=0})--
    return result
 end
 
@@ -1744,8 +1742,6 @@ function logistic_network_items_info(port)
    return result
 end
 
---laterdo vehicle logistic requests...
-
 --laterdo add or remove stacks from player trash
 
 --laterdo full personal logistics menu where you can go line by line along requests and edit them, iterate through trash?
@@ -1769,7 +1765,11 @@ end
 
 function get_blueprint_description(stack)
    local bp_data = get_bp_data_for_edit(stack)
-   return bp_data.blueprint.description
+   local desc = bp_data.blueprint.description
+   if desc == nil then
+      desc = ""
+   end
+   return desc
 end
 
 function set_blueprint_label(stack,label)
@@ -1780,7 +1780,11 @@ end
 
 function get_blueprint_label(stack)
    local bp_data = get_bp_data_for_edit(stack)
-   return bp_data.blueprint.label
+   local label = bp_data.blueprint.label
+   if label == nil then
+      label = ""
+   end
+   return label
 end
 
 function get_top_left_and_bottom_right(pos_1, pos_2)
@@ -1844,7 +1848,7 @@ function paste_blueprint(pindex)
       --printout("Cannot place that there.", pindex)
       return false
    else
-      p.play_sound{path = "Close-Inventory-Sound"}--***laterdo better sound
+      p.play_sound{path = "Close-Inventory-Sound"}--laterdo maybe better blueprint placement sound
       --printout("Cannot place that there.", pindex)
       return true
    end
@@ -1977,4 +1981,373 @@ function get_blueprint_info(stack, in_hand)
    return result
 end
 
+function apply_blueprint_import(pindex, text)
+   local bp = game.get_player(pindex).cursor_stack
+   --local result = bp.import_stack("0"..text)
+   local result = bp.import_stack(text)
+   if result == 0 then
+      printout("Successfully imported blueprint " .. get_blueprint_label(bp), pindex)
+   elseif result == -1 then 
+      printout("Imported with errors, blueprint " .. get_blueprint_label(bp), pindex)
+   else
+      printout("Failed to import blueprint ", pindex)
+   end
+end
 
+--[[ Blueprint menu options summary
+   0. name, menu instructions
+   1. Read the description of this blueprint
+   2. Read the icons of this blueprint, which are its features components
+   3. List all components of this blueprint
+   4. List all missing components for building this blueprint 
+   5. Edit the label of this blueprint
+   6. Edit the description of this blueprint
+   7. Create a copy of this blueprint
+   8. Clear this blueprint 
+   9. Export this blueprint as a text string
+   10. Import a text string to overwrite this blueprint
+   11. Use the last selected area to reselect this blueprint --todo add****
+
+   This menu opens when you press RIGHT BRACKET on a blueprint in hand 
+]]
+function blueprint_menu(menu_index, pindex, clicked, other_input)
+   local index = menu_index
+   local other = other_input or -1
+   local p = game.get_player(pindex)
+   local bp = p.cursor_stack
+   
+   if bp.is_blueprint_setup() == false then
+      if index == 0 then
+         --Give basic info ...
+         printout("Empty blueprint with limited options" 
+         .. ", Press 'W' and 'S' to navigate options, press 'LEFT BRACKET' to select an option or press 'E' to exit this menu.", pindex)
+      elseif index == 1 then 
+         --Import a text string to save into this blueprint
+         if not clicked then
+            local result = "Empty blueprint, press 'LEFT BRACKET' to import a text string to overwrite this blueprint"
+            printout(result, pindex)
+         else
+            players[pindex].blueprint_menu.edit_import = true
+            local frame = game.get_player(pindex).gui.screen.add{type = "frame", name = "blueprint-edit-import"}
+            frame.bring_to_front()
+            frame.force_auto_center()
+            frame.focus()
+            local input = frame.add{type="textfield", name = "input"}
+            input.focus()
+            local result = "Paste a copied blueprint text string in this box and then press ENTER to load it"
+            printout(result, pindex)
+         end
+      else 
+         players[pindex].blueprint_menu.index = 0
+         p.play_sound{path = "inventory-wrap-around"}
+         printout("Empty blueprint with limited options" 
+         .. ", Press 'W' and 'S' to navigate options, press 'LEFT BRACKET' to select an option or press 'E' to exit this menu.", pindex)
+      end
+      return
+   end
+   
+   if index == 0 then
+      --Give basic info ...
+      printout("Blueprint " .. get_blueprint_label(bp) 
+      .. ", Press 'W' and 'S' to navigate options, press 'LEFT BRACKET' to select an option or press 'E' to exit this menu.", pindex)
+   elseif index == 1 then
+      --Read the description of this blueprint
+      if not clicked then
+         local result = "Read the description of this blueprint"
+         printout(result, pindex)
+      else
+         local result = get_blueprint_description(bp)
+         if result == nil or result == "" then
+            result = "no description"
+         end
+         printout(result, pindex)
+      end
+   elseif index == 2 then
+      --Read the icons of this blueprint, which are its features components
+      if not clicked then
+         local result = "Read the icons of this blueprint, which are its features components"
+         printout(result, pindex)
+      else
+         local result = "This blueprint features "
+         if bp.blueprint_icons and #bp.blueprint_icons > 0 then
+            --Icon 1
+            if bp.blueprint_icons[1] ~= nil then
+               result = result .. bp.blueprint_icons[1].signal.name .. ", "
+            end
+            if bp.blueprint_icons[2] ~= nil then
+               result = result .. bp.blueprint_icons[2].signal.name .. ", "
+            end
+            if bp.blueprint_icons[3] ~= nil then
+               result = result .. bp.blueprint_icons[3].signal.name .. ", "
+            end
+            if bp.blueprint_icons[4] ~= nil then
+               result = result .. bp.blueprint_icons[4].signal.name .. ", "
+            end
+         else
+            result = result .. "nothing"
+         end
+         printout(result, pindex)
+      end
+   elseif index == 3 then
+      --List all components of this blueprint
+      if not clicked then
+         local result = "List all components of this blueprint"
+         printout(result, pindex)
+      else
+         --Create a table of entity counts
+         local ents = bp.get_blueprint_entities()
+         local ent_counts = {}
+         local unique_ent_count = 0
+         --p.print("blueprint total entity count: " .. #ents)--
+         for i, ent in ipairs(ents) do 
+            local str = ent.name
+            if ent_counts[str] == nil then
+               ent_counts[str] = 1
+               --p.print("adding " .. str)--
+               unique_ent_count = unique_ent_count + 1
+            else
+               ent_counts[str] = ent_counts[str] + 1
+               --p.print(str .. " x " .. ent_counts[str])--
+            end
+         end
+         --p.print("blueprint unique entity count: " .. unique_ent_count)
+         --Sort by count
+         table.sort(ent_counts, function(a,b)
+            return ent_counts[a] < ent_counts[b]
+         end)
+         --List results
+         local result = "Blueprint contains "
+         for name, count in pairs(ent_counts) do 
+            result = result .. count .. " " .. name .. ", "
+         end
+         if unique_ent_count == 0 then
+            result = result .. "nothing"
+         end
+         printout(result, pindex)
+         --p.print(result)--
+      end
+   elseif index == 4 then
+      --List all missing components for building this blueprint from your inventory
+      if not clicked then
+         local result = "List all missing components for building this blueprint from your inventory"
+         printout(result, pindex)
+      else
+         --Create a table of entity counts
+         local ents = bp.get_blueprint_entities()
+         local ent_counts = {}
+         local unique_ent_count = 0
+         --p.print("blueprint total entity count: " .. #ents)--
+         for i, ent in ipairs(ents) do 
+            local str = ent.name
+            if ent_counts[str] == nil then
+               ent_counts[str] = 1
+               --p.print("adding " .. str)--
+               unique_ent_count = unique_ent_count + 1
+            else
+               ent_counts[str] = ent_counts[str] + 1
+               --p.print(str .. " x " .. ent_counts[str])--
+            end
+         end
+         --p.print("blueprint unique entity count: " .. unique_ent_count)
+         --Subtract inventory amounts
+         local result = "Blueprint contains "
+         for name, count in pairs(ent_counts) do 
+            local inv_count = p.get_main_inventory().get_item_count(name)
+            if inv_count >= count then
+               ent_counts[name] = 0
+            else
+               ent_counts[name] = ent_counts[name] - inv_count
+            end
+         end
+         --Sort by count
+         table.sort(ent_counts, function(a,b)
+            return ent_counts[a] < ent_counts[b]
+         end)
+         --Read results
+         local result = "You are missing "
+         unique_ent_count = 0
+         for name, count in pairs(ent_counts) do 
+            if count > 0 then
+               result = result .. count .. " " .. name .. ", "
+               unique_ent_count = unique_ent_count + 1
+            end
+         end
+         if unique_ent_count == 0 then
+            result = result .. "nothing"
+         end
+         result = result .. " to build this blueprint "
+         printout(result, pindex)
+         --p.print(result)--
+      end
+   elseif index == 5 then
+      --Edit the label of this blueprint
+      if not clicked then
+         local result = "Edit the label of this blueprint"
+         printout(result, pindex)
+      else
+         players[pindex].blueprint_menu.edit_label = true
+         local frame = game.get_player(pindex).gui.screen.add{type = "frame", name = "blueprint-edit-label"}
+         frame.bring_to_front()
+         frame.force_auto_center()
+         frame.focus()
+         local input = frame.add{type="textfield", name = "input", text = get_blueprint_label(bp)}
+         input.focus()
+         local result = "Edit the label text box for this blueprint and press ENTER to confirm"
+         printout(result, pindex)
+      end
+   elseif index == 6 then
+      --Edit the description of this blueprint
+      if not clicked then
+         local result = "Edit the description of this blueprint"
+         printout(result, pindex)
+      else
+         players[pindex].blueprint_menu.edit_description = true
+         local frame = game.get_player(pindex).gui.screen.add{type = "frame", name = "blueprint-edit-description"}
+         frame.bring_to_front()
+         frame.force_auto_center()
+         frame.focus()
+         local input = frame.add{type="textfield", name = "input", text = get_blueprint_description(bp)}
+         input.focus()
+         local result = "Edit the description text box for this blueprint and press ENTER to confirm"
+         printout(result, pindex)
+      end
+   elseif index == 7 then
+      --Create a copy of this blueprint
+      if not clicked then
+         local result = "Create a copy of this blueprint"
+         printout(result, pindex)
+      else
+         p.insert(table.deepcopy(bp))
+         local result = "Blue print copy inserted to inventory"
+         printout(result, pindex)
+      end
+   elseif index == 8 then
+      --Clear this blueprint
+      if not clicked then
+         local result = "Clear this blueprint"
+         printout(result, pindex)
+      else
+         bp.set_stack({name = "blueprint", count = 1})
+         --bp.set_stack(nil)
+         local result = "Blueprint cleared and menu closed"
+         printout(result, pindex)
+         blueprint_menu_close(pindex)
+      end
+   elseif index == 9 then
+      --Export this blueprint as a text string
+      if not clicked then
+         local result = "Export this blueprint as a text string"
+         printout(result, pindex)
+      else
+         players[pindex].blueprint_menu.edit_export = true
+         local frame = game.get_player(pindex).gui.screen.add{type = "frame", name = "blueprint-edit-export"}
+         frame.bring_to_front()
+         frame.force_auto_center()
+         frame.focus()
+         local input = frame.add{type="textfield", name = "input", text = string.sub(stack.export_stack(),2)}
+         input.focus()
+         local result = "Copy the text from this boz using 'CONTROL + A' and then 'CONTROL + C' and then press ENTER to exit"
+         printout(result, pindex)
+      end
+   elseif index == 10 then
+      --Import a text string to save into this blueprint
+      if not clicked then
+         local result = "Import a text string to save into this blueprint"
+         printout(result, pindex)
+      else
+         players[pindex].blueprint_menu.edit_import = true
+         local frame = game.get_player(pindex).gui.screen.add{type = "frame", name = "blueprint-edit-import"}
+         frame.bring_to_front()
+         frame.force_auto_center()
+         frame.focus()
+         local input = frame.add{type="textfield", name = "input"}
+         input.focus()
+         local result = "Paste a copied blueprint text string in this box and then press ENTER to load it"
+         printout(result, pindex)
+      end
+   end
+end
+BLUEPRINT_MENU_LENGTH = 10
+
+function blueprint_menu_open(pindex)
+   if players[pindex].vanilla_mode then
+      return 
+   end
+   --Set the player menu tracker to this menu
+   players[pindex].menu = "blueprint_menu"
+   players[pindex].in_menu = true
+   players[pindex].move_queue = {}
+   
+   --Set the menu line counter to 0
+   players[pindex].blueprint_menu = {
+      index = 0,
+      edit_label = false,
+      edit_description = false,
+      edit_export = false,
+      edit_import = false
+      }
+   
+   --Play sound
+   game.get_player(pindex).play_sound{path = "Open-Inventory-Sound"}
+   
+   --Load menu 
+   blueprint_menu(players[pindex].blueprint_menu.index, pindex, false)
+end
+
+function blueprint_menu_close(pindex, mute_in)
+   local mute = mute_in
+   --Set the player menu tracker to none
+   players[pindex].menu = "none"
+   players[pindex].in_menu = false
+
+   --Set the menu line counter to 0
+   players[pindex].blueprint_menu.index = 0
+   
+   --play sound
+   if not mute then
+      game.get_player(pindex).play_sound{path="Close-Inventory-Sound"}
+   end
+   
+   --Destroy text fields
+   if game.get_player(pindex).gui.screen["blueprint-edit-label"] ~= nil then 
+      game.get_player(pindex).gui.screen["blueprint-edit-label"].destroy()
+   end
+   if game.get_player(pindex).gui.screen["blueprint-edit-description"] ~= nil then 
+      game.get_player(pindex).gui.screen["blueprint-edit-description"].destroy()
+   end
+   if game.get_player(pindex).gui.screen["blueprint-edit-export"] ~= nil then 
+      game.get_player(pindex).gui.screen["blueprint-edit-export"].destroy()
+   end
+   if game.get_player(pindex).gui.screen["blueprint-edit-import"] ~= nil then
+      game.get_player(pindex).gui.screen["blueprint-edit-import"].destroy()
+   end
+   if game.get_player(pindex).opened ~= nil then
+      game.get_player(pindex).opened = nil
+   end
+end
+
+function blueprint_menu_up(pindex)
+   players[pindex].blueprint_menu.index = players[pindex].blueprint_menu.index - 1
+   if players[pindex].blueprint_menu.index < 0 then
+      players[pindex].blueprint_menu.index = 0
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
+   else
+      --Play sound
+      game.get_player(pindex).play_sound{path = "Inventory-Move"}
+   end
+   --Load menu
+   blueprint_menu(players[pindex].blueprint_menu.index, pindex, false)
+end
+
+function blueprint_menu_down(pindex)
+   players[pindex].blueprint_menu.index = players[pindex].blueprint_menu.index + 1
+   if players[pindex].blueprint_menu.index > BLUEPRINT_MENU_LENGTH then
+      players[pindex].blueprint_menu.index = BLUEPRINT_MENU_LENGTH
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
+   else
+      --Play sound
+      game.get_player(pindex).play_sound{path = "Inventory-Move"}
+   end
+   --Load menu
+   blueprint_menu(players[pindex].blueprint_menu.index, pindex, false)
+end
