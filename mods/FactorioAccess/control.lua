@@ -10359,6 +10359,7 @@ script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
       --players[pindex].lag_building_direction = true
       read_hand(pindex)
    end
+   delete_empty_planners_in_inventory(pindex)
    players[pindex].bp_selecting = false
    sync_build_cursor_graphics(pindex)
 end)
@@ -13576,3 +13577,19 @@ function all_ents_are_walkable(pos)
    return true
 end 
 
+function delete_empty_planners_in_inventory(pindex)
+   local inv = game.get_player(pindex).get_main_inventory()
+   local length = #inv
+   for i=1,length,1 do
+      local stack = inv[i]
+      if stack and stack.valid_for_read then
+         if stack.name == "cut-paste-tool" or stack.name == "copy-paste-tool" then 
+            stack.clear()
+         elseif stack.is_deconstruction_item or stack.is_upgrade_item then
+            stack.clear()
+         elseif stack.is_blueprint and stack.is_blueprint_setup() == false then
+            stack.clear()
+         end
+      end
+   end
+end
