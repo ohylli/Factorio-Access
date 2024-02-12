@@ -544,6 +544,7 @@ end
 
 function nudge_key(direction, event)--
    local pindex = event.player_index
+   local p = game.get_player(pindex)
    if not check_for_player(pindex) or players[pindex].menu == "prompt" then
       return 
    end
@@ -554,6 +555,23 @@ function nudge_key(direction, event)--
          local new_pos = offset_position(ent.position,direction,1)
          local temporary_teleported = false
          local actually_teleported = false
+         
+         --Clear the new build location
+         local left_top
+         local right_bottom
+         local width = ent.tile_width
+         local height = ent.tile_height
+         if ent.direction == dirs.east or ent.direction == dirs.west then
+            --Flip width and height. Note: diagonal cases are rounded to north/south cases 
+            height = ent.tile_width
+            width = ent.tile_height
+         end
+         
+         left_top = {x = math.floor(ent.position.x - math.floor(width/2)), y = math.floor(ent.position.y - math.floor(height/2))}
+         left_top = offset_position(left_top,direction,1)
+         right_bottom = {x = math.ceil(left_top.x + width), y = math.ceil(left_top.y + height)}
+         clear_obstacles_in_rectangle(left_top, right_bottom, pindex)
+         
          --First teleport the ent to 0,0 temporarily
          temporary_teleported = ent.teleport({0,0})
          if not temporary_teleported then
@@ -561,16 +579,40 @@ function nudge_key(direction, event)--
             printout({"access.failed-to-nudge"}, pindex)
             return 
          end
+         
          --Now check if the ent can be placed at its new location, and proceed or revert accordingly
          if ent.surface.can_place_entity{name = ent.name, position = new_pos, direction = ent.direction} then
             actually_teleported = ent.teleport(new_pos)
          else
+            --Cannot build in new location, so send it back
             actually_teleported = ent.teleport(old_pos)
             game.get_player(pindex).play_sound{path = "utility/cannot_build"}
-            printout({"access.failed-to-nudge"}, pindex)
+            
+            --Explain build error
+            local result = "Cannot nudge"
+            local build_area = {left_top, right_bottom}
+            local ents_in_area = p.surface.find_entities_filtered{area = build_area, invert = true, type = ENT_TYPES_YOU_CAN_BUILD_OVER}
+            local tiles_in_area = p.surface.find_tiles_filtered{area = build_area, invert = false, name = {"water", "deepwater", "water-green", "deepwater-green", "water-shallow", "water-mud", "water-wube"}}
+            local obstacle_ent_name = nil
+            local obstacle_tile_name = nil
+            --Check for an entity in the way
+            for i, area_ent in ipairs(ents_in_area) do 
+               if area_ent.valid and area_ent.prototype.tile_width and area_ent.prototype.tile_width > 0 and area_ent.prototype.tile_height and area_ent.prototype.tile_height > 0 then
+                  obstacle_ent_name = localising.get(area_ent,pindex)
+               end
+            end
+            
+            --Report obstacles
+            if obstacle_ent_name ~= nil then
+               result = result .. ", " .. obstacle_ent_name .. " in the way."
+            elseif #tiles_in_area > 0 then
+               result = result .. ", water is in the way."
+            end
+            printout(result, pindex)
             return 
          end
          if not actually_teleported then
+            --Failed to teleport
             printout({"access.failed-to-nudge"}, pindex)
             return 
          else
@@ -9455,7 +9497,7 @@ function build_item_in_hand(pindex, free_place_straight_rail)
             
             --Report obstacles
             if obstacle_ent_name ~= nil then
-               result = result .. ", " .. obstacle_ent_name .. " might be in the way."
+               result = result .. ", " .. obstacle_ent_name .. " in the way."
             elseif #tiles_in_area > 0 then
                result = result .. ", water is in the way."
             end
