@@ -6209,12 +6209,14 @@ function move(direction,pindex)
          players[pindex].cursor_pos = offset_position(players[pindex].position, direction,1)
          --Telestep walking sounds
          if players[pindex].tile.previous ~= nil and players[pindex].tile.previous.valid and players[pindex].tile.previous.type == "transport-belt" then
-            game.get_player(pindex).play_sound{path = "utility/metal_walking_sound"}
+            game.get_player(pindex).play_sound{path = "utility/metal_walking_sound", volume_modifier = 1}
          else
             local tile = game.get_player(pindex).surface	.get_tile(new_pos.x, new_pos.y)
             local sound_path = "tile-walking/" .. tile.name
             if game.is_valid_sound_path(sound_path) then
-               game.get_player(pindex).play_sound{path = "tile-walking/" .. tile.name}
+               game.get_player(pindex).play_sound{path = "tile-walking/" .. tile.name, volume_modifier = 1}
+            else
+               game.get_player(pindex).play_sound{path = "player-walk", volume_modifier = 1}
             end
          end
          if not game.get_player(pindex).driving then
