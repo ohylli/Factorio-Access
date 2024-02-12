@@ -12,6 +12,10 @@ production_types = {}
 building_types = {}
 dirs = defines.direction
 
+ENT_NAMES_CLEARED_AS_OBSTACLES = {"tree-01-stump","tree-02-stump","tree-03-stump","tree-04-stump","tree-05-stump","tree-06-stump","tree-07-stump","tree-08-stump","tree-09-stump","small-scorchmark","small-scorchmark-tintable","medium-scorchmark","medium-scorchmark-tintable","big-scorchmark","big-scorchmark-tintable","huge-scorchmark","huge-scorchmark-tintable","rock-big","rock-huge","sand-rock-big"}
+ENT_TYPES_YOU_CAN_WALK_OVER  = {"resource", "transport-belt", "underground-belt", "splitter", "item-entity", "entity-ghost", "heat-pipe", "pipe", "pipe-to-ground", "character", "rail-signal", "flying-text", "highlight-box", "combat-robot", "logistic-robot", "construction-robot", "rocket-silo-rocket-shadow" }
+ENT_TYPES_YOU_CAN_BUILD_OVER = {"resource", "entity-ghost", "flying-text", "highlight-box", "combat-robot", "logistic-robot", "construction-robot", "rocket-silo-rocket-shadow"}
+
 local util = require('util')
 
 local function squared_distance(pos1, pos2)
@@ -3300,7 +3304,8 @@ function read_hand(pindex)
       players[pindex].skip_read_hand = false
       return
    end
-   local cursor_stack=game.get_player(pindex).cursor_stack
+   local cursor_stack = game.get_player(pindex).cursor_stack
+   local cursor_ghost = game.get_player(pindex).cursor_ghost
    if cursor_stack and cursor_stack.valid_for_read then
       if cursor_stack.is_blueprint then
          --Blueprint extra info 
@@ -3338,6 +3343,26 @@ function read_hand(pindex)
          end
          printout(out, pindex)
       end
+   elseif cursor_ghost ~= nil then
+      --Any ghost
+         local out={"access.cursor-description"}
+         table.insert(out,cursor_ghost.localised_name)
+         local build_entity = cursor_ghost.place_result
+         if build_entity and build_entity.supports_direction then
+            table.insert(out,1)
+            table.insert(out,{"access.facing-direction",players[pindex].building_direction})
+         else
+            table.insert(out,0)
+            table.insert(out,"")
+         end
+         table.insert(out,0)
+         local extra = 0
+         if extra > 0 then
+            table.insert(out,cursor_stack.count+extra)
+         else
+            table.insert(out,0)
+         end
+         printout(out, pindex)
    else
       printout({"access.empty_cursor"}, pindex)
    end
@@ -7966,7 +7991,7 @@ script.on_event("mine-area", function(event)
       else
          --Check if it is a remnant ent, clear obstacles
          local ent_is_remnant = false
-         local remnant_names = REMNANT_OBSTACLES
+         local remnant_names = ENT_NAMES_CLEARED_AS_OBSTACLES
          for i,name in ipairs(remnant_names) do 
             if ent.name == name then
                ent_is_remnant = true
@@ -8032,8 +8057,6 @@ function try_to_mine_with_sound(ent,pindex)
    end
 end
 
-REMNANT_OBSTACLES = {"tree-01-stump","tree-02-stump","tree-03-stump","tree-04-stump","tree-05-stump","tree-06-stump","tree-07-stump","tree-08-stump","tree-09-stump","small-scorchmark","small-scorchmark-tintable","medium-scorchmark","medium-scorchmark-tintable","big-scorchmark","big-scorchmark-tintable","huge-scorchmark","huge-scorchmark-tintable","rock-big","rock-huge","sand-rock-big"}
-
 --Mines all trees and rocks and ground items in a selected circular area. Useful when placing structures. Forces mining. laterdo add deleting stumps maybe but they do fade away eventually 
 function clear_obstacles_in_circle(position, radius, pindex)
    local surf = game.get_player(pindex).surface
@@ -8063,7 +8086,7 @@ function clear_obstacles_in_circle(position, radius, pindex)
    end
    
    --Find and mine corpse entities such as building remnants
-   local remnant_ents = surf.find_entities_filtered{position = position, radius = radius, name = REMNANT_OBSTACLES}
+   local remnant_ents = surf.find_entities_filtered{position = position, radius = radius, name = ENT_NAMES_CLEARED_AS_OBSTACLES}
    for i,remnant_ent in ipairs(remnant_ents) do
       if remnant_ent ~= nil and remnant_ent.valid then
          rendering.draw_circle{color = {1, 0, 0},radius = 2,width = 2,target = remnant_ent.position,surface = remnant_ent.surface,time_to_live = 60}
@@ -8122,7 +8145,7 @@ function clear_obstacles_in_rectangle(left_top, right_bottom, pindex)
    end
    
    --Find and mine corpse entities such as building remnants
-   local remnant_ents = surf.find_entities_filtered{area = {left_top, right_bottom}, name = REMNANT_OBSTACLES}
+   local remnant_ents = surf.find_entities_filtered{area = {left_top, right_bottom}, name = ENT_NAMES_CLEARED_AS_OBSTACLES}
    for i,remnant_ent in ipairs(remnant_ents) do
       if remnant_ent ~= nil and remnant_ent.valid then
          rendering.draw_circle{color = {1, 0, 0},radius = 2,width = 2,target = remnant_ent.position,surface = remnant_ent.surface,time_to_live = 60}
@@ -8626,10 +8649,15 @@ script.on_event("click-hand", function(event)
    else
       --Not in a menu
       local stack = game.get_player(pindex).cursor_stack
+      local cursor_ghost = game.get_player(pindex).cursor_ghost
       local ent = get_selected_ent(pindex)
 
       if stack and stack.valid_for_read and stack.valid then
          players[pindex].last_click_tick = event.tick
+      elseif cursor_ghost ~= nil then
+         players[pindex].last_click_tick = event.tick
+         printout("Cannot build the ghost in hand", pindex)
+         return
       else
          return
       end
@@ -8808,9 +8836,10 @@ script.on_event("click-entity", function(event)
    else
       --Not in a menu
       local stack = game.get_player(pindex).cursor_stack
+      local ghost = game.get_player(pindex).cursor_ghost
       local ent = get_selected_ent(pindex)
       
-      if stack and stack.valid_for_read and stack.valid then
+      if ghost or (stack and stack.valid_for_read and stack.valid) then
          return 
       else
          players[pindex].last_click_tick = event.tick
@@ -9193,14 +9222,14 @@ function build_item_in_hand(pindex, free_place_straight_rail)
    if not (stack and stack.valid and stack.valid_for_read) then
       game.get_player(pindex).play_sound{path = "utility/cannot_build"}
       local message =  "Invalid item in hand!"
-	  if game.get_player(pindex).is_cursor_empty() then
-	     local auto_cancel_when_empty = true --laterdo this check may become a toggle-able game setting
-	     if players[pindex].build_lock == true and auto_cancel_when_empty then 
-		    players[pindex].build_lock = false
-		    message = "Build lock disabled, emptied hand."
-	     end
-	  end
-	  printout(message,pindex)
+      if game.get_player(pindex).is_cursor_empty() then
+         local auto_cancel_when_empty = true --laterdo this check may become a toggle-able game setting
+         if players[pindex].build_lock == true and auto_cancel_when_empty then 
+            players[pindex].build_lock = false
+            message = "Build lock disabled, emptied hand."
+         end
+      end
+      printout(message,pindex)
       return
    end
          
@@ -9408,11 +9437,29 @@ function build_item_in_hand(pindex, free_place_straight_rail)
          schedule(2,"read_tile",pindex) 
       else
          --Report errors
-         if players[pindex].build_lock == true then
-            game.get_player(pindex).play_sound{path = "utility/cannot_build"}
-         else
-            game.get_player(pindex).play_sound{path = "utility/cannot_build"}
-            printout("Cannot place that there.", pindex)
+         game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+         if players[pindex].build_lock == false then
+            --Explain build error
+            local result = "Cannot place that there "
+            local build_area = {players[pindex].building_footprint_left_top, players[pindex].building_footprint_right_bottom}
+            local ents_in_area = p.surface.find_entities_filtered{area = build_area, invert = true, type = ENT_TYPES_YOU_CAN_BUILD_OVER}
+            local tiles_in_area = p.surface.find_tiles_filtered{area = build_area, invert = false, name = {"water", "deepwater", "water-green", "deepwater-green", "water-shallow", "water-mud", "water-wube"}}
+            local obstacle_ent_name = nil
+            local obstacle_tile_name = nil
+            --Check for an entity in the way
+            for i, area_ent in ipairs(ents_in_area) do 
+               if area_ent.valid and area_ent.prototype.tile_width and area_ent.prototype.tile_width > 0 and area_ent.prototype.tile_height and area_ent.prototype.tile_height > 0 then
+                  obstacle_ent_name = localising.get(area_ent,pindex)
+               end
+            end
+            
+            --Report obstacles
+            if obstacle_ent_name ~= nil then
+               result = result .. ", " .. obstacle_ent_name .. " might be in the way."
+            elseif #tiles_in_area > 0 then
+               result = result .. ", water is in the way."
+            end
+            printout(result, pindex)
          end
       end
       --Restore the original underground belt chute preview 
@@ -12198,7 +12245,7 @@ function get_entity_part_at_cursor(pindex)
 	 local p = game.get_player(pindex)
 	 local x = players[pindex].cursor_pos.x
 	 local y = players[pindex].cursor_pos.y
-    local excluded_names = {"character", "flying-text", "highlight-box"}
+    local excluded_names = {"character", "flying-text", "highlight-box", "combat-robot", "logistic-robot", "construction-robot", "rocket-silo-rocket-shadow"}
 	 local ents = p.surface.find_entities_filtered{position = {x = x,y = y}, name = excluded_names, invert = true}
 	 local north_same = false
 	 local south_same = false
@@ -13625,7 +13672,7 @@ function reset_bump_stats(pindex)
 end
 
 function all_ents_are_walkable(pos)
-   local ents = game.surfaces[1].find_entities_filtered{position = center_of_tile(pos), radius = 0.4, invert = true, type = {"resource", "transport-belt", "underground-belt", "splitter", "item-entity", "entity-ghost", "heat-pipe", "pipe", "pipe-to-ground", "character", "rail-signal", "flying-text", "highlight-box" }}
+   local ents = game.surfaces[1].find_entities_filtered{position = center_of_tile(pos), radius = 0.4, invert = true, type = ENT_TYPES_YOU_CAN_WALK_OVER}
    for i, ent in ipairs(ents) do 
       return false
    end
