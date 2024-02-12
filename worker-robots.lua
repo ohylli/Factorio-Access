@@ -2222,14 +2222,14 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
          printout(result, pindex)
       end
    elseif index == 8 then
-      --Clear this blueprint
+      --Delete this blueprint
       if not clicked then
-         local result = "Clear this blueprint"
+         local result = "Delete this blueprint"
          printout(result, pindex)
       else
          bp.set_stack({name = "blueprint", count = 1})
-         --bp.set_stack(nil)
-         local result = "Blueprint cleared and menu closed"
+         bp.set_stack(nil)--calls event handler to delete empty planners.
+         local result = "Blueprint deleted and menu closed"
          printout(result, pindex)
          blueprint_menu_close(pindex)
       end
