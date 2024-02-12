@@ -393,8 +393,9 @@ end
 --Brief extra entity info is given here. If the parameter info_comes_after_indexing is false, then this info distinguishes the entity with its description as a new line of the scanner list, such as how assembling machines with different recipes are listed separately.
 function extra_info_for_scan_list(ent,pindex,info_comes_after_indexing)
    local result = ""
-   --Drills
+
    if ent.name ~= "water" and ent.type == "mining-drill"  then
+   --Mining drill products
       local pos = ent.position
       local radius = ent.prototype.mining_drill_radius
       local area = {{pos.x - radius, pos.y - radius}, {pos.x + radius, pos.y + radius}}
@@ -428,7 +429,13 @@ function extra_info_for_scan_list(ent,pindex,info_comes_after_indexing)
       end
    end)
    
-   if ent.type == "container" or ent.type == "logistic-container" then --Chests are identified by whether they contain nothing a specific item, or simply various items
+   if ent.name == "entity-ghost" then
+   --Ghost names
+      result = " of " .. ent.ghost_name
+   end
+   
+   if ent.type == "container" or ent.type == "logistic-container" then 
+   --Chests are identified by whether they contain nothing a specific item, or simply various items
       local itemset = ent.get_inventory(defines.inventory.chest).get_contents()
       local itemtable = {}
       for name, count in pairs(itemset) do
@@ -445,7 +452,7 @@ function extra_info_for_scan_list(ent,pindex,info_comes_after_indexing)
          result = result .. " with various items "
       end
    elseif ent.type == "unit-spawner" then
-      --Group by pollution level
+   --Group spawners by pollution level
       if ent.absorbed_pollution > 0 then
          result = " polluted lightly "
          if ent.absorbed_pollution > 99 then
@@ -468,8 +475,10 @@ function extra_info_for_scan_list(ent,pindex,info_comes_after_indexing)
    end
    
    if info_comes_after_indexing == true and ent.train ~= nil and ent.train.valid then
+   --Train name for train vehicles
       result = result .. " of train " .. get_train_name(ent.train)
    elseif ent.name == "character" then
+   --Character names 
       local p = ent.player
       local p2 = ent.associated_player
       if p ~= nil and p.valid and p.name ~= nil and p.name ~= "" then
@@ -484,19 +493,21 @@ function extra_info_for_scan_list(ent,pindex,info_comes_after_indexing)
          result = result .. " X "
       end
    elseif ent.name == "character-corpse" then
+   --Character corpse info
       if ent.character_corpse_player_index == pindex then
          result = result .. " of your character "
       elseif ent.character_corpse_player_index ~= nil then
          result = result .. " of another character "
       end
    elseif info_comes_after_indexing == true and ent.name == "train-stop" then
+   --Train stop name 
       result = result .. " " .. ent.backer_name
    elseif ent.name == "forest" then
+   --Forest type by density
       result = result .. classify_forest(ent.position,pindex,true)
    elseif ent.name == "roboport" then
+   --Roboport network name 
       result = result .. " of network " .. get_network_name(ent)
-   elseif ent.type == "spider-vehicle" then
-      result = result .. " labelled " .. ent.entity_label
    end
    
    return result
@@ -725,6 +736,7 @@ end
 
 --Usually called when the cursor find an entity, gives its name and key information.
 function ent_info(pindex, ent, description)
+   local p = game.get_player(pindex)
    local result = ent.name
    if game.players[pindex].name == "Crimso" then
       result = result .. " " .. ent.type .. " "
@@ -792,7 +804,22 @@ function ent_info(pindex, ent, description)
             result = result .. "and other items "
          end
       end
-      
+      if ent.type == "logistic-container" then
+         local network = ent.surface.find_logistic_network_by_position(ent.position, ent.force)
+         if network == nil then
+            local nearest_roboport = find_nearest_roboport(ent.surface, ent.position, 5000)
+            if nearest_roboport == nil then
+               result = result .. ", not in a network, no networks found within 5000 tiles"
+            else
+               local dist = math.ceil(util.distance(ent.position, nearest_roboport.position) - 25)
+               local dir = direction_lookup(get_direction_of_that_from_this(nearest_roboport.position, ent.position))
+               result = result .. ", not in a network, nearest network " .. nearest_roboport.backer_name .. " is about " .. dist .. " to the " .. dir
+            end
+         else
+            local network_name = network.cells[1].owner.backer_name 
+            result = result .. ", in network" .. network_name
+         end
+      end 
    end  
    --Explain the contents of a pipe or storage tank or etc.
    if ent.type == "pipe" or ent.type == "pipe-to-ground" or ent.type == "storage-tank" or ent.type == "pump" or ent.name == "boiler" or ent.name == "heat-exchanger" or ent.type == "generator" then
@@ -1201,8 +1228,6 @@ function ent_info(pindex, ent, description)
       local cell = ent.logistic_cell
       local network = ent.logistic_cell.logistic_network
       result = result .. " of network " .. get_network_name(ent) .. "," .. roboport_contents_info(ent)
-   elseif ent.type == "spider-vehicle" then
-      result = result .. " labelled " .. ent.entity_label
    end
    --Give drop position (like for inserters)
    if ent.drop_position ~= nil then
@@ -1274,7 +1299,7 @@ function ent_info(pindex, ent, description)
          result = result .. ", Out of Fuel "
       end
    end
-
+   --Explain connected status 
    if ent.prototype.electric_energy_source_prototype ~= nil and ent.is_connected_to_electric_network() == false then
       result = result .. " Not Connected"
    elseif ent.prototype.electric_energy_source_prototype ~= nil and ent.energy == 0 and ent.type ~= "solar-panel" then
@@ -1314,7 +1339,7 @@ function ent_info(pindex, ent, description)
       elseif modules.get_item_count() > 2 then
 	     result = result .. " with " .. modules[1].name .. " and " .. modules[2].name .. " and other modules "
       end
-   elseif ent.name == "nuclear-reactor" or ent.name == "heat-pipe" or ent.name == "heat-exchanger" then
+   elseif ent.temperature ~= nil and ent.name ~= "heat-pipe" then --ent.name == "nuclear-reactor" or ent.name == "heat-pipe" or ent.name == "heat-exchanger" then
       result = result .. ", temperature " .. math.floor(ent.temperature) .. " degrees C "
 	  if ent.name == "nuclear-reactor" then
 	     if ent.temperature > 900 then
@@ -1328,7 +1353,102 @@ function ent_info(pindex, ent, description)
    elseif ent.name == "item-on-ground" then
       result = result .. ", " .. ent.stack.name 
    end
+   --Explain heat connection neighbors
+   if ent.prototype.heat_buffer_prototype ~= nil then
+      result = result .. " connects "
+      local con_targets = get_heat_connection_target_positions(ent.name, ent.position, ent.direction)
+      local con_count = 0
+      local con_counts = {0,0,0,0,0,0,0,0}
+      con_counts[dirs.north+1] = 0
+      con_counts[dirs.south+1] = 0
+      con_counts[dirs.east+1]  = 0
+      con_counts[dirs.west+1]  = 0
+      if #con_targets > 0 then
+         for i, con_target_pos in ipairs(con_targets) do 
+            --For each heat connection target position
+            rendering.draw_circle{color = {1.0, 0.0, 0.5},radius = 0.1,width = 2,target = con_target_pos, surface = ent.surface, time_to_live = 30}
+            local target_ents = ent.surface.find_entities_filtered{position = con_target_pos}
+            for j, target_ent in ipairs(target_ents) do 
+               if target_ent.valid and #get_heat_connection_positions(target_ent.name, target_ent.position, target_ent.direction) > 0 then
+                  for k, spot in ipairs(get_heat_connection_positions(target_ent.name, target_ent.position, target_ent.direction)) do 
+                     --For each heat connection of the found target entity 
+                     rendering.draw_circle{color = {1.0, 1.0, 0.5},radius = 0.2,width = 2,target = spot, surface = ent.surface, time_to_live = 30}
+                     if util.distance(con_target_pos,spot) < 0.2 then
+                        --For each match
+                        rendering.draw_circle{color = {0.5, 1.0, 0.5},radius = 0.3,width = 2,target = spot, surface = ent.surface, time_to_live = 30}
+                        con_count = con_count + 1
+                        local con_dir = get_direction_of_that_from_this(con_target_pos,ent.position)
+                        if con_count > 1 then
+                           result = result .. " and "
+                        end
+                        result = result .. direction_lookup(con_dir) 
+                     end
+                  end 
+               end
+            end
+         end
+      end
+      if con_count == 0 then
+         result = result .. " to nothing "
+      end
+      if ent.name == "heat-pipe" then --For this ent in particular, read temp after direction
+         result = result .. ", temperature " .. math.floor(ent.temperature) .. " degrees C "
+      end
+   end 
    return result
+end
+
+function get_heat_connection_positions(ent_name, ent_position, ent_direction)
+   local pos = ent_position
+   local positions = {}
+   if ent_name == "heat-pipe" then
+      table.insert(positions, {x = pos.x, y = pos.y})
+   elseif ent_name == "heat-exchanger" then
+      table.insert(positions, offset_position(pos, rotate_180(ent_direction), 0.5))
+   elseif ent_name == "nuclear-reactor" then
+      table.insert(positions, {x = pos.x-2, y = pos.y-2})
+      table.insert(positions, {x = pos.x-0, y = pos.y-2})
+      table.insert(positions, {x = pos.x+2, y = pos.y-2})
+      
+      table.insert(positions, {x = pos.x-2, y = pos.y-0})
+      table.insert(positions, {x = pos.x+2, y = pos.y-0})
+      
+      table.insert(positions, {x = pos.x-2, y = pos.y+2})
+      table.insert(positions, {x = pos.x-0, y = pos.y+2})
+      table.insert(positions, {x = pos.x+2, y = pos.y+2})
+   end 
+   return positions 
+end
+
+function get_heat_connection_target_positions(ent_name, ent_position, ent_direction)
+   local pos = ent_position
+   local positions = {}
+   if ent_name == "heat-pipe" then
+      table.insert(positions, {x = pos.x-1, y = pos.y-0})
+      table.insert(positions, {x = pos.x+1, y = pos.y-0})
+      table.insert(positions, {x = pos.x-0, y = pos.y-1})
+      table.insert(positions, {x = pos.x-0, y = pos.y+1})
+   elseif ent_name == "heat-exchanger" then
+      table.insert(positions, offset_position(pos, rotate_180(ent_direction), 1.5))
+   elseif ent_name == "nuclear-reactor" then
+      table.insert(positions, {x = pos.x-2, y = pos.y-3})
+      table.insert(positions, {x = pos.x-0, y = pos.y-3})
+      table.insert(positions, {x = pos.x+2, y = pos.y-3})
+      
+      table.insert(positions, {x = pos.x-3, y = pos.y-2})
+      table.insert(positions, {x = pos.x+3, y = pos.y-2})
+      
+      table.insert(positions, {x = pos.x-3, y = pos.y-0})
+      table.insert(positions, {x = pos.x+3, y = pos.y-0})
+      
+      table.insert(positions, {x = pos.x-3, y = pos.y+2})
+      table.insert(positions, {x = pos.x+3, y = pos.y+2})
+      
+      table.insert(positions, {x = pos.x-2, y = pos.y+3})
+      table.insert(positions, {x = pos.x-0, y = pos.y+3})
+      table.insert(positions, {x = pos.x+2, y = pos.y+3}) 
+   end 
+   return positions 
 end
 
 --Explain whether the belt is some type of corner or sideloading junction or etc.
@@ -2878,11 +2998,18 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
       end
       printout(start_phrase .. players[pindex].building.index .. ", " .. building_sector.inventory[players[pindex].building.index], pindex)
    elseif building_sector.name == "Fluid" then 
-      if players[pindex].building.ent ~= nil and players[pindex].building.ent.valid and players[pindex].building.ent.type == "fluid-turret" and players[pindex].building.index ~= 1then
+      if players[pindex].building.ent ~= nil and players[pindex].building.ent.valid and players[pindex].building.ent.type == "fluid-turret" and players[pindex].building.index ~= 1 then
          --Prevent fluid turret crashes
          players[pindex].building.index = 1
       end
       local box = building_sector.inventory
+      if #box == 0 then
+         printout(start_phrase .. "No fluid" , pindex)
+         return
+      elseif players[pindex].building.index > #box or players[pindex].building.index == 0 then
+         players[pindex].building.index = 1
+         game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
+      end
       local capacity = box.get_capacity(players[pindex].building.index)
       local type = box.get_prototype(players[pindex].building.index).production_type
       local fluid = box[players[pindex].building.index]
@@ -3147,17 +3274,6 @@ function read_inventory_slot(pindex, start_phrase_in)
       if stack.health < 1 then
          start_phrase = start_phrase .. " damaged "
       end
-      if stack.name == "spidertron-remote" then
-if stack.connected_entity == nil then
-         start_phrase = start_phrase .. " unlinked "
-else
-if stack.connected_entity.entity_label == nil then
-         start_phrase = start_phrase .. " an unlabelled "
-else
-         start_phrase = start_phrase .. stack.connected_entity.entity_label 
-end
-      end
-end
       printout(start_phrase .. localising.get(stack,pindex) .. " x " .. stack.count .. " " .. stack.prototype.subgroup.name , pindex)
    else
       printout(start_phrase .. "Empty Slot",pindex)
@@ -3174,18 +3290,6 @@ function read_hand(pindex)
       if cursor_stack.is_blueprint then
          --Blueprint extra info 
          printout(get_blueprint_info(cursor_stack,true),pindex)
-      elseif cursor_stack.name == "spidertron-remote" then
-local start_phrase = ""
-if cursor_stack.connected_entity == nil then
-         start_phrase = start_phrase .. " unlinked "
-else
-if cursor_stack.connected_entity.entity_label == nil then
-         start_phrase = start_phrase .. " an unlabelled "
-else
-         start_phrase = start_phrase .. cursor_stack.connected_entity.entity_label 
-end
-      end
-      printout(start_phrase .. localising.get(cursor_stack,pindex) .. " x " .. cursor_stack.count .. " " .. cursor_stack.prototype.subgroup.name , pindex)
       else
          --Any other valid item
          local out={"access.cursor-description"}
@@ -3374,7 +3478,7 @@ function target(pindex)
    end
 end
 
---Move the mouse cursor to the correct pixel on the screen **todo figure out how to center mouse cursor on tile during smooth walk (the player and the camera are both not tile aligned. The current solution is to teleport the player to the tile center when cursor mode enables)
+--Move the mouse cursor to the correct pixel on the screen 
 function move_mouse_cursor(position,pindex)
    if players[pindex].vanilla_mode or game.get_player(pindex).game_view_settings.update_entity_selection == true then
       return
@@ -4173,7 +4277,7 @@ function build_preview_checks_info(stack, pindex)
       --Prepare result string 
       if relevant_fluid_north ~= nil or relevant_fluid_east ~= nil or relevant_fluid_south ~= nil or relevant_fluid_west ~= nil then
          local count = 0
-         result = result .. ", pipe connects to "
+         result = result .. ", pipe can connect to "
          
          if relevant_fluid_north ~= nil then
             result = result .. relevant_fluid_north .. " at north, "
@@ -4210,6 +4314,40 @@ function build_preview_checks_info(stack, pindex)
       
    end
    
+   --For heat pipes, preview the connection directions
+   if ent_p.type == "heat-pipe" then 
+      result = result .. " heat pipe can connect "
+      local con_targets = get_heat_connection_target_positions("heat-pipe", pos, dirs.north)
+      local con_count = 0
+      if #con_targets > 0 then
+         for i, con_target_pos in ipairs(con_targets) do 
+            --For each heat connection target position
+            rendering.draw_circle{color = {1.0, 0.0, 0.5},radius = 0.1,width = 2,target = con_target_pos, surface = p.surface, time_to_live = 30}
+            local target_ents = p.surface.find_entities_filtered{position = con_target_pos}
+            for j, target_ent in ipairs(target_ents) do 
+               if target_ent.valid and #get_heat_connection_positions(target_ent.name, target_ent.position, target_ent.direction) > 0 then
+                  for k, spot in ipairs(get_heat_connection_positions(target_ent.name, target_ent.position, target_ent.direction)) do 
+                     --For each heat connection of the found target entity 
+                     rendering.draw_circle{color = {1.0, 1.0, 0.5},radius = 0.2,width = 2,target = spot, surface = p.surface, time_to_live = 30}
+                     if util.distance(con_target_pos,spot) < 0.2 then
+                        --For each match
+                        rendering.draw_circle{color = {0.5, 1.0, 0.5},radius = 0.3,width = 2,target = spot, surface = p.surface, time_to_live = 30}
+                        con_count = con_count + 1
+                        local con_dir = get_direction_of_that_from_this(con_target_pos,pos)
+                        if con_count > 1 then
+                           result = result .. " and "
+                        end
+                        result = result .. direction_lookup(con_dir) 
+                     end
+                  end 
+               end
+            end
+         end
+      end
+      if con_count == 0 then
+         result = result .. " to nothing "
+      end
+   end 
    --For electric poles, report the directions of up to 5 wire-connectible electric poles that can connect
    if ent_p.type == "electric-pole" then
      local pole_dict = surf.find_entities_filtered{type = "electric-pole", position = pos, radius = ent_p.max_wire_distance}
@@ -4275,6 +4413,24 @@ function build_preview_checks_info(stack, pindex)
          end
       end
    end
+   
+   --For logistic chests, list whether there is a network nearby
+   if ent_p.type == "logistic-container" then
+      local network = p.surface.find_logistic_network_by_position(pos, p.force)
+      if network == nil then
+         local nearest_roboport = find_nearest_roboport(p.surface, pos, 5000)
+         if nearest_roboport == nil then
+            result = result .. ", not in a network, no networks found within 5000 tiles"
+         else
+            local dist = math.ceil(util.distance(pos, nearest_roboport.position) - 25)
+            local dir = direction_lookup(get_direction_of_that_from_this(nearest_roboport.position, pos))
+            result = result .. ", not in a network, nearest network " .. nearest_roboport.backer_name .. " is about " .. dist .. " to the " .. dir
+         end
+      else
+         local network_name = network.cells[1].owner.backer_name 
+         result = result .. ", in network" .. network_name
+      end
+   end 
    
    --For all electric powered entities, note whether powered, and from which direction. Otherwise report the nearest power pole.
    if ent_p.electric_energy_source_prototype ~= nil then
@@ -4643,6 +4799,7 @@ function initialize(player)
    faplayer.last_pickup_tick = faplayer.last_pickup_tick or 1
    faplayer.last_item_picked_up = faplayer.last_item_picked_up or nil
    faplayer.skip_read_hand = faplayer.skip_read_hand or false
+   faplayer.tutorial = faplayer.tutorial or nil 
 
    faplayer.preferences = {
       building_inventory_row_length = building_inventory_row_length or 8,
@@ -4791,6 +4948,14 @@ spider = nil
       index = 0,
       renaming = false
    }
+   
+   faplayer.blueprint_menu = faplayer.blueprint_menu or {
+      index = 0,
+      edit_label = false,
+      edit_description = false,
+      edit_export = false,
+      edit_import = false
+   }
 
    if table_size(faplayer.mapped) == 0 then
       player.force.rechart()
@@ -4834,7 +4999,7 @@ script.on_event(defines.events.on_player_changed_position,function(event)
 
          --Build lock building + rotate belts in hand unless cursor mode
          local stack = p.cursor_stack
-         if players[pindex].build_lock and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and stack.prototype.place_result.type == "transport-belt" then 
+         if players[pindex].build_lock and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and (stack.prototype.place_result.type == "transport-belt" or stack.name == "rail") then 
             turn_to_cursor_direction_cardinal(pindex)
             players[pindex].building_direction = players[pindex].player_direction
             build_item_in_hand(pindex)--build extra belt when turning
@@ -4873,7 +5038,7 @@ script.on_event(defines.events.on_player_changed_position,function(event)
          if ent ~= nil and ent.valid then
             cursor_highlight(pindex, ent, nil)
             p.selected = ent
-            p.play_sound{path = "Close-Inventory-Sound", volume_modifier = 0.75}--***laterdo unique sound to note a detected ent 
+            p.play_sound{path = "Close-Inventory-Sound", volume_modifier = 0.75}
          else 
             cursor_highlight(pindex, nil, nil)
             p.selected = nil
@@ -5104,6 +5269,8 @@ function menu_cursor_up(pindex)
       train_stop_menu_up(pindex)
    elseif players[pindex].menu == "roboport_menu" then
       roboport_menu_up(pindex)
+   elseif players[pindex].menu == "blueprint_menu" then
+      blueprint_menu_up(pindex)
    end
 end
 
@@ -5330,6 +5497,8 @@ function menu_cursor_down(pindex)
       train_stop_menu_down(pindex)
    elseif players[pindex].menu == "roboport_menu" then
       roboport_menu_down(pindex)
+   elseif players[pindex].menu == "blueprint_menu" then
+      blueprint_menu_down(pindex)
    end
 end
 
@@ -5795,10 +5964,17 @@ function on_tick(event)
             aim_gun_at_nearest_enemy(pindex,enemy)
          end
       end
-   elseif event.tick % 300 == 14 then
+   elseif event.tick % 90 == 13 then
       for pindex, player in pairs(players) do
-         --Fix running speed bug (toggle walk aldo fixes it)
+         --Fix running speed bug (toggle walk also fixes it)
          fix_walk(pindex)
+      end
+   elseif event.tick % 1200 == 14 then
+      for pindex, player in pairs(players) do
+         --Tutorial reminder every 20 seconds until you open it
+         if players[pindex].tutorial == nil then
+            printout("Press 'H' to open the tutorial", pindex)
+         end
       end
    end
 end
@@ -5821,7 +5997,7 @@ function update_menu_visuals()
             update_custom_GUI_sprite("item.repair-pack", 3, pindex)
          elseif player.menu == "crafting_queue" then
             update_overhead_sprite("item.repair-pack",2,1.25,pindex)
-            update_custom_GUI_sprite("item.repair-pack", 3, pindex)
+            update_custom_GUI_sprite("item.repair-pack", 3, pindex, "utility.clock")
          elseif player.menu == "travel" then
             update_overhead_sprite("utility.downloading_white",4,1.25,pindex)
             update_custom_GUI_sprite("utility.downloading_white", 3, pindex)
@@ -5843,6 +6019,9 @@ function update_menu_visuals()
          elseif player.menu == "roboport_menu" then
             update_overhead_sprite("item.roboport",2,1.25,pindex)
             update_custom_GUI_sprite("item.roboport", 3, pindex)
+         elseif player.menu == "blueprint_menu" then
+            update_overhead_sprite("item.blueprint",2,1.25,pindex)
+            update_custom_GUI_sprite("item.blueprint", 3, pindex)
          elseif player.menu == "pump" then
             update_overhead_sprite("item.offshore-pump",2,1.25,pindex)
             update_custom_GUI_sprite("item.offshore-pump", 3, pindex)
@@ -7141,6 +7320,8 @@ function close_menu_resets(pindex)
       train_stop_menu_close(pindex, false)
    elseif players[pindex].menu == "roboport_menu" then
       roboport_menu_close(pindex)
+   elseif players[pindex].menu == "blueprint_menu" then
+      blueprint_menu_close(pindex)
    end
    
    --Stop any enabled mouse entity selection
@@ -8357,16 +8538,18 @@ script.on_event("click-menu", function(event)
          train_stop_menu(players[pindex].train_stop_menu.index, pindex, true)
       elseif players[pindex].menu == "roboport_menu" then
          roboport_menu(players[pindex].roboport_menu.index, pindex, true)
+      elseif players[pindex].menu == "blueprint_menu" then
+         blueprint_menu(players[pindex].blueprint_menu.index, pindex, true)
       end      
    end
 end)
 
 --Different behavior when you click on an inventory slot depending on the item in hand and the item in the slot (WIP)
-function player_inventory_click(pindex, click_is_left_in)
+function player_inventory_click(pindex, left_click)
    --****todo finish this to include all interaction cases, then generalize it to building inventories . 
    --Use code from above and then replace above clutter with calls to this.
    --Use stack.transfer_stack(other_stack)
-   local click_is_left = click_is_left_in or true
+   local click_is_left = left_click or true
    local p = game.get_player(pindex)
    local stack_cur = p.cursor_stack
    local stack_inv = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
@@ -8533,22 +8716,8 @@ script.on_event("click-hand-right", function(event)
       --If something is in hand...     
       if stack.prototype ~= nil and (stack.prototype.place_result ~= nil or stack.prototype.place_as_tile_result ~= nil) and stack.name ~= "offshore-pump" then
          --Laterdo here: build as ghost 
-      elseif stack.is_blueprint and stack.is_blueprint_setup() then
-         --Paste blueprint 
-         players[pindex].last_held_blueprint = stack
-         paste_blueprint(pindex)
-      elseif stack.is_blueprint and not stack.is_blueprint_setup() then
-         --Select blueprint
-         local pex = players[pindex]
-         if pex.bp_selecting ~= true then
-            pex.bp_selecting = true
-            pex.bp_select_point_1 = pex.cursor_pos
-            printout("Started blueprint selection at " .. math.floor(pex.cursor_pos.x) .. "," .. math.floor(pex.cursor_pos.y) , pindex)
-         else
-            pex.bp_selecting = false
-            pex.bp_select_point_2 = pex.cursor_pos
-            create_blueprint(pindex, pex.bp_select_point_1, pex.bp_select_point_2)
-         end
+      elseif stack.is_blueprint then
+         blueprint_menu_open(pindex)
       elseif stack.is_deconstruction_item then
          --Cancel deconstruction 
          local pex = players[pindex]
@@ -9328,9 +9497,6 @@ script.on_event("transfer-one-stack", function(event)
             --Transfer stack from building to player inventory
 			local stack = players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index]
             if stack and stack.valid and stack.valid_for_read then
-if players[pindex].menu == "vehicle" and game.get_player(pindex).opened.type == "spider-vehicle" and stack.prototype.place_as_equipment_result ~= nil  then
-return
-else
                if game.get_player(pindex).can_insert(stack) then
                   game.get_player(pindex).play_sound{path = "utility/inventory_move"}
                   local result = stack.name
@@ -9346,7 +9512,6 @@ else
 				  printout(result,pindex)
                end
             end
-end
          else
             local offset = 1
             if players[pindex].building.recipe_list ~= nil then
@@ -9356,9 +9521,6 @@ end
 		       --Transfer stack from player inventory to building
                local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
                if stack and stack.valid and stack.valid_for_read then
-if players[pindex].menu == "vehicle" and game.get_player(pindex).opened.type == "spider-vehicle" and stack.prototype.place_as_equipment_result ~= nil  then
-return
-else
                   if players[pindex].building.ent.can_insert(stack) then
                      game.get_player(pindex).play_sound{path = "utility/inventory_move"}
                      local result = stack.name
@@ -9374,7 +9536,6 @@ else
             end
          end
       end
-end
    end
 end)
 
@@ -9388,24 +9549,14 @@ script.on_event("equip-item", function(event)
    local result = ""
    if stack ~= nil and stack.valid_for_read and stack.valid then
       --Equip item grabbed in hand, for selected menus
-      if not players[pindex].in_menu or players[pindex].menu == "inventory" or  (players[pindex].menu == "vehicle" and game.get_player(pindex).opened.type == "spider-vehicle") then
+      if not players[pindex].in_menu or players[pindex].menu == "inventory" then
          result = equip_it(stack,pindex)
-     end
+      end
    elseif players[pindex].menu == "inventory" then
       --Equip the selected item from its inventory slot directly
       local stack = game.get_player(pindex).get_main_inventory()[players[pindex].inventory.index]
       result = equip_it(stack,pindex)
-         elseif players[pindex].menu == "vehicle" and game.get_player(pindex).opened.type == "spider-vehicle" then
-      --Equip the selected item from its inventory slot directly
-local stack
-         if players[pindex].building.sector <= #players[pindex].building.sectors then
-      local invs = defines.inventory
-stack = game.get_player(pindex).opened.get_inventory(invs.spider_trunk)[players[pindex].building.index]
-else
-               stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
-end
-      result = equip_it(stack,pindex)
-
+      
    elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then
       --Something will be smart-inserted so do nothing here
       return
@@ -9673,17 +9824,7 @@ script.on_event("menu-clear-filter", function(event)
          if players[pindex].building.sector <= #players[pindex].building.sectors then
             if stack and stack.valid_for_read and stack.valid and stack.count > 0 then
                local iName = players[pindex].building.sectors[players[pindex].building.sector].name
-               if iName ~= "Fluid" and iName ~= "Filters" then               
-                  -- local building = players[pindex].building
-                  -- local target_stack = building.sectors[building.sector].inventory[building.index]
-                  -- if target_stack and target_stack.valid_for_read and target_stack.transfer_stack{name=stack.name} then--****todo relocate this transfer functionality to Z key.
-                      -- printout("Inserted 1 " .. stack.name, pindex)
-                     -- stack.count = stack.count - 1
-                  -- else
-                     -- printout("Cannot insert " .. stack.name .. " into " .. players[pindex].building.sectors[players[pindex].building.sector].name, pindex)
-                  -- end
-               
-               elseif iName == "Filters" and players[pindex].item_selection == false and players[pindex].building.index < #players[pindex].building.sectors[players[pindex].building.sector].inventory then 
+               if iName == "Filters" and players[pindex].item_selection == false and players[pindex].building.index < #players[pindex].building.sectors[players[pindex].building.sector].inventory then 
                   players[pindex].building.ent.set_filter(players[pindex].building.index, nil)
                   players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index] = "No filter selected."
                   printout("Filter cleared", pindex)
@@ -9706,161 +9847,167 @@ script.on_event("read-entity-status", function(event)
       return
    end
    local ent = get_selected_ent(pindex)
+   if not ent then
+      return
+   end
    local stack = game.get_player(pindex).cursor_stack
    if players[pindex].in_menu then
       return
-   elseif ent then
-      --Print out the status of a machine, if it exists.
-      local result = ""
-      local ent_status_id = ent.status
-      local ent_status_text = ""
-      local status_lookup = into_lookup(defines.entity_status)
-      if ent.name == "cargo-wagon" then
-         --Instead of status, read contents   
-         result = " " .. cargo_wagon_top_contents_info(ent)
-      elseif ent.name == "fluid-wagon" then
-         --Instead of status, read contents   
-         result =  " " .. fluid_contents_info(ent)
-      elseif ent_status_id ~= nil then
-         --Print status if it exists
-         ent_status_text = status_lookup[ent_status_id]
-         result =  " " .. ent_status_text
-      else--There is no status
-	      --When there is no status, for entities with fuel inventories, read that out instead. This is typical for vehicles.
-	      if ent.get_fuel_inventory() ~= nil then
-		      result = " " .. fuel_inventory_info(ent)
-		   elseif ent.type == "electric-pole" then
-		    --For electric poles with no power flow, report the nearest electric pole with a power flow.
-            if get_electricity_satisfaction(ent) > 0 then
-               result = get_electricity_satisfaction(ent) .. " percent network satisfaction, with " .. get_electricity_flow_info(ent)
-            else
-               result = "No power, " .. report_nearest_supplied_electric_pole(ent)
-            end
-         else
-            result = "No status."
-         end
-      end
-      --For working or normal entities, give some extra info about specific entities.
-      if result == "" then
-         result = "result error"
-      end
-      
-      --For working or normal entities, give some extra info about specific entities in terms of speeds or bonuses.
-      local list = defines.entity_status
-      if ent.status ~= nil and ent.status ~= list.no_power and ent.status ~= list.no_power and ent.status ~= list.no_fuel then
-         if ent.type == "inserter" then --items per minute based on rotation speed and the STATED hand capacity
-            local cap = ent.force.inserter_stack_size_bonus + 1
-            if ent.name == "stack-inserter" or ent.name == "stack-filter-inserter" then
-               cap = ent.force.stack_inserter_capacity_bonus + 1
-            end
-            local rate = string.format(" %.1f ", cap * ent.prototype.inserter_rotation_speed * 57.5) 
-            result = result .. ", can move " .. rate .. " items per second, with a hand capacity of " .. cap
-         end
-         if ent.prototype ~= nil and ent.prototype.belt_speed ~= nil and ent.prototype.belt_speed > 0 then --items per minute by simple reading
-            if ent.name == "splitter" or ent.name == "fast-splitter" or ent.name == "express splitter" then
-               result = result .. ", can process " .. math.floor(ent.prototype.belt_speed * 480 * 2) .. " items per second"
-            else 
-               result = result .. ", can move " .. math.floor(ent.prototype.belt_speed * 480) .. " items per second"
-            end
-         end
-         if ent.type == "assembling-machine" or ent.type == "furnace" then --Crafting cycles per minute based on recipe time and the STATED craft speed ; laterdo maybe extend this to all "crafting machine" types?
-            local progress = ent.crafting_progress
-            local speed = ent.crafting_speed
-            local recipe_time = 0
-            local cycles = 0-- crafting cycles completed per minute for this recipe
-            if ent.get_recipe() ~= nil and ent.get_recipe().valid then
-               recipe_time = ent.get_recipe().energy
-               cycles = 60 / recipe_time * speed
-            end
-            local cycles_string = string.format(" %.2f ", cycles)
-            if cycles == math.floor(cycles) then
-               cycles_string = math.floor(cycles)
-            end
-            local speed_string = string.format(" %.2f ", speed)
-            if speed == math.floor(speed) then
-               speed_string = math.floor(speed)
-            end
-            if cycles < 10 then --more than 6 seconds to craft
-               result = result .. ", recipe progress " .. math.floor(progress * 100) .. " percent "
-            end
-            if cycles > 0 then
-               result = result .. ", can complete " .. cycles_string .. " recipe cycles per minute "
-            end
-            result = result .. ", with a crafting speed of " .. speed_string .. ", at " .. math.floor(100 * (1 + ent.speed_bonus) + 0.5) .. " percent "
-            if ent.productivity_bonus ~= 0 then
-               result = result .. ", with productivity bonus " .. math.floor(100 * (0 + ent.productivity_bonus) + 0.5) .. " percent "
-            end
-         elseif ent.type == "mining-drill" then
-            result = result .. ", producing " .. string.format(" %.2f ",ent.prototype.mining_speed * 60 * (1 + ent.speed_bonus)) .. " items per minute "
-            if ent.speed_bonus ~= 0 then
-               result = result .. ", with speed " .. math.floor(100 * (1 + ent.speed_bonus) + 0.5) .. " percent " 
-            end
-            if ent.productivity_bonus ~= 0 then
-               result = result .. ", with productivity bonus " .. math.floor(100 * (0 + ent.productivity_bonus) + 0.5) .. " percent "
-            end 
-         elseif ent.name == "lab" then
-            if ent.speed_bonus ~= 0 then
-               result = result .. ", with speed " .. math.floor(100 * (1 + ent.force.laboratory_speed_modifier * (1 + (ent.speed_bonus - ent.force.laboratory_speed_modifier))) + 0.5) .. " percent " --laterdo fix bug**
-               --game.get_player(pindex).print(result)
-            end
-            if ent.productivity_bonus ~= 0 then
-               result = result .. ", with productivity bonus " .. math.floor(100 * (0 + ent.productivity_bonus + ent.force.laboratory_productivity_bonus) + 0.5) .. " percent "
-            end
-         else --All other entities with the an applicable status
-            if ent.speed_bonus ~= 0 then
-               result = result .. ", with speed " .. math.floor(100 * (1 + ent.speed_bonus) + 0.5) .. " percent "
-            end
-            if ent.productivity_bonus ~= 0 then
-               result = result .. ", with productivity bonus " .. math.floor(100 * (0 + ent.productivity_bonus) + 0.5) .. " percent "
-            end
-         end
-         --laterdo maybe pump speed?
-      end
-            
-      --Entity power usage
-      local power_rate = (1 + ent.consumption_bonus)
-      local drain = ent.electric_drain
-      if drain ~= nil then
-         drain = drain * 60
-      else
-         drain = 0
-      end
-      local uses_energy = false
-      if drain > 0 or (ent.prototype ~= nil and ent.prototype.max_energy_usage ~= nil and ent.prototype.max_energy_usage > 0) then
-         uses_energy = true
-      end
-      if ent.status ~= nil and uses_energy and ent.status == list.working then
-         result = result .. ", consuming " .. get_power_string(ent.prototype.max_energy_usage * 60 * power_rate + drain)
-      elseif ent.status ~= nil and uses_energy and ent.status == list.no_power or ent.status == list.low_power then
-         result = result .. ", consuming less than " .. get_power_string(ent.prototype.max_energy_usage * 60 * power_rate + drain)
-      elseif ent.status ~= nil and uses_energy or (ent.prototype ~= nil and ent.prototype.max_energy_usage ~= nil and ent.prototype.max_energy_usage > 0) then
-         result = result .. ", idle and consuming " .. get_power_string(drain)
-      end
-      if uses_energy and ent.prototype.burner_prototype ~= nil then
-         result = result .. " as burner fuel "
-      end
-      
-      --Entity Health 
-      if ent.is_entity_with_health and ent.get_health_ratio() == 1 then
-         result = result .. ", full health "
-      elseif ent.is_entity_with_health then
-         result = result .. ", " .. math.floor(ent.get_health_ratio() * 100) .. " percent health"
-      end
-      
-      if ent.name == "straight-rail" then
-         -- Report nearest rail intersection position -- laterdo find better keybind
-         local nearest, dist = find_nearest_intersection(ent, pindex)
-         if nearest == nil then
-            result = result .. ", no rail intersections within " .. dist .. " tiles " 
-         else
-            result = result .. ", nearest rail intersection at " .. dist .. " " .. direction_lookup(get_direction_of_that_from_this(nearest.position,ent.position))
-         end
-      end
-      
-      printout(result ,pindex)
-      --game.get_player(pindex).print(result)--**
-      
    end
+   --Print out the status of a machine, if it exists.
+   local result = {""}
+   local ent_status_id = ent.status
+   local ent_status_text = ""
+   local status_lookup = into_lookup(defines.entity_status)
+   status_lookup[23] = "Full burnt result output"--weird exception 
+   if ent.name == "cargo-wagon" then
+      --Instead of status, read contents   
+      table.insert(result, cargo_wagon_top_contents_info(ent))
+   elseif ent.name == "fluid-wagon" then
+      --Instead of status, read contents   
+      table.insert(result, fluid_contents_info(ent))
+   elseif ent_status_id ~= nil then
+      --Print status if it exists
+      ent_status_text = status_lookup[ent_status_id]
+      if ent_status_text == nil then
+         print("Weird no entity status lookup".. ent.name .. '-' .. ent.type .. '-' .. ent.status)
+      end
+      table.insert(result, {"entity-status."..ent_status_text:gsub("_","-")})
+   else--There is no status
+      --When there is no status, for entities with fuel inventories, read that out instead. This is typical for vehicles.
+      if ent.get_fuel_inventory() ~= nil then
+         table.insert(result,  fuel_inventory_info(ent))
+      elseif ent.type == "electric-pole" then
+         --For electric poles with no power flow, report the nearest electric pole with a power flow.
+         if get_electricity_satisfaction(ent) > 0 then
+            table.insert(result,  get_electricity_satisfaction(ent) .. " percent network satisfaction, with " .. get_electricity_flow_info(ent))
+         else
+            table.insert(result,  "No power, " .. report_nearest_supplied_electric_pole(ent))
+         end
+      else
+         table.insert(result,  "No status.")
+      end
+   end
+   --For working or normal entities, give some extra info about specific entities.
+   if #result == 1 then
+      table.insert(result,  "result error")
+   end
+   
+   --For working or normal entities, give some extra info about specific entities in terms of speeds or bonuses.
+   local list = defines.entity_status
+   if ent.status ~= nil and ent.status ~= list.no_power and ent.status ~= list.no_power and ent.status ~= list.no_fuel then
+      if ent.type == "inserter" then --items per minute based on rotation speed and the STATED hand capacity
+         local cap = ent.force.inserter_stack_size_bonus + 1
+         if ent.name == "stack-inserter" or ent.name == "stack-filter-inserter" then
+            cap = ent.force.stack_inserter_capacity_bonus + 1
+         end
+         local rate = string.format(" %.1f ", cap * ent.prototype.inserter_rotation_speed * 57.5) 
+         table.insert(result, ", can move " .. rate .. " items per second, with a hand capacity of " .. cap)
+      end
+      if ent.prototype ~= nil and ent.prototype.belt_speed ~= nil and ent.prototype.belt_speed > 0 then --items per minute by simple reading
+         if ent.name == "splitter" or ent.name == "fast-splitter" or ent.name == "express splitter" then
+            table.insert(result, ", can process " .. math.floor(ent.prototype.belt_speed * 480 * 2) .. " items per second")
+         else 
+            table.insert(result, ", can move " .. math.floor(ent.prototype.belt_speed * 480) .. " items per second")
+         end
+      end
+      if ent.type == "assembling-machine" or ent.type == "furnace" then --Crafting cycles per minute based on recipe time and the STATED craft speed ; laterdo maybe extend this to all "crafting machine" types?
+         local progress = ent.crafting_progress
+         local speed = ent.crafting_speed
+         local recipe_time = 0
+         local cycles = 0-- crafting cycles completed per minute for this recipe
+         if ent.get_recipe() ~= nil and ent.get_recipe().valid then
+            recipe_time = ent.get_recipe().energy
+            cycles = 60 / recipe_time * speed
+         end
+         local cycles_string = string.format(" %.2f ", cycles)
+         if cycles == math.floor(cycles) then
+            cycles_string = math.floor(cycles)
+         end
+         local speed_string = string.format(" %.2f ", speed)
+         if speed == math.floor(speed) then
+            speed_string = math.floor(speed)
+         end
+         if cycles < 10 then --more than 6 seconds to craft
+            table.insert(result, ", recipe progress " .. math.floor(progress * 100) .. " percent ")
+         end
+         if cycles > 0 then
+            table.insert(result, ", can complete " .. cycles_string .. " recipe cycles per minute ")
+         end
+         table.insert(result, ", with a crafting speed of " .. speed_string .. ", at " .. math.floor(100 * (1 + ent.speed_bonus) + 0.5) .. " percent ")
+         if ent.productivity_bonus ~= 0 then
+            table.insert(result, ", with productivity bonus " .. math.floor(100 * (0 + ent.productivity_bonus) + 0.5) .. " percent ")
+         end
+      elseif ent.type == "mining-drill" then
+         table.insert(result, ", producing " .. string.format(" %.2f ",ent.prototype.mining_speed * 60 * (1 + ent.speed_bonus)) .. " items per minute ")
+         if ent.speed_bonus ~= 0 then
+            table.insert(result, ", with speed " .. math.floor(100 * (1 + ent.speed_bonus) + 0.5) .. " percent " )
+         end
+         if ent.productivity_bonus ~= 0 then
+            table.insert(result, ", with productivity bonus " .. math.floor(100 * (0 + ent.productivity_bonus) + 0.5) .. " percent ")
+         end 
+      elseif ent.name == "lab" then
+         if ent.speed_bonus ~= 0 then
+            table.insert(result, ", with speed " .. math.floor(100 * (1 + ent.force.laboratory_speed_modifier * (1 + (ent.speed_bonus - ent.force.laboratory_speed_modifier))) + 0.5) .. " percent " )--laterdo fix bug**
+            --game.get_player(pindex).print(result)
+         end
+         if ent.productivity_bonus ~= 0 then
+            table.insert(result, ", with productivity bonus " .. math.floor(100 * (0 + ent.productivity_bonus + ent.force.laboratory_productivity_bonus) + 0.5) .. " percent ")
+         end
+      else --All other entities with the an applicable status
+         if ent.speed_bonus ~= 0 then
+            table.insert(result, ", with speed " .. math.floor(100 * (1 + ent.speed_bonus) + 0.5) .. " percent ")
+         end
+         if ent.productivity_bonus ~= 0 then
+            table.insert(result, ", with productivity bonus " .. math.floor(100 * (0 + ent.productivity_bonus) + 0.5) .. " percent ")
+         end
+      end
+      --laterdo maybe pump speed?
+   end
+         
+   --Entity power usage
+   local power_rate = (1 + ent.consumption_bonus)
+   local drain = ent.electric_drain
+   if drain ~= nil then
+      drain = drain * 60
+   else
+      drain = 0
+   end
+   local uses_energy = false
+   if drain > 0 or (ent.prototype ~= nil and ent.prototype.max_energy_usage ~= nil and ent.prototype.max_energy_usage > 0) then
+      uses_energy = true
+   end
+   if ent.status ~= nil and uses_energy and ent.status == list.working then
+      table.insert(result, ", consuming " .. get_power_string(ent.prototype.max_energy_usage * 60 * power_rate + drain))
+   elseif ent.status ~= nil and uses_energy and ent.status == list.no_power or ent.status == list.low_power then
+      table.insert(result, ", consuming less than " .. get_power_string(ent.prototype.max_energy_usage * 60 * power_rate + drain))
+   elseif ent.status ~= nil and uses_energy or (ent.prototype ~= nil and ent.prototype.max_energy_usage ~= nil and ent.prototype.max_energy_usage > 0) then
+      table.insert(result, ", idle and consuming " .. get_power_string(drain))
+   end
+   if uses_energy and ent.prototype.burner_prototype ~= nil then
+      table.insert(result, " as burner fuel ")
+   end
+   
+   --Entity Health 
+   if ent.is_entity_with_health and ent.get_health_ratio() == 1 then
+      table.insert(result, {"access.full-health"})
+   elseif ent.is_entity_with_health then
+      table.insert(result, {"access.percent-health",  math.floor(ent.get_health_ratio() * 100) })
+   end
+   
+   if ent.name == "straight-rail" then
+      -- Report nearest rail intersection position -- laterdo find better keybind
+      local nearest, dist = find_nearest_intersection(ent, pindex)
+      if nearest == nil then
+         table.insert(result, ", no rail intersections within " .. dist .. " tiles " )
+      else
+         table.insert(result, ", nearest rail intersection at " .. dist .. " " .. direction_lookup(get_direction_of_that_from_this(nearest.position,ent.position)))
+      end
+   end
+   
+   printout(result ,pindex)
+   --game.get_player(pindex).print(result)--**
+   
 end)
 
 function into_lookup(array)
@@ -10321,7 +10468,7 @@ end)
 script.on_event(defines.events.on_player_created, function(event)
    initialize(game.players[event.player_index])
    if not game.is_multiplayer() then
-      printout("Press 'TAB' to continue, and later you can press 'H' for help", 0)--***maybe todo repeated alert every minute until the player presses.
+      printout("Press 'TAB' to continue", pindex)
    end
 end)
 
@@ -10621,7 +10768,7 @@ script.on_event("locate-hand-in-inventory",function(event)
       locate_hand_in_player_inventory(pindex)
    elseif players[pindex].menu == "inventory" then
       locate_hand_in_player_inventory(pindex)
-   elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then--****test vehicles
+   elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then
       locate_hand_in_building_output_inventory(pindex)
    else
       printout("Cannot locate items in this menu", pindex)
@@ -10695,7 +10842,7 @@ script.on_event("open-warnings-menu", function(event)
    if not check_for_player(pindex) or players[pindex].vanilla_mode then
       return
    end
-   if players[pindex].in_menu == false or game.get_player(pindex)._gui_type == defines.gui_type.production then
+   if players[pindex].in_menu == false or game.get_player(pindex).opened_gui_type == defines.gui_type.production then
       players[pindex].warnings.short = scan_for_warnings(30, 30, pindex)
       players[pindex].warnings.medium = scan_for_warnings(100, 100, pindex)
       players[pindex].warnings.long = scan_for_warnings(500, 500, pindex)
@@ -10764,6 +10911,7 @@ end)
 --GUI action confirmed, such as by pressing ENTER
 script.on_event(defines.events.on_gui_confirmed,function(event)
    local pindex = event.player_index
+   local p = game.get_player(pindex)
    if not check_for_player(pindex) then
       return
    end
@@ -10836,6 +10984,56 @@ script.on_event(defines.events.on_gui_confirmed,function(event)
       event.element.destroy()
       players[pindex].menu_search_frame.destroy()
       players[pindex].menu_search_frame = nil
+   elseif players[pindex].blueprint_menu.edit_label == true then
+      --Apply the new label
+      players[pindex].blueprint_menu.edit_label = false
+      local result = event.element.text
+      if result == nil or result == "" then 
+         result = "unknown"
+      end
+      set_blueprint_label(p.cursor_stack,result)
+      printout("Blueprint label changed to " .. result , pindex)
+      event.element.destroy()
+      if p.gui.screen["blueprint-edit-label"] ~= nil then
+         p.gui.screen["blueprint-edit-label"].destroy()
+      end
+   elseif players[pindex].blueprint_menu.edit_description == true then
+      --Apply the new desc 
+      players[pindex].blueprint_menu.edit_description = false
+      local result = event.element.text
+      if result == nil or result == "" then 
+         result = "unknown"
+      end
+      set_blueprint_description(p.cursor_stack,result)
+      printout("Blueprint description changed.", pindex)
+      event.element.destroy()
+      if p.gui.screen["blueprint-edit-description"] ~= nil then
+         p.gui.screen["blueprint-edit-description"].destroy()
+      end
+   elseif players[pindex].blueprint_menu.edit_import == true then
+      --Apply the new import
+      players[pindex].blueprint_menu.edit_import = false
+      local result = event.element.text
+      if result == nil or result == "" then 
+         result = "unknown"
+      end
+      apply_blueprint_import(pindex, result)
+      event.element.destroy()
+      if p.gui.screen["blueprint-edit-import"] ~= nil then
+         p.gui.screen["blueprint-edit-import"].destroy()
+      end
+   elseif players[pindex].blueprint_menu.edit_export == true then
+      --Instruct export
+      players[pindex].blueprint_menu.edit_export = false
+      local result = event.element.text
+      if result == nil or result == "" then 
+         result = "unknown"
+      end
+      printout("Text box closed" , pindex)
+      event.element.destroy()
+      if p.gui.screen["blueprint-edit-export"] ~= nil then
+         p.gui.screen["blueprint-edit-export"].destroy()
+      end
    end
    players[pindex].last_menu_search_tick = event.tick
 end)   
@@ -11169,7 +11367,7 @@ script.on_event("inventory-read-armor-stats", function(event)
    if not check_for_player(pindex) or not players[pindex].in_menu then
       return
    end
-   if (players[pindex].in_menu and players[pindex].menu == "inventory") or (players[pindex].menu == "vehicle" and game.get_player(pindex).opened.type == "spider-vehicle") then
+   if players[pindex].in_menu and players[pindex].menu == "inventory" then
 	  local result = read_armor_stats(pindex)
 	  --game.get_player(pindex).print(result)--
 	  printout(result,pindex)
@@ -11182,7 +11380,7 @@ script.on_event("inventory-read-equipment-list", function(event)
    if not check_for_player(pindex) or not players[pindex].in_menu then
       return
    end
-   if (players[pindex].in_menu and players[pindex].menu == "inventory") or (players[pindex].menu == "vehicle" and game.get_player(pindex).opened.type == "spider-vehicle") then
+   if players[pindex].in_menu and players[pindex].menu == "inventory" then
 	  local result = read_equipment_list(pindex)
 	  --game.get_player(pindex).print(result)--
 	  printout(result,pindex)
@@ -11196,7 +11394,7 @@ script.on_event("inventory-remove-all-equipment-and-armor", function(event)
       return
    end
    
-   if (players[pindex].in_menu and players[pindex].menu == "inventory") or (players[pindex].menu == "vehicle" and game.get_player(pindex).opened.type == "spider-vehicle") then
+   if players[pindex].in_menu and players[pindex].menu == "inventory" then
 	  local result = remove_equipment_and_armor(pindex)
 	  --game.get_player(pindex).print(result)--
 	  printout(result,pindex)
@@ -12414,7 +12612,7 @@ function update_overhead_sprite(sprite, scale_in, radius_in, pindex)
 end
 
 --Draws a custom GUI with a sprite in the middle of the screen. Set it to nil to clear it.
-function update_custom_GUI_sprite(sprite, scale_in, pindex)
+function update_custom_GUI_sprite(sprite, scale_in, pindex, sprite_2)
    local player = players[pindex]
    local p = game.get_player(pindex)
    local scale = scale_in
@@ -12424,20 +12622,160 @@ function update_custom_GUI_sprite(sprite, scale_in, pindex)
    else
       local f = player.custom_GUI_frame
       local s1 = player.custom_GUI_sprite
+      local s2 = player.custom_GUI_sprite_2
+      local s3 = player.custom_GUI_sprite_3
+      local s4 = player.custom_GUI_sprite_4
+      local s5 = player.custom_GUI_sprite_5
+      --Set the frame
       if f == nil or not f.valid then
          f = game.get_player(pindex).gui.screen.add{type="frame"}
          f.force_auto_center()
          f.bring_to_front()
       end
+      --Set the main sprite
       if s1 == nil or not s1.valid then
          s1 = f.add{type="sprite",caption = "custom menu"}
       end
       if s1.sprite ~= sprite then 
          s1.sprite = sprite
       end
+      --Set the secondary sprite
+      if sprite_2 == nil and s2 ~= nil and s2.valid then
+         player.custom_GUI_sprite_2.visible = false
+      elseif sprite_2 ~= nil then
+         if s2 == nil or not s2.valid then
+            s2 = f.add{type="sprite",caption = "custom menu"}
+         end
+         if s2.sprite ~= sprite_2 then 
+            s2.sprite = sprite_2
+         end
+         player.custom_GUI_sprite_2 = s2
+         player.custom_GUI_sprite_2.visible = true
+      end
+      --If a blueprint is in hand, set the blueprint sprites
+      if players[pindex].menu == "blueprint_menu" and p.cursor_stack and p.cursor_stack.valid_for_read and p.cursor_stack.is_blueprint then
+         local bp = p.cursor_stack
+         local sprite_2_name = nil
+         local sprite_3_name = nil
+         local sprite_4_name = nil
+         local sprite_5_name = nil
+         if bp.blueprint_icons and #bp.blueprint_icons > 0 then
+            --Icon 1
+            if bp.blueprint_icons[1] ~= nil then
+               local icon_1 = bp.blueprint_icons[1].signal
+               sprite_2_name = icon_1.type .. "." .. icon_1.name
+               s2 = player.custom_GUI_sprite_2
+               if sprite_2_name ~= nil then
+                  if s2 == nil or not s2.valid then
+                     s2 = f.add{type="sprite",caption = "custom menu"}
+                  end
+                  if s2.sprite ~= sprite_2_name then 
+                     s2.sprite = sprite_2_name
+                  end
+                  player.custom_GUI_sprite_2 = s2
+                  player.custom_GUI_sprite_2.visible = true
+               end
+            else
+               s2 = player.custom_GUI_sprite_2
+               if s2 ~= nil and s2.valid then
+                  s2.visible = false
+                  s2 = nil
+               end
+            end
+            --Icon 2
+            if bp.blueprint_icons[2] ~= nil then
+               local icon_2 = bp.blueprint_icons[2].signal
+               sprite_3_name = icon_2.type .. "." .. icon_2.name
+               s3 = player.custom_GUI_sprite_3
+               if sprite_3_name ~= nil then
+                  if s3 == nil or not s3.valid then
+                     s3 = f.add{type="sprite",caption = "custom menu"}
+                  end
+                  if s3.sprite ~= sprite_3_name then 
+                     s3.sprite = sprite_3_name
+                  end
+                  player.custom_GUI_sprite_3 = s3
+                  player.custom_GUI_sprite_3.visible = true
+               end
+            else
+               s3 = player.custom_GUI_sprite_3
+               if s3 ~= nil and s3.valid then
+                  s3.visible = false
+                  s3 = nil
+               end
+            end
+            --Icon 3
+            if bp.blueprint_icons[3] ~= nil then
+               local icon_3 = bp.blueprint_icons[3].signal
+               sprite_4_name = icon_3.type .. "." .. icon_3.name
+               s4 = player.custom_GUI_sprite_4
+               if sprite_4_name ~= nil then
+                  if s4 == nil or not s4.valid then
+                     s4 = f.add{type="sprite",caption = "custom menu"}
+                  end
+                  if s4.sprite ~= sprite_4_name then 
+                     s4.sprite = sprite_4_name
+                  end
+                  player.custom_GUI_sprite_4 = s4
+                  player.custom_GUI_sprite_4.visible = true
+               end
+            else
+               s4 = player.custom_GUI_sprite_4
+               if s4 ~= nil and s4.valid then
+                  s4.visible = false
+                  s4 = nil
+               end
+            end
+            --Icon 4
+            if bp.blueprint_icons[4] ~= nil then
+               local icon_4 = bp.blueprint_icons[4].signal
+               sprite_5_name = icon_4.type .. "." .. icon_4.name
+               s5 = player.custom_GUI_sprite_5
+               if sprite_5_name ~= nil then
+                  if s5 == nil or not s5.valid then
+                     s5 = f.add{type="sprite",caption = "custom menu"}
+                  end
+                  if s5.sprite ~= sprite_5_name then 
+                     s5.sprite = sprite_5_name
+                  end
+                  player.custom_GUI_sprite_5 = s5
+                  player.custom_GUI_sprite_5.visible = true
+               end
+            else
+               s5 = player.custom_GUI_sprite_5
+               if s5 ~= nil and s5.valid then
+                  s5.visible = false
+                  s5 = nil
+               end
+            end
+         end
+      else
+         if s2 ~= nil and s2.valid and sprite_2 == nil then
+            player.custom_GUI_sprite_2.visible = false
+            s2 = nil
+         end
+         if s3 ~= nil and s3.valid then
+            player.custom_GUI_sprite_3.visible = false
+            s3 = nil
+         end
+         if s4 ~= nil and s4.valid then
+            player.custom_GUI_sprite_4.visible = false
+            s4 = nil
+         end
+         if s5 ~= nil and s5.valid then
+            player.custom_GUI_sprite_5.visible = false
+            s5 = nil
+         end
+      end
+      
+      --Finalize
       f.visible = true
       player.custom_GUI_frame = f
       player.custom_GUI_sprite = s1
+      player.custom_GUI_sprite_2 = s2
+      player.custom_GUI_sprite_3 = s3
+      player.custom_GUI_sprite_4 = s4
+      player.custom_GUI_sprite_5 = s5
       f.bring_to_front()
    end
 end
@@ -12674,7 +13012,8 @@ function menu_search_get_next(pindex, str, start_phrase_in)
    elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") and pb.recipe_selection == true then
       new_index, new_index_2 = crafting_find_index_of_next_name_match(str,pindex, search_index, search_index_2, players[pindex].building.recipe_list)
    elseif players[pindex].menu == "technology" then
-      local techs = {} --Reads the selected tech catagory
+      --Search the selected tech catagory
+      local techs = {}
       if players[pindex].technology.category == 1 then
          techs = players[pindex].technology.lua_researchable
       elseif players[pindex].technology.category == 2 then
@@ -12683,6 +13022,43 @@ function menu_search_get_next(pindex, str, start_phrase_in)
          techs = players[pindex].technology.lua_unlocked
       end
       new_index = inventory_find_index_of_next_name_match(techs, search_index, str, pindex)
+      --Search the second tech category 
+      if new_index <= 0 then
+         players[pindex].technology.category = players[pindex].technology.category + 1
+         if players[pindex].technology.category > 3 then 
+            players[pindex].technology.category = 1
+         end
+         if players[pindex].technology.category == 1 then
+            techs = players[pindex].technology.lua_researchable
+         elseif players[pindex].technology.category == 2 then
+            techs = players[pindex].technology.lua_locked
+         elseif players[pindex].technology.category == 3 then
+            techs = players[pindex].technology.lua_unlocked
+         end
+         new_index = inventory_find_index_of_next_name_match(techs, search_index, str, pindex)
+      end
+      --Search the third tech category 
+      if new_index <= 0 then
+         players[pindex].technology.category = players[pindex].technology.category + 1
+         if players[pindex].technology.category > 3 then 
+            players[pindex].technology.category = 1
+         end
+         if players[pindex].technology.category == 1 then
+            techs = players[pindex].technology.lua_researchable
+         elseif players[pindex].technology.category == 2 then
+            techs = players[pindex].technology.lua_locked
+         elseif players[pindex].technology.category == 3 then
+            techs = players[pindex].technology.lua_unlocked
+         end
+         new_index = inventory_find_index_of_next_name_match(techs, search_index, str, pindex)
+      end
+      --Circle back to the original category if nothing found 
+      if new_index <= 0 then
+         players[pindex].technology.category = players[pindex].technology.category + 1
+         if players[pindex].technology.category > 3 then 
+            players[pindex].technology.category = 1
+         end
+      end
    else
       printout("This menu or building sector does not support searching.",pindex)
       return
