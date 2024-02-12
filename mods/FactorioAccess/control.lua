@@ -5990,6 +5990,11 @@ function on_tick(event)
          if enemy ~= nil and enemy.valid then
             aim_gun_at_nearest_enemy(pindex,enemy)
          end
+         
+         --If crafting, play a sound
+         if p.crafting_queue_size > 0 then
+            p.play_sound{path = "player-crafting", volume_modifier = 0.5}
+         end
       end
    elseif event.tick % 90 == 13 then
       for pindex, player in pairs(players) do
@@ -6369,6 +6374,9 @@ function cursor_mode_move(direction, pindex, single_only)
    
    --Update player direction to face the cursor (after the vanilla move event that turns the character too, and only ends when the movement key is released)
    turn_to_cursor_direction_precise(pindex)
+   
+   --Play Sound
+   game.get_player(pindex).play_sound{path = "Close-Inventory-Sound", volume_modifier = 0.75}
 end
 
 --Makes the character face the cursor but can be overwriten by vanilla move keys.
@@ -6593,6 +6601,9 @@ script.on_event("cursor-size-increment", function(event)
       local scan_right_bottom = {math.floor(players[pindex].cursor_pos.x)+players[pindex].cursor_size+1,math.floor(players[pindex].cursor_pos.y)+players[pindex].cursor_size+1}
       draw_area_as_cursor(scan_left_top,scan_right_bottom,pindex)
    end
+   
+   --Play Sound
+   game.get_player(pindex).play_sound{path = "Close-Inventory-Sound", volume_modifier = 0.75}
 end)
 
 --We have cursor sizes 1,3,5,11,21,101,251
@@ -6622,6 +6633,9 @@ script.on_event("cursor-size-decrement", function(event)
       local scan_right_bottom = {math.floor(players[pindex].cursor_pos.x)+players[pindex].cursor_size+1,math.floor(players[pindex].cursor_pos.y)+players[pindex].cursor_size+1}
       draw_area_as_cursor(scan_left_top,scan_right_bottom,pindex)
    end
+   
+   --Play Sound
+   game.get_player(pindex).play_sound{path = "Close-Inventory-Sound", volume_modifier = 0.75}
 end)
 
 script.on_event("increase-inventory-bar-by-1", function(event)
