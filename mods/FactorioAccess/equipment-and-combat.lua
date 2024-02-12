@@ -50,14 +50,20 @@ function equip_it(stack,pindex)
 	  end
    elseif stack.prototype.place_as_equipment_result ~= nil then
       --Equip equipment ("gear")
-      local armor_inv = game.get_player(pindex).get_inventory(defines.inventory.character_armor)
-	  if armor_inv.is_empty() then
-	     return "Equipment requires armor with an equipment grid."
-	  end
-	  if armor_inv[1].grid == nil or not armor_inv[1].grid.valid  then
-	     return "Equipment requires armor with an equipment grid."
-	  end
-	  local grid = armor_inv[1].grid
+      local armor_inv 
+      local grid 
+      if players[pindex].menu == "vehicle" and game.get_player(pindex).opened.type == "spider-vehicle" then
+         grid = game.get_player(pindex).opened.grid
+      else
+         armor_inv = game.get_player(pindex).get_inventory(defines.inventory.character_armor)
+         if armor_inv.is_empty() then
+            return "Equipment requires armor with an equipment grid."
+         end
+         if armor_inv[1].grid == nil or not armor_inv[1].grid.valid  then
+            return "Equipment requires armor with an equipment grid."
+         end
+         grid = armor_inv[1].grid
+     end
 	  --Iterate across the whole grid, trying to place the item. 
 	  local placed = nil
 	  for i = 0, grid.width-1, 1 do
@@ -201,8 +207,13 @@ function read_armor_stats(pindex)
       return armor_inv[1].name .. " equipped, with no equipment grid."
    end
    --Armor with Equipment
-   result = armor_inv[1].name .. " equipped, "
-   local grid = armor_inv[1].grid
+   local grid 
+   if players[pindex].menu == "vehicle" and game.get_player(pindex).opened.type == "spider-vehicle" then
+      grid = game.get_player(pindex).opened.grid
+   else
+      result = armor_inv[1].name .. " equipped, "
+      grid = armor_inv[1].grid
+   end
    if grid.count() == 0 then
       return result .. " no armor equipment installed. "
    end
@@ -256,8 +267,13 @@ function read_equipment_list(pindex)
       return "No equipment grid."
    end
    --Armor with Equipment
-   result = "Equipped, "
-   local grid = armor_inv[1].grid
+   local grid 
+   if players[pindex].menu == "vehicle" and game.get_player(pindex).opened.type == "spider-vehicle" then
+      grid = game.get_player(pindex).opened.grid
+   else
+      result = "Equipped, "
+      grid = armor_inv[1].grid
+   end
    if grid.equipment == nil or grid.equipment == {} then
       return " No armor equipment installed. "
    end
@@ -289,7 +305,12 @@ function remove_equipment_and_armor(pindex)
       return "No armor."
    end
    
-   local grid = armor_inv[1].grid
+   local grid 
+   if players[pindex].menu == "vehicle" and game.get_player(pindex).opened.type == "spider-vehicle" then
+      grid = game.get_player(pindex).opened.grid
+   else
+      grid = armor_inv[1].grid
+   end
    if grid ~= nil and grid.valid then 
        local e_count = grid.count()
 	   --Take all items
@@ -307,15 +328,16 @@ function remove_equipment_and_armor(pindex)
    end
    
    --Remove armor
-   if game.get_player(pindex).get_inventory(defines.inventory.character_main).count_empty_stacks() == 0 then
-      return "Inventory full."
+   if players[pindex].menu == "vehicle" and game.get_player(pindex).opened.type == "spider-vehicle" then
+      --do nothing 
+   elseif game.get_player(pindex).get_inventory(defines.inventory.character_main).count_empty_stacks() == 0 then
+      result = result .. " inventory full "
    else
       result = result .. "removed " .. armor_inv[1].name
-	  game.get_player(pindex).clear_cursor()
-	  local stack2 = game.get_player(pindex).cursor_stack
-	  stack2.swap_stack(armor_inv[1])
       game.get_player(pindex).clear_cursor()
-      return result
+      local stack2 = game.get_player(pindex).cursor_stack
+      stack2.swap_stack(armor_inv[1])
+      game.get_player(pindex).clear_cursor()
    end
    
    return result

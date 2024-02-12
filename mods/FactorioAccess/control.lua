@@ -508,6 +508,8 @@ function extra_info_for_scan_list(ent,pindex,info_comes_after_indexing)
    elseif ent.name == "roboport" then
    --Roboport network name 
       result = result .. " of network " .. get_network_name(ent)
+   elseif ent.type == "spider-vehicle" then
+      result = result .. " labelled " .. ent.entity_label
    end
    
    return result
@@ -1228,6 +1230,8 @@ function ent_info(pindex, ent, description)
       local cell = ent.logistic_cell
       local network = ent.logistic_cell.logistic_network
       result = result .. " of network " .. get_network_name(ent) .. "," .. roboport_contents_info(ent)
+   elseif ent.type == "spider-vehicle" then
+      result = result .. " labelled " .. ent.entity_label
    end
    --Give drop position (like for inserters)
    if ent.drop_position ~= nil then
@@ -3106,6 +3110,17 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
             if stack.health < 1 then
                start_phrase = start_phrase .. " damaged "
             end
+            if stack.name == "spidertron-remote" then
+               if stack.connected_entity == nil then
+                  start_phrase = start_phrase .. " unlinked "
+               else
+                  if stack.connected_entity.entity_label == nil then
+                     start_phrase = start_phrase .. " an unlabelled "
+                  else
+                     start_phrase = start_phrase .. stack.connected_entity.entity_label 
+                  end
+               end
+            end
             printout(start_phrase .. localising.get(stack,pindex) .. " x " .. stack.count, pindex)
          end
       else
@@ -3290,6 +3305,18 @@ function read_hand(pindex)
       if cursor_stack.is_blueprint then
          --Blueprint extra info 
          printout(get_blueprint_info(cursor_stack,true),pindex)
+      elseif cursor_stack.name == "spidertron-remote" then
+         local start_phrase = ""
+         if cursor_stack.connected_entity == nil then
+            start_phrase = start_phrase .. " unlinked "
+         else
+            if cursor_stack.connected_entity.entity_label == nil then
+               start_phrase = start_phrase .. " an unlabelled "
+            else
+               start_phrase = start_phrase .. cursor_stack.connected_entity.entity_label 
+            end
+         end
+         printout(start_phrase .. localising.get(cursor_stack,pindex) .. " x " .. cursor_stack.count .. " " .. cursor_stack.prototype.subgroup.name , pindex)
       else
          --Any other valid item
          local out={"access.cursor-description"}
@@ -9495,8 +9522,11 @@ script.on_event("transfer-one-stack", function(event)
       if (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then
          if players[pindex].building.sector <= #players[pindex].building.sectors and #players[pindex].building.sectors[players[pindex].building.sector].inventory > 0 and players[pindex].building.sectors[players[pindex].building.sector].name ~= "Fluid" then
             --Transfer stack from building to player inventory
-			local stack = players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index]
+            local stack = players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index]
             if stack and stack.valid and stack.valid_for_read then
+               if players[pindex].menu == "vehicle" and game.get_player(pindex).opened.type == "spider-vehicle" and stack.prototype.place_as_equipment_result ~= nil then
+                  return
+               end
                if game.get_player(pindex).can_insert(stack) then
                   game.get_player(pindex).play_sound{path = "utility/inventory_move"}
                   local result = stack.name
@@ -9521,6 +9551,9 @@ script.on_event("transfer-one-stack", function(event)
 		       --Transfer stack from player inventory to building
                local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
                if stack and stack.valid and stack.valid_for_read then
+                  if players[pindex].menu == "vehicle" and game.get_player(pindex).opened.type == "spider-vehicle" and stack.prototype.place_as_equipment_result ~= nil then
+                     return
+                  end
                   if players[pindex].building.ent.can_insert(stack) then
                      game.get_player(pindex).play_sound{path = "utility/inventory_move"}
                      local result = stack.name
@@ -9549,14 +9582,23 @@ script.on_event("equip-item", function(event)
    local result = ""
    if stack ~= nil and stack.valid_for_read and stack.valid then
       --Equip item grabbed in hand, for selected menus
-      if not players[pindex].in_menu or players[pindex].menu == "inventory" then
+      if not players[pindex].in_menu or players[pindex].menu == "inventory" or  (players[pindex].menu == "vehicle" and game.get_player(pindex).opened.type == "spider-vehicle") then
          result = equip_it(stack,pindex)
       end
    elseif players[pindex].menu == "inventory" then
       --Equip the selected item from its inventory slot directly
       local stack = game.get_player(pindex).get_main_inventory()[players[pindex].inventory.index]
       result = equip_it(stack,pindex)
-      
+   elseif players[pindex].menu == "vehicle" and game.get_player(pindex).opened.type == "spider-vehicle" then
+      --Equip the selected item from its inventory slot directly
+      local stack
+      if players[pindex].building.sector <= #players[pindex].building.sectors then
+         local invs = defines.inventory
+         stack = game.get_player(pindex).opened.get_inventory(invs.spider_trunk)[players[pindex].building.index]
+      else
+         stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
+      end
+      result = equip_it(stack,pindex)
    elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then
       --Something will be smart-inserted so do nothing here
       return
@@ -11368,7 +11410,7 @@ script.on_event("inventory-read-armor-stats", function(event)
    if not check_for_player(pindex) or not players[pindex].in_menu then
       return
    end
-   if players[pindex].in_menu and players[pindex].menu == "inventory" then
+   if (players[pindex].in_menu and players[pindex].menu == "inventory") or (players[pindex].menu == "vehicle" and game.get_player(pindex).opened.type == "spider-vehicle") then
 	  local result = read_armor_stats(pindex)
 	  --game.get_player(pindex).print(result)--
 	  printout(result,pindex)
@@ -11381,7 +11423,7 @@ script.on_event("inventory-read-equipment-list", function(event)
    if not check_for_player(pindex) or not players[pindex].in_menu then
       return
    end
-   if players[pindex].in_menu and players[pindex].menu == "inventory" then
+   if (players[pindex].in_menu and players[pindex].menu == "inventory") or (players[pindex].menu == "vehicle" and game.get_player(pindex).opened.type == "spider-vehicle") then
 	  local result = read_equipment_list(pindex)
 	  --game.get_player(pindex).print(result)--
 	  printout(result,pindex)
@@ -11395,7 +11437,7 @@ script.on_event("inventory-remove-all-equipment-and-armor", function(event)
       return
    end
    
-   if players[pindex].in_menu and players[pindex].menu == "inventory" then
+   if (players[pindex].in_menu and players[pindex].menu == "inventory") or (players[pindex].menu == "vehicle" and game.get_player(pindex).opened.type == "spider-vehicle") then
 	  local result = remove_equipment_and_armor(pindex)
 	  --game.get_player(pindex).print(result)--
 	  printout(result,pindex)
