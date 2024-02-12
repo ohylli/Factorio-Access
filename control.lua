@@ -6207,11 +6207,8 @@ function move(direction,pindex)
          end
          players[pindex].position = new_pos
          players[pindex].cursor_pos = offset_position(players[pindex].position, direction,1)
-
-         if players[pindex].tile.previous ~= nil
-            and players[pindex].tile.previous.valid
-            and players[pindex].tile.previous.type == "transport-belt"
-         then
+         --Telestep walking sounds
+         if players[pindex].tile.previous ~= nil and players[pindex].tile.previous.valid and players[pindex].tile.previous.type == "transport-belt" then
             game.get_player(pindex).play_sound{path = "utility/metal_walking_sound"}
          else
             local tile = game.get_player(pindex).surface	.get_tile(new_pos.x, new_pos.y)
@@ -9184,7 +9181,7 @@ function build_item_in_hand(pindex, free_place_straight_rail)
 	     local auto_cancel_when_empty = true --laterdo this check may become a toggle-able game setting
 	     if players[pindex].build_lock == true and auto_cancel_when_empty then 
 		    players[pindex].build_lock = false
-		    message = "Build lock disabled, empty hand."
+		    message = "Build lock disabled, emptied hand."
 	     end
 	  end
 	  printout(message,pindex)
@@ -10125,7 +10122,7 @@ function rotate_building_info_read(event, forward)
             --Display and read the new direction info
             players[pindex].building_direction = build_dir
             sync_build_cursor_graphics(pindex)
-            printout(direction_lookup(build_dir), pindex)
+            printout(direction_lookup(build_dir) .. " in hand", pindex)
             players[pindex].lag_building_direction = false
          else
             printout(stack.name .. " never needs rotating.", pindex)

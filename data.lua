@@ -251,6 +251,14 @@ data:extend({
 
 {
    type = "sound",
+   name = "player-crafting",
+   filename = "__FactorioAccess__/Audio/player-crafting-zapsplat-modified_industrial_mechanical_wind_up_manual_001_86125.wav",
+   volume = 0.25,
+   preload = true
+},
+
+{
+   type = "sound",
    name = "player-damaged-character",
    filename = "__FactorioAccess__/Audio/player-damaged-character-zapsplat-modified_multimedia_beep_harsh_synth_single_high_pitched_87498.wav",
    volume = 0.75,
@@ -291,6 +299,14 @@ data:extend({
 
 {
    type = "sound",
+   name = "player-walk",
+   filename = "__FactorioAccess__/Audio/player-walk-zapsplat-little_robot_sound_factory_fantasy_Footstep_Dirt_001.wav",
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
    name = "Rotate-Hand-Sound",
    filename = "__core__/sound/gui-back.ogg",
    volume = 1,
@@ -301,7 +317,7 @@ data:extend({
    type = "sound",
    name = "scanner-pulse",
    filename = "__FactorioAccess__/Audio/scanner-pulse-zapsplat_science_fiction_computer_alarm_single_medium_ring_beep_fast_001_84293.wav",
-   volume = 0.5,
+   volume = 0.3,
    preload = true
 },
 
