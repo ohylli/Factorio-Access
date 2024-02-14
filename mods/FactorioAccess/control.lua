@@ -6068,10 +6068,12 @@ function on_tick(event)
          --Fix running speed bug (toggle walk also fixes it)
          fix_walk(pindex)
       end
-   elseif event.tick % 1200 == 14 then
+   elseif event.tick % 600 == 14 then
       for pindex, player in pairs(players) do
-         --Tutorial reminder every 20 seconds until you open it
-         if players[pindex].tutorial == nil then
+         --Tutorial reminder every 10 seconds until you open it
+         if players[pindex].started ~= true then
+            printout("Press 'TAB' to begin", pindex)
+         elseif players[pindex].tutorial == nil then
             printout("Press 'H' to open the tutorial", pindex)
          end
       end
@@ -7594,6 +7596,12 @@ script.on_event("switch-menu-or-gun", function(event)
    if not check_for_player(pindex) then
       return
    end
+   
+   if players[pindex].started ~= true then
+      players[pindex].started = true
+      return
+   end
+   
    if players[pindex].in_menu and players[pindex].menu ~= "prompt" then
       game.get_player(pindex).play_sound{path="Change-Menu-Tab-Sound"}
       if (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then
@@ -11613,12 +11621,20 @@ script.on_event("help-chapter-back", function(event)
    tutorial_menu_chapter_back(pindex)
 end)
 
-script.on_event("help-toggle-header", function(event)
+script.on_event("help-toggle-header-mode", function(event)
    local pindex = event.player_index
    if not check_for_player(pindex) then
       return
    end
-   tutorial_menu_toggle(pindex)
+   tutorial_menu_toggle_header_detail(pindex)
+end)
+
+script.on_event("help-get-header", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   tutorial_menu_read_header_once(pindex)
 end)
 
 --**Use this key to test stuff (ALT-G)
