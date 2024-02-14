@@ -1493,14 +1493,14 @@ data:extend({
 {
     type = "custom-input",
     name = "help-next",
-    key_sequence = "SHIFT + H",
+    key_sequence = "CONTROL + H",
     consuming = "none"
 },
 
 {
     type = "custom-input",
     name = "help-back",
-    key_sequence = "CONTROL + H",
+    key_sequence = "SHIFT + H",
     consuming = "none"
 },
 
@@ -1520,8 +1520,15 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "help-toggle-header",
+    name = "help-toggle-header-mode",
     key_sequence = "CONTROL + SHIFT + H",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "help-get-header",
+    key_sequence = "ALT + H",
     consuming = "none"
 },
 
