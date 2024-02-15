@@ -10760,6 +10760,7 @@ script.on_event("toggle-vanilla-mode",function(event)
    game.get_player(pindex).play_sound{path = "utility/confirm"}
    if players[pindex].vanilla_mode == false then
       game.get_player(pindex).print("Vanilla mode : ON")
+      players[pindex].cursor = false
       players[pindex].walk = 2
       game.get_player(pindex).character_running_speed_modifier = 0
       players[pindex].hide_cursor = true
@@ -13752,4 +13753,28 @@ function delete_empty_planners_in_inventory(pindex)
          end
       end
    end
+
+--This function can be called via the console: /c __FactorioAccess__ regenerate_all_uncharted_spawners()
+function regenerate_all_uncharted_spawners(surface_in)
+   local surf = surface_in or surfaces["nauvis"]
+   
+   --Get spawner names
+   local spawner_names = {}
+   for name, prot in pairs(game.get_filtered_entity_prototypes({{filter = "type", type = "unit-spawner"}})) do
+      table.insert(spawner_names,name}
+   end
+   
+   for chunk in surf.get_chunks() do
+      local is_charted = false
+      --Check if the chunk is charted by any players
+      for pindex, player in pairs(players) do
+         is_charted = is_charted or player.force.is_chunk_charted(surf, {x = chunk.x, y = chunk.y})
+      end
+      --Regenerate the spawners if NOT charted by any player forces
+      if is_charted == false then
+         for i, name in ipairs(spawner_names) do
+            surf.regenerate_entity(name, chunk)
+         end
+      end
+   end 
 end
