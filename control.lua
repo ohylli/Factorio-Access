@@ -6070,6 +6070,7 @@ function on_tick(event)
    --The elseifs can schedule up to 16 events.
    if event.tick % 15 == 0 then
       for pindex, player in pairs(players) do
+         --Bump checks
          check_and_play_bump_alert_sound(pindex,event.tick)
          check_and_play_stuck_alert_sound(pindex,event.tick)
       end
@@ -6230,7 +6231,7 @@ function move_characters(event)
                sync_build_cursor_graphics(pindex)
             else
                --Force the pointer to the cursor location (if on screen)
-               if cursor_position_is_on_screen(pindex) then
+               if cursor_position_is_on_screen_with_player_centered(pindex) then
                   move_mouse_cursor(players[pindex].cursor_pos,pindex)
                else
                   move_mouse_cursor(players[pindex].position,pindex)
@@ -6302,7 +6303,8 @@ end
 
 --Move player character (and adapt the cursor to smooth walking)
 function move(direction,pindex)
-   if game.get_player(pindex).driving then
+   local p = game.get_player(pindex)
+   if p.driving then
       return
    end
    local first_player = game.get_player(pindex)
@@ -6494,7 +6496,9 @@ function cursor_mode_move(direction, pindex, single_only)
    p.play_sound{path = "Close-Inventory-Sound", volume_modifier = 0.75}
    
    --Focus the map view onto the position if it is out of reach
-   adjust_camera_view(pindex)
+   if single_only then--we would want this for WASD but it messes up the camera a lot.
+      adjust_camera_view(pindex)
+   end
 end
 
 function adjust_camera_view(pindex)
@@ -6503,10 +6507,15 @@ function adjust_camera_view(pindex)
    local cut_off = p.reach_distance + 4
    if cursor_dist <= cut_off then
       p.close_map()
-      if cursor_position_is_on_screen(pindex) == false then
+      if cursor_position_is_on_screen_with_player_centered(pindex) == false then
          fix_zoom(pindex)
       end
    elseif cursor_dist > cut_off then
+      -- local zoom_pos = {x = 32 * math.floor(players[pindex].cursor_pos.x/32), y = 32 * math.floor(players[pindex].cursor_pos.y/32)}
+      -- if players[pindex].zoom_pos ~= zoom_pos then 
+         -- players[pindex].zoom_pos = zoom_pos
+         -- p.zoom_to_world(zoom_pos)
+      -- end
       p.zoom_to_world(players[pindex].cursor_pos)
    end
    sync_build_cursor_graphics(pindex)
@@ -12646,7 +12655,7 @@ function sync_build_cursor_graphics(pindex)
       --Move mouse cursor according to building box
       if player.cursor then
          --Adjust for cursor
-         if cursor_position_is_on_screen(pindex) then
+         if cursor_position_is_on_screen_with_player_centered(pindex) then
             local new_pos = {x = (left_top.x + width/2),y = (left_top.y  + height/2)}
             move_mouse_cursor(new_pos,pindex)
          else 
@@ -12706,7 +12715,7 @@ function sync_build_cursor_graphics(pindex)
       rendering.set_visible(player.building_footprint,true)
       
       --Move the mouse pointer
-      if cursor_position_is_on_screen(pindex) then
+      if cursor_position_is_on_screen_with_player_centered(pindex) then
          move_mouse_cursor(center_pos,pindex)
       else 
          move_mouse_cursor(players[pindex].position,pindex)
@@ -12807,14 +12816,14 @@ function cursor_highlight(pindex, ent, box_type, skip_mouse_movement)
    end
    
    --Move the mouse cursor to the object on screen or to the player position for objects off screen 
-   if cursor_position_is_on_screen(pindex) then
+   if cursor_position_is_on_screen_with_player_centered(pindex) then
       move_mouse_cursor(center_of_tile(c_pos),pindex)
    else
       move_mouse_cursor(center_of_tile(p.position),pindex)
    end
 end
 
-function cursor_position_is_on_screen(pindex)
+function cursor_position_is_on_screen_with_player_centered(pindex)
    local range_y = math.floor(16/players[pindex].zoom)--found experimentally by counting tile ranges at different zoom levels
    local range_x = range_y * game.get_player(pindex).display_scale * 1.5--found experimentally by checking scales
    return (math.abs(players[pindex].cursor_pos.y - players[pindex].position.y) <= range_y and math.abs(players[pindex].cursor_pos.x - players[pindex].position.x) <= range_x)
