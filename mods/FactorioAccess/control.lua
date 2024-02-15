@@ -1343,13 +1343,23 @@ function ent_info(pindex, ent, description)
          end
       end
    end
-   
+   --Explain if no fuel 
    if ent.prototype.burner_prototype ~= nil then
       if ent.energy == 0 and fuel_inventory_info(ent) == "Contains no fuel." then
          result = result .. ", Out of Fuel "
       end
    end
-   --Explain connected status 
+   --Explain other problematic status messages
+   local status = ent.status
+   local stat = defines.entity_status
+   if status ~= nil and status ~= stat.normal and status ~= stat.working then
+      if status == stat.no_ingredients or status == stat.no_input_fluid or status = stat.no_minable_resources or status = stat.item_ingredient_shortage or status = stat.missing_required_fluid or status = stat.no_ammo then
+         result = result .. ", input missing "
+      elseif status = stat.full_output or status == stat.full_burnt_result_output then
+         result = result .. " output full "
+      end
+   end 
+   --Explain power connected status 
    if ent.prototype.electric_energy_source_prototype ~= nil and ent.is_connected_to_electric_network() == false then
       result = result .. " Not Connected"
    elseif ent.prototype.electric_energy_source_prototype ~= nil and ent.energy == 0 and ent.type ~= "solar-panel" then
@@ -8784,15 +8794,23 @@ script.on_event("click-hand", function(event)
             end
             printout(ent_counter .. " entities marked to be upgraded.", pindex) 
          end
-      elseif stack.prototype ~= nil and (stack.prototype.name == "capsule" or stack.prototype.type == "capsule") then
+      elseif stack.prototype ~= nil stack.prototype.type == "capsule" then
          --If holding a capsule type, e.g. cliff explosives or robot capsules, or remotes, try to use it at the cursor position (no feedback about successful usage)
+         local cursor_dist = util.distance(game.get_player(pindex).position,players[pindex].cursor_pos)
          local range = 20
          if stack.name == "cliff-explosives" then
             range = 10
          elseif stack.name == "grenade" then
             range = 15
          end
-         if util.distance(game.get_player(pindex).position,players[pindex].cursor_pos) < range then
+         if stack.name == "artillery-targeting-remote" then
+            game.get_player(pindex).use_from_cursor(players[pindex].cursor_pos)
+            --Play sound **laterdo better sound
+            game.get_player(pindex).play_sound{path = "Close-Inventory-Sound"}
+            if cursor_dist < 7 then
+               printout("Warning, you are in the target area!",pindex)
+            end
+         elseif cursor_dist < range then
             game.get_player(pindex).use_from_cursor(players[pindex].cursor_pos)
          else
             game.get_player(pindex).play_sound{path = "utility/cannot_build"}
@@ -8955,6 +8973,8 @@ function clicked_on_entity(ent,pindex)
       end
    elseif ent.operable then
       printout("No menu for " .. ent.name,pindex)
+   elseif ent.type == "resource" and ent.name ~= "crude-oil" and ent.name ~= "uranium-ore" then
+      printout("No menu for " .. ent.name .. " but it can be mined by hand." ,pindex)
    else
       printout("No menu for " .. ent.name,pindex)
    end
