@@ -1352,28 +1352,28 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "train-menu-up",
+    name = "alternative-menu-up",
     key_sequence = "UP",
     consuming = "none"
 },
 
 {
     type = "custom-input",
-    name = "train-menu-down",
+    name = "alternative-menu-down",
     key_sequence = "DOWN",
     consuming = "none"
 },
 
 {
     type = "custom-input",
-    name = "train-menu-left",
+    name = "alternative-menu-left",
     key_sequence = "LEFT",
     consuming = "none"
 },
 
 {
     type = "custom-input",
-    name = "train-menu-right",
+    name = "alternative-menu-right",
     key_sequence = "RIGHT",
     consuming = "none"
 },
