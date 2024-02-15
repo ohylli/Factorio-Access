@@ -1840,6 +1840,10 @@ function teleport_to_closest(pindex, pos, muted, ignore_enemies)
       printout("Cannot teleport", pindex)--this is unlikely to be reached because we find the first non-colliding position
       return false
    end
+   
+   --Adjust camera
+   game.get_player(pindex).close_map()
+   
    return true
 end
 
@@ -3772,6 +3776,11 @@ function scan_index(pindex)
             dir_dist} , pindex)
       end
    end
+   
+   --Adjust camera if in cursor mode
+   if players[pindex].cursor then
+      adjust_camera_view(pindex)
+   end
 end 
 
 function scan_down(pindex)
@@ -4054,6 +4063,7 @@ function toggle_cursor(pindex)
    if (not players[pindex].cursor) and (not players[pindex].hide_cursor) then
       players[pindex].cursor = true
       players[pindex].build_lock = false
+      game.get_player(pindex).close_map()
             
       --Teleport to the center of the nearest tile to align
       local can_port = game.get_player(pindex).surface.can_place_entity{name = "character", position = center_of_tile(game.get_player(pindex).position)}
@@ -5376,6 +5386,11 @@ function menu_cursor_up(pindex)
    elseif players[pindex].menu == "blueprint_menu" then
       blueprint_menu_up(pindex)
    end
+   
+   --Adjust camera if in cursor mode
+   if players[pindex].cursor then
+      adjust_camera_view(pindex)
+   end
 end
 
 
@@ -5603,6 +5618,11 @@ function menu_cursor_down(pindex)
       roboport_menu_down(pindex)
    elseif players[pindex].menu == "blueprint_menu" then
       blueprint_menu_down(pindex)
+   end
+   
+   --Adjust camera if in cursor mode
+   if players[pindex].cursor then
+      adjust_camera_view(pindex)
    end
 end
 
@@ -6413,16 +6433,17 @@ function cursor_mode_move(direction, pindex, single_only)
    if single_only then
       diff = 1
    end
+   local p = game.get_player(pindex)
    players[pindex].cursor_pos = center_of_tile(offset_position(players[pindex].cursor_pos, direction, diff))
    
    if players[pindex].cursor_size == 0 then
       -- Cursor size 0 ("1 by 1"): Read tile
-      if not game.get_player(pindex).driving then
+      if not p.driving then
          read_tile(pindex)
       end
       
       --Update drawn cursor
-      local stack = game.get_player(pindex).cursor_stack
+      local stack = p.cursor_stack
       if stack and stack.valid_for_read and stack.valid and (stack.prototype.place_result ~= nil or stack.is_blueprint) then 
          sync_build_cursor_graphics(pindex)
       end
@@ -6439,7 +6460,7 @@ function cursor_mode_move(direction, pindex, single_only)
       else
          cursor_highlight(pindex, nil, nil)
       end
-   elseif not game.get_player(pindex).driving then
+   elseif not p.driving then
       -- Larger cursor sizes: scan area
       local scan_left_top = {math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size,math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size}
       local scan_right_bottom = {math.floor(players[pindex].cursor_pos.x)+players[pindex].cursor_size+1,math.floor(players[pindex].cursor_pos.y)+players[pindex].cursor_size+1}
@@ -6455,7 +6476,25 @@ function cursor_mode_move(direction, pindex, single_only)
    turn_to_cursor_direction_precise(pindex)
    
    --Play Sound
-   game.get_player(pindex).play_sound{path = "Close-Inventory-Sound", volume_modifier = 0.75}
+   p.play_sound{path = "Close-Inventory-Sound", volume_modifier = 0.75}
+   
+   --Focus the map view onto the position if it is out of reach
+   adjust_camera_view(pindex)
+end
+
+function adjust_camera_view(pindex)
+   local p = game.get_player(pindex)
+   local cursor_dist = util.distance(players[pindex].cursor_pos, players[pindex].position)
+   local cut_off = p.reach_distance + 4
+   if cursor_dist <= cut_off then
+      p.close_map()
+      if cursor_position_is_on_screen(pindex) == false then
+         fix_zoom(pindex)
+      end
+   elseif cursor_dist > cut_off then
+      p.zoom_to_world(players[pindex].cursor_pos)
+   end
+   sync_build_cursor_graphics(pindex)
 end
 
 --Makes the character face the cursor but can be overwriten by vanilla move keys.
@@ -6594,6 +6633,8 @@ script.on_event("return-cursor-to-player", function(event)
          jump_to_player(pindex)
       end
    end
+   --Adjust camera
+   adjust_camera_view(pindex)
 end)
 
 --Default is CONTROL + J
