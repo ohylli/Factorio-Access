@@ -1353,9 +1353,9 @@ function ent_info(pindex, ent, description)
    local status = ent.status
    local stat = defines.entity_status
    if status ~= nil and status ~= stat.normal and status ~= stat.working then
-      if status == stat.no_ingredients or status == stat.no_input_fluid or status = stat.no_minable_resources or status = stat.item_ingredient_shortage or status = stat.missing_required_fluid or status = stat.no_ammo then
+      if status == stat.no_ingredients or status == stat.no_input_fluid or status == stat.no_minable_resources or status == stat.item_ingredient_shortage or status == stat.missing_required_fluid or status == stat.no_ammo then
          result = result .. ", input missing "
-      elseif status = stat.full_output or status == stat.full_burnt_result_output then
+      elseif status == stat.full_output or status == stat.full_burnt_result_output then
          result = result .. " output full "
       end
    end 
@@ -3322,16 +3322,19 @@ function get_crafting_que_total(pindex)
    return total_items
 end 
 
-function read_crafting_slot(pindex, start_phrase)
+function read_crafting_slot(pindex, start_phrase, new_category)
    start_phrase = start_phrase or ""
    recipe = players[pindex].crafting.lua_recipes[players[pindex].crafting.category][players[pindex].crafting.index]
    if recipe.valid == true then
       if recipe.category == "smelting" then
          printout(start_phrase .. localising.get(recipe,pindex) .. " can only be crafted by a furnace.", pindex)
       else
-         printout(start_phrase .. localising.get(recipe,pindex) .. " " .. recipe.category .. " " .. recipe.group.name .. " " .. game.get_player(pindex).get_craftable_count(recipe.name), pindex)
+         if new_category == true then
+            start_phrase = start_phrase .. localising.get(recipe.group) .. ", "
+         end
+         printout(start_phrase .. localising.get(recipe,pindex) .. " can craft " .. game.get_player(pindex).get_craftable_count(recipe.name), pindex)
       end
-      else
+   else
       printout("Blank",pindex)
    end
 end
@@ -5229,7 +5232,7 @@ function menu_cursor_up(pindex)
       if players[pindex].crafting.category < 1 then
          players[pindex].crafting.category = players[pindex].crafting.max
       end
-      read_crafting_slot(pindex)
+      read_crafting_slot(pindex, "", true)
    elseif players[pindex].menu == "crafting_queue" then   
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
       load_crafting_queue(pindex)
@@ -5444,7 +5447,7 @@ function menu_cursor_down(pindex)
       if players[pindex].crafting.category > players[pindex].crafting.max then
          players[pindex].crafting.category = 1
       end
-      read_crafting_slot(pindex)
+      read_crafting_slot(pindex, "", true)
    elseif players[pindex].menu == "crafting_queue" then   
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
       load_crafting_queue(pindex)
@@ -8835,7 +8838,7 @@ script.on_event("click-hand", function(event)
             end
             printout(ent_counter .. " entities marked to be upgraded.", pindex) 
          end
-      elseif stack.prototype ~= nil stack.prototype.type == "capsule" then
+      elseif stack.prototype ~= nil and stack.prototype.type == "capsule" then
          --If holding a capsule type, e.g. cliff explosives or robot capsules, or remotes, try to use it at the cursor position (no feedback about successful usage)
          local cursor_dist = util.distance(game.get_player(pindex).position,players[pindex].cursor_pos)
          local range = 20
@@ -10580,7 +10583,7 @@ script.on_event(defines.events.on_player_mined_item,function(event)
    local pindex = event.player_index
    --Play item pickup sound 
    game.get_player(pindex).play_sound{path = "utility/picked_up_item", volume_modifier = 1}
-end
+end)
 
 function ensure_global_structures_are_up_to_date()
    global.forces = global.forces or {}
@@ -11092,7 +11095,7 @@ script.on_event("open-fast-travel-menu", function(event)
       players[pindex].move_queue = {}
       players[pindex].travel.index = {x = 1, y = 0}
       players[pindex].travel.creating = false
-      printout("Navigate up and down to select a fast travel location, and jump to it with LEFT BRACKET.  Alternatively, select an option by navigating left and right.", pindex)
+      printout("Navigate up and down with W and S to select a fast travel location, and jump to it with LEFT BRACKET.  Alternatively, select an option by navigating left and right with A and D.", pindex)
       local screen = game.get_player(pindex).gui.screen
       local frame = screen.add{type = "frame", name = "travel"}
       frame.bring_to_front()
@@ -11326,7 +11329,7 @@ script.on_event("nudge-right", function(event)
 end)
 
 
-script.on_event("train-menu-up", function(event)
+script.on_event("alternative-menu-up", function(event)
    local pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -11338,7 +11341,7 @@ script.on_event("train-menu-up", function(event)
    end
 end)
 
-script.on_event("train-menu-down", function(event)
+script.on_event("alternative-menu-down", function(event)
    local pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -11350,7 +11353,7 @@ script.on_event("train-menu-down", function(event)
    end
 end)
 
-script.on_event("train-menu-left", function(event)
+script.on_event("alternative-menu-left", function(event)
    local pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -11360,7 +11363,7 @@ script.on_event("train-menu-left", function(event)
    end
 end)
 
-script.on_event("train-menu-right", function(event)
+script.on_event("alternative-menu-right", function(event)
    local pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -13818,6 +13821,7 @@ function delete_empty_planners_in_inventory(pindex)
          end
       end
    end
+end
 
 --This function can be called via the console: /c __FactorioAccess__ regenerate_all_uncharted_spawners()
 function regenerate_all_uncharted_spawners(surface_in)
@@ -13826,7 +13830,7 @@ function regenerate_all_uncharted_spawners(surface_in)
    --Get spawner names
    local spawner_names = {}
    for name, prot in pairs(game.get_filtered_entity_prototypes({{filter = "type", type = "unit-spawner"}})) do
-      table.insert(spawner_names,name}
+      table.insert(spawner_names,name)
    end
    
    for chunk in surf.get_chunks() do
