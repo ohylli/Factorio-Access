@@ -3281,11 +3281,23 @@ end
 function read_crafting_queue(pindex, start_phrase)
    start_phrase = start_phrase or ""
    if players[pindex].crafting_queue.max ~= 0 then
-      item = players[pindex].crafting_queue.lua_queue[players[pindex].crafting_queue.index]
-      printout(start_phrase .. item.recipe .. " x " .. item.count, pindex)
+      local item = players[pindex].crafting_queue.lua_queue[players[pindex].crafting_queue.index]
+      local recipe_name_only = item.recipe
+      printout(start_phrase .. localising.get(game.recipe_prototypes[recipe_name_only],pindex) .. " x " .. item.count, pindex)
    else
       printout(start_phrase .. "Blank", pindex)
    end
+end
+
+function count_in_crafting_queue(check_recipe_name, pindex)
+   local count = 0
+   for i, item in ipairs(game.get_player(pindex).crafting_queue) do 
+      if item.recipe == check_recipe_name then
+         count = count + item.count
+      end
+      --game.print(item.recipe .. " vs " .. check_recipe_name)
+   end
+   return count
 end
    
 function load_crafting_queue(pindex)
@@ -3330,9 +3342,9 @@ function read_crafting_slot(pindex, start_phrase, new_category)
          printout(start_phrase .. localising.get(recipe,pindex) .. " can only be crafted by a furnace.", pindex)
       else
          if new_category == true then
-            start_phrase = start_phrase .. localising.get(recipe.group) .. ", "
+            start_phrase = start_phrase .. localising.get_alt(recipe.group,pindex) .. ", "
          end
-         printout(start_phrase .. localising.get(recipe,pindex) .. " can craft " .. game.get_player(pindex).get_craftable_count(recipe.name), pindex)
+         printout(start_phrase .. localising.get(recipe,pindex) .. ", can craft " .. game.get_player(pindex).get_craftable_count(recipe.name), pindex)
       end
    else
       printout("Blank",pindex)
@@ -8361,7 +8373,8 @@ script.on_event("click-menu", function(event)
          }
          local count = game.get_player(pindex).begin_crafting(T)
          if count > 0 then
-            printout("Started crafting " .. count .. " " .. T.recipe.name, pindex)
+            local total_count = count_in_crafting_queue(T.recipe.name, pindex)
+            printout("Started crafting " .. count .. " " .. localising.get_alt(T.recipe,pindex) .. ", " .. total_count .. " total in queue", pindex)
          else
             printout("Not enough ingredients", pindex)
          end
@@ -9664,7 +9677,8 @@ script.on_event("crafting-all", function(event)
          }
          local count = game.get_player(pindex).begin_crafting(T)
          if count > 0 then
-            printout("Started crafting " .. count .. " " .. T.recipe.name, pindex)
+            local total_count = count_in_crafting_queue(T.recipe.name, pindex)
+            printout("Started crafting " .. count .. " " .. localising.get_alt(T.recipe,pindex) .. ", " .. total_count .. " total in queue", pindex)
          else
             printout("Not enough materials", pindex)
          end
@@ -10006,7 +10020,8 @@ script.on_event("crafting-5", function(event)
          }
          local count = game.get_player(pindex).begin_crafting(T)
          if count > 0 then
-            printout("Started crafting " .. count .. " " .. T.recipe.name, pindex)
+            local total_count = count_in_crafting_queue(T.recipe.name, pindex)
+            printout("Started crafting " .. count .. " " .. localising.get_alt(T.recipe,pindex) .. ", " .. total_count .. " total in queue", pindex)
          else
             printout("Not enough materials", pindex)
          end
