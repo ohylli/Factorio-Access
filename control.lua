@@ -7936,7 +7936,7 @@ function play_mining_sound(pindex)
    end
 end
 
---Creates sound effects for vanilla mining. Needs to be same key as vanilla mining key. 
+--Creates sound effects for vanilla mining 
 script.on_event("mine-access-sounds", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -7945,8 +7945,7 @@ script.on_event("mine-access-sounds", function(event)
    if not (players[pindex].in_menu) and not players[pindex].vanilla_mode then   
       target(pindex)
       local ent = get_selected_ent(pindex)
-      --if ent and (ent.prototype.mineable_properties.products == nil or ent.prototype.mineable_properties.products[1].name == ent.name) then
-      if ent and ent.valid and (ent.prototype.mineable_properties.products ~= nil) then
+      if ent and ent.valid and (ent.prototype.mineable_properties.products ~= nil) and ent.type ~= "resource" then
          game.get_player(pindex).selected = ent
          game.get_player(pindex).play_sound{path = "player-mine"}
          schedule(25, "play_mining_sound", pindex)
@@ -10516,6 +10515,11 @@ script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
    sync_build_cursor_graphics(pindex)
 end)
 
+script.on_event(defines.events.on_player_mined_item,function(event)
+   local pindex = event.player_index
+   --Play item pickup sound 
+   game.get_player(pindex).play_sound{path = "utility/picked_up_item", volume_modifier = 1}
+end
 
 function ensure_global_structures_are_up_to_date()
    global.forces = global.forces or {}
