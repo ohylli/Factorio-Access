@@ -162,16 +162,24 @@ function remove_weapons_and_ammo(pindex)
    --Remove all ammo
    for i = 1, ammos_count, 1 do
       if main_inv.can_insert(ammo_inv[i]) then
-	     local inserted = main_inv.insert(ammo_inv[i])--laterdo recover the uninserted if cannot insert (which is only when inv full) or maybe fails to remove anyway?
-	     resulted_remove_count = resulted_remove_count + math.ceil(ammo_inv.remove(ammo_inv[i]) / 1000 )--we just want to count stacks
+         local inserted = main_inv.insert(ammo_inv[i])
+         local removed = ammo_inv.remove(ammo_inv[i])
+         if inserted ~= removed then
+            game.get_player(pindex).print("ammo removal count error",{volume_modifier=0})--todo fix
+         end
+         resulted_remove_count = resulted_remove_count + math.ceil(removed / 1000 )--counts how many stacks are removed
 	  end
    end
    
    --Remove all guns
    for i = 1, guns_count, 1 do
       if main_inv.can_insert(guns_inv[i]) then
-	     local inserted = main_inv.insert(guns_inv[i])--laterdo recover the uninserted if cannot insert (which is only when inv full) or maybe fails to remove anyway?
-	     resulted_remove_count = resulted_remove_count + math.ceil(guns_inv.remove(guns_inv[i]) / 1000)--we just want to count stacks
+	     local inserted = main_inv.insert(guns_inv[i])
+        local removed = guns_inv.remove(guns_inv[i])
+        if inserted ~= removed then
+            game.get_player(pindex).print("gun removal count error",{volume_modifier=0})--todo fix
+        end
+	     resulted_remove_count = resulted_remove_count + math.ceil(removed / 1000)--counts how many stacks are removed
 	  end
    end
    
@@ -453,7 +461,7 @@ function aim_gun_at_nearest_enemy(pindex,enemy_in)
    --If in range, move the cursor onto the enemy to aim the gun
    if dist < range then 
       players[pindex].cursor_pos = enemy.position
-      move_mouse_cursor(enemy.position,pindex)
+      move_mouse_pointer(enemy.position,pindex)
       cursor_highlight(pindex,nil,nil,true)
    end
    return true
