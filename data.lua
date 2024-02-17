@@ -1478,6 +1478,14 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "shoot-weapon-fa",
+    key_sequence = "SPACE",
+    linked_game_control = "shoot-enemy",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "launch-rocket",
     key_sequence = "SPACE",
     consuming = "none"

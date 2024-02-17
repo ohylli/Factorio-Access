@@ -674,7 +674,7 @@ function move_cursor_structure(pindex, dir)
          local ent = network[network[current][adjusted[(0 + dir) %8]][index].num]
          if ent.ent.valid then
             cursor_highlight(pindex, ent.ent, nil)
-            move_mouse_cursor(ent.ent.position,pindex)
+            move_mouse_pointer(ent.ent.position,pindex)
             players[pindex].cursor_pos = ent.ent.position
             --Case 1: Proposing a new structure
             printout("To " .. ent.name .. " " .. extra_info_for_scan_list(ent.ent,pindex,true) .. ", " .. description  .. ", " .. index .. " of " .. #network[current][adjusted[(0 + dir) % 8]], pindex)
@@ -705,7 +705,7 @@ function move_cursor_structure(pindex, dir)
       local ent = network[current]
       if ent.ent.valid then
          cursor_highlight(pindex, ent.ent, nil)
-         move_mouse_cursor(ent.ent.position,pindex)
+         move_mouse_pointer(ent.ent.position,pindex)
          players[pindex].cursor_pos = ent.ent.position
          --Case 2: Returning to the current structure
          printout("Back at " .. ent.name .. " " .. extra_info_for_scan_list(ent.ent,pindex,true) .. ", " .. description, pindex)
@@ -736,7 +736,7 @@ function move_cursor_structure(pindex, dir)
       local ent = network[current]
      if ent.ent.valid then
          cursor_highlight(pindex, ent.ent, nil)
-         move_mouse_cursor(ent.ent.position,pindex)
+         move_mouse_pointer(ent.ent.position,pindex)
          players[pindex].cursor_pos = ent.ent.position
          --Case 3: Moved to the new structure
          printout("Now at " .. ent.name .. " " .. extra_info_for_scan_list(ent.ent,pindex,true) .. ", " .. description, pindex)
@@ -772,7 +772,7 @@ function move_cursor_structure(pindex, dir)
       local ent = network[network[current][direction][index].num]
       if ent.ent.valid then
          cursor_highlight(pindex, ent.ent, nil)
-         move_mouse_cursor(ent.ent.position,pindex)
+         move_mouse_pointer(ent.ent.position,pindex)
          players[pindex].cursor_pos = ent.ent.position
          --Case 4: Propose a new structure within the same direction
          printout("To " .. ent.name .. " " .. extra_info_for_scan_list(ent.ent,pindex,true) .. ", " .. description  .. ", " .. index .. " of " .. #network[current][direction], pindex)
@@ -1830,7 +1830,7 @@ function teleport_to_closest(pindex, pos, muted, ignore_enemies)
          end        
          --Update cursor after teleport
          players[pindex].cursor_pos = table.deepcopy(new_pos)
-         move_mouse_cursor(center_of_tile(players[pindex].cursor_pos),pindex)
+         move_mouse_pointer(center_of_tile(players[pindex].cursor_pos),pindex)
          cursor_highlight(pindex,nil,nil)
       else
          printout("Teleport Failed", pindex)
@@ -3595,14 +3595,14 @@ end
 function target(pindex)
    local ent = get_selected_ent(pindex)
    if ent and not players[pindex].vanilla_mode then
-         move_mouse_cursor(ent.position,pindex)
+         move_mouse_pointer(ent.position,pindex)
    elseif not players[pindex].vanilla_mode then
-         move_mouse_cursor(players[pindex].cursor_pos, pindex)
+         move_mouse_pointer(players[pindex].cursor_pos, pindex)
    end
 end
 
 --Move the mouse cursor to the correct pixel on the screen 
-function move_mouse_cursor(position,pindex)
+function move_mouse_pointer(position,pindex)
    if players[pindex].vanilla_mode or game.get_player(pindex).game_view_settings.update_entity_selection == true then
       return
    end
@@ -3611,10 +3611,10 @@ function move_mouse_cursor(position,pindex)
    local screen = game.players[pindex].display_resolution
    screen = {x = screen.width, y = screen.height}
    pixels = add_position(pixels,mult_position(screen,0.5))
-   move_cursor(pixels.x, pixels.y, pindex)
+   move_pointer(pixels.x, pixels.y, pindex)
 end
 
-function move_cursor(x,y, pindex)
+function move_pointer(x,y, pindex)
    if x >= 0 and y >=0 and x < game.players[pindex].display_resolution.width and y < game.players[pindex].display_resolution.height then
       print ("setCursor " .. pindex .. " " .. math.ceil(x) .. "," .. math.ceil(y))
    end
@@ -4093,13 +4093,13 @@ function toggle_cursor(pindex)
       end      
       players[pindex].position = game.get_player(pindex).position
       players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos)
-      move_mouse_cursor(players[pindex].cursor_pos,pindex)
+      move_mouse_pointer(players[pindex].cursor_pos,pindex)
       read_tile(pindex, "Cursor mode enabled, ")
    else
       players[pindex].cursor = false
       players[pindex].cursor_pos = offset_position(players[pindex].position,players[pindex].player_direction,1)
       players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos)
-      move_mouse_cursor(players[pindex].cursor_pos,pindex)
+      move_mouse_pointer(players[pindex].cursor_pos,pindex)
       sync_build_cursor_graphics(pindex)
       target(pindex)
       players[pindex].player_direction = game.get_player(pindex).character.direction
@@ -6232,9 +6232,9 @@ function move_characters(event)
             else
                --Force the pointer to the cursor location (if on screen)
                if cursor_position_is_on_screen_with_player_centered(pindex) then
-                  move_mouse_cursor(players[pindex].cursor_pos,pindex)
+                  move_mouse_pointer(players[pindex].cursor_pos,pindex)
                else
-                  move_mouse_cursor(players[pindex].position,pindex)
+                  move_mouse_pointer(players[pindex].position,pindex)
                end
             end
          end
@@ -11648,6 +11648,33 @@ script.on_event("inventory-remove-all-equipment-and-armor", function(event)
    
 end)
 
+script.on_event("shoot-weapon-fa", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local p = game.get_player(pindex)
+   local ammo_inv = p.get_inventory(defines.inventory.character_ammo)
+   local selected_ammo = ammo_inv[p.character.selected_gun_index]
+   local cursor_pos = players[pindex].cursor_pos
+   local abort_missle = false 
+   local c_dist = util.distance(p.position, cursor_pos)
+   if c_dist < 35 or (players[pindex].cursor == false and cursor_position_is_on_screen_with_player_centered(pindex) == false) then
+      if selected_ammo.name == "atomic-bomb" then
+         abort_missle = true
+      end
+   end
+   
+   if abort_missle then
+      --Unequip the missile
+      
+      --Warn the player
+   else
+      --Suppress alerts for 5 seconds?
+   end
+   
+end)
+
 --Attempt to launch a rocket
 script.on_event("launch-rocket", function(event)
    local pindex = event.player_index
@@ -12657,9 +12684,9 @@ function sync_build_cursor_graphics(pindex)
          --Adjust for cursor
          if cursor_position_is_on_screen_with_player_centered(pindex) then
             local new_pos = {x = (left_top.x + width/2),y = (left_top.y  + height/2)}
-            move_mouse_cursor(new_pos,pindex)
+            move_mouse_pointer(new_pos,pindex)
          else 
-            move_mouse_cursor(players[pindex].position,pindex)
+            move_mouse_pointer(players[pindex].position,pindex)
          end
       else
          --Adjust for direct placement
@@ -12689,7 +12716,7 @@ function sync_build_cursor_graphics(pindex)
             end
             pos = offset_position(pos, players[pindex].player_direction, base_offset + size_offset)
          end
-         move_mouse_cursor(pos,pindex)
+         move_mouse_pointer(pos,pindex)
       end
    elseif stack == nil or not stack.valid_for_read then
       --Invalid stack: Hide the objects
@@ -12716,9 +12743,9 @@ function sync_build_cursor_graphics(pindex)
       
       --Move the mouse pointer
       if cursor_position_is_on_screen_with_player_centered(pindex) then
-         move_mouse_cursor(center_pos,pindex)
+         move_mouse_pointer(center_pos,pindex)
       else 
-         move_mouse_cursor(players[pindex].position,pindex)
+         move_mouse_pointer(players[pindex].position,pindex)
       end
    else
       --Hide the objects
@@ -12817,9 +12844,9 @@ function cursor_highlight(pindex, ent, box_type, skip_mouse_movement)
    
    --Move the mouse cursor to the object on screen or to the player position for objects off screen 
    if cursor_position_is_on_screen_with_player_centered(pindex) then
-      move_mouse_cursor(center_of_tile(c_pos),pindex)
+      move_mouse_pointer(center_of_tile(c_pos),pindex)
    else
-      move_mouse_cursor(center_of_tile(p.position),pindex)
+      move_mouse_pointer(center_of_tile(p.position),pindex)
    end
 end
 
