@@ -1277,7 +1277,19 @@ function ent_info(pindex, ent, description)
       local network = ent.logistic_cell.logistic_network
       result = result .. " of network " .. get_network_name(ent) .. "," .. roboport_contents_info(ent)
    elseif ent.type == "spider-vehicle" then
-      result = result .. " labelled " .. ent.entity_label
+      local label = ent.entity_label
+      if label == nil then
+         label = ""
+      end
+      result = result .. label
+   elseif ent.type == "spider-leg" then
+      local spiders = ent.surface.find_entities_filtered{position = ent.position, radius = 5, type = "spider-vehicle"}
+      local spider  = ent.surface.get_closest(ent.position, spiders)
+      local label = spider.entity_label
+      if label == nil then
+         label = ""
+      end
+      result = result .. label
    end
    --Give drop position (like for inserters)
    if ent.drop_position ~= nil then
@@ -3170,18 +3182,19 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
             if stack.health < 1 then
                start_phrase = start_phrase .. " damaged "
             end
+            local remote_info = ""
             if stack.name == "spidertron-remote" then
-               if stack.connected_entity == nil then
-                  start_phrase = start_phrase .. " unlinked "
+               if cursor_stack.connected_entity == nil then
+                  remote_info = " not linked "
                else
-                  if stack.connected_entity.entity_label == nil then
-                     start_phrase = start_phrase .. " an unlabelled "
+                  if cursor_stack.connected_entity.entity_label == nil then
+                     remote_info = " for unlabelled spidertron "
                   else
-                     start_phrase = start_phrase .. stack.connected_entity.entity_label 
+                     remote_info = " for spidertron " .. cursor_stack.connected_entity.entity_label 
                   end
                end
             end
-            printout(start_phrase .. localising.get(stack,pindex) .. " x " .. stack.count, pindex)
+            printout(start_phrase .. localising.get(stack,pindex) .. remote_info .. " x " .. stack.count, pindex)
          end
       else
          --Read the "empty slot"
@@ -3382,17 +3395,17 @@ function read_hand(pindex)
          --Blueprint extra info 
          printout(get_blueprint_info(cursor_stack,true),pindex)
       elseif cursor_stack.name == "spidertron-remote" then
-         local start_phrase = ""
+         local remote_info = ""
          if cursor_stack.connected_entity == nil then
-            start_phrase = start_phrase .. " unlinked "
+            remote_info = " not linked "
          else
             if cursor_stack.connected_entity.entity_label == nil then
-               start_phrase = start_phrase .. " an unlabelled "
+               remote_info = " for unlabelled spidertron "
             else
-               start_phrase = start_phrase .. cursor_stack.connected_entity.entity_label 
+               remote_info = " for spidertron " .. cursor_stack.connected_entity.entity_label 
             end
          end
-         printout(start_phrase .. localising.get(cursor_stack,pindex) .. " x " .. cursor_stack.count .. " " .. cursor_stack.prototype.subgroup.name , pindex)
+         printout(localising.get(cursor_stack,pindex) .. remote_info, pindex)
       else
          --Any other valid item
          local out={"access.cursor-description"}
@@ -8794,9 +8807,9 @@ script.on_event("click-hand", function(event)
       elseif stack.name == "offshore-pump" then
          --If holding an offshore pump, open the offshore pump builder
          build_offshore_pump_in_hand(pindex)
-      elseif stack.name == "spidertron-remote" then
---open spidermenu with the remote in hand
-      spider_menu_open(pindex, stack)
+      elseif stack.name == "spidertron-remote" and stack.connected_entity ~= nil then
+         --Set the cursor position as the spidertron autopilot target.
+         spider_menu(3, pindex, stack.connected_entity, true, nil)
       elseif stack.is_repair_tool then
          --If holding a repair pack, try to use it (will not work on enemies)
          repair_pack_used(ent,pindex)
@@ -8948,6 +8961,9 @@ script.on_event("click-hand-right", function(event)
             p.surface.cancel_upgrade_area{area={left_top, right_bottom}, force=p.force, player=p, item=p.cursor_stack}
             printout("Canceled upgrading in selected area", pindex) 
          end
+      elseif stack.name == "spidertron-remote" then
+         --open spidermenu with the remote in hand
+         spider_menu_open(pindex, stack)
       end 
    end
 end)
@@ -9028,14 +9044,16 @@ function clicked_on_entity(ent,pindex)
    elseif ent.type == "spider-leg" then
       --Find and open the spider
       local spiders = ent.surface.find_entities_filtered{position = ent.position, radius = 5, type = "spider-vehicle"}
-      if spiders[1] and spiders[1].valid then
-         open_operable_vehicle(spiders[1],pindex)
+      local spider  = ent.surface.get_closest(ent.position, spiders)
+      if spider and spider.valid then
+         open_operable_vehicle(spider,pindex)
       end
    elseif ent.name == "rocket-silo-rocket-shadow" or ent.name == "rocket-silo-rocket" then
       --Find and open the silo
       local silos = ent.surface.find_entities_filtered{position = ent.position, radius = 5, type = "rocket-silo"}
-      if silos[1] and silos[1].valid then
-         open_operable_building(silos[1],pindex)
+      local silo  = ent.surface.get_closest(ent.position, silos)
+      if silo and silo.valid then
+         open_operable_building(silo,pindex)
       end
    elseif ent.operable then
       printout("No menu for " .. ent.name,pindex)
@@ -11656,13 +11674,11 @@ script.on_event("shoot-weapon-fa", function(event)
    local p = game.get_player(pindex)
    local ammo_inv = p.get_inventory(defines.inventory.character_ammo)
    local selected_ammo = ammo_inv[p.character.selected_gun_index]
-   local cursor_pos = players[pindex].cursor_pos
+   local target_pos = p.shooting_state.position
    local abort_missle = false 
-   local c_dist = util.distance(p.position, cursor_pos)
-   if c_dist < 35 or (players[pindex].cursor == false and cursor_position_is_on_screen_with_player_centered(pindex) == false) then
-      if selected_ammo.name == "atomic-bomb" then
-         abort_missle = true
-      end
+   local aim_dist = util.distance(p.position, target_pos)
+   if aim_dist < 35 and selected_ammo.name == "atomic-bomb" then
+      abort_missle = true
    end
    
    if abort_missle then
