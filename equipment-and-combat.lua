@@ -1,9 +1,17 @@
 --Here: functions relating to combat, repair packs 
 --Does not include event handlers, guns and equipment, repair work (but maybe it could?)
 
+local localising=require('localising')
+
 --Tries to equip a stack. For now called only for a stack in hand when the only the inventory is open.
 function equip_it(stack,pindex)
-   local message = "no message"
+   local message = ""
+   if players[pindex].menu == "vehicle" and game.get_player(pindex).opened.type == "spider-vehicle" then
+      message = localising.get_alt(game.entity_prototypes["spidertron"]) 
+      if message == nil then
+         message = "Spidertron "--laterdo possible bug here
+      end
+   end
    
    if stack == nil or not stack.valid_for_read or not stack.valid then
       return "Nothing found to equip."
@@ -12,9 +20,9 @@ function equip_it(stack,pindex)
    if stack.is_armor then
       local armor = game.get_player(pindex).get_inventory(defines.inventory.character_armor)
       if armor.is_empty() then
-         message = " Equipped " .. stack.name
+         message = message .. " Equipped " .. stack.name
       else
-         message = " Equipped " .. stack.name .. " and took in hand " .. armor[1].name
+         message = message .. " Equipped " .. stack.name .. " and took in hand " .. armor[1].name
       end
       stack.swap_stack(armor[1])
       players[pindex].skip_read_hand = true
@@ -23,14 +31,14 @@ function equip_it(stack,pindex)
 	  local gun_inv = game.get_player(pindex).get_inventory(defines.inventory.character_guns)
 	  if gun_inv.can_insert(stack) then
 	     local inserted = gun_inv.insert(stack)
-		 message = " Equipped " .. stack.name
+		 message = message .. " Equipped " .. stack.name
 		 stack.count = stack.count - inserted
        players[pindex].skip_read_hand = true
 	  else
 	    if gun_inv.count_empty_stacks() == 0 then 
-		    message = "All gun slots full."
+		    message = message .. " All gun slots full."
 		 else
-		    message = "Cannot insert " .. stack.name
+		    message = message .. " Cannot insert " .. stack.name
 		 end
 	  end
    elseif stack.type == "ammo" then
@@ -38,14 +46,14 @@ function equip_it(stack,pindex)
 	  local ammo_inv = game.get_player(pindex).get_inventory(defines.inventory.character_ammo)
 	  if ammo_inv.can_insert(stack) then
 	     local inserted = ammo_inv.insert(stack)
-		 message = "Reloaded with " .. stack.name
+		 message = message .. " Reloaded with " .. stack.name
 		 stack.count = stack.count - inserted
        players[pindex].skip_read_hand = true
 	  else
 	    if ammo_inv.count_empty_stacks() == 0 then 
-		    message = "All ammo slots full."
+		    message = message .. " All ammo slots full."
 		 else
-		    message = "Cannot insert " .. stack.name
+		    message = message .. " Cannot insert " .. stack.name
 		 end
 	  end
    elseif stack.prototype.place_as_equipment_result ~= nil then
@@ -79,19 +87,19 @@ function equip_it(stack,pindex)
 	  end    
      local slots_left = count_empty_equipment_slots(grid)
 	  if placed ~= nil then
-	     message = "Equipped " .. stack.name .. ", " .. slots_left .. " empty slots remaining."
+	    message = message .. " equipped " .. stack.name .. ", " .. slots_left .. " empty slots remaining."
 		 stack.count = stack.count - 1
        players[pindex].skip_read_hand = true
 	  else
 	     --Check if the grid is full 
 		 if slots_left == 0 then
-		    message = "All armor equipment slots are full."
+		    message = message .. " All armor equipment slots are full."
 		 else
-		    message = "This equipment does not fit in the remaining ".. slots_left .. " slots."
+		    message = message .. " This equipment does not fit in the remaining ".. slots_left .. " slots."
 		 end
 	  end
    else
-      message = " Cannot equip " .. stack.name
+      message = message .. " Cannot equip " .. stack.name
    end
    
    return message
@@ -218,9 +226,13 @@ function read_armor_stats(pindex)
    local grid 
    if players[pindex].menu == "vehicle" and game.get_player(pindex).opened.type == "spider-vehicle" then
       grid = game.get_player(pindex).opened.grid
+      result = localising.get_alt(game.entity_prototypes["spidertron"]) 
+      if result == nil then
+         result = "Spidertron "--laterdo possible bug here
+      end
    else
-      result = armor_inv[1].name .. " equipped, "
       grid = armor_inv[1].grid
+      result = armor_inv[1].name .. " equipped, "
    end
    if grid.count() == 0 then
       return result .. " no armor equipment installed. "
@@ -228,7 +240,7 @@ function read_armor_stats(pindex)
    --Read shield level
    if grid.max_shield > 0 then
       if grid.shield == grid.max_shield then
-	     result = " shields full, "
+	     result = result .. " shields full, "
 	  else
 	     result = result .. " shields at " .. math.ceil(100 * grid.shield / grid.max_shield) .. " percent, "
 	  end
@@ -278,15 +290,19 @@ function read_equipment_list(pindex)
    local grid 
    if players[pindex].menu == "vehicle" and game.get_player(pindex).opened.type == "spider-vehicle" then
       grid = game.get_player(pindex).opened.grid
+      result = localising.get_alt(game.entity_prototypes["spidertron"]) 
+      if result == nil then
+         result = "Spidertron "--laterdo possible bug here
+      end
    else
-      result = "Equipped, "
       grid = armor_inv[1].grid
+      result = "Armor "
    end
    if grid.equipment == nil or grid.equipment == {} then
       return " No armor equipment installed. "
    end
    --Read Equipment List
-   result = "Equipped, "
+   result = result .." equipped, "
    local contents = grid.get_contents() 
    local itemtable = {}
    for name, count in pairs(contents) do
