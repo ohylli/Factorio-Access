@@ -513,7 +513,11 @@ function extra_info_for_scan_list(ent,pindex,info_comes_after_indexing)
    --Roboport network name 
       result = result .. " of network " .. get_network_name(ent)
    elseif ent.type == "spider-vehicle" then
-      result = result .. " labelled " .. ent.entity_label
+      local label = ent.entity_label
+      if label == nil then
+         label = ""
+      end
+      result = result .. label
    end
    
    return result
@@ -3606,11 +3610,14 @@ function locate_hand_in_crafting_menu(pindex)
 end
 
 function target(pindex)
+   if players[pindex].vanilla_mode then
+      return
+   end 
    local ent = get_selected_ent(pindex)
-   if ent and not players[pindex].vanilla_mode then
-         move_mouse_pointer(ent.position,pindex)
-   elseif not players[pindex].vanilla_mode then
-         move_mouse_pointer(players[pindex].cursor_pos, pindex)
+   if ent then
+      move_mouse_pointer(ent.position,pindex)
+   else
+      move_mouse_pointer(players[pindex].cursor_pos, pindex)
    end
 end
 
@@ -3618,9 +3625,25 @@ end
 function move_mouse_pointer(position,pindex)
    if players[pindex].vanilla_mode or game.get_player(pindex).game_view_settings.update_entity_selection == true then
       return
+   elseif players[pindex].cursor and cursor_position_is_on_screen_with_player_centered(pindex) == false then
+      move_mouse_pointer_map_mode(position,pindex)
+      return
    end
    local player = players[pindex]
    local pixels = mult_position( sub_position(position, player.position), 32*player.zoom)
+   local screen = game.players[pindex].display_resolution
+   screen = {x = screen.width, y = screen.height}
+   pixels = add_position(pixels,mult_position(screen,0.5))
+   move_pointer(pixels.x, pixels.y, pindex)
+end
+
+--Move the mouse cursor to the correct pixel on the screen 
+function move_mouse_pointer_map_mode(position,pindex)
+   if players[pindex].vanilla_mode or game.get_player(pindex).game_view_settings.update_entity_selection == true then
+      return
+   end
+   local player = players[pindex]
+   local pixels = mult_position( sub_position(position, player.cursor_pos), 32*player.zoom)
    local screen = game.players[pindex].display_resolution
    screen = {x = screen.width, y = screen.height}
    pixels = add_position(pixels,mult_position(screen,0.5))
@@ -7239,7 +7262,7 @@ script.on_event("scan-sort-by-distance", function(event)
    if not (players[pindex].in_menu) then
       players[pindex].nearby.index = 1
       players[pindex].nearby.count = false
-      printout("Sorting scan results by distance from your position", pindex)
+      printout("Sorting scan results by distance from character position", pindex)
       scan_sort(pindex)
    end
 end)
@@ -9796,7 +9819,7 @@ script.on_event("equip-item", function(event)
    local result = ""
    if stack ~= nil and stack.valid_for_read and stack.valid then
       --Equip item grabbed in hand, for selected menus
-      if not players[pindex].in_menu or players[pindex].menu == "inventory" or  (players[pindex].menu == "vehicle" and game.get_player(pindex).opened.type == "spider-vehicle") then
+      if not players[pindex].in_menu or players[pindex].menu == "inventory" or (players[pindex].menu == "vehicle" and game.get_player(pindex).opened.type == "spider-vehicle") then
          result = equip_it(stack,pindex)
       end
    elseif players[pindex].menu == "inventory" then
@@ -10625,6 +10648,7 @@ script.on_event(defines.events.on_player_mined_item,function(event)
    local pindex = event.player_index
    --Play item pickup sound 
    game.get_player(pindex).play_sound{path = "utility/picked_up_item", volume_modifier = 1}
+   game.get_player(pindex).play_sound{path = "Close-Inventory-Sound", volume_modifier = 1}
 end)
 
 function ensure_global_structures_are_up_to_date()
@@ -12701,8 +12725,9 @@ function sync_build_cursor_graphics(pindex)
          if cursor_position_is_on_screen_with_player_centered(pindex) then
             local new_pos = {x = (left_top.x + width/2),y = (left_top.y  + height/2)}
             move_mouse_pointer(new_pos,pindex)
-         else 
-            move_mouse_pointer(players[pindex].position,pindex)
+         -- else
+            -- local new_pos = {x = (players[pindex].cursor_pos.x + width/2),y = (players[pindex].cursor_pos.y  + height/2)}
+            -- move_mouse_pointer_map_mode(new_pos,pindex)--maybe not needed as a special case
          end
       else
          --Adjust for direct placement
@@ -13904,7 +13929,7 @@ function regenerate_all_uncharted_spawners(surface_in)
       local is_charted = false
       --Check if the chunk is charted by any players
       for pindex, player in pairs(players) do
-         is_charted = is_charted or player.force.is_chunk_charted(surf, {x = chunk.x, y = chunk.y})
+         is_charted = is_charted or (player.force and player.force.is_chunk_charted(surf, {x = chunk.x, y = chunk.y}))
       end
       --Regenerate the spawners if NOT charted by any player forces
       if is_charted == false then
