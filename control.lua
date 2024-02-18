@@ -3635,6 +3635,7 @@ function move_mouse_pointer(position,pindex)
    screen = {x = screen.width, y = screen.height}
    pixels = add_position(pixels,mult_position(screen,0.5))
    move_pointer(pixels.x, pixels.y, pindex)
+   --game.get_player(pindex).print("moved to " ..  math.floor(pixels.x) .. " , " ..  math.floor(pixels.y), {volume_modifier=0})--
 end
 
 --Move the mouse cursor to the correct pixel on the screen 
@@ -3643,11 +3644,13 @@ function move_mouse_pointer_map_mode(position,pindex)
       return
    end
    local player = players[pindex]
-   local pixels = mult_position( sub_position(position, player.cursor_pos), 32*player.zoom)
+   --local pixels = {x = 0, y = 0}
+   local pixels = mult_position(sub_position(position, players[pindex].cursor_pos), 32*players[pindex].zoom)
    local screen = game.players[pindex].display_resolution
    screen = {x = screen.width, y = screen.height}
    pixels = add_position(pixels,mult_position(screen,0.5))
    move_pointer(pixels.x, pixels.y, pindex)
+   --game.get_player(pindex).print("moved to " .. math.floor(pixels.x) .. " , " ..  math.floor(pixels.y), {volume_modifier=0})--
 end
 
 function move_pointer(x,y, pindex)
@@ -12722,13 +12725,8 @@ function sync_build_cursor_graphics(pindex)
       --Move mouse cursor according to building box
       if player.cursor then
          --Adjust for cursor
-         if cursor_position_is_on_screen_with_player_centered(pindex) then
-            local new_pos = {x = (left_top.x + width/2),y = (left_top.y  + height/2)}
-            move_mouse_pointer(new_pos,pindex)
-         -- else
-            -- local new_pos = {x = (players[pindex].cursor_pos.x + width/2),y = (players[pindex].cursor_pos.y  + height/2)}
-            -- move_mouse_pointer_map_mode(new_pos,pindex)--maybe not needed as a special case
-         end
+         local new_pos = {x = (left_top.x + width/2),y = (left_top.y  + height/2)}
+         move_mouse_pointer(new_pos,pindex)
       else
          --Adjust for direct placement
          local pos = player.cursor_pos
