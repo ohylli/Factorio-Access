@@ -2024,7 +2024,7 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
       elseif index == 1 then 
          --Import a text string to save into this blueprint
          if not clicked then
-            local result = "Empty blueprint, press 'LEFT BRACKET' to import a text string to overwrite this blueprint"
+            local result = "Import a text string to fill this blueprint"
             printout(result, pindex)
          else
             players[pindex].blueprint_menu.edit_import = true
@@ -2037,6 +2037,7 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
             local result = "Paste a copied blueprint text string in this box and then press ENTER to load it"
             printout(result, pindex)
          end
+      --elseif index == 2 then --use last selected area ***
       else 
          players[pindex].blueprint_menu.index = 0
          p.play_sound{path = "inventory-wrap-around"}
@@ -2244,7 +2245,7 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
          frame.bring_to_front()
          frame.force_auto_center()
          frame.focus()
-         local input = frame.add{type="textfield", name = "input", text = string.sub(stack.export_stack(),2)}
+         local input = frame.add{type="textfield", name = "input", text = bp.export_stack()} 
          input.focus()
          local result = "Copy the text from this boz using 'CONTROL + A' and then 'CONTROL + C' and then press ENTER to exit"
          printout(result, pindex)
