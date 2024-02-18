@@ -96,7 +96,7 @@ function spider_menu(menu_index, pindex, spiderin, clicked, other_input)
          else
             cursor = players[pindex].cursor_pos
             game.get_player(pindex).cursor_stack.connected_entity.autopilot_destination = cursor
-            printout("Spidertron sent to coordinates" .. cursor.x .. ", " .. cursor.y, pindex)
+            printout("Spidertron sent to coordinates" .. math.floor(cursor.x) .. ", " .. math.floor(cursor.y), pindex)
          end
       end
    elseif index == 4 then
@@ -109,7 +109,7 @@ function spider_menu(menu_index, pindex, spiderin, clicked, other_input)
          else
             cursor = players[pindex].cursor_pos
             game.get_player(pindex).cursor_stack.connected_entity.add_autopilot_destination(cursor)
-            printout("Coordinates " .. cursor.x .. ", " .. cursor.y .. "added to this spidertron's autopilot queue.", pindex)
+            printout("Coordinates " .. math.floor(cursor.x) .. ", " .. math.floor(cursor.y) .. "added to this spidertron's autopilot queue.", pindex)
          end
       end
    elseif index == 5 then
