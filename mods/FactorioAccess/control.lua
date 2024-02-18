@@ -3371,7 +3371,14 @@ end
 --Reads a player inventory slot
 function read_inventory_slot(pindex, start_phrase_in)
    local start_phrase = start_phrase_in or ""
-   local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
+   local index = players[pindex].inventory.index
+   if index < 1 then
+      index = 1
+   elseif index > #players[pindex].inventory.lua_inventory then
+      index = #players[pindex].inventory.lua_inventory
+   end
+   players[pindex].inventory.index = index
+   local stack = players[pindex].inventory.lua_inventory[index]
    if stack == nil or not stack.valid_for_read then
       return 
    end
