@@ -3308,6 +3308,9 @@ end
 
 function count_in_crafting_queue(check_recipe_name, pindex)
    local count = 0
+   if game.get_player(pindex).crafting_queue == nil or #game.get_player(pindex).crafting_queue == 0 then
+      return count
+   end
    for i, item in ipairs(game.get_player(pindex).crafting_queue) do 
       if item.recipe == check_recipe_name then
          count = count + item.count
@@ -6151,7 +6154,7 @@ function on_tick(event)
          end
          
          --If crafting, play a sound
-         if p.crafting_queue_size > 0 then
+         if p.crafting_queue ~= nil and #p.crafting_queue > 0 and p.crafting_queue_size > 0 then
             p.play_sound{path = "player-crafting", volume_modifier = 0.5}
          end
       end
