@@ -6154,7 +6154,7 @@ function on_tick(event)
          end
          
          --If crafting, play a sound
-         if p.crafting_queue ~= nil and #p.crafting_queue > 0 and p.crafting_queue_size > 0 then
+         if p.character and p.crafting_queue ~= nil and #p.crafting_queue > 0 and p.crafting_queue_size > 0 then
             p.play_sound{path = "player-crafting", volume_modifier = 0.5}
          end
       end
@@ -6163,7 +6163,7 @@ function on_tick(event)
          --Fix running speed bug (toggle walk also fixes it)
          fix_walk(pindex)
       end
-   elseif event.tick % 600 == 14 then
+   elseif event.tick % 300 == 14 then
       for pindex, player in pairs(players) do
          --Tutorial reminder every 10 seconds until you open it
          if players[pindex].started ~= true then
