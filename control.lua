@@ -3649,14 +3649,16 @@ end
 
 --Move the mouse cursor to the correct pixel on the screen 
 function move_mouse_pointer(position,pindex)
+   local pos = position
    if players[pindex].vanilla_mode or game.get_player(pindex).game_view_settings.update_entity_selection == true then
       return
    elseif players[pindex].cursor and cursor_position_is_on_screen_with_player_centered(pindex) == false then
-      move_mouse_pointer_map_mode(position,pindex)
-      return
+      pos = players[pindex].position 
+      --move_mouse_pointer_map_mode(position,pindex)
+      --return
    end
    local player = players[pindex]
-   local pixels = mult_position( sub_position(position, player.position), 32*player.zoom)
+   local pixels = mult_position( sub_position(pos, player.position), 32*player.zoom)
    local screen = game.players[pindex].display_resolution
    screen = {x = screen.width, y = screen.height}
    pixels = add_position(pixels,mult_position(screen,0.5))
@@ -11041,7 +11043,9 @@ script.on_event("pipette-tool-info",function(event)
          players[pindex].building_direction = ent.direction
          players[pindex].cursor_rotation_offset = 0
       end
-      players[pindex].cursor_pos = get_ent_northwest_corner_position(ent)
+      if players[pindex].cursor then
+         players[pindex].cursor_pos = get_ent_northwest_corner_position(ent)
+      end
       sync_build_cursor_graphics(pindex)
       cursor_highlight(pindex, ent, nil, nil)
    end
