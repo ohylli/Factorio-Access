@@ -4455,7 +4455,7 @@ function build_preview_checks_info(stack, pindex)
       local ents_north = p.surface.find_entities_filtered{position = {x = pos.x+0, y = pos.y-1} }
       local ents_south = p.surface.find_entities_filtered{position = {x = pos.x+0, y = pos.y+1} }
       local ents_east  = p.surface.find_entities_filtered{position = {x = pos.x+1, y = pos.y+0} }
-      local ents_west  = p.surface.find_entities_filtered{position = {x = pos.x-1, y = pos.y+0} }--****bug due to player detection
+      local ents_west  = p.surface.find_entities_filtered{position = {x = pos.x-1, y = pos.y+0} }
       local relevant_fluid_north = nil
       local relevant_fluid_east  = nil
       local relevant_fluid_south = nil
@@ -4463,10 +4463,34 @@ function build_preview_checks_info(stack, pindex)
       local box = nil
       local dir_from_pos = nil
       
-      box, relevant_fluid_north, dir_from_pos = get_relevant_fluidbox_and_fluid_name(ents_north[1], pos, dirs.north)
-      box, relevant_fluid_south, dir_from_pos = get_relevant_fluidbox_and_fluid_name(ents_south[1], pos, dirs.south)
-      box, relevant_fluid_east, dir_from_pos  = get_relevant_fluidbox_and_fluid_name(ents_east[1], pos, dirs.east)
-      box, relevant_fluid_west, dir_from_pos  = get_relevant_fluidbox_and_fluid_name(ents_west[1], pos, dirs.west)
+      local north_ent = nil
+      for i, ent_cand in ipairs(ents_north) do
+         if ent_cand.valid and ent_cand.fluidbox ~= nil then
+            north_ent = ent_cand
+         end
+      end
+      local south_ent = nil
+      for i, ent_cand in ipairs(ents_south) do
+         if ent_cand.valid and ent_cand.fluidbox ~= nil then
+            south_ent = ent_cand
+         end
+      end
+      local east_ent = nil
+      for i, ent_cand in ipairs(ents_east) do
+         if ent_cand.valid and ent_cand.fluidbox ~= nil then
+            east_ent = ent_cand
+         end
+      end
+      local west_ent = nil
+      for i, ent_cand in ipairs(ents_west) do
+         if ent_cand.valid and ent_cand.fluidbox ~= nil then
+            west_ent = ent_cand
+         end
+      end
+      box, relevant_fluid_north, dir_from_pos = get_relevant_fluidbox_and_fluid_name(north_ent, pos, dirs.north)
+      box, relevant_fluid_south, dir_from_pos = get_relevant_fluidbox_and_fluid_name(south_ent, pos, dirs.south)
+      box, relevant_fluid_east, dir_from_pos  = get_relevant_fluidbox_and_fluid_name(east_ent, pos, dirs.east)
+      box, relevant_fluid_west, dir_from_pos  = get_relevant_fluidbox_and_fluid_name(west_ent, pos, dirs.west)
  
       --Prepare result string 
       if relevant_fluid_north ~= nil or relevant_fluid_east ~= nil or relevant_fluid_south ~= nil or relevant_fluid_west ~= nil then
