@@ -954,7 +954,7 @@ function ent_info(pindex, ent, description)
          local next_belt = ent.belt_neighbours["outputs"][1]
           --Check contents
          local next_contents = {}
-         if next_belt ~= nil and next_belt.valid and #next_belt.belt_neighbours["inputs"] == 1 then
+         if next_belt ~= nil and next_belt.valid and #next_belt.belt_neighbours["inputs"] == 1 and next_belt.name ~= "entity-ghost" then
             local left = next_belt.get_transport_line(1).get_contents()
             local right = next_belt.get_transport_line(2).get_contents()
 
@@ -972,6 +972,8 @@ function ent_info(pindex, ent, description)
                return k1.count > k2.count
             end)
          end
+         
+         --laterdo same prediction using what is carried by the input belts for this belt!***
          
          if #next_contents > 0 then
             result = result .. " assumed carrying " .. next_contents[1].name
@@ -2337,25 +2339,28 @@ function get_connected_lines(B)
    local inputs = B.belt_neighbours["inputs"]
    local outputs = B.belt_neighbours["outputs"]
    for i, belt in pairs(outputs) do
-      if hash[belt.unit_number] ~= true then
-         hash[belt.unit_number] = true
-         table.insert(frontier, {side = 1, belt = belt})
+      if belt.name ~= "entity-ghost" then
+         if hash[belt.unit_number] ~= true then
+            hash[belt.unit_number] = true
+            table.insert(frontier, {side = 1, belt = belt})
+         end
       end
    end
 
       for i, belt in pairs(inputs) do
-         if hash[belt.unit_number] ~= true then
-            local side = 1
-            if #inputs == 1 then
-               side = 1
-            elseif belt.direction == (B.direction + 2) % 8 then
-               side = 0
+         if belt.name ~= "entity-ghost" then
+            if hash[belt.unit_number] ~= true then
+               local side = 1
+               if #inputs == 1 then
+                  side = 1
+               elseif belt.direction == (B.direction + 2) % 8 then
+                  side = 0
                elseif belt.direction == (B.direction + 6) % 8 then
-               side = 2
-            end
+                  side = 2
+               end
                
-
-            table.insert(precursors, {side = side, belt = belt})
+               table.insert(precursors, {side = side, belt = belt})
+            end
          end
       end
 
@@ -2367,27 +2372,31 @@ function get_connected_lines(B)
       local outputs = explored.belt.belt_neighbours["outputs"]
       local inputs = explored.belt.belt_neighbours["inputs"]
       for i, belt in pairs(outputs) do
-         if hash[belt.unit_number] ~= true then
-            hash[belt.unit_number] = true
-            table.insert(frontier, {side = 1, belt = belt})
+         if belt.name ~= "entity-ghost" then
+            if hash[belt.unit_number] ~= true then
+               hash[belt.unit_number] = true
+               
+               table.insert(frontier, {side = 1, belt = belt})
+            end
          end
       end
 
       for i, belt in pairs(inputs) do
-         if hash[belt.unit_number] ~= true then
-            local side = 1
-            if explored.side == 0 or explored.side == 2 then
-               side = explored.side
-            elseif #inputs == 1 then
-               side = 1
-            elseif belt.direction == (explored.belt.direction + 2) % 8 then
-               side = 0
+         if belt.name ~= "entity-ghost" then
+            if hash[belt.unit_number] ~= true then
+               local side = 1
+               if explored.side == 0 or explored.side == 2 then
+                  side = explored.side
+               elseif #inputs == 1 then
+                  side = 1
+               elseif belt.direction == (explored.belt.direction + 2) % 8 then
+                  side = 0
                elseif belt.direction == (explored.belt.direction + 6) % 8 then
-               side = 2
-            end
+                  side = 2
+               end
                
-
-            table.insert(upstreams, {side = side, belt = belt})
+               table.insert(upstreams, {side = side, belt = belt})
+            end
          end
       end
 if explored.side == 0 then
@@ -2414,21 +2423,23 @@ if explored.side == 0 then
       local inputs = explored.belt.belt_neighbours["inputs"]
 
       for i, belt in pairs(inputs) do
-         if hash[belt.unit_number] ~= true then
-            hash[belt.unit_number] = true
-            local side = 1
-            if explored.side == 0 or explored.side == 2 then
-               side = explored.side
-            elseif #inputs == 1 then
-               side = 1
-            elseif belt.direction == (explored.belt.direction + 2) % 8 then
-               side = 0
+         if belt.name ~= "entity-ghost" then
+            if hash[belt.unit_number] ~= true then
+               hash[belt.unit_number] = true
+               local side = 1
+               if explored.side == 0 or explored.side == 2 then
+                  side = explored.side
+               elseif #inputs == 1 then
+                  side = 1
+               elseif belt.direction == (explored.belt.direction + 2) % 8 then
+                  side = 0
                elseif belt.direction == (explored.belt.direction + 6) % 8 then
-               side = 2
-            end
-               
+                  side = 2
+               end
+                  
 
-            table.insert(frontier, {side = side, belt = belt})
+               table.insert(frontier, {side = side, belt = belt})
+            end
          end
       end
 if explored.side == 0 then
@@ -2461,21 +2472,23 @@ if explored.side == 0 then
       local inputs = explored.belt.belt_neighbours["inputs"]
 
       for i, belt in pairs(inputs) do
-         if hash[belt.unit_number] ~= true then
-            hash[belt.unit_number] = true
-            local side = 1
-            if explored.side == 0 or explored.side == 2 then
-               side = explored.side
-            elseif #inputs == 1 then
-               side = 1
-            elseif belt.direction == (explored.belt.direction + 2) % 8 then
-               side = 0
+         if belt.name ~= "entity-ghost" then
+            if hash[belt.unit_number] ~= true then
+               hash[belt.unit_number] = true
+               local side = 1
+               if explored.side == 0 or explored.side == 2 then
+                  side = explored.side
+               elseif #inputs == 1 then
+                  side = 1
+               elseif belt.direction == (explored.belt.direction + 2) % 8 then
+                  side = 0
                elseif belt.direction == (explored.belt.direction + 6) % 8 then
-               side = 2
-            end
-               
+                  side = 2
+               end
+                  
 
-            table.insert(frontier, {side = side, belt = belt})
+               table.insert(frontier, {side = side, belt = belt})
+            end
          end
       end
 if explored.side == 0 then
@@ -4298,12 +4311,12 @@ function build_preview_checks_info(stack, pindex)
       return " cannot place this here "
    end
    
-   --For belt types, check if it would form a corner or junction here. Laterdo include underground exits.
+   --For belt types, check if it would form a corner or junction here. **Laterdo include underground exits and possibly ghost belts.
    if ent_p.type == "transport-belt" then
-      local ents_north = p.surface.find_entities_filtered{position = {x = pos.x+0 ,y = pos.y-1}, type = "transport-belt"}
-		local ents_south = p.surface.find_entities_filtered{position = {x = pos.x+0 ,y = pos.y+1}, type = "transport-belt"}
-		local ents_east  = p.surface.find_entities_filtered{position = {x = pos.x+1 ,y = pos.y+0}, type = "transport-belt"}
-		local ents_west  = p.surface.find_entities_filtered{position = {x = pos.x-1 ,y = pos.y+0}, type = "transport-belt"}
+      local ents_north = p.surface.find_entities_filtered{position = {x = pos.x+0 ,y = pos.y-1}, type = {"transport-belt", "underground-belt"}}
+		local ents_south = p.surface.find_entities_filtered{position = {x = pos.x+0 ,y = pos.y+1}, type = {"transport-belt", "underground-belt"}}
+		local ents_east  = p.surface.find_entities_filtered{position = {x = pos.x+1 ,y = pos.y+0}, type = {"transport-belt", "underground-belt"}}
+		local ents_west  = p.surface.find_entities_filtered{position = {x = pos.x-1 ,y = pos.y+0}, type = {"transport-belt", "underground-belt"}}
       
       rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = pos.x+0 ,y = pos.y-1}, surface = p.surface, time_to_live = 30}
       rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = pos.x+0 ,y = pos.y+1}, surface = p.surface, time_to_live = 30}
@@ -4442,7 +4455,7 @@ function build_preview_checks_info(stack, pindex)
       local ents_north = p.surface.find_entities_filtered{position = {x = pos.x+0, y = pos.y-1} }
       local ents_south = p.surface.find_entities_filtered{position = {x = pos.x+0, y = pos.y+1} }
       local ents_east  = p.surface.find_entities_filtered{position = {x = pos.x+1, y = pos.y+0} }
-      local ents_west  = p.surface.find_entities_filtered{position = {x = pos.x-1, y = pos.y+0} }
+      local ents_west  = p.surface.find_entities_filtered{position = {x = pos.x-1, y = pos.y+0} }--****bug due to player detection
       local relevant_fluid_north = nil
       local relevant_fluid_east  = nil
       local relevant_fluid_south = nil
