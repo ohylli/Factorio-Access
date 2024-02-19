@@ -3807,7 +3807,7 @@ function scan_index(pindex)
             printout("Error: This object is no longer valid. Try rescanning.", pindex)
             return
          end
-         players[pindex].cursor_pos = center_of_tile(ent.position)
+         players[pindex].cursor_pos = get_ent_northwest_corner_position(ent)
          cursor_highlight(pindex, ent, "train-visualization")--focus on scanned item 
          sync_build_cursor_graphics(pindex)
          players[pindex].last_indexed_ent = ent
@@ -3827,7 +3827,7 @@ function scan_index(pindex)
          end
          --The scan target is an aggregate, select it now
          ent = {name = name, position = table.deepcopy(entry.position), group = entry.group} --maybe use "aggregate = true" ?
-         players[pindex].cursor_pos = center_of_tile(ent.position)
+         players[pindex].cursor_pos = ent.position
          cursor_highlight(pindex, nil, "train-visualization")
          sync_build_cursor_graphics(pindex)
          players[pindex].last_indexed_ent = ent
@@ -4823,9 +4823,9 @@ function read_coords(pindex, start_phrase)
             local p_dir = players[pindex].player_direction
             local preview_str = ", preview is " 
             if dir == dirs.north or dir == dirs.south then 
-               preview_str = preview_str .. stack.prototype.place_result.tile_width .. " wide " 
+               preview_str = preview_str .. stack.prototype.place_result.tile_width .. " tiles wide " 
             elseif dir == dirs.east or dir == dirs.west then
-               preview_str = preview_str .. stack.prototype.place_result.tile_height .. " wide " 
+               preview_str = preview_str .. stack.prototype.place_result.tile_height .. " tiles wide " 
             end
             if players[pindex].cursor or p_dir == dirs.east or p_dir == dirs.south or p_dir == dirs.north then
                preview_str = preview_str .. " to the East "
@@ -4833,9 +4833,9 @@ function read_coords(pindex, start_phrase)
                preview_str = preview_str .. " to the West "
             end
             if dir == dirs.north or dir == dirs.south then 
-               preview_str = preview_str .. " and " .. stack.prototype.place_result.tile_height .. " high " 
+               preview_str = preview_str .. " and " .. stack.prototype.place_result.tile_height .. " tiles high " 
             elseif dir == dirs.east or dir == dirs.west then
-               preview_str = preview_str .. " and " .. stack.prototype.place_result.tile_width .. " high " 
+               preview_str = preview_str .. " and " .. stack.prototype.place_result.tile_width .. " tiles high " 
             end
             if players[pindex].cursor or p_dir == dirs.east or p_dir == dirs.south or p_dir == dirs.west then
                preview_str = preview_str .. " to the South "
@@ -4848,7 +4848,7 @@ function read_coords(pindex, start_phrase)
             local left_top, right_bottom, build_pos = get_blueprint_corners(pindex, false)
             local bp_dim_1 = right_bottom.x - left_top.x 
             local bp_dim_2 = right_bottom.y - left_top.y
-            local preview_str = ", blueprint preview is " .. bp_dim_1 .. " wide to the East and " .. bp_dim_2 .. " high to the South" 
+            local preview_str = ", blueprint preview is " .. bp_dim_1 .. " tiles wide to the East and " .. bp_dim_2 .. " tiles high to the South" 
             result = result .. preview_str
          elseif stack and stack.valid_for_read and stack.valid and stack.prototype.place_as_tile_result ~= nil then
             --Paving preview size
@@ -11041,6 +11041,9 @@ script.on_event("pipette-tool-info",function(event)
          players[pindex].building_direction = ent.direction
          players[pindex].cursor_rotation_offset = 0
       end
+      players[pindex].cursor_pos = get_ent_northwest_corner_position(ent)
+      sync_build_cursor_graphics(pindex)
+      cursor_highlight(pindex, ent, nil, nil)
    end
 end)
 
@@ -11270,12 +11273,12 @@ script.on_event(defines.events.on_gui_confirmed,function(event)
       return
    end
    if players[pindex].menu == "travel" then
+      local result = event.element.text
+      if result == nil or result == "" then 
+         result = "unknown"
+      end
       if players[pindex].travel.creating then
          players[pindex].travel.creating = false
-         local result = event.element.text
-         if result == nil or result == "" then 
-            result = "unknown"
-         end
          table.insert(global.players[pindex].travel, {name = result, position = center_of_tile(players[pindex].position)})
          table.sort(global.players[pindex].travel, function(k1, k2)
             return k1.name < k2.name
@@ -12969,6 +12972,21 @@ function set_cursor_colors_to_player_colors(pindex)
    if players[pindex].building_footprint ~= nil and rendering.is_valid(players[pindex].building_footprint) then
       rendering.set_color(players[pindex].building_footprint,p.color)
    end
+end
+
+function get_ent_northwest_corner_position(ent)
+   if ent.valid == false or ent.tile_width == nil then
+      return ent.position
+   end
+   local width  = ent.tile_width
+   local height = ent.tile_height
+   if ent.direction == dirs.east or ent.direction == dirs.west then
+      width  = ent.tile_height
+      height = ent.tile_width
+   end
+   local pos = center_of_tile({x = ent.position.x - math.floor(width/2), y = ent.position.y - math.floor(height/2)})
+   --rendering.draw_rectangle{color = {0.75,1,1,0.75}, surface = ent.surface, draw_on_ground = true, players = nil, width = 2, left_top = {math.floor(pos.x)+0.05,math.floor(pos.y)+0.05}, right_bottom = {math.ceil(pos.x)-0.05,math.ceil(pos.y)-0.05}, time_to_live = 30}
+   return pos
 end
 
 --Draws a sprite over the head of the player, with the selected scale. Set it to nil to clear it.
