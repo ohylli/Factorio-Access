@@ -789,7 +789,10 @@ end
 --Usually called when the cursor find an entity, gives its name and key information.
 function ent_info(pindex, ent, description)
    local p = game.get_player(pindex)
-   local result = ent.name
+   local result = localising.get(ent)
+   if result == nil or result == "" then
+      result = ent.name
+   end
    if game.players[pindex].name == "Crimso" then
       result = result .. " " .. ent.type .. " "
    end
