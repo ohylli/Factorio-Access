@@ -1860,8 +1860,8 @@ function teleport_to_closest(pindex, pos, muted, ignore_enemies)
       return false
    end
    
-   --Adjust camera
-   game.get_player(pindex).close_map()
+   -- --Adjust camera
+   -- game.get_player(pindex).close_map()
    
    return true
 end
@@ -3845,9 +3845,9 @@ function scan_index(pindex)
    end
    
    --Adjust camera if in cursor mode
-   if players[pindex].cursor then
-      adjust_camera_view(pindex)
-   end
+   -- if players[pindex].cursor then
+      -- adjust_camera_view(pindex)
+   -- end
 end 
 
 function scan_down(pindex)
@@ -4130,7 +4130,6 @@ function toggle_cursor(pindex)
    if (not players[pindex].cursor) and (not players[pindex].hide_cursor) then
       players[pindex].cursor = true
       players[pindex].build_lock = false
-      game.get_player(pindex).close_map()
             
       --Teleport to the center of the nearest tile to align
       local can_port = game.get_player(pindex).surface.can_place_entity{name = "character", position = center_of_tile(game.get_player(pindex).position)}
@@ -4171,6 +4170,7 @@ function toggle_cursor(pindex)
       local right_bottom = {math.floor(players[pindex].cursor_pos.x)+players[pindex].cursor_size+1,math.floor(players[pindex].cursor_pos.y)+players[pindex].cursor_size+1}
       draw_area_as_cursor(left_top,right_bottom,pindex)
    end
+   game.get_player(pindex).close_map()
 end
 
 function teleport_to_cursor(pindex, muted, ignore_enemies, return_cursor)
@@ -5455,9 +5455,9 @@ function menu_cursor_up(pindex)
    end
    
    --Adjust camera if in cursor mode
-   if players[pindex].cursor then
-      adjust_camera_view(pindex)
-   end
+   -- if players[pindex].cursor then
+      -- adjust_camera_view(pindex)
+   -- end
 end
 
 
@@ -5688,9 +5688,9 @@ function menu_cursor_down(pindex)
    end
    
    --Adjust camera if in cursor mode
-   if players[pindex].cursor then
-      adjust_camera_view(pindex)
-   end
+   -- if players[pindex].cursor then
+      -- adjust_camera_view(pindex)
+   -- end
 end
 
 function menu_cursor_left(pindex)
@@ -6318,6 +6318,12 @@ function move_characters(event)
             player.player.walking_state = {walking = false}
          end
       end
+      --Adjust camera 
+      -- if player.cursor then
+         -- adjust_camera_view(pindex)
+      -- else
+         -- game.get_player(pindex).close_map()
+      -- end
    end
 end
 
@@ -6548,9 +6554,9 @@ function cursor_mode_move(direction, pindex, single_only)
    p.play_sound{path = "Close-Inventory-Sound", volume_modifier = 0.75}
    
    --Focus the map view onto the position if it is out of reach
-   if single_only then--we would want this for WASD but it messes up the camera a lot.
-      adjust_camera_view(pindex)
-   end
+   -- if single_only then--we would want this for WASD but it messes up the camera a lot.
+      -- adjust_camera_view(pindex)
+   -- end
 end
 
 function adjust_camera_view(pindex)
@@ -6559,15 +6565,10 @@ function adjust_camera_view(pindex)
    local cut_off = p.reach_distance + 4
    if cursor_dist <= cut_off then
       p.close_map()
-      if cursor_position_is_on_screen_with_player_centered(pindex) == false then
-         fix_zoom(pindex)
-      end
-   elseif cursor_dist > cut_off then
-      -- local zoom_pos = {x = 32 * math.floor(players[pindex].cursor_pos.x/32), y = 32 * math.floor(players[pindex].cursor_pos.y/32)}
-      -- if players[pindex].zoom_pos ~= zoom_pos then 
-         -- players[pindex].zoom_pos = zoom_pos
-         -- p.zoom_to_world(zoom_pos)
+      -- if cursor_position_is_on_screen_with_player_centered(pindex) == false then
+         -- fix_zoom(pindex)
       -- end
+   elseif cursor_dist > cut_off then
       p.zoom_to_world(players[pindex].cursor_pos)
    end
    sync_build_cursor_graphics(pindex)
@@ -6697,6 +6698,18 @@ script.on_event("read-cursor-distance-and-direction", function(event)
    rendering.draw_circle{color = {1, 0.2, 0}, radius = 0.1, width = 5, target = players[pindex].cursor_pos, surface = game.get_player(pindex).surface, time_to_live = 180}
 end)
 
+script.on_event("read-character-coords", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local pos = game.get_player(pindex).position
+   local result = "Character at " .. math.floor(pos.x) .. ", " .. math.floor(pos.y)
+   printout(result,pindex)
+   game.get_player(pindex).print(result, {volume_modifier = 0})
+end
+)
+
 --Returns the cursor to the player position.
 script.on_event("return-cursor-to-player", function(event)
    pindex = event.player_index
@@ -6709,8 +6722,8 @@ script.on_event("return-cursor-to-player", function(event)
          jump_to_player(pindex)
       end
    end
-   --Adjust camera
-   adjust_camera_view(pindex)
+   -- --Adjust camera
+   -- adjust_camera_view(pindex)
 end)
 
 --Default is CONTROL + J
@@ -11805,12 +11818,12 @@ script.on_event("help-toggle-header-mode", function(event)
    tutorial_menu_toggle_header_detail(pindex)
 end)
 
-script.on_event("help-get-header", function(event)
+script.on_event("help-get-other", function(event)
    local pindex = event.player_index
    if not check_for_player(pindex) then
       return
    end
-   tutorial_menu_read_header_once(pindex)
+   tutorial_menu_read_other_once(pindex)
 end)
 
 --**Use this key to test stuff (ALT-G)

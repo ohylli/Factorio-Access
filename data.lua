@@ -430,6 +430,13 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "read-character-coords",
+    key_sequence = "CONTROL + K",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "return-cursor-to-player",
     key_sequence = "J",
     consuming = "none"
@@ -1535,7 +1542,7 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "help-get-header",
+    name = "help-get-other",
     key_sequence = "ALT + H",
     consuming = "none"
 },
