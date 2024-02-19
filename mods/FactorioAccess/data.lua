@@ -1515,14 +1515,14 @@ data:extend({
 {
     type = "custom-input",
     name = "help-chapter-next",
-    key_sequence = "SHIFT + ALT + H",
+    key_sequence = "CONTROL + ALT + H",
     consuming = "none"
 },
 
 {
     type = "custom-input",
     name = "help-chapter-back",
-    key_sequence = "CONTROL + ALT + H",
+    key_sequence = "SHIFT + ALT + H",
     consuming = "none"
 },
 
