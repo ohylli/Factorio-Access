@@ -128,14 +128,12 @@ function tutorial_menu_toggle_header_detail(pindex)
    tutorial_menu(pindex, players[pindex].tutorial.reading_the_header, players[pindex].tutorial.clicked) 
 end 
 
-function tutorial_menu_read_header_once(pindex)
+function tutorial_menu_read_other_once(pindex)
    local tutorial = players[pindex].tutorial
    if tutorial == nil then
       load_tutorial(pindex)
-      tutorial_menu(pindex, players[pindex].tutorial.reading_the_header, players[pindex].tutorial.clicked) 
-      return 
    end
-   tutorial_menu(pindex, true, players[pindex].tutorial.clicked) 
+   tutorial_menu(pindex, (not players[pindex].tutorial.reading_the_header), players[pindex].tutorial.clicked) 
 end 
 
 function tutorial_menu_back(pindex)
