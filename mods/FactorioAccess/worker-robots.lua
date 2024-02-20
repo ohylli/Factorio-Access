@@ -1986,11 +1986,23 @@ function apply_blueprint_import(pindex, text)
    --local result = bp.import_stack("0"..text)
    local result = bp.import_stack(text)
    if result == 0 then
-      printout("Successfully imported blueprint " .. get_blueprint_label(bp), pindex)
+      if bp.is_blueprint then
+         printout("Successfully imported blueprint " .. get_blueprint_label(bp), pindex)
+      elseif bp.is_blueprint_book then
+         printout("Successfully imported blueprint book ", pindex)
+      else
+         printout("Successfully imported unknown planner item", pindex)
+      end
    elseif result == -1 then 
-      printout("Imported with errors, blueprint " .. get_blueprint_label(bp), pindex)
-   else
-      printout("Failed to import blueprint ", pindex)
+      if bp.is_blueprint then
+         printout("Imported with errors, blueprint " .. get_blueprint_label(bp), pindex)
+      elseif bp.is_blueprint_book then
+         printout("Imported with errors, blueprint book ", pindex)
+      else
+         printout("Imported with errors, unknown planner item", pindex)
+      end
+   else--result == 1
+      printout("Failed to import blueprint item", pindex)
    end
 end
 
