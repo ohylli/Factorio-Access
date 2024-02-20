@@ -2458,21 +2458,46 @@ function blueprint_menu_down(pindex)
    blueprint_menu(players[pindex].blueprint_menu.index, pindex, false)
 end
 
+function blueprint_book_get_name(bpb)
+   --todo ***
+end
+
+function blueprint_book_set_name(bpb, new_name)
+   --todo ***
+end
+
+function blueprint_book_get_bp_count(bpb)
+   --todo ***
+end
+
+function blueprint_book_add_bp(bpb,bp)
+   --todo ***
+end
+
+function blueprint_book_copy_bp(bpb,index)
+   --todo ***
+end
+
+function blueprint_book_take_out_bp(bpb,index)
+   --todo ***
+end
+
+
 --[[ Blueprint book menu options summary
-   List Mode
+   List Mode (Press LEFT BRACKET on the BPB in hand)
    0. name, menu instructions
    X. Read/copy/take out blueprint number X
    
-   Settings Mode 
+   Settings Mode (Press RIGHT BRACKET on the BPB in hand)
    0. name, bp count, menu instructions
-   1. Read the icons of this blueprint book, which are its featured components
+   1. Read the description (?) and icons (?) of this blueprint book, which are its featured components
    2. Rename this book 
    3. Create a copy of this blueprint book
    4. Clear this blueprint book 
    5. Export this blueprint book as a text string
    6. Import a text string to overwrite this blueprint book
 
-   This menu opens when you press RIGHT BRACKET on a blueprint in hand 
+   Note: BPB normally supports description and icons, but it is unclear whether the json tables can access these.
 ]]
 function blueprint_book_menu(pindex, menu_index, list_mode, left_clicked, right_clicked)
    local index = menu_index
