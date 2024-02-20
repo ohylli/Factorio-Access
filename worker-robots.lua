@@ -1845,11 +1845,31 @@ function paste_blueprint(pindex)
    local result = bp.build_blueprint{surface = p.surface, force = p.force, position = build_pos, direction = dir, by_player = p, force_build = false}
    if result == nil or #result == 0 then
       p.play_sound{path = "utility/cannot_build"}
-      --printout("Cannot place that there.", pindex)
+      --Explain build error
+      local result = "Cannot place there "
+      local build_area = {left_top, right_bottom}
+      local ents_in_area = p.surface.find_entities_filtered{area = build_area, invert = true, type = ENT_TYPES_YOU_CAN_BUILD_OVER}
+      local tiles_in_area = p.surface.find_tiles_filtered{area = build_area, invert = false, name = {"water", "deepwater", "water-green", "deepwater-green", "water-shallow", "water-mud", "water-wube"}}
+      local obstacle_ent_name = nil
+      local obstacle_tile_name = nil
+      --Check for an entity in the way
+      for i, area_ent in ipairs(ents_in_area) do 
+         if area_ent.valid and area_ent.prototype.tile_width and area_ent.prototype.tile_width > 0 and area_ent.prototype.tile_height and area_ent.prototype.tile_height > 0 then
+            obstacle_ent_name = localising.get(area_ent,pindex)
+         end
+      end
+      
+      --Report obstacles
+      if obstacle_ent_name ~= nil then
+         result = result .. ", " .. obstacle_ent_name .. " in the way."
+      elseif #tiles_in_area > 0 then
+         result = result .. ", water is in the way."
+      end
+      printout(result, pindex)
       return false
    else
       p.play_sound{path = "Close-Inventory-Sound"}--laterdo maybe better blueprint placement sound
-      --printout("Cannot place that there.", pindex)
+      printout("Placed blueprint "  .. get_blueprint_label(bp), pindex)
       return true
    end
 end
@@ -1931,6 +1951,67 @@ function get_blueprint_corners(pindex, draw_rect)
    return left_top, right_bottom, mouse_pos
 end 
 
+function get_blueprint_width_and_height(pindex)
+   local p = game.get_player(pindex)
+   local bp = p.cursor_stack
+   if bp == nil or bp.valid_for_read == false or bp.is_blueprint == false then
+      return nil, nil
+   end
+   local pos = players[pindex].cursor_pos
+   local ents = bp.get_blueprint_entities()
+   local west_most_x = nil 
+   local east_most_x = nil
+   local north_most_y = nil
+   local south_most_y = nil
+   
+   --Empty blueprint
+   if bp.is_blueprint_setup() == false then
+      return 0, 0
+   end
+   
+   --Find the blueprint borders and corners 
+   for i, ent in ipairs(ents) do 
+      local ent_width = game.entity_prototypes[ent.name].tile_width
+      local ent_height = game.entity_prototypes[ent.name].tile_height
+      if ent.direction == dirs.east or ent.direction == dirs.west then
+         ent_width = game.entity_prototypes[ent.name].tile_height
+         ent_height = game.entity_prototypes[ent.name].tile_width
+      end
+      local ent_north = ent.position.y - math.floor(ent_height/2)
+      local ent_east  = ent.position.x + math.floor(ent_width/2)
+      local ent_south = ent.position.y + math.floor(ent_height/2)
+      local ent_west  = ent.position.x - math.floor(ent_width/2)
+      if west_most_x == nil then
+         west_most_x = ent_west 
+         east_most_x = ent_east
+         north_most_y = ent_north
+         south_most_y = ent_south
+      end
+      if west_most_x > ent_west then
+         west_most_x = ent_west
+      end
+      if east_most_x < ent_east then 
+         east_most_x = ent_east
+      end
+      if north_most_y > ent_north then
+         north_most_y = ent_north
+      end
+      if south_most_y < ent_south then
+         south_most_y = ent_south 
+      end
+   end
+   local bp_left_top = {x = math.floor(west_most_x), y = math.floor(north_most_y)}
+   local bp_right_bottom = {x = math.ceil(east_most_x), y = math.ceil(south_most_y)}
+   local bp_width = bp_right_bottom.x - bp_left_top.x - 1
+   local bp_height = bp_right_bottom.y - bp_left_top.y - 1
+   if players[pindex].blueprint_hand_direction == dirs.east or players[pindex].blueprint_hand_direction == dirs.west then
+      --Flip width and height
+      bp_width = bp_right_bottom.y - bp_left_top.y - 1
+      bp_height = bp_right_bottom.x - bp_left_top.x - 1
+   end
+   return bp_width, bp_height
+end 
+
 --Export and import the same blueprint so that its parameters reset, e.g. rotation.
 function refresh_blueprint_in_hand(pindex)
    local p = game.get_player(pindex)
@@ -2010,15 +2091,16 @@ end
    0. name, menu instructions
    1. Read the description of this blueprint
    2. Read the icons of this blueprint, which are its features components
-   3. List all components of this blueprint
-   4. List all missing components for building this blueprint 
-   5. Edit the label of this blueprint
-   6. Edit the description of this blueprint
-   7. Create a copy of this blueprint
-   8. Clear this blueprint 
-   9. Export this blueprint as a text string
-   10. Import a text string to overwrite this blueprint
-   11. Use the last selected area to reselect this blueprint --todo add****
+   3. Read the blueprint dimensions and total component count
+   4. List all components of this blueprint
+   5. List all missing components for building this blueprint 
+   6. Edit the label of this blueprint
+   7. Edit the description of this blueprint
+   8. Create a copy of this blueprint
+   9. Clear this blueprint 
+   10. Export this blueprint as a text string
+   11. Import a text string to overwrite this blueprint
+   12. Use the last selected area to reselect this blueprint --todo add****
 
    This menu opens when you press RIGHT BRACKET on a blueprint in hand 
 ]]
@@ -2078,7 +2160,7 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
    elseif index == 2 then
       --Read the icons of this blueprint, which are its features components
       if not clicked then
-         local result = "Read the icons of this blueprint, which are its features components"
+         local result = "Read the icons of this blueprint, which are its featured components"
          printout(result, pindex)
       else
          local result = "This blueprint features "
@@ -2102,6 +2184,17 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
          printout(result, pindex)
       end
    elseif index == 3 then
+       --Read the blueprint dimensions and total component count
+      if not clicked then
+         local result = "Read the blueprint dimensions and total component count"
+         printout(result, pindex)
+      else
+         local count = bp.get_blueprint_entity_count()
+         local width, height = get_blueprint_width_and_height(pindex)
+         local result = "This blueprint is " .. width .. " tiles wide and " .. height .. " tiles high and contains " .. count .. " entities "
+         printout(result, pindex)
+      end
+   elseif index == 4 then
       --List all components of this blueprint
       if not clicked then
          local result = "List all components of this blueprint"
@@ -2139,7 +2232,7 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
          printout(result, pindex)
          --p.print(result)--
       end
-   elseif index == 4 then
+   elseif index == 5 then
       --List all missing components for building this blueprint from your inventory
       if not clicked then
          local result = "List all missing components for building this blueprint from your inventory"
@@ -2192,10 +2285,10 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
          printout(result, pindex)
          --p.print(result)--
       end
-   elseif index == 5 then
+   elseif index == 6 then
       --Edit the label of this blueprint
       if not clicked then
-         local result = "Edit the label of this blueprint"
+         local result = "Rename this blueprint by editing its label"
          printout(result, pindex)
       else
          players[pindex].blueprint_menu.edit_label = true
@@ -2208,7 +2301,7 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
          local result = "Edit the label text box for this blueprint and press ENTER to confirm"
          printout(result, pindex)
       end
-   elseif index == 6 then
+   elseif index == 7 then
       --Edit the description of this blueprint
       if not clicked then
          local result = "Edit the description of this blueprint"
@@ -2224,7 +2317,7 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
          local result = "Edit the description text box for this blueprint and press ENTER to confirm"
          printout(result, pindex)
       end
-   elseif index == 7 then
+   elseif index == 8 then
       --Create a copy of this blueprint
       if not clicked then
          local result = "Create a copy of this blueprint"
@@ -2234,7 +2327,7 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
          local result = "Blue print copy inserted to inventory"
          printout(result, pindex)
       end
-   elseif index == 8 then
+   elseif index == 9 then
       --Delete this blueprint
       if not clicked then
          local result = "Delete this blueprint"
@@ -2246,7 +2339,7 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
          printout(result, pindex)
          blueprint_menu_close(pindex)
       end
-   elseif index == 9 then
+   elseif index == 10 then
       --Export this blueprint as a text string
       if not clicked then
          local result = "Export this blueprint as a text string"
@@ -2262,7 +2355,7 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
          local result = "Copy the text from this boz using 'CONTROL + A' and then 'CONTROL + C' and then press ENTER to exit"
          printout(result, pindex)
       end
-   elseif index == 10 then
+   elseif index == 11 then
       --Import a text string to save into this blueprint
       if not clicked then
          local result = "Import a text string to save into this blueprint"
@@ -2280,7 +2373,7 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
       end
    end
 end
-BLUEPRINT_MENU_LENGTH = 10
+BLUEPRINT_MENU_LENGTH = 11
 
 function blueprint_menu_open(pindex)
    if players[pindex].vanilla_mode then
