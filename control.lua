@@ -585,7 +585,11 @@ function nudge_key(direction, event)--
          end
          
          --Now check if the ent can be placed at its new location, and proceed or revert accordingly
-         if ent.surface.can_place_entity{name = ent.name, position = new_pos, direction = ent.direction} then
+         local check_name = ent.name
+         if check_name == "entity-ghost" then
+            check_name = ent.ghost_name
+         end
+         if ent.surface.can_place_entity{name = check_name, position = new_pos, direction = ent.direction} then
             actually_teleported = ent.teleport(new_pos)
          else
             --Cannot build in new location, so send it back
@@ -10702,6 +10706,9 @@ script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
          refresh_blueprint_in_hand(pindex)
       end
    end
+   if players[pindex].menu == "blueprint_menu" then
+      close_menu_resets(pindex)
+   end
    if players[pindex].previous_hand_item_name ~= new_item_name then
       players[pindex].previous_hand_item_name = new_item_name
       --players[pindex].lag_building_direction = true
@@ -12837,6 +12844,10 @@ function sync_build_cursor_graphics(pindex)
       if dir_indicator ~= nil then rendering.destroy(player.building_dir_arrow) end
       local arrow_pos = player.cursor_pos
       local dir = players[pindex].blueprint_hand_direction
+      if dir == nil then
+         players[pindex].blueprint_hand_direction = dirs.north
+         dir = dirs.north
+      end
       player.building_dir_arrow = rendering.draw_sprite{sprite = "fluid.crude-oil", tint = {r = 0.25, b = 0.25, g = 1.0, a = 0.75}, render_layer = 254, 
          surface = game.get_player(pindex).surface, players = nil, target = arrow_pos, orientation = dir/(2 * dirs.south)}
       dir_indicator = player.building_dir_arrow
@@ -13068,7 +13079,11 @@ function update_custom_GUI_sprite(sprite, scale_in, pindex, sprite_2)
             --Icon 1
             if bp.blueprint_icons[1] ~= nil then
                local icon_1 = bp.blueprint_icons[1].signal
-               sprite_2_name = icon_1.type .. "." .. icon_1.name
+               local type_name = icon_1.type
+               if type_name == "virtual" then
+                  type_name = "virtual-signal"
+               end
+               sprite_2_name = type_name .. "." .. icon_1.name
                s2 = player.custom_GUI_sprite_2
                if sprite_2_name ~= nil then
                   if s2 == nil or not s2.valid then
@@ -13090,7 +13105,11 @@ function update_custom_GUI_sprite(sprite, scale_in, pindex, sprite_2)
             --Icon 2
             if bp.blueprint_icons[2] ~= nil then
                local icon_2 = bp.blueprint_icons[2].signal
-               sprite_3_name = icon_2.type .. "." .. icon_2.name
+               local type_name = icon_2.type
+               if type_name == "virtual" then
+                  type_name = "virtual-signal"
+               end
+               sprite_3_name = type_name .. "." .. icon_2.name
                s3 = player.custom_GUI_sprite_3
                if sprite_3_name ~= nil then
                   if s3 == nil or not s3.valid then
@@ -13112,7 +13131,11 @@ function update_custom_GUI_sprite(sprite, scale_in, pindex, sprite_2)
             --Icon 3
             if bp.blueprint_icons[3] ~= nil then
                local icon_3 = bp.blueprint_icons[3].signal
-               sprite_4_name = icon_3.type .. "." .. icon_3.name
+               local type_name = icon_3.type
+               if type_name == "virtual" then
+                  type_name = "virtual-signal"
+               end
+               sprite_4_name = type_name .. "." .. icon_3.name
                s4 = player.custom_GUI_sprite_4
                if sprite_4_name ~= nil then
                   if s4 == nil or not s4.valid then
@@ -13134,7 +13157,11 @@ function update_custom_GUI_sprite(sprite, scale_in, pindex, sprite_2)
             --Icon 4
             if bp.blueprint_icons[4] ~= nil then
                local icon_4 = bp.blueprint_icons[4].signal
-               sprite_5_name = icon_4.type .. "." .. icon_4.name
+               local type_name = icon_4.type
+               if type_name == "virtual" then
+                  type_name = "virtual-signal"
+               end
+               sprite_5_name = type_name .. "." .. icon_4.name
                s5 = player.custom_GUI_sprite_5
                if sprite_5_name ~= nil then
                   if s5 == nil or not s5.valid then
