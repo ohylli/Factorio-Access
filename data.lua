@@ -1148,6 +1148,22 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "flip-blueprint-horizontal-info",
+    key_sequence = "F",
+    linked_game_control = "flip-blueprint-horizontal",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "flip-blueprint-vertical-info",
+    key_sequence = "G",
+    linked_game_control = "flip-blueprint-vertical",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "inventory-read-weapons-data",
     key_sequence = "R",
     consuming = "none"

@@ -7432,6 +7432,11 @@ script.on_event("pickup-items-info", function(event)
    if not check_for_player(pindex) then
       return
    end
+   local p = game.get_player(pindex)
+   local bp = p.cursor_stack
+   if bp and bp.valid_for_read and bp.is_blueprint then
+      return
+   end
    read_item_pickup_state(pindex)
 end)
 
@@ -10474,6 +10479,32 @@ function rotate_building_info_read(event, forward)
       end
    end
 end
+
+script.on_event("flip-blueprint-horizontal-info", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local p = game.get_player(pindex)
+   local bp = p.cursor_stack
+   if bp == nil or bp.valid_for_read == false or bp.is_blueprint == false then
+      return
+   end
+   printout("Flipping horizontal",pindex)
+end)
+
+script.on_event("flip-blueprint-vertical-info", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local p = game.get_player(pindex)
+   local bp = p.cursor_stack
+   if bp == nil or bp.valid_for_read == false or bp.is_blueprint == false then
+      return
+   end
+   printout("Flipping vertical",pindex)
+end)
 
 script.on_event("inventory-read-weapons-data", function(event)
    pindex = event.player_index
