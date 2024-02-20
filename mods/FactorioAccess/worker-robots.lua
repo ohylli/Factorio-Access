@@ -2457,3 +2457,197 @@ function blueprint_menu_down(pindex)
    --Load menu
    blueprint_menu(players[pindex].blueprint_menu.index, pindex, false)
 end
+
+--[[ Blueprint book menu options summary
+   List Mode
+   0. name, menu instructions
+   X. Read/copy/take out blueprint number X
+   
+   Settings Mode 
+   0. name, bp count, menu instructions
+   1. Read the icons of this blueprint book, which are its featured components
+   2. Rename this book 
+   3. Create a copy of this blueprint book
+   4. Clear this blueprint book 
+   5. Export this blueprint book as a text string
+   6. Import a text string to overwrite this blueprint book
+
+   This menu opens when you press RIGHT BRACKET on a blueprint in hand 
+]]
+function blueprint_book_menu(pindex, menu_index, list_mode, left_clicked, right_clicked)
+   local index = menu_index
+   local p = game.get_player(pindex)
+   local bpb = p.cursor_stack
+   
+   --Update menu length
+   players[pindex].blueprint_book_menu.menu_length = BLUEPRINT_BOOK_SETTINGS_MENU_LENGTH
+   if list_mode then 
+      players[pindex].blueprint_book_menu.menu_length = 0 --***todo allow reading bpb json...
+   end
+   
+   --Run menu
+   if list_mode then
+      --Blueprint book list mode 
+      if index == 0 then
+         --stuff
+         printout("Browsing blueprint book" 
+         .. ", Press 'W' and 'S' to navigate options, press 'LEFT BRACKET' to copy a blueprint to hand, press 'RIGHT BRACKET' to take out a blueprint to hand, press 'E' to exit this menu.", pindex)
+      else
+         --Examine blueprints
+         if left_clicked == false and right_clicked == false then 
+            --Read blueprint info
+            --...
+         elseif left_clicked == true  and right_clicked == false then 
+            --Copy the blueprint to hand
+            --...
+         elseif left_clicked == false and right_clicked == true  then 
+            --Take the blueprint to hand
+            --...
+         end
+      end
+   else
+      --Blueprint book settings mode 
+      if index == 0 then
+         printout("Menu for blueprint book" 
+         .. ", Press 'W' and 'S' to navigate options, press 'LEFT BRACKET' to select, press 'E' to exit this menu.", pindex)
+      elseif index == 1 then
+         --Read the icons of this blueprint book, which are its featured components
+         if left_clicked ~= true then
+            local result = "Read the icons of this blueprint book, which are its featured components"
+            printout(result, pindex)
+         else
+            --Stuff ***
+         end
+      elseif index == 2 then
+         --Rename this book
+         if left_clicked ~= true then
+            local result = "Rename this book"
+            printout(result, pindex)
+         else
+            --Stuff ***
+         end
+      elseif index == 3 then
+         --Create a copy of this blueprint book
+         if left_clicked ~= true then
+            local result = "Create a copy of this blueprint book"
+            printout(result, pindex)
+         else
+            --Stuff ***
+         end
+      elseif index == 4 then
+         --Clear this blueprint book 
+         if left_clicked ~= true then
+            local result = "Clear this blueprint book"
+            printout(result, pindex)
+         else
+            --Stuff ***
+         end
+      elseif index == 5 then
+         --Export this blueprint book as a text string 
+         if left_clicked ~= true then
+            local result = "Export this blueprint book as a text string"
+            printout(result, pindex)
+         else
+            --Stuff ***
+         end
+      elseif index == 6 then
+         --Import a text string to overwrite this blueprint book
+         if left_clicked ~= true then
+            local result = "Import a text string to overwrite this blueprint book"
+            printout(result, pindex)
+         else
+            --Stuff ***
+         end
+      end
+   end 
+end
+BLUEPRINT_BOOK_SETTINGS_MENU_LENGTH = 1
+
+function blueprint_book_menu_open(pindex)
+   if players[pindex].vanilla_mode then
+      return 
+   end
+   --Set the player menu tracker to this menu
+   players[pindex].menu = "blueprint_book_menu"
+   players[pindex].in_menu = true
+   players[pindex].move_queue = {}
+   
+   --Set the menu line counter to 0
+   players[pindex].blueprint_book_menu = {
+      index = 0,
+      menu_length = 1,
+      list_mode = true, 
+      edit_label = false,
+      edit_description = false,
+      edit_export = false,
+      edit_import = false
+      }
+   
+   --Play sound
+   game.get_player(pindex).play_sound{path = "Open-Inventory-Sound"}
+   
+   --Load menu 
+   local bpb_menu = players[pindex].blueprint_book_menu
+   blueprint_book_menu(pindex, bpb_menu.index, bpb_menu.list_mode, false, false)
+end
+
+function blueprint_book_menu_close(pindex, mute_in)
+   local mute = mute_in
+   --Set the player menu tracker to none
+   players[pindex].menu = "none"
+   players[pindex].in_menu = false
+
+   --Set the menu line counter to 0
+   players[pindex].blueprint_book_menu.index = 0
+   
+   --play sound
+   if not mute then
+      game.get_player(pindex).play_sound{path="Close-Inventory-Sound"}
+   end
+   
+   --Destroy text fields
+   if game.get_player(pindex).gui.screen["blueprint-book-edit-label"] ~= nil then 
+      game.get_player(pindex).gui.screen["blueprint-book-edit-label"].destroy()
+   end
+   if game.get_player(pindex).gui.screen["blueprint-book-edit-description"] ~= nil then 
+      game.get_player(pindex).gui.screen["blueprint-book-edit-description"].destroy()
+   end
+   if game.get_player(pindex).gui.screen["blueprint-book-edit-export"] ~= nil then 
+      game.get_player(pindex).gui.screen["blueprint-book-edit-export"].destroy()
+   end
+   if game.get_player(pindex).gui.screen["blueprint-book-edit-import"] ~= nil then
+      game.get_player(pindex).gui.screen["blueprint-book-edit-import"].destroy()
+   end
+   if game.get_player(pindex).opened ~= nil then
+      game.get_player(pindex).opened = nil
+   end
+end
+
+function blueprint_book_menu_up(pindex)
+   players[pindex].blueprint_book_menu.index = players[pindex].blueprint_book_menu.index - 1
+   if players[pindex].blueprint_book_menu.index < 0 then
+      players[pindex].blueprint_book_menu.index = 0
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
+   else
+      --Play sound
+      game.get_player(pindex).play_sound{path = "Inventory-Move"}
+   end
+   --Load menu
+   local bpb_menu = players[pindex].blueprint_book_menu
+   blueprint_book_menu(pindex, bpb_menu.index, bpb_menu.list_mode, false, false)
+end
+
+function blueprint_book_menu_down(pindex)
+   players[pindex].blueprint_book_menu.index = players[pindex].blueprint_book_menu.index + 1
+   if players[pindex].blueprint_book_menu.index > players[pindex].blueprint_book_menu.menu_length then
+      players[pindex].blueprint_book_menu.index = players[pindex].blueprint_book_menu.menu_length
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
+   else
+      --Play sound
+      game.get_player(pindex).play_sound{path = "Inventory-Move"}
+   end
+   --Load menu
+   local bpb_menu = players[pindex].blueprint_book_menu
+   blueprint_book_menu(pindex, bpb_menu.index, bpb_menu.list_mode, false, false)
+end
+
