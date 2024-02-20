@@ -2,9 +2,9 @@ require('zoom')
 require('rails-and-trains')
 require('spidertron')
 require('worker-robots')
-local localising=require('localising')
 require('equipment-and-combat')
 require('help-system')
+localising=require('localising')
 
 groups = {}
 entity_types = {}
@@ -10387,7 +10387,7 @@ function rotate_building_info_read(event, forward)
    if forward == false then 
       mult = -1
    end
-   if not(players[pindex].in_menu) then
+   if players[pindex].in_menu == false or players[pindex].menu == "blueprint_menu" then
       local ent = get_selected_ent(pindex)
       local stack = game.get_player(pindex).cursor_stack
       local build_dir = players[pindex].building_direction
