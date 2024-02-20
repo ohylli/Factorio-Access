@@ -5180,6 +5180,16 @@ spider = nil
       edit_export = false,
       edit_import = false
    }
+   
+   faplayer.blueprint_book_menu = faplayer.blueprint_book_menu or {
+      index = 0,
+      menu_length = 0,
+      list_mode = true, 
+      edit_label = false,
+      edit_description = false,
+      edit_export = false,
+      edit_import = false
+      }
 
    if table_size(faplayer.mapped) == 0 then
       player.force.rechart()
@@ -5495,6 +5505,8 @@ function menu_cursor_up(pindex)
       roboport_menu_up(pindex)
    elseif players[pindex].menu == "blueprint_menu" then
       blueprint_menu_up(pindex)
+   elseif players[pindex].menu == "blueprint_book_menu" then
+      blueprint_book_menu_up(pindex)
    end
    
    --Adjust camera if in cursor mode
@@ -5728,6 +5740,8 @@ function menu_cursor_down(pindex)
       roboport_menu_down(pindex)
    elseif players[pindex].menu == "blueprint_menu" then
       blueprint_menu_down(pindex)
+   elseif players[pindex].menu == "blueprint_book_menu" then
+      blueprint_book_menu_down(pindex)
    end
    
    --Adjust camera if in cursor mode
@@ -6264,6 +6278,9 @@ function update_menu_visuals()
          elseif player.menu == "blueprint_menu" then
             update_overhead_sprite("item.blueprint",2,1.25,pindex)
             update_custom_GUI_sprite("item.blueprint", 3, pindex)
+         elseif player.menu == "blueprint_book_menu" then
+            update_overhead_sprite("item.blueprint-book",2,1.25,pindex)
+            update_custom_GUI_sprite("item.blueprint-book", 3, pindex)
          elseif player.menu == "pump" then
             update_overhead_sprite("item.offshore-pump",2,1.25,pindex)
             update_custom_GUI_sprite("item.offshore-pump", 3, pindex)
@@ -7619,6 +7636,8 @@ function close_menu_resets(pindex)
       roboport_menu_close(pindex)
    elseif players[pindex].menu == "blueprint_menu" then
       blueprint_menu_close(pindex)
+   elseif players[pindex].menu == "blueprint_book_menu" then
+      blueprint_book_menu_close(pindex)
    end
    
    --Stop any enabled mouse entity selection
@@ -8841,6 +8860,9 @@ script.on_event("click-menu", function(event)
          roboport_menu(players[pindex].roboport_menu.index, pindex, true)
       elseif players[pindex].menu == "blueprint_menu" then
          blueprint_menu(players[pindex].blueprint_menu.index, pindex, true)
+      elseif players[pindex].menu == "blueprint_book_menu" then
+         local bpb_menu = players[pindex].blueprint_book_menu
+         blueprint_book_menu(pindex, bpb_menu.index, bpb_menu.list_mode, true, false)
       end      
    end
 end)
@@ -8929,6 +8951,8 @@ script.on_event("click-hand", function(event)
             pex.bp_select_point_2 = pex.cursor_pos
             create_blueprint(pindex, pex.bp_select_point_1, pex.bp_select_point_2)
          end
+      elseif stack.is_blueprint_book then
+         blueprint_book_menu_open(pindex, true)
       elseif stack.is_deconstruction_item then
          --Mark deconstruction
          local pex = players[pindex]
@@ -9032,6 +9056,8 @@ script.on_event("click-hand-right", function(event)
          --Laterdo here: build as ghost 
       elseif stack.is_blueprint then
          blueprint_menu_open(pindex)
+      elseif stack.is_blueprint_book then
+         blueprint_book_menu_open(pindex, false)
       elseif stack.is_deconstruction_item then
          --Cancel deconstruction 
          local pex = players[pindex]
@@ -10737,7 +10763,7 @@ script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
          refresh_blueprint_in_hand(pindex)
       end
    end
-   if players[pindex].menu == "blueprint_menu" then
+   if players[pindex].menu == "blueprint_menu" or players[pindex].menu == "blueprint_book_menu" then
       close_menu_resets(pindex)
    end
    if players[pindex].previous_hand_item_name ~= new_item_name then

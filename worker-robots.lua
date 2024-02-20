@@ -1758,7 +1758,7 @@ local function set_stack_bp_from_data(stack,bp_data)
 end
 
 function set_blueprint_description(stack,description)
-   local bp_data=get_bp_data_for_edit(stack)
+   local bp_data = get_bp_data_for_edit(stack)
    bp_data.blueprint.description = description
    set_stack_bp_from_data(stack,bp_data)
 end
@@ -2059,6 +2059,24 @@ function get_blueprint_info(stack, in_hand)
    
    result = result .. ", " .. stack.get_blueprint_entity_count() .. " entities in total "
    --game.print(result)
+   return result
+end
+
+function get_blueprint_icons_info(bp_table)
+   local result = ""
+   --Use icons as extra info (in case it is not named)
+   local icons = bp_table.icons
+   if icons == nil or #icons == 0 then
+      result = result .. " no icons "
+      return result
+   end
+   
+   for i, signal in ipairs(icons) do 
+      if signal.index > 1 then
+         result = result .. " and "
+      end
+      result = result .. signal.signal.name
+   end
    return result
 end
 
@@ -2458,30 +2476,76 @@ function blueprint_menu_down(pindex)
    blueprint_menu(players[pindex].blueprint_menu.index, pindex, false)
 end
 
-function blueprint_book_get_name(bpb)
+local function get_bp_book_data_for_edit(stack)
+   --return game.json_to_table(game.decode_string(string.sub(stack.export_stack(),2)))
+   return game.json_to_table(game.decode_string(string.sub(stack.export_stack(),2)))
+end
+
+--We run the export just once because it eats UPS
+local function set_bp_book_data_from_cursor(pindex)
+   players[pindex].blueprint_book_menu.book_data = get_bp_book_data_for_edit(game.get_player(pindex).cursor_stack)
+end
+
+function blueprint_book_get_name(pindex)
+   local bp_data = players[pindex].blueprint_book_menu.book_data
+   local label = bp_data.blueprint_book.label
+   if label == nil then
+      label = ""
+   end
+   return label
+end
+
+function blueprint_book_set_name(pindex, new_name)
+   local bp_data = players[pindex].blueprint_book_menu.book_data
+   bp_data.blueprint_book.label = label
+   set_stack_bp_from_data(stack,bp_data)
+end
+
+function blueprint_book_get_item_count(pindex)
+   local bp_data = players[pindex].blueprint_book_menu.book_data
+   local items = bp_data.blueprint_book.blueprints
+   if items == nil or items == {} then
+      return 0 
+   else
+      return #items
+   end
+end
+
+function blueprint_book_data_get_item_count(book_data)
+   local items = bp_data.blueprint_book.blueprints
+   if items == nil or items == {} then
+      return 0 
+   else
+      return #items
+   end
+end
+
+function blueprint_book_read_item(pindex,i)
+   local bp_data = players[pindex].blueprint_book_menu.book_data
+   local items = bp_data.blueprint_book.blueprints
+   return items[i]["blueprint"]
+end
+
+--Puts the book away and imports the selected blueprint to hand 
+function blueprint_book_copy_item_to_hand(pindex,i)
+   local bp_data = players[pindex].blueprint_book_menu.book_data
+   local items = bp_data.blueprint_book.blueprints
+   local item = items[i]["blueprint"]
+   local item_string = "0" .. game.encode_string(game.table_to_json(items[i]))
+   
+   local p = game.get_player(pindex) 
+   p.clear_cursor()
+   p.cursor_stack.import_stack(item_string)
+   printout("Copied blueprint to hand",pindex)
+end
+
+function blueprint_book_take_out_item(pindex,index)
    --todo ***
 end
 
-function blueprint_book_set_name(bpb, new_name)
+function blueprint_book_add_item(pindex,bp)
    --todo ***
 end
-
-function blueprint_book_get_bp_count(bpb)
-   --todo ***
-end
-
-function blueprint_book_add_bp(bpb,bp)
-   --todo ***
-end
-
-function blueprint_book_copy_bp(bpb,index)
-   --todo ***
-end
-
-function blueprint_book_take_out_bp(bpb,index)
-   --todo ***
-end
-
 
 --[[ Blueprint book menu options summary
    List Mode (Press LEFT BRACKET on the BPB in hand)
@@ -2503,11 +2567,11 @@ function blueprint_book_menu(pindex, menu_index, list_mode, left_clicked, right_
    local index = menu_index
    local p = game.get_player(pindex)
    local bpb = p.cursor_stack
-   
+   local item_count = blueprint_book_get_item_count(pindex)
    --Update menu length
    players[pindex].blueprint_book_menu.menu_length = BLUEPRINT_BOOK_SETTINGS_MENU_LENGTH
    if list_mode then 
-      players[pindex].blueprint_book_menu.menu_length = 0 --***todo allow reading bpb json...
+      players[pindex].blueprint_book_menu.menu_length = item_count
    end
    
    --Run menu
@@ -2515,26 +2579,54 @@ function blueprint_book_menu(pindex, menu_index, list_mode, left_clicked, right_
       --Blueprint book list mode 
       if index == 0 then
          --stuff
-         printout("Browsing blueprint book" 
-         .. ", Press 'W' and 'S' to navigate options, press 'LEFT BRACKET' to copy a blueprint to hand, press 'RIGHT BRACKET' to take out a blueprint to hand, press 'E' to exit this menu.", pindex)
+         printout("Browsing blueprint book "  .. blueprint_book_get_name(pindex) .. ", with "  .. item_count .. " items,"
+         .. ", Press 'W' and 'S' to navigate options, press 'LEFT BRACKET' to copy a blueprint to hand, press 'E' to exit this menu.", pindex)
       else
-         --Examine blueprints
+         --Examine items 
+         local item = blueprint_book_read_item(pindex, index)
+         local name = ""
+         if item == nil or item.item == nil then
+            name = "Unknown item (" .. index .. ")"
+         elseif item.item == "blueprint" then
+            local label = item.label
+            if label == nil then
+               label = ""
+            end
+            name = "Blueprint " .. label .. ", featuring " .. get_blueprint_icons_info(item)
+         elseif item.item == "blueprint-book" or item.item == "blueprint_book" or item.item == "book" then
+            local label = item.label
+            if label == nil then
+               label = ""
+            end
+            name = "Blueprint book " .. label .. ", with " .. blueprint_book_data_get_item_count(book_data) .. " items "
+         else
+            name = "unknown item " .. item.item
+         end
          if left_clicked == false and right_clicked == false then 
             --Read blueprint info
-            --...
+            local result = name
+            printout(result, pindex)
          elseif left_clicked == true  and right_clicked == false then 
             --Copy the blueprint to hand
-            --...
+            if item == nil or item.item == nil then
+               printout("Cannot get this.", pindex)
+            elseif item.item == "blueprint" or item.item == "blueprint-book" then
+               blueprint_book_copy_item_to_hand(pindex,index)
+            else
+               printout("Cannot get this.", pindex)
+            end
          elseif left_clicked == false and right_clicked == true  then 
-            --Take the blueprint to hand
+            --Take the blueprint to hand (Therefore both copy and delete)
             --...
          end
       end
    else
       --Blueprint book settings mode 
-      if index == 0 then
-         printout("Menu for blueprint book" 
-         .. ", Press 'W' and 'S' to navigate options, press 'LEFT BRACKET' to select, press 'E' to exit this menu.", pindex)
+      if true then
+         printout("Settings for blueprint book "  .. blueprint_book_get_name(pindex) .. " not yet implemented ", pindex)--***
+      elseif index == 0 then
+         printout("Settings for blueprint book "  .. blueprint_book_get_name(pindex) .. ", with "  .. item_count .. " items,"
+         .. " Press 'W' and 'S' to navigate options, press 'LEFT BRACKET' to select, press 'E' to exit this menu.", pindex)
       elseif index == 1 then
          --Read the icons of this blueprint book, which are its featured components
          if left_clicked ~= true then
@@ -2588,7 +2680,7 @@ function blueprint_book_menu(pindex, menu_index, list_mode, left_clicked, right_
 end
 BLUEPRINT_BOOK_SETTINGS_MENU_LENGTH = 1
 
-function blueprint_book_menu_open(pindex)
+function blueprint_book_menu_open(pindex, open_in_list_mode)
    if players[pindex].vanilla_mode then
       return 
    end
@@ -2599,14 +2691,16 @@ function blueprint_book_menu_open(pindex)
    
    --Set the menu line counter to 0
    players[pindex].blueprint_book_menu = {
+      book_data = nil,
       index = 0,
-      menu_length = 1,
-      list_mode = true, 
+      menu_length = 0,
+      list_mode = open_in_list_mode, 
       edit_label = false,
       edit_description = false,
       edit_export = false,
       edit_import = false
       }
+   set_bp_book_data_from_cursor(pindex)
    
    --Play sound
    game.get_player(pindex).play_sound{path = "Open-Inventory-Sound"}
