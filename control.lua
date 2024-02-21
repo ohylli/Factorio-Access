@@ -3,6 +3,7 @@ require('rails-and-trains')
 require('spidertron')
 require('worker-robots')
 require('equipment-and-combat')
+require('circuit-networks')
 require('help-system')
 localising=require('localising')
 
@@ -793,7 +794,7 @@ end
 --Usually called when the cursor find an entity, gives its name and key information.
 function ent_info(pindex, ent, description)
    local p = game.get_player(pindex)
-   local result = localising.get(ent)
+   local result = localising.get(ent,pindex)
    if result == nil or result == "" then
       result = ent.name
    end
@@ -1019,7 +1020,7 @@ function ent_info(pindex, ent, description)
    end
 
    --Explain the entity facing direction
-   if ent.prototype.is_building and ent.supports_direction then
+   if (ent.prototype.is_building and ent.supports_direction) or ent.name == "entity-ghost" then
       result = result .. ", Facing "
       if ent.direction == 0 then 
          result = result .. "North "
@@ -8997,6 +8998,8 @@ script.on_event("click-hand", function(event)
             end
             printout(ent_counter .. " entities marked to be upgraded.", pindex) 
          end
+      elseif stack.name == "red-wire" or stack.name == "green-wire" or stack.name == "copper-cable" then
+         drag_wire_and_read(pindex)
       elseif stack.prototype ~= nil and stack.prototype.type == "capsule" then
          --If holding a capsule type, e.g. cliff explosives or robot capsules, or remotes, try to use it at the cursor position (no feedback about successful usage)
          local cursor_dist = util.distance(game.get_player(pindex).position,players[pindex].cursor_pos)

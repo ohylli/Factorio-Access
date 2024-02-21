@@ -1,4 +1,4 @@
---Here: Functions relating worker robots, roboports, logistic systems, blueprints
+--Here: Functions relating worker robots, roboports, logistic systems, blueprints and other planners, ghosts
 --Does not include event handlers directly, but can have functions called by them.
 
 dirs = defines.direction

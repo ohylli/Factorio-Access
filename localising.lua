@@ -3,8 +3,8 @@ local localising = {}
 --Returns the localised name of an object as a string
 function localising.get(object,pindex)
    if pindex == nil then
-      printout("localising: pindex is nil error")
-      return
+      game.print("localising: pindex is nil error")
+      return nil
    end
    if object.valid and string.sub(object.object_name,-9) ~= "Prototype" then
       object = object.prototype
