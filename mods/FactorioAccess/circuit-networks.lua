@@ -1,6 +1,6 @@
 --Here: Functions relating to circuit networks, virtual signals, wiring and unwiring buildings, and the such.
 --Does not include event handlers directly, but can have functions called by them.
-
+local dcb = defines.control_behavior
 
 function drag_wire_and_read(pindex)
    --Start/end dragging wire 
@@ -161,8 +161,61 @@ function constant_combinator_remove_last_signal(ent, pindex)
    printout("No signals to remove", pindex)
 end
 
+function get_circuit_read_mode_name(ent)
+   local result = "None"
+   if ent.type == "inserter" then
+      local control = ent.get_control_behavior()
+      if control.circuit_read_hand_contents == true then
+         if control.circuit_hand_read_mode == dcb.inserter.hand_read_mode.hold then
+            result = "Read held items" 
+         elseif control.circuit_hand_read_mode == dcb.inserter.hand_read_mode.pulse then
+            result = "Pulse passing items" 
+         end
+      end
+   elseif ent.type == "transport-belt" then
+      local control = ent.get_control_behavior()
+      if control.read_contents == true then
+         if control.read_contents_mode == dcb.inserter.transport_belt.content_read_mode.hold then
+            result = "Read held items" 
+         elseif control.read_contents_mode == dcb.transport_belt.content_read_mode.pulse then
+            result = "Pulse passing items"
+         end
+      end
+   elseif ent.type == "storage-tank" or ent.type == "container" or ent.type == "logistic-container" then
+      result = "Read contents"
+   elseif ent.type == "gate" then
+      result = "Read player presence in virtual signal G"
+   elseif ent.type == "accumulator" then
+      result = "Read charge percentage in virtual signal A"
+   elseif ent.type == "rail-signal" or ent.type == "rail-chain-signal" then
+      result = "Read virtual color signals for rail signal states"
+   elseif ent.type == "train-stop" or ent.type == "roboport" or ent.type == "mining-drill" or ent.type == "pumpjack" then
+      result = "Read something "--todo***
+   end
+   return result
+end
 
---[[ Blueprint menu options summary
+function toggle_circuit_read_mode(ent)
+   local result = -1
+   if ent.type == "inserter" then
+      local control = ent.get_control_behavior()
+      if control.circuit_read_hand_contents == true then
+         --***
+      end
+      result = 0
+   elseif ent.type == "transport-belt" then
+      local control = ent.get_control_behavior()
+      if control.read_contents == true then
+         --***
+      end
+      result = 0
+   else
+      result = 1
+   end
+   return result
+end
+
+--[[ Circuit network menu options summary
    0. "<BUILDING NAME> of Network <id_no> <color>." + instructions
    1. Read Mode: <None?>
    2. Control Mode: <Mode of operation>, Press LEFT BRACKET to toggle.
