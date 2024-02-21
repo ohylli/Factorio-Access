@@ -1459,7 +1459,7 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "set-splitter-filter",
+    name = "set-entity-filter-from-hand",
     key_sequence = "CONTROL + LEFTBRACKET",
     consuming = "none"
 },
