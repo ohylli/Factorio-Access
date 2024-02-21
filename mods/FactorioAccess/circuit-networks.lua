@@ -78,16 +78,87 @@ function drag_wire_and_read(pindex)
    end
 end
 
-function constant_combinator_signals_info(ent)
-   --***
+function localise_signal_name(signal,pindex)--todo*** actually localise
+   local sig_name = signal.name
+   local sig_type = signal.type
+   if sig_name == nil then
+      sig_name = "nil"
+   end
+   if sig_type == nil then
+      sig_type = "nil"
+   end
+   local result = (sig_type .. " " .. sig_name) 
+   return result 
 end
 
-function add_hand_to_constant_combinator_signals(ent, pindex)
-   --***
+function constant_combinator_count_valid_signals(ent)
+   local count = 0
+   local combinator = ent.get_control_behavior()
+   local max_signals_count = combinator.signals_count
+   for i = 1,max_signals_count,1 do 
+      if combinator.get_signal(i).signal ~= nil then
+         count = count + 1
+      end
+   end
+   return count
 end
 
-function remove_last_constant_combinator_signal(ent)
-   --***
+function constant_combinator_get_first_empty_slot_id(ent)
+   local combinator = ent.get_control_behavior()
+   local max_signals_count = combinator.signals_count
+   for i = 1,max_signals_count,1 do 
+      if combinator.get_signal(i).signal == nil then
+         return i
+      end
+   end
+   return max_signals_count
+end
+
+function constant_combinator_signals_info(ent, pindex)
+   local combinator = ent.get_control_behavior()
+   local max_signals_count = combinator.signals_count
+   local valid_signals_count = constant_combinator_count_valid_signals(ent)
+   local result = " with signals " 
+   if valid_signals_count == 0 then
+      result = " with no signals "
+   else
+      for i = 1,max_signals_count,1 do 
+         local signal = combinator.get_signal(i)
+         if signal.signal ~= nil then
+            local signal_name = localise_signal_name(signal.signal,pindex)
+            if i > 1 then
+               result = result .. " and "
+            end   
+            result = result .. signal_name .. " times " .. signal.count .. ", "
+         end
+      end
+   end
+   --game.print(result)--
+   return result 
+end
+
+function constant_combinator_add_stack_signal(ent, stack, pindex)
+   local combinator = ent.get_control_behavior()
+   local first_empty_slot = constant_combinator_get_first_empty_slot_id(ent)
+   local new_signal_id = {type = "item", name = stack.name}
+   local new_signal  = {signal = new_signal_id, count = 1}
+   combinator.set_signal(first_empty_slot, new_signal)
+   printout("Added signal for " .. localising.get(stack, pindex), pindex)
+end
+
+function constant_combinator_remove_last_signal(ent, pindex)
+   local combinator = ent.get_control_behavior()
+   local max_signals_count = combinator.signals_count
+   for i = max_signals_count,1,-1 do 
+      local signal = combinator.get_signal(i)
+      if signal.signal ~= nil then
+         local signal_name = localise_signal_name(signal.signal,pindex)
+         printout("Removed last signal " .. signal_name, pindex)
+         combinator.set_signal(i , nil)
+         return
+      end
+   end
+   printout("No signals to remove", pindex)
 end
 
 

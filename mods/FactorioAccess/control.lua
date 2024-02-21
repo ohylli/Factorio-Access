@@ -1480,7 +1480,10 @@ function ent_info(pindex, ent, description)
       if ent.name == "heat-pipe" then --For this ent in particular, read temp after direction
          result = result .. ", temperature " .. math.floor(ent.temperature) .. " degrees C "
       end
-   end 
+   end
+   if ent.type == "constant-combinator" then
+      result = result .. constant_combinator_signals_info(ent, pindex)
+   end
    return result
 end
 
@@ -11678,7 +11681,8 @@ script.on_event("set-splitter-output-priority-right", function(event)
    end
 end)
 
-script.on_event("set-splitter-filter", function(event)
+--Sets splitter filter and also contant combinator signals
+script.on_event("set-entity-filter-from-hand", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -11690,17 +11694,27 @@ script.on_event("set-splitter-filter", function(event)
       --Not in a menu
       local stack = game.get_player(pindex).cursor_stack
       local ent =  get_selected_ent(pindex)
+      if ent == nil or ent.valid == false then
+         return
+      end
       if stack == nil or not stack.valid_for_read or not stack.valid then
-         if ent and ent.valid and ent.type == "splitter" then
+         if ent.type == "splitter" then
             --Clear the filter
             local result = set_splitter_priority(ent, nil, nil, nil, true)
             printout(result,pindex)
+         elseif ent.type == "constant-combinator" then
+            --Remove the last signal
+            constant_combinator_remove_last_signal(ent, pindex)
          end
-         return
-      elseif ent and ent.valid and ent.type == "splitter" then
-         --Set the filter
-         local result = set_splitter_priority(ent, nil, nil, stack)
-         printout(result,pindex)
+      else
+         if ent.type == "splitter" then
+            --Set the filter
+            local result = set_splitter_priority(ent, nil, nil, stack)
+            printout(result,pindex)
+         elseif ent.type == "constant-combinator" then
+            --Add a new signal
+            constant_combinator_add_stack_signal(ent, stack, pindex)
+         end
       end
    end
 end)
