@@ -163,8 +163,8 @@ end
 
 function get_circuit_read_mode_name(ent)
    local result = "None"
+   local control = ent.get_control_behavior()
    if ent.type == "inserter" then
-      local control = ent.get_control_behavior()
       if control.circuit_read_hand_contents == true then
          if control.circuit_hand_read_mode == dcb.inserter.hand_read_mode.hold then
             result = "Read held items" 
@@ -173,47 +173,207 @@ function get_circuit_read_mode_name(ent)
          end
       end
    elseif ent.type == "transport-belt" then
-      local control = ent.get_control_behavior()
       if control.read_contents == true then
-         if control.read_contents_mode == dcb.inserter.transport_belt.content_read_mode.hold then
+         if control.read_contents_mode == dcb.transport_belt.content_read_mode.hold then
             result = "Read held items" 
          elseif control.read_contents_mode == dcb.transport_belt.content_read_mode.pulse then
             result = "Pulse passing items"
          end
       end
-   elseif ent.type == "storage-tank" or ent.type == "container" or ent.type == "logistic-container" then
+   elseif ent.type == "container" or ent.type == "logistic-container" or ent.type == "storage-tank" then
       result = "Read contents"
    elseif ent.type == "gate" then
       result = "Read player presence in virtual signal G"
-   elseif ent.type == "accumulator" then
-      result = "Read charge percentage in virtual signal A"
    elseif ent.type == "rail-signal" or ent.type == "rail-chain-signal" then
       result = "Read virtual color signals for rail signal states"
-   elseif ent.type == "train-stop" or ent.type == "roboport" or ent.type == "mining-drill" or ent.type == "pumpjack" then
-      result = "Read something "--todo***
+   elseif ent.type == "train-stop" then
+      result = "Read train ID in virtual signal T and en route train count in virtual signal C" 
+   elseif ent.type == "accumulator" then
+      result = "Read charge percentage in virtual signal A"
+   elseif ent.type == "roboport" then
+      result = "Read something "--todo explain other read modes***
+   elseif ent.type == "mining-drill" then
+      result = "Read something "--todo explain other read modes***
+   elseif ent.type == "pumpjack" then
+      result = "Read something "--todo explain other read modes***
    end
    return result
 end
 
 function toggle_circuit_read_mode(ent)
-   local result = -1
+   local result = "No change"
+   local control = ent.get_control_behavior()
    if ent.type == "inserter" then
-      local control = ent.get_control_behavior()
-      if control.circuit_read_hand_contents == true then
-         --***
+      if control.circuit_read_hand_contents == false then
+         control.circuit_read_hand_contents = true
+         control.circuit_hand_read_mode = dcb.inserter.hand_read_mode.hold
+         result = "Read held items" 
+      elseif control.circuit_hand_read_mode == dcb.inserter.hand_read_mode.hold then
+         control.circuit_read_hand_contents = true
+         control.circuit_hand_read_mode = dcb.inserter.hand_read_mode.pulse
+         result = "Pulse passing items"
+      else --if control.circuit_hand_read_mode == dcb.inserter.hand_read_mode.pulse then
+         control.circuit_read_hand_contents = false
+         result = "None"
       end
-      result = 0
-   elseif ent.type == "transport-belt" then
-      local control = ent.get_control_behavior()
-      if control.read_contents == true then
-         --***
+   elseif ent.type == "transport-belt" then 
+      if control.read_contents == false then
+         control.read_contents = true
+         control.read_contents_mode = dcb.transport_belt.content_read_mode.hold 
+         result = "Read held items" 
+      elseif control.read_contents_mode == dcb.transport_belt.content_read_mode.hold then
+         control.read_contents = true
+         control.read_contents_mode = dcb.transport_belt.content_read_mode.pulse
+         result = "Pulse passing items"
+      else --if control.read_contents_mode == dcb.transport_belt.content_read_mode.pulse then
+         control.read_contents = false
+         result = "None"
       end
-      result = 0
    else
-      result = 1
+      result = "No change" --laterdo** allow toggling some other read modes
    end
    return result
 end
+
+function get_circuit_operation_mode_name(ent)
+   local result = "None"
+   local control = ent.get_control_behavior()
+   if ent.type == "inserter" then 
+      if control.circuit_mode_of_operation == dcb.inserter.circuit_mode_of_operation.none then
+         result = "None"
+      elseif control.circuit_mode_of_operation == dcb.inserter.circuit_mode_of_operation.enable_disable then
+         result = "Enable with condition"
+      elseif control.circuit_mode_of_operation == dcb.inserter.circuit_mode_of_operation.read_hand_contents then
+         result = "Only read hand contents"
+      else
+         result = "Other"
+      end
+   elseif ent.type == "transport-belt" then 
+      if control.enable_disable == true then
+         result = "Enable with condition"
+      else
+         result = "None"
+      end
+   elseif ent.name == "logistic-requester-chest" then
+      if control.circuit_mode_of_operation == dcb.logistic_container.circuit_mode_of_operation.set_requests then
+         result = "Set logistic requests to match network signals"
+      elseif control.circuit_mode_of_operation == dcb.logistic_container.circuit_mode_of_operation.send_contents then
+         result = "Only read contents"
+      else
+         result = "Other"
+      end
+   elseif ent.type == "gate" then
+      result = "Undefined"--**laterdo
+   elseif ent.type == "rail-signal" then
+      result = "Undefined"--**laterdo
+   elseif ent.type == "train-stop" then
+      result = "Undefined"--**laterdo
+   elseif ent.type == "mining-drill" then
+      result = "Undefined"--**laterdo
+   elseif ent.type == "pumpjack" then
+      result = "Undefined"--**laterdo
+   elseif ent.type == "power-switch" then
+      if control.circuit_condition ~= nil or control.disabled == true then
+         result = "Enable with condition"
+      else
+         result = "None"
+      end
+   elseif ent.type == "programmable-speaker" then
+      result = "Undefined"--**laterdo
+   elseif ent.type == "lamp" then
+      result = "Undefined"--**laterdo
+   elseif ent.type == "offshore-pump" then
+      if control.circuit_condition ~= nil or control.disabled == true then
+         result = "Enable with condition"
+      else
+         result = "None"
+      end
+   elseif ent.type == "pump" then
+      if control.circuit_condition ~= nil or control.disabled == true then
+         result = "Enable with condition"
+      else
+         result = "None"
+      end
+   else
+      result = "None"
+   end
+   return result
+end
+
+function toggle_circuit_operation_mode(ent)
+   local result = "None"
+   local control = ent.get_control_behavior()
+   if ent.type == "inserter" then 
+      if control.circuit_mode_of_operation == dcb.inserter.circuit_mode_of_operation.none then
+         control.circuit_mode_of_operation = dcb.inserter.circuit_mode_of_operation.enable_disable
+         result = "Enable with condition"
+      elseif control.circuit_mode_of_operation == dcb.inserter.circuit_mode_of_operation.enable_disable then
+         control.circuit_mode_of_operation = dcb.inserter.circuit_mode_of_operation.read_hand_contents
+         result = "Only read hand contents"
+      elseif control.circuit_mode_of_operation == dcb.inserter.circuit_mode_of_operation.read_hand_contents then
+         control.circuit_mode_of_operation = dcb.inserter.circuit_mode_of_operation.none
+         result = "None"
+      else
+         control.circuit_mode_of_operation = dcb.inserter.circuit_mode_of_operation.none
+         result = "None"
+      end
+   elseif ent.type == "transport-belt" then 
+      if control.enable_disable == true then
+         control.enable_disable = false
+         result = "None"
+      else
+         control.enable_disable = true
+         result = "Enable with condition"
+      end
+   elseif ent.name == "logistic-requester-chest" then
+      if control.circuit_mode_of_operation == dcb.logistic_container.circuit_mode_of_operation.set_requests then
+         control.circuit_mode_of_operation = dcb.logistic_container.circuit_mode_of_operation.send_contents
+         result = "Only read contents"
+      elseif control.circuit_mode_of_operation == dcb.logistic_container.circuit_mode_of_operation.send_contents then
+         control.circuit_mode_of_operation = dcb.logistic_container.circuit_mode_of_operation.set_requests
+         result = "Set logistic requests to match network signals"
+      else
+         control.circuit_mode_of_operation = dcb.logistic_container.circuit_mode_of_operation.send_contents
+         result = "Only read contents"
+      end
+   elseif ent.type == "gate" then
+      result = "Undefined"--**laterdo
+   elseif ent.type == "rail-signal" then
+      result = "Undefined"--**laterdo
+   elseif ent.type == "train-stop" then
+      result = "Undefined"--**laterdo
+   elseif ent.type == "mining-drill" then
+      result = "Undefined"--**laterdo
+   elseif ent.type == "pumpjack" then
+      result = "Undefined"--**laterdo
+   elseif ent.type == "power-switch" then
+      if control.circuit_condition ~= nil or control.disabled == true then--**laterdo
+         result = "Enable with condition"
+      else
+         result = "None"
+      end
+   elseif ent.type == "programmable-speaker" then
+      result = "Undefined"--**laterdo
+   elseif ent.type == "lamp" then
+      result = "Undefined"--**laterdo
+   elseif ent.type == "offshore-pump" then
+      if control.circuit_condition ~= nil or control.disabled == true then--**laterdo
+         result = "Enable with condition"
+      else
+         result = "None"
+      end
+   elseif ent.type == "pump" then
+      if control.circuit_condition ~= nil or control.disabled == true then--**laterdo
+         result = "Enable with condition"
+      else
+         result = "None"
+      end
+   else
+      result = "None"
+   end
+   return result
+end
+
 
 --[[ Circuit network menu options summary
    0. "<BUILDING NAME> of Network <id_no> <color>." + instructions
