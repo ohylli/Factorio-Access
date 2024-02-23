@@ -197,7 +197,7 @@ function get_selected_ent(pindex)
       if not ent then
          print(serpent.line(tile.ents),tile.index,ent)
       end
-      if ent.valid and (players[pindex].cursor or ent.unit_number ~= game.get_player(pindex).character.unit_number) then
+      if ent.valid and (ent.type ~= 'character' or players[pindex].cursor or ent.player ~= pindex) then
          return ent
       end
       table.remove(tile.ents,tile.index)
