@@ -237,12 +237,14 @@ end
 
 function get_circuit_operation_mode_name(ent)
    local result = "None"
+   local uses_condition = false
    local control = ent.get_control_behavior()
    if ent.type == "inserter" then 
       if control.circuit_mode_of_operation == dcb.inserter.circuit_mode_of_operation.none then
          result = "None"
       elseif control.circuit_mode_of_operation == dcb.inserter.circuit_mode_of_operation.enable_disable then
          result = "Enable with condition"
+         uses_condition = true
       elseif control.circuit_mode_of_operation == dcb.inserter.circuit_mode_of_operation.read_hand_contents then
          result = "Only read hand contents"
       else
@@ -251,6 +253,7 @@ function get_circuit_operation_mode_name(ent)
    elseif ent.type == "transport-belt" then 
       if control.enable_disable == true then
          result = "Enable with condition"
+         uses_condition = true
       else
          result = "None"
       end
@@ -285,19 +288,21 @@ function get_circuit_operation_mode_name(ent)
    elseif ent.type == "offshore-pump" then
       if control.circuit_condition ~= nil or control.disabled == true then
          result = "Enable with condition"
+         uses_condition = true
       else
          result = "None"
       end
    elseif ent.type == "pump" then
       if control.circuit_condition ~= nil or control.disabled == true then
          result = "Enable with condition"
+         uses_condition = true
       else
          result = "None"
       end
    else
       result = "None"
    end
-   return result
+   return result, uses_condition
 end
 
 function toggle_circuit_operation_mode(ent)
@@ -374,19 +379,199 @@ function toggle_circuit_operation_mode(ent)
    return result
 end
 
+function read_circuit_condition(ent)
+   local control = ent.get_control_behavior()
+   local cond = control.circuit_condition.condition
+   local fulfilled = control.circuit_condition.fulfilled
+   local comparator = cond.comparator
+   local first_signal_name = localise_signal_name(cond.first_signal,pindex)
+   local second_signal_name = localise_signal_name(cond.second_signal,pindex)
+   local result = ""
+   if cond.second_signal == nil then
+      second_signal_name = cond.constant
+      if cond.constant == nil then
+         second_signal_name = 0
+      end
+   end
+   local result = first_signal_name .. " " .. comparator .. " " .. second_signal_name
+   return result 
+end
 
---[[ Circuit network menu options summary
-   0. "<BUILDING NAME> of Network <id_no> <color>." + instructions
-   1. Read Mode: <None?>
-   2. Control Mode: <Mode of operation>, Press LEFT BRACKET to toggle.
-   3. Enable_mode: [Enabled when: <condition summary> ]  Read_mode:[Current output: <aignal name and count>]
-   4. First signal: <SIGNAL>, Press LEFT BRACKET to load item in hand instead. You can also press ENTER and input a latin letter or digit to use as a signal by entering the character and then a forward slash character.
-   5. Condition operator: <op>, Press LEFT BRACKET to toggle. 
-   6. Second signal: <SIGNAL>, Press LEFT BRACKET to load item in hand instead OR press ENTER to type in a number instead. You can also input a latin letter or digit to use as a signal by entering the character and then a forward slash character.
+function toggle_condition_comparator(circuit_condition, pindex)
+   local cond = circuit_condition.condition
+   local comparator = cond.comparator
+   if comparator == "=" then
+      comparator = "≠"
+   elseif comparator == "≠" then
+      comparator = ">"
+   elseif comparator == ">" then
+      comparator = "≥"
+   elseif comparator == "≥" then
+      comparator = "<"
+   elseif comparator == "<" then
+      comparator = "≤"
+   elseif comparator == "≤" then
+      comparator = "="
+   else
+      comparator = "="
+   end
+   printout(comparator, pindex)
+   return 
+end
 
-   This menu opens when you press KEY when a building is selected.
-]]
-function circuit_network_menu(ent, menu_index, pindex, clicked, other_input)
-   local index = menu_index
+function write_condition_first_signal_item(circuit_condition, stack)
+   local cond = circuit_condition.condition
+   cond.first_signal = {type = "item", name = stack.name}
+   return 
+end
+
+function write_condition_second_signal_item(circuit_condition, stack)
+   local cond = circuit_condition.condition
+   cond.second_signal = {type = "item", name = stack.name}
+   return 
+end
+
+function write_condition_second_signal_constant(circuit_condition, constant)
+   local cond = circuit_condition.condition
+   cond.second_signal = nil
+   cond.constant = constant
+   return 
+end
+
+--[[ 
+   Circuit network menu options summary
    
+   0) Menu info: "Electric Poles of Circuit Network <id_no> <color>, with # members." + instructions
+   1) List all active signals of this network
+   2) List all members of this network
+   3) List buildings connected to this electric pole
+   4) (Inventory edge, call 3)
+   
+   0) Menu info: "Electric Poles of Circuit Network <id_no> <color>, with # members." + instructions
+   1) List all active signals of the network
+   2) Read machine behavior summary: "Reading none and enabled when X < Y"
+   3) Toggle machine reading mode: None / Read held contents / Pulse passing contents
+   4) Toggle machine control mode: None / Enabled condition
+   5) Toggle enabled condition comparing rule: greater than / less than / equal to / not equal to
+   6) Set enabled condition first signal: Use the signal selector
+   7) Set enabled condition second signal: Press LB to use the signal selector or press ENTER to type in a constant
+
+   This menu opens when you press KEY when a building menu is open.
+]]
+function circuit_network_menu(pindex, ent, menu_index, clicked, other_input)
+   local index = menu_index
+   local control = ent.get_control_behavior()
+   if control == nil then
+      printout("No circuit network interface for this entity" , pindex)
+      return
+   end
+   local circuit_cond = control.circuit_condition
+   
+   if ent.type == "electric-pole" then
+      if index == 0 then
+         --Menu info
+      elseif index == 1 then
+         --List all active signals of this network
+      elseif index == 2 then
+         --List all members of this network
+      elseif index == 3 then
+         --List buildings connected to this electric pole
+      elseif index > 3 then
+         --(inventory edge: play sound and set index and call this menu again)
+      end
+      return
+   else
+      if index == 0 then
+         --Menu info
+      elseif index == 1 then
+         --List all active signals of this network
+      elseif index == 2 then
+         --Read machine behavior summary
+      elseif index == 3 then
+         --Toggle machine reading mode
+      elseif index == 4 then
+         --Toggle machine control mode
+      elseif index == 5 then
+         --Toggle enabled condition comparing rule
+      elseif index == 6 then
+         --Set enabled condition first signal
+      elseif index == 7 then
+         --Set enabled condition second signal
+      end
+      return
+   end
+end
+CIRCUIT_NETWORK_MENU_LENGTH = 7
+
+function circuit_network_menu_open(pindex)
+   if players[pindex].vanilla_mode then
+      return 
+   end
+   --Set the player menu tracker to this menu
+   players[pindex].menu = "circuit_network_menu"
+   players[pindex].in_menu = true
+   players[pindex].move_queue = {}
+   
+   --Set the menu line counter to 0
+   players[pindex].circuit_network_menu = {
+      index = 0
+      }
+   
+   --Play sound
+   game.get_player(pindex).play_sound{path = "Open-Inventory-Sound"}
+   
+   --Load menu 
+   local cn_menu = players[pindex].circuit_network_menu
+   circuit_network_menu(pindex, nil, cn_menu.index, false)
+end
+
+function circuit_network_close(pindex, mute_in)
+   local mute = mute_in
+   --Set the player menu tracker to none
+   players[pindex].menu = "none"
+   players[pindex].in_menu = false
+
+   --Set the menu line counter to 0
+   players[pindex].circuit_network_menu.index = 0
+   
+   --play sound
+   if not mute then
+      game.get_player(pindex).play_sound{path="Close-Inventory-Sound"}
+   end
+   
+   --Close GUIs
+   if game.get_player(pindex).gui.screen["signal-name-enter"] ~= nil then 
+      game.get_player(pindex).gui.screen["signal-name-enter"].destroy()
+   end
+   if game.get_player(pindex).opened ~= nil then
+      game.get_player(pindex).opened = nil
+   end
+end
+
+function circuit_network_menu_up(pindex)
+   players[pindex].circuit_network_menu.index = players[pindex].circuit_network_menu.index - 1
+   if players[pindex].circuit_network_menu.index < 0 then
+      players[pindex].circuit_network_menu.index = 0
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
+   else
+      --Play sound
+      game.get_player(pindex).play_sound{path = "Inventory-Move"}
+   end
+   --Load menu
+   local cn_menu = players[pindex].circuit_network_menu
+   circuit_network_menu(pindex, nil, cn_menu.index, false)
+end
+
+function circuit_network_menu_down(pindex)
+   players[pindex].circuit_network_menu.index = players[pindex].circuit_network_menu.index + 1
+   if players[pindex].circuit_network_menu.index > CIRCUIT_NETWORK_MENU_LENGTH then
+      players[pindex].circuit_network_menu.index = CIRCUIT_NETWORK_MENU_LENGTH
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
+   else
+      --Play sound
+      game.get_player(pindex).play_sound{path = "Inventory-Move"}
+   end
+   --Load menu
+   local cn_menu = players[pindex].circuit_network_menu
+   circuit_network_menu(pindex, nil, cn_menu.index, false)
 end
