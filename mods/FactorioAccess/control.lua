@@ -2808,7 +2808,7 @@ function scan_sort(pindex)
    for i, name in ipairs(players[pindex].nearby.ents   ) do
       local i1 = 1
       while i1 <= #name.ents do --this appears to be removing invalid ents within a set.
-         if not name.ents[i1].valid and not name.aggregate then
+         if name.ents[i1] == nil or (name.ents[i1].valid == false and name.aggregate == false) then
             table.remove(name.ents, i1)
          else
             i1 = i1 + 1
@@ -5904,8 +5904,10 @@ function menu_cursor_left(pindex)
       elseif players[pindex].travel.index.x == 2 then
          printout("Rename", pindex)
       elseif players[pindex].travel.index.x == 3 then
-         printout("Delete", pindex)
+         printout("Relocate to current character position", pindex)
       elseif players[pindex].travel.index.x == 4 then
+         printout("Delete", pindex)
+      elseif players[pindex].travel.index.x == 5 then
          printout("Create New", pindex)
       end
    elseif players[pindex].menu == "structure-travel" then
@@ -6054,8 +6056,8 @@ function menu_cursor_right(pindex)
          end
       end
       read_warnings_slot(pindex)
-   elseif players[pindex].menu == "travel" then
-      if players[pindex].travel.index.x < 4 then
+   elseif players[pindex].menu == "travel" then--fast_travel menu
+      if players[pindex].travel.index.x < 5 then
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
          players[pindex].travel.index.x = players[pindex].travel.index.x + 1
       end
@@ -6064,8 +6066,10 @@ function menu_cursor_right(pindex)
       elseif players[pindex].travel.index.x == 2 then
          printout("Rename", pindex)
       elseif players[pindex].travel.index.x == 3 then
-         printout("Delete", pindex)
+         printout("Relocate to current character position", pindex)
       elseif players[pindex].travel.index.x == 4 then
+         printout("Delete", pindex)
+      elseif players[pindex].travel.index.x == 5 then
          printout("Create New", pindex)
       end
    elseif players[pindex].menu == "structure-travel" then
@@ -6252,6 +6256,8 @@ function on_tick(event)
             printout("Press 'TAB' to begin", pindex)
          elseif players[pindex].tutorial == nil then
             printout("Press 'H' to open the tutorial", pindex)
+         elseif player.ticks_to_respawn ~= nil then
+            printout(math.floor(player.ticks_to_respawn/60) .. " seconds until respawn", pindex)
          end
       end
    end
@@ -8838,12 +8844,20 @@ script.on_event("click-menu", function(event)
             local input = frame.add{type="textfield", name = "input"}
             input.focus()
             input.select(1, 0)
-         elseif players[pindex].travel.index.x == 3 then --Delete
+         elseif players[pindex].travel.index.x == 3 then --Relocate to current character position
+            --****todo
+            table.remove(global.players[pindex].travel, players[pindex].travel.index.y)
+            table.insert(global.players[pindex].travel, {name = result, position = center_of_tile(players[pindex].position)})
+            table.sort(global.players[pindex].travel, function(k1, k2)
+               return k1.name < k2.name
+            end)
+            printout("Relocated to " .. math.floor(players[pindex].position.x) .. ", " .. math.floor(players[pindex].position.y), pindex)
+         elseif players[pindex].travel.index.x == 4 then --Delete
             printout("Deleted " .. global.players[pindex].travel[players[pindex].travel.index.y].name, pindex)
             table.remove(global.players[pindex].travel, players[pindex].travel.index.y)
             players[pindex].travel.x = 1
             players[pindex].travel.index.y = players[pindex].travel.index.y - 1
-         elseif players[pindex].travel.index.x == 4 then --Create new 
+         elseif players[pindex].travel.index.x == 5 then --Create new 
             printout("Enter a name for this fast travel point, then press 'ENTER' to confirm.", pindex)
             players[pindex].travel.creating = true
             local frame = game.get_player(pindex).gui.screen["travel"]
@@ -10778,19 +10792,32 @@ script.on_event("read-time-and-research-progress", function(event)
    if not check_for_player(pindex) then
       return
    end
+   --Get local time
    local surf = game.get_player(pindex).surface
    local hour = math.floor((24*surf.daytime + 12) % 24)
    local minute = math.floor((24* surf.daytime - math.floor(24*surf.daytime)) * 60)
-   local progress = math.floor(game.get_player(pindex).force.research_progress* 100)
+   local time_string = " The local time is " .. hour .. ":" .. string.format("%02d", minute) .. ", "
+   
+   --Get total playtime
+   local total_hours = math.floor(game.tick/3600)
+   local total_minutes = math.floor((game.tick % 3600)/60)
+   local total_time_string = " The total mission time is " .. total_hours .. " hours and " .. total_minutes .. "minutes "
+   
+   --Add research progress info
+   local progress_string = " No research in progress, "
    local tech = game.get_player(pindex).force.current_research
    if tech ~= nil then
-      printout("The local time is " .. hour .. ":" .. string.format("%02d", minute) .. ", Researching " .. game.get_player(pindex).force.current_research.name .. ", " .. progress .. "%", pindex)
-   else
-      printout("The local time is " .. hour .. ":" .. string.format("%02d", minute), pindex)
+      local research_progress = math.floor(game.get_player(pindex).force.research_progress* 100)
+      progress_string = " Researching " .. tech.name .. ", " .. research_progress .. "%, "
    end
+   
+   printout(time_string .. progress_string .. total_time_string, pindex)
    if players[pindex].vanilla_mode then
       game.get_player(pindex).open_technology_gui()
    end
+      
+   --Temporarily disable research queue, add it as a feature laterdo**
+   game.get_player(pindex).force.research_queue_enabled = false
 end)
 
 script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
