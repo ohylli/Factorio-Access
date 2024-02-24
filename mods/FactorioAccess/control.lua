@@ -4154,25 +4154,29 @@ function scan_area(x,y,w,h, pindex, filter_direction)
 end
 
 function toggle_cursor(pindex)
-   if game.get_player(pindex).character == nil then
+   local p = game.get_player(pindex)
+   if p.character == nil then
+      players[pindex].cursor = true
+      players[pindex].build_lock = false
       return
    end
+   
    if (not players[pindex].cursor) and (not players[pindex].hide_cursor) then
       players[pindex].cursor = true
       players[pindex].build_lock = false
             
       --Teleport to the center of the nearest tile to align
-      local can_port = game.get_player(pindex).surface.can_place_entity{name = "character", position = center_of_tile(game.get_player(pindex).position)}
-      local ents = game.get_player(pindex).surface.find_entities_filtered{position = center_of_tile(game.get_player(pindex).position), radius = 0.1, type = {"character"}, invert = true}
+      local can_port = p.surface.can_place_entity{name = "character", position = center_of_tile(p.position)}
+      local ents = p.surface.find_entities_filtered{position = center_of_tile(p.position), radius = 0.1, type = {"character"}, invert = true}
       if #ents > 0 and ents[1].valid then
          local ent = ents[1]
          --Ignore ents you can walk through, laterdo better collision checks**
-         can_port = can_port or all_ents_are_walkable(game.get_player(pindex).position)
+         can_port = can_port or all_ents_are_walkable(p.position)
       end
       if can_port then
-         game.get_player(pindex).teleport(center_of_tile(game.get_player(pindex).position))
+         p.teleport(center_of_tile(p.position))
       end      
-      players[pindex].position = game.get_player(pindex).position
+      players[pindex].position = p.position
       players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos)
       move_mouse_pointer(players[pindex].cursor_pos,pindex)
       read_tile(pindex, "Cursor mode enabled, ")
@@ -4183,7 +4187,7 @@ function toggle_cursor(pindex)
       move_mouse_pointer(players[pindex].cursor_pos,pindex)
       sync_build_cursor_graphics(pindex)
       target(pindex)
-      players[pindex].player_direction = game.get_player(pindex).character.direction
+      players[pindex].player_direction = p(pindex).character.direction
       players[pindex].build_lock = false
       read_tile(pindex, "Cursor mode disabled, ")
    end
@@ -4200,7 +4204,7 @@ function toggle_cursor(pindex)
       local right_bottom = {math.floor(players[pindex].cursor_pos.x)+players[pindex].cursor_size+1,math.floor(players[pindex].cursor_pos.y)+players[pindex].cursor_size+1}
       draw_area_as_cursor(left_top,right_bottom,pindex)
    end
-   game.get_player(pindex).close_map()
+   p.close_map()
 end
 
 function teleport_to_cursor(pindex, muted, ignore_enemies, return_cursor)
@@ -7922,6 +7926,9 @@ script.on_event("switch-menu-or-gun", function(event)
    
    --Gun related changes (this seems to run before the actual switch happens so even when we write the new index, it will change, so we need to be predictive)
    local p = game.get_player(pindex)
+   if p.character == nil then
+      return
+   end
    local guns_inv = p.get_inventory(defines.inventory.character_guns)
    local ammo_inv = game.get_player(pindex).get_inventory(defines.inventory.character_ammo)
    local result = ""
@@ -8047,6 +8054,9 @@ script.on_event("reverse-switch-menu-or-gun", function(event)
    
    --Gun related changes (Vanilla Factorio DOES NOT have shift + tab weapon revserse switching, so we add it without prediction needed)
    local p = game.get_player(pindex)
+   if p.character == nil then
+      return
+   end
    local guns_inv = p.get_inventory(defines.inventory.character_guns)
    local ammo_inv = game.get_player(pindex).get_inventory(defines.inventory.character_ammo)
    local result = ""
