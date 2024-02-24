@@ -998,7 +998,7 @@ function ent_info(pindex, ent, description)
          end
       end
    end
-   
+      
    --For underground belts, note whether entrance or Exited
    if ent.type == "underground-belt" then
       if ent.belt_to_ground_type == "input" then
@@ -1025,24 +1025,7 @@ function ent_info(pindex, ent, description)
 
    --Explain the entity facing direction
    if (ent.prototype.is_building and ent.supports_direction) or ent.name == "entity-ghost" then
-      result = result .. ", Facing "
-      if ent.direction == 0 then 
-         result = result .. "North "
-      elseif ent.direction == 1 then
-         result = result .. "Northeast "
-      elseif ent.direction == 2 then
-         result = result .. "East "
-      elseif ent.direction == 3 then
-         result = result .. "Southeast "
-      elseif ent.direction == 4 then
-         result = result .. "South "
-      elseif ent.direction == 5 then
-         result = result .. "Southwest "
-      elseif ent.direction == 6 then
-         result = result .. "West "
-      elseif ent.direction == 7 then
-         result = result .. "Northwest "
-      end
+      result = result .. ", Facing " .. direction_lookup(ent.direction) 
    elseif ent.name == "locomotive" or ent.prototype.type == "car" then
       result = result .. " facing " .. get_heading(ent)
    end
@@ -1063,6 +1046,9 @@ function ent_info(pindex, ent, description)
       else
          result = result .. ", not connected " 
       end
+   elseif ent.type == "splitter" then
+      --Splitter priority info
+      result = result .. splitter_priority_info(ent)
    elseif (ent.name  == "pipe") and ent.neighbours ~= nil then
       --List connected neighbors 
       result = result .. " connects "
@@ -2613,11 +2599,27 @@ end
 
 function get_substring_before_space(str)
    local first, final = string.find(str," ")
-   if first == nil or first == 1 then
+   if first == nil or first == 1 then --No space, or space at the start only
       return str
    else
       return string.sub(str,1,first-1)
    end
+end
+
+function get_substring_after_space(str)
+   local first, final = string.find(str," ")
+   if final == nil then --No spaces
+      return str
+   end
+   if first == 1 then --spaces at start only
+      return string.sub(str,final+1,string.len(str))
+   end
+   
+   if final == string.len(str) then --space at the end only?
+      return str
+   end
+   
+   return string.sub(str,final+1,string.len(str))
 end
 
 function get_substring_before_comma(str)
@@ -5291,7 +5293,7 @@ script.on_event(defines.events.on_player_changed_position,function(event)
             return
          end
          
-         if ent ~= nil and ent.valid then
+         if ent ~= nil and ent.valid and (p.character == nil or (p.character ~= nil and p.character.unit_number ~= ent.unit_number)) then
             cursor_highlight(pindex, ent, nil)
             p.selected = ent
             p.play_sound{path = "Close-Inventory-Sound", volume_modifier = 0.75}
@@ -8316,7 +8318,7 @@ script.on_event("mine-area", function(event)
    end
    cleared_total = cleared_total + cleared_count
    
-   --Also, if cut-paste tool in hand, mine every non-resource entity in the area that you can. 
+   --If cut-paste tool in hand, mine every non-resource entity in the area that you can. 
    local p = game.get_player(pindex)
    local stack = p.cursor_stack
    if stack and stack.valid_for_read and stack.name == "cut-paste-tool" then
@@ -8332,6 +8334,22 @@ script.on_event("mine-area", function(event)
          end
       end
    end
+   
+   --If the deconstruction planner is in hand, mine every entity marked for deconstruction except for cliffs.
+   if stack and stack.valid_for_read and stack.is_deconstruction_item then
+      players[pindex].allow_reading_flying_text = false
+      local all_ents = p.surface.find_entities_filtered{position = p.position, radius = 5, force = {p.force, "neutral"}}
+      for i,ent in ipairs(all_ents) do
+         if ent and ent.valid and ent.is_registered_for_deconstruction(p.force) then
+            local name = ent.name
+            game.get_player(pindex).play_sound{path = "player-mine"}
+            if try_to_mine_with_sound(ent,pindex) then
+               cleared_total = cleared_total + 1
+            end
+         end
+      end
+   end
+   
    printout(" Cleared away " .. cleared_total .. " objects. ", pindex)
 end)
 
@@ -11412,7 +11430,41 @@ script.on_event(defines.events.on_gui_confirmed,function(event)
    if not check_for_player(pindex) then
       return
    end
-   if players[pindex].menu == "travel" then
+   if players[pindex].cursor_jumping == true then
+      --Jump the cursor
+      players[pindex].cursor_jumping = false
+      local result = event.element.text
+      if result ~= nil and result ~= "" then 
+         local new_x = tonumber(get_substring_before_space(result))
+         local new_y = tonumber(get_substring_after_space(result))
+         
+         --Check if valid numbers
+         local valid_coords = new_x ~= nil and new_y ~= nil
+         
+         --Change cursor position or return error
+         if valid_coords then
+            players[pindex].cursor_pos = {x = new_x, y = new_y}
+            printout("Cursor jumped to " .. new_x .. ", " .. new_y, pindex)
+         else
+            printout("Invalid input", pindex)
+         end
+      end
+      event.element.destroy()
+      --Set the player menu tracker to none
+      players[pindex].menu = "none"
+      players[pindex].in_menu = false
+      --play sound
+      if not mute then
+         p.play_sound{path="Close-Inventory-Sound"}
+      end
+      --Destroy text fields
+      if p.gui.screen["cursor-jump"] ~= nil then 
+         p.gui.screen["cursor-jump"].destroy()
+      end
+      if p.opened ~= nil then
+         p.opened = nil
+      end
+   elseif players[pindex].menu == "travel" then
       local result = event.element.text
       if result == nil or result == "" then 
          result = "unknown"
@@ -12854,6 +12906,32 @@ function set_splitter_priority(splitter, is_input, is_left, filter_item_stack, c
    return result
 end
 
+function splitter_priority_info(ent)
+   local result = "," 
+   local input = ent.splitter_input_priority
+   local output = ent.splitter_output_priority
+   local filter = ent.splitter_filter
+   if input == "none" then
+      result = result .. " input balanced, "
+   else
+      result = result .. " input priority " .. input .. ", "
+   end
+   if filter == nil then
+      if output == "none" then
+         result = result .. " output balanced, "
+      else
+         result = result .. " output priority " .. output .. ", "
+      end
+   else
+      local item_name = localising.get(filter,pindex)
+      if item_name == nil or item_name == "" then
+         item_name = "unknown item"
+      end
+      result = result .. " output filtering " .. item_name .. " from the " .. output .. ", "
+   end
+   return result
+end
+
 function rotate_90(dir)
    return (dir + dirs.east) % (2 * dirs.south)
 end
@@ -13122,6 +13200,17 @@ function cursor_position_is_on_screen_with_player_centered(pindex)
    local range_y = math.floor(16/players[pindex].zoom)--found experimentally by counting tile ranges at different zoom levels
    local range_x = range_y * game.get_player(pindex).display_scale * 1.5--found experimentally by checking scales
    return (math.abs(players[pindex].cursor_pos.y - players[pindex].position.y) <= range_y and math.abs(players[pindex].cursor_pos.x - players[pindex].position.x) <= range_x)
+end
+
+function type_cursor_position(pindex)
+   printout("Enter new co-ordinates for the cursor, separated by a space", pindex)
+   players[pindex].cursor_jumping = true
+   local frame = game.get_player(pindex).gui.screen.add{type = "frame", name = "cursor-jump"}
+   frame.bring_to_front()
+   frame.force_auto_center()
+   frame.focus()
+   local input = frame.add{type="textfield", name = "input"}
+   input.focus()
 end
 
 function set_cursor_colors_to_player_colors(pindex)
@@ -14223,3 +14312,5 @@ function general_mod_menu_down(pindex, menu, upper_limit)
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
    end
 end
+
+
