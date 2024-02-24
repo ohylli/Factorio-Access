@@ -806,7 +806,11 @@ function ent_info(pindex, ent, description)
       return result
    end
    if ent.type == "resource" then
-      result = result .. ", x " .. ent.amount
+      if ent.name ~= "crude-oil" then
+         result = result .. ", x " .. ent.amount
+      else
+         result = result .. ", x " .. math.floor(ent.amount/3000) .. "%"
+      end
    end
    if ent.name == "entity-ghost" then
       result = localising.get(ent.ghost_prototype, pindex) .. " " .. localising.get(ent, pindex)
@@ -4150,6 +4154,9 @@ function scan_area(x,y,w,h, pindex, filter_direction)
 end
 
 function toggle_cursor(pindex)
+   if game.get_player(pindex).character == nil then
+      return
+   end
    if (not players[pindex].cursor) and (not players[pindex].hide_cursor) then
       players[pindex].cursor = true
       players[pindex].build_lock = false
@@ -5231,7 +5238,14 @@ script.on_event(defines.events.on_player_changed_position,function(event)
       local pos = (p.position)
       if p.walking_state.direction ~= players[pindex].player_direction and players[pindex].cursor == false then 
          --Directions mismatch. Turn to new direction --turn (Note, this code handles diagonal turns and other direction changes)
-         players[pindex].player_direction = p.character.direction
+         if p.character ~= nil then
+            players[pindex].player_direction = p.character.direction
+         else
+            players[pindex].player_direction = p.walking_state.direction
+            if p.walking_state.direction == nil then
+               players[pindex].player_direction = dirs.north
+            end
+         end
          local new_pos = (offset_position(pos,players[pindex].player_direction,1.0))
          players[pindex].cursor_pos = new_pos           
 
@@ -6641,6 +6655,9 @@ end
 --Makes the character face the cursor but can be overwriten by vanilla move keys.
 function turn_to_cursor_direction_cardinal(pindex)--
    local p = game.get_player(pindex)
+   if p.character == nil then
+      return
+   end
    local pex = players[pindex]
    local dir = get_balanced_direction_of_that_from_this(pex.cursor_pos, p.position)
    if dir == dirs.northwest or dir == dirs.north or dir == dirs.northeast then
@@ -6660,6 +6677,9 @@ end
 --Makes the character face the cursor but can be overwriten by vanilla move keys.
 function turn_to_cursor_direction_precise(pindex)
    local p = game.get_player(pindex)
+   if p.character == nil then
+      return
+   end
    local pex = players[pindex]
    local dir = get_balanced_direction_of_that_from_this(pex.cursor_pos, p.position) 
    pex.player_direction = dir
@@ -7079,6 +7099,9 @@ end)
 script.on_event("scan-facing-direction", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
+      return
+   end
+   if p.character == nil then
       return
    end
    if not (players[pindex].in_menu) then
@@ -8058,6 +8081,9 @@ end)
 
 function swap_weapon_forward(pindex, write_to_character)
    local p = game.get_player(pindex)
+   if p.character == nil then
+      return
+   end
    local gun_index = p.character.selected_gun_index
    local guns_inv = p.get_inventory(defines.inventory.character_guns)
    local ammo_inv = game.get_player(pindex).get_inventory(defines.inventory.character_ammo)
@@ -8097,6 +8123,9 @@ end
 
 function swap_weapon_backward(pindex, write_to_character)
    local p = game.get_player(pindex)
+   if p.character == nil then
+      return
+   end
    local gun_index = p.character.selected_gun_index
    local guns_inv = p.get_inventory(defines.inventory.character_guns)
    local ammo_inv = game.get_player(pindex).get_inventory(defines.inventory.character_ammo)
@@ -11844,9 +11873,12 @@ script.on_event("inventory-remove-all-equipment-and-armor", function(event)
    
 end)
 
-script.on_event("shoot-weapon-fa", function(event)
+script.on_event("shoot-weapon-fa", function(event) --WIP
    local pindex = event.player_index
    if not check_for_player(pindex) then
+      return
+   end
+   if p.character == nil then
       return
    end
    local p = game.get_player(pindex)
@@ -11854,6 +11886,11 @@ script.on_event("shoot-weapon-fa", function(event)
    local selected_ammo = ammo_inv[p.character.selected_gun_index]
    local target_pos = p.shooting_state.position
    local abort_missle = false 
+   
+   if selected_ammo == nil or selected_ammo.valid_for_read == false or target_pos == nil then
+      return
+   end
+   
    local aim_dist = util.distance(p.position, target_pos)
    if aim_dist < 35 and selected_ammo.name == "atomic-bomb" then
       abort_missle = true
@@ -13004,7 +13041,7 @@ function cursor_highlight(pindex, ent, box_type, skip_mouse_movement)
          h_box.highlight_box_type = "entity"
       end  
 
-      if players[pindex].cursor or ent.unit_number ~= p.character.unit_number then 
+      if players[pindex].cursor or (p.character ~= nil and ent.unit_number ~= p.character.unit_number) then 
          p.selected = ent
       end
    end
@@ -14099,7 +14136,7 @@ function delete_empty_planners_in_inventory(pindex)
    end
 end
 
---This function can be called via the console: /c __FactorioAccess__ regenerate_all_uncharted_spawners()
+--This function can be called via the console: /c __FactorioAccess__ regenerate_all_uncharted_spawners() --laterdo fix bugs?
 function regenerate_all_uncharted_spawners(surface_in)
    local surf = surface_in or surfaces["nauvis"]
    
@@ -14122,4 +14159,30 @@ function regenerate_all_uncharted_spawners(surface_in)
          end
       end
    end 
+end
+
+function general_mod_menu_up(pindex, menu, limit_in)--todo*** use
+   local lower_limit = 0 
+   if limit_in ~= nil then
+      lower_limit = limit_in
+   end
+   menu.index = menu.index - 1
+   if menu.index < lower_limit then
+      menu.index = lower_limit
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
+   else
+      --Play sound
+      game.get_player(pindex).play_sound{path = "Inventory-Move"}
+   end
+end
+
+function general_mod_menu_down(pindex, menu, upper_limit)
+   menu.index = menu.index + 1
+   if menu.index > upper_limit then
+      menu.index = upper_limit
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
+   else
+      --Play sound
+      game.get_player(pindex).play_sound{path = "Inventory-Move"}
+   end
 end
