@@ -860,11 +860,14 @@ function ent_info(pindex, ent, description)
       if #itemtable == 0 then
          result = result .. " with nothing "
       else
-         result = result .. " with " .. itemtable[1].name .. " times " .. itemtable[1].count .. ", "
+         result = result .. " with " .. localising.get_item_from_name(itemtable[1].name,pindex) .. " times " .. itemtable[1].count .. ", "
          if #itemtable > 1 then
-            result = result .. " and " .. itemtable[2].name .. " times " .. itemtable[2].count .. ", "
+            result = result .. " and " .. localising.get_item_from_name(itemtable[2].name,pindex) .. " times " .. itemtable[2].count .. ", "
          end
          if #itemtable > 2 then
+            result = result .. " and " .. localising.get_item_from_name(itemtable[3].name,pindex) .. " times " .. itemtable[3].count .. ", "
+         end
+         if #itemtable > 3 then
             result = result .. "and other items "
          end
       end
@@ -896,9 +899,9 @@ function ent_info(pindex, ent, description)
          return k1.count > k2.count
       end)
       if #fluids > 0 and fluids[1].count ~= nil then
-         result = result .. " with " .. fluids[1].name --can check amount by opening the ent menu
+         result = result .. " with " .. localising.get_fluid_from_name(fluids[1].name,pindex) --can check amount by opening the ent menu
 		 if #fluids > 1 and fluids[2].count ~= nil then
-            result = result .. " and " .. fluids[2].name --(this should not happen because it means different fluids mixed!)
+            result = result .. " and " .. localising.get_fluid_from_name(fluids[2].name,pindex) --(this should not happen because it means different fluids mixed!)
 		 end
 		 if #fluids > 2 then
             result = result .. ", and other fluids "
@@ -950,9 +953,9 @@ function ent_info(pindex, ent, description)
          return k1.count > k2.count
       end)
       if #contents > 0 then
-         result = result .. " carrying " .. contents[1].name
+         result = result .. " carrying " .. localising.get_item_from_name(contents[1].name,pindex)--****localize
          if #contents > 1 then
-            result = result .. ", and " .. contents[2].name
+            result = result .. ", and " .. localising.get_item_from_name(contents[2].name,pindex)
             if #contents > 2 then
                result = result .. ", and other item types " 
             end
@@ -961,7 +964,7 @@ function ent_info(pindex, ent, description)
       else
          --No currently carried items: Now try to announce likely recently carried items by checking the next belt over (must have only this belt as input)
          local next_belt = ent.belt_neighbours["outputs"][1]
-          --Check contents
+         --Check contents of next belt
          local next_contents = {}
          if next_belt ~= nil and next_belt.valid and #next_belt.belt_neighbours["inputs"] == 1 and next_belt.name ~= "entity-ghost" then
             local left = next_belt.get_transport_line(1).get_contents()
@@ -982,13 +985,45 @@ function ent_info(pindex, ent, description)
             end)
          end
          
-         --laterdo same prediction using what is carried by the input belts for this belt!***
+         --Check contents of prev belt todo test ****
+         local prev_belts = ent.belt_neighbours["inputs"]
+         local prev_contents = {}
+         for i, prev_belt in ipairs(prev_belts) do 
+             --Check contents
+            if prev_belt ~= nil and prev_belt.valid and prev_belt.name ~= "entity-ghost" then
+               local left = prev_belt.get_transport_line(1).get_contents()
+               local right = prev_belt.get_transport_line(2).get_contents()
+
+               for name, count in pairs(right) do
+                  if left[name] ~= nil then
+                     left[name] = left[name] + count
+                  else
+                     left[name] = count
+                  end
+               end
+               for name, count in pairs(left) do
+                  table.insert(prev_contents, {name = name, count = count})
+               end
+               table.sort(prev_contents, function(k1, k2)
+                  return k1.count > k2.count
+               end)
+            end
+         end
          
+         --Report assumed carried items based on input/output neighbors 
          if #next_contents > 0 then
-            result = result .. " assumed carrying " .. next_contents[1].name
+            result = result .. " assumed carrying " .. localising.get_item_from_name(next_contents[1].name,pindex)--****localize
             if #next_contents > 1 then
-               result = result .. ", and " .. next_contents[2].name
+               result = result .. ", and " .. localising.get_item_from_name(next_contents[2].name,pindex)
                if #next_contents > 2 then
+                  result = result .. ", and other item types " 
+               end
+            end
+         elseif #prev_contents > 0 then
+            result = result .. " assumed carrying " .. localising.get_item_from_name(prev_contents[1].name,pindex)
+            if #prev_contents > 1 then
+               result = result .. ", and " .. localising.get_item_from_name(prev_contents[2].name,pindex)
+               if #prev_contents > 2 then
                   result = result .. ", and other item types " 
                end
             end
@@ -1011,7 +1046,7 @@ function ent_info(pindex, ent, description)
    --Explain the recipe of a machine without pause and before the direction
    pcall(function()
       if ent.get_recipe() ~= nil then
-         result = result .. " producing " .. ent.get_recipe().name
+         result = result .. " producing " .. localising.get_recipe_from_name(ent.get_recipe().name, pindex)
       end
    end)
    
@@ -1127,9 +1162,9 @@ function ent_info(pindex, ent, description)
                if ent.type == "assembling-machine" and ent.get_recipe() ~= nil then
                   if ent.name == "oil-refinery" and ent.get_recipe().name == "basic-oil-processing" then
                      if i == 2 then
-                        result = result .. ", crude-oil Flow " .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
+                        result = result .. ", " .. localising.get_fluid_from_name("crude-oil",pindex) .. " Flow " .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
                      elseif i == 5 then
-                        result = result .. ", petroleum-gas Flow " .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
+                        result = result .. ", " .. localising.get_fluid_from_name("petroleum-gas",pindex) .. " Flow " .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
                      else
                         result = result .. ", " .. "Unused" .. " Flow " .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
                      end
@@ -1173,6 +1208,7 @@ function ent_info(pindex, ent, description)
                   end
 
                else
+                  --Other ent types and assembling machines with no recipes
                   local filter = box.filter or {name = ""}
                   result = result .. ", " .. filter.name .. " Flow " .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
                end
@@ -2606,7 +2642,7 @@ function get_substring_before_space(str)
    end
 end
 
-function get_substring_after_space(str)
+function get_substring_after_space(str)--***
    local first, final = string.find(str," ")
    if final == nil then --No spaces
       return str
@@ -6832,6 +6868,14 @@ script.on_event("release-cursor", function(event)
    cursor_highlight(pindex, nil, nil)
 end)
 
+script.on_event("type-cursor-target", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   type_cursor_position(pindex)
+end)
+
 script.on_event("teleport-to-cursor", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -7796,11 +7840,11 @@ function read_quick_bar_slot(index,pindex)
          count = count + stack.count
          printout("unselected " .. localising.get(item, pindex) .. " x " .. count, pindex)
       else
-         printout("selected " .. localising.get(item, pindex) .. " x " .. count, pindex)
+         printout("selected " .. localising.get(item, pindex) .. " x " .. count, pindex) --****should read even if quickbar does not activate, but maybe not working because it is linked to the game control?
       end
 
    else
-      printout("Empty quickbar slot",pindex)
+      printout("Empty quickbar slot",pindex)--does this print, maybe not working because it is linked to the game control?
    end
 end
 
@@ -7808,13 +7852,18 @@ function set_quick_bar_slot(index, pindex)
    local page = game.get_player(pindex).get_active_quick_bar_page(1)-1
    local stack_cur = game.get_player(pindex).cursor_stack
    local stack_inv = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
+   local ent = get_selected_ent(pindex)
    if stack_cur and stack_cur.valid_for_read and stack_cur.valid == true then
       game.get_player(pindex).set_quick_bar_slot(index + 10*page, stack_cur) 
       printout("Quickbar assigned " .. index .. " " .. localising.get(stack_cur, pindex), pindex)
    elseif players[pindex].menu == "inventory" and stack_inv and stack_inv.valid_for_read and stack_inv.valid == true then
       game.get_player(pindex).set_quick_bar_slot(index + 10*page, stack_inv) 
       printout("Quickbar assigned " .. index .. " " .. localising.get(stack_inv, pindex), pindex)
+   elseif ent ~= nil and ent.valid and ent.prototype.place_result ~= nil then
+      game.get_player(pindex).set_quick_bar_slot(index + 10*page, ent.name) 
+      printout("Quickbar assigned " .. index .. " " .. localising.get(ent, pindex), pindex)
    else
+      --Clear the slot
       local item = game.get_player(pindex).get_quick_bar_slot(index+ 10*page)
       local item_name = ""
       if item ~= nil then

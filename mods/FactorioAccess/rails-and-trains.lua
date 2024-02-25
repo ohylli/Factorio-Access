@@ -3444,27 +3444,27 @@ end
 function get_heading(ent)
    local heading = "unknown"
    if ent == nil then
-      return "nill error"
+      return "nil error"
    end
    local ori = ent.orientation
    if ori < 0.0625 then
-      heading = "North"
+      heading = direction_lookup(dirs.north)
    elseif ori < 0.1875 then
-      heading = "Northeast"
+      heading = direction_lookup(dirs.northeast)
    elseif ori < 0.3125 then
-      heading = "East"
+      heading = direction_lookup(dirs.east)
    elseif ori < 0.4375 then
-      heading = "Southeast"
+      heading = direction_lookup(dirs.southeast)
    elseif ori < 0.5625 then
-      heading = "South"
+      heading = direction_lookup(dirs.south)
    elseif ori < 0.6875 then
-      heading = "Southwest"
+      heading = direction_lookup(dirs.southwest)
    elseif ori < 0.8125 then
-      heading = "West"
+      heading = direction_lookup(dirs.west)
    elseif ori < 0.9375 then
-      heading = "Northwest"
+      heading = direction_lookup(dirs.northwest)
    else
-      heading = "North"
+      heading = direction_lookup(dirs.north)--default
    end      
    return heading
 end
