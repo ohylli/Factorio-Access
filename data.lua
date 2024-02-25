@@ -451,6 +451,13 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "type-cursor-target",
+    key_sequence = "ALT + T",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "teleport-to-cursor",
     key_sequence = "SHIFT + T",
     consuming = "none"

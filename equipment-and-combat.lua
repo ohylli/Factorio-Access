@@ -96,6 +96,8 @@ function equip_it(stack,pindex)
 		    message = message .. " This equipment does not fit in the remaining ".. slots_left .. " slots."
 		 end
 	  end
+   elseif players[pindex].in_menu == false and (stack.prototype.place_result ~= nil or stack.prototype.place_as_tile_result ~= nil) then
+      message = ""
    else
       message = message .. " Cannot equip " .. stack.name
    end
