@@ -87,6 +87,77 @@ function drag_wire_and_read(pindex)
    players[pindex].last_wire_ent = c_ent
 end
 
+function wire_neighbours_info(ent, read_network_ids)
+   --List connected electric poles
+   local neighbour_count = 0
+   local result = ""
+   if (#ent.neighbours.copper + #ent.neighbours.red + #ent.neighbours.green) == 0 then
+      result = result .. " with no connections, "
+   else
+      result = result .. " connected to "
+      for i,pole in ipairs(ent.neighbours.copper) do
+         local dir = get_direction_of_that_from_this(pole.position,ent.position)
+         local dist = util.distance(pole.position,ent.position)
+         if neighbour_count > 0 then
+            result = result .. " and "
+         end
+         local id = pole.electric_network_id
+         if id == nil then
+            id = "nil"
+         end
+         result = result .. math.ceil(dist) .. " tiles " .. direction_lookup(dir) 
+         if read_network_ids == true then 
+            result = result .. " to electric network number " .. id
+         end
+         result = result .. ", "
+         neighbour_count = neighbour_count + 1
+      end
+      for i,nbr in ipairs(ent.neighbours.red) do
+         local dir = get_direction_of_that_from_this(nbr.position,ent.position)
+         local dist = util.distance(nbr.position,ent.position)
+         if neighbour_count > 0 then
+            result = result .. " and "
+         end
+         result = result .. " red wire " .. math.ceil(dist) .. " tiles " .. direction_lookup(dir)
+         if nbr.type == "electric-pole" then 
+            local id = nbr.get_circuit_network(defines.wire_type.red, defines.circuit_connector_id.electric_pole)
+            if id == nil then
+               id = "nil"
+            else
+               id = id.network_id
+            end
+            if read_network_ids == true then 
+               result = result .. " network number " .. id
+            end
+         end
+         result = result .. ", "
+         neighbour_count = neighbour_count + 1
+      end
+      for i,nbr in ipairs(ent.neighbours.green) do
+         local dir = get_direction_of_that_from_this(nbr.position,ent.position)
+         local dist = util.distance(nbr.position,ent.position)
+         if neighbour_count > 0 then
+            result = result .. " and "
+         end
+         result = result .. " green wire " .. math.ceil(dist) .. " tiles " .. direction_lookup(dir) 
+         if nbr.type == "electric-pole" then 
+            local id = nbr.get_circuit_network(defines.wire_type.green, defines.circuit_connector_id.electric_pole)
+            if id == nil then
+               id = "nil"
+            else
+               id = id.network_id
+            end
+            if read_network_ids == true then 
+               result = result .. " network number " .. id
+            end
+         end
+         result = result .. ", "
+         neighbour_count = neighbour_count + 1
+      end
+   end
+   return result 
+end
+
 function localise_signal_name(signal,pindex)--todo*** actually localise
    local sig_name = signal.name
    local sig_type = signal.type

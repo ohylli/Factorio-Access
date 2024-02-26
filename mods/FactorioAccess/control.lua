@@ -1276,20 +1276,8 @@ function ent_info(pindex, ent, description)
       result = result .. ", " .. radar_charting_info(ent)
       --game.print(result)--test
    elseif ent.type == "electric-pole" then
-      --List connected electric poles
-      if #ent.neighbours.copper == 0 then
-         result = result .. " with no connections, "
-      else
-         result = result .. " connected to "
-         for i,pole in ipairs(ent.neighbours.copper) do
-            local dir = get_direction_of_that_from_this(pole.position,ent.position)
-            local dist = util.distance(pole.position,ent.position)
-            if i > 1 then
-               result = result .. " and "
-            end
-            result = result .. math.ceil(dist) .. " tiles " .. direction_lookup(dir) .. ", "
-         end
-      end
+      --List connected wire neighbors 
+      result = result .. wire_neighbours_info(ent, false)
       --Count number of entities being supplied within supply area.
       local pos = ent.position
       local sdist = ent.prototype.supply_area_distance
@@ -1309,7 +1297,16 @@ function ent_info(pindex, ent, description)
          result = result .. " drawing from " .. producer_count .. " buildings, " 
       end
       result = result .. "Check status for power flow information. "
-      
+   elseif ent.type == "power-switch" then 
+      if ent.power_switch_state == false then
+         result = result .. " off, "
+      elseif ent.power_switch_state == true then
+         result = result .. " on, "
+      end
+      if (#ent.neighbours.red + #ent.neighbours.green) > 0 then
+         result = result .. " observes circuit condition, " 
+      end
+      result = result .. wire_neighbours_info(ent,true)
    elseif ent.name == "rail-signal" or ent.name == "rail-chain-signal" then
       result = result .. ", " .. get_signal_state_info(ent)
    elseif ent.name == "roboport" then
@@ -9295,6 +9292,18 @@ function clicked_on_entity(ent,pindex)
    elseif ent.name == "roboport" then
       --For a roboport, open roboport menu 
       roboport_menu_open(pindex)
+   elseif ent.type == "power-switch" then  
+      --Toggle it, if in manual mode 
+      if (#ent.neighbours.red + #ent.neighbours.green) > 0 then
+         printout("observes circuit condition",pindex)
+      else
+         ent.power_switch_state = not ent.power_switch_state
+         if ent.power_switch_state == true then
+            printout("Switched on",pindex)
+         elseif ent.power_switch_state == false then
+            printout("Switched off",pindex)
+         end
+      end
    elseif ent.operable and ent.prototype.is_building then
       --If checking an operable building, open its menu
       open_operable_building(ent,pindex)
@@ -9503,6 +9512,7 @@ function open_operable_building(ent,pindex)--open_building
          end
          read_building_slot(pindex, true)
       else
+         --No building sectors
          if game.get_player(pindex).opened ~= nil then
             printout(ent.name .. ", this menu has no options ", pindex)
          else
