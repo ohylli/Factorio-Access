@@ -4225,7 +4225,7 @@ function toggle_cursor(pindex)
       move_mouse_pointer(players[pindex].cursor_pos,pindex)
       sync_build_cursor_graphics(pindex)
       target(pindex)
-      players[pindex].player_direction = p(pindex).character.direction
+      players[pindex].player_direction = p.character.direction
       players[pindex].build_lock = false
       read_tile(pindex, "Cursor mode disabled, ")
    end
