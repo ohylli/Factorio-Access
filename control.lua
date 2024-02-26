@@ -985,7 +985,7 @@ function ent_info(pindex, ent, description)
             end)
          end
          
-         --Check contents of prev belt todo test ****
+         --Check contents of prev belt
          local prev_belts = ent.belt_neighbours["inputs"]
          local prev_contents = {}
          for i, prev_belt in ipairs(prev_belts) do 
@@ -1012,7 +1012,7 @@ function ent_info(pindex, ent, description)
          
          --Report assumed carried items based on input/output neighbors 
          if #next_contents > 0 then
-            result = result .. " assumed carrying " .. localising.get_item_from_name(next_contents[1].name,pindex)--****localize
+            result = result .. " assumed carrying " .. localising.get_item_from_name(next_contents[1].name,pindex)
             if #next_contents > 1 then
                result = result .. ", and " .. localising.get_item_from_name(next_contents[2].name,pindex)
                if #next_contents > 2 then
@@ -6845,6 +6845,10 @@ end
 --Returns the cursor to the player position.
 script.on_event("return-cursor-to-player", function(event)
    pindex = event.player_index
+   return_cursor_to_character(pindex)
+end)
+
+function return_cursor_to_character(pindex)
    if not check_for_player(pindex) then
       return
    end
@@ -6856,7 +6860,7 @@ script.on_event("return-cursor-to-player", function(event)
    end
    -- --Adjust camera
    -- adjust_camera_view(pindex)
-end)
+end 
 
 --Default is CONTROL + J
 script.on_event("release-cursor", function(event)
@@ -7845,7 +7849,7 @@ function read_quick_bar_slot(index,pindex)
          count = count + stack.count
          printout("unselected " .. localising.get(item, pindex) .. " x " .. count, pindex)
       else
-         printout("selected " .. localising.get(item, pindex) .. " x " .. count, pindex) --****should read even if quickbar does not activate, but maybe not working because it is linked to the game control?
+         printout("selected " .. localising.get(item, pindex) .. " x " .. count, pindex) 
       end
 
    else
@@ -7854,6 +7858,7 @@ function read_quick_bar_slot(index,pindex)
 end
 
 function set_quick_bar_slot(index, pindex)
+   local p = game.get_player(pindex)
    local page = game.get_player(pindex).get_active_quick_bar_page(1)-1
    local stack_cur = game.get_player(pindex).cursor_stack
    local stack_inv = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
@@ -7864,7 +7869,7 @@ function set_quick_bar_slot(index, pindex)
    elseif players[pindex].menu == "inventory" and stack_inv and stack_inv.valid_for_read and stack_inv.valid == true then
       game.get_player(pindex).set_quick_bar_slot(index + 10*page, stack_inv) 
       printout("Quickbar assigned " .. index .. " " .. localising.get(stack_inv, pindex), pindex)
-   elseif ent ~= nil and ent.valid and ent.prototype.place_result ~= nil then
+   elseif ent ~= nil and ent.valid and ent.force == p.force and game.item_prototypes[ent.name] ~= nil then
       game.get_player(pindex).set_quick_bar_slot(index + 10*page, ent.name) 
       printout("Quickbar assigned " .. index .. " " .. localising.get(ent, pindex), pindex)
    else
@@ -8916,14 +8921,11 @@ script.on_event("click-menu", function(event)
             local input = frame.add{type="textfield", name = "input"}
             input.focus()
             input.select(1, 0)
-         elseif players[pindex].travel.index.x == 3 then --Relocate to current character position
-            --****todo
-            table.remove(global.players[pindex].travel, players[pindex].travel.index.y)
-            table.insert(global.players[pindex].travel, {name = result, position = center_of_tile(players[pindex].position)})
-            table.sort(global.players[pindex].travel, function(k1, k2)
-               return k1.name < k2.name
-            end)
-            printout("Relocated to " .. math.floor(players[pindex].position.x) .. ", " .. math.floor(players[pindex].position.y), pindex)
+         elseif players[pindex].travel.index.x == 3 then --Relocate to current character position ****
+            players[pindex].travel[players[pindex].travel.index.y].position = center_of_tile(players[pindex].position)
+            printout("Relocated point ".. players[pindex].travel[players[pindex].travel.index.y].name .. " to " .. math.floor(players[pindex].position.x) .. ", " .. math.floor(players[pindex].position.y), pindex)
+            players[pindex].cursor_pos = players[pindex].position
+            cursor_highlight(pindex)
          elseif players[pindex].travel.index.x == 4 then --Delete
             printout("Deleted " .. global.players[pindex].travel[players[pindex].travel.index.y].name, pindex)
             table.remove(global.players[pindex].travel, players[pindex].travel.index.y)
@@ -10871,8 +10873,8 @@ script.on_event("read-time-and-research-progress", function(event)
    local time_string = " The local time is " .. hour .. ":" .. string.format("%02d", minute) .. ", "
    
    --Get total playtime
-   local total_hours = math.floor(game.tick/3600)
-   local total_minutes = math.floor((game.tick % 3600)/60)
+   local total_hours = math.floor(game.tick/216000)
+   local total_minutes = math.floor((game.tick % 216000)/3600)
    local total_time_string = " The total mission time is " .. total_hours .. " hours and " .. total_minutes .. "minutes "
    
    --Add research progress info
@@ -12034,29 +12036,46 @@ script.on_event("shoot-weapon-fa", function(event) --WIP todo*** consumes shoot 
    local selected_ammo = ammo_inv[p.character.selected_gun_index]
    local target_pos = p.shooting_state.position
    local abort_missle = false 
+   local abort_message = ""
    
    if selected_ammo == nil or selected_ammo.valid_for_read == false then
       return
    end
    
-   if target_pos == nil then
+   if target_pos == nil or util.distance(p.position, target_pos) < 1.5 then
       target_pos = players[pindex].cursor_pos
+      p.shooting_state.position = players[pindex].cursor_pos
+      if selected_ammo.name == "atomic-bomb" then
+         abort_missle = true
+         abort_message = "Aiming alert, scroll mouse wheel to zoom out."
+      end 
    end
    
    local aim_dist_1 = util.distance(p.position, target_pos)
    local aim_dist_2 = util.distance(p.position, players[pindex].cursor_pos)
-   if (aim_dist_1 < 30 or aim_dist_2 < 30) and selected_ammo.name == "atomic-bomb" then
+   if aim_dist_1 < 1.5 and selected_ammo.name == "atomic-bomb" then
       abort_missle = true
+      abort_message = "Aiming alert, scroll mouse wheel to zoom out."
+   elseif util.distance(target_pos, players[pindex].cursor_pos) > 2 and selected_ammo.name == "atomic-bomb" then
+      abort_missle = true
+      abort_message = "Aiming alert, move cursor to sync mouse."
+   end 
+   if (aim_dist_1 < 35 or aim_dist_2 < 35) and selected_ammo.name == "atomic-bomb" then
+      abort_missle = true
+      abort_message = "Range alert, target too close, hold to fire anyway."
    end  
    --p.print("abort check")
    if abort_missle then
       
       --Remove all atomic bombs
-      force_remove_atomic_bombs(pindex)
+      delete_equipped_atomic_bombs(pindex)
 
       --Warn the player
       p.play_sound{path = "utility/cannot_build"}
-      printout("Range alert, target is too close, disarmed all atomic bombs.", pindex) --todo*** schedule re-equipping the bombs 
+      printout(abort_message, pindex)
+      
+      --Schedule to restore the items on a later tick
+      schedule(310, "restore_equipped_atomic_bombs", pindex)
    else
       --Suppress alerts for 10 seconds?
    end
