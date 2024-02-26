@@ -199,6 +199,31 @@ function remove_weapons_and_ammo(pindex)
    return message
 end
 
+function force_remove_atomic_bombs(pindex)
+   local guns_inv = game.get_player(pindex).get_inventory(defines.inventory.character_guns)
+   local ammo_inv = game.get_player(pindex).get_inventory(defines.inventory.character_ammo)
+   local main_inv = game.get_player(pindex).get_inventory(defines.inventory.character_main)
+   local guns_count  = #guns_inv - guns_inv.count_empty_stacks()
+   local ammos_count = #ammo_inv - ammo_inv.count_empty_stacks()
+   local expected_remove_count = guns_count + ammos_count
+   local resulted_remove_count = 0
+   local message = ""
+   
+   --Remove all atomic bombs
+   for i = 1, ammos_count, 1 do
+      if ammo_inv[i] and ammo_inv[i].valid_for_read and ammo_inv[i].name == "atomic-bomb" then
+         local inserted = main_inv.insert(ammo_inv[i])
+         local removed = ammo_inv.remove(ammo_inv[i])
+         if inserted ~= removed then
+            game.get_player(pindex).print("ammo removal count error",{volume_modifier=0})--todo fix
+         end
+         resulted_remove_count = resulted_remove_count + math.ceil(removed / 1000 )--counts how many stacks are removed
+	  end
+   end
+     
+   return message
+end
+
 function count_empty_equipment_slots(grid)
     local slots_left = 0
 	for i = 0, grid.width-1, 1 do

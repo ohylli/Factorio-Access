@@ -24,6 +24,7 @@ function drag_wire_and_read(pindex)
       local drag_target = p.drag_target
       local ents_at_position = p.surface.find_entities_filtered{position = players[pindex].cursor_pos, radius = 0.2, type = {"transport-belt", "inserter", "container", "logistic-container", "storage-tank", "gate", "rail-signal", "rail-chain-signal", "train-stop", "accumulator", "roboport", "mining-drill", "pumpjack", "power-switch", "programmable-speaker", "lamp", "offshore-pump", "pump", "electric-pole"}}
       local c_ent = ents_at_position[1]
+      local last_c_ent = players[pindex].last_wire_ent
       local network_found = nil
       if c_ent == nil or c_ent.valid == false then
          c_ent = p.selected
@@ -63,10 +64,17 @@ function drag_wire_and_read(pindex)
             local target_ent = drag_target.target_entity
             local target_network = drag_target.target_wire_id
             network_found = c_ent.electric_network_id
-            if network_found == nil or network_found.valid == false then
+            if network_found == nil then
                network_found = "nil"
             end
             result = " Connected " .. localising.get(target_ent,pindex) .. " to electric network ID " .. network_found 
+         elseif (c_ent ~= nil and c_ent.name == "power-switch") or (last_c_ent ~= nil and last_c_ent.valid and last_c_ent.name == "power-switch") then 
+            network_found = c_ent.electric_network_id
+            if network_found == nil then
+               network_found = "nil"
+            end
+               result = " Wiring power switch"
+            --result = " Connected " .. localising.get(c_ent,pindex) .. " to electric network ID " .. network_found 
          else
             result = " Disconnected " .. wire_name 
          end
@@ -76,6 +84,7 @@ function drag_wire_and_read(pindex)
    else
       p.play_sound{path = "utility/cannot_build"}
    end
+   players[pindex].last_wire_ent = c_ent
 end
 
 function localise_signal_name(signal,pindex)--todo*** actually localise
