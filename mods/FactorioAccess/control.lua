@@ -6294,8 +6294,8 @@ function on_tick(event)
             printout("Press 'TAB' to begin", pindex)
          elseif players[pindex].tutorial == nil then
             printout("Press 'H' to open the tutorial", pindex)
-         elseif player.ticks_to_respawn ~= nil then
-            printout(math.floor(player.ticks_to_respawn/60) .. " seconds until respawn", pindex)
+         elseif game.get_player(pindex).ticks_to_respawn ~= nil then
+            printout(math.floor(game.get_player(pindex).ticks_to_respawn/60) .. " seconds until respawn", pindex)
          end
       end
    end
@@ -7701,6 +7701,7 @@ script.on_event("close-menu-access", function(event)--close_menu, menu closed
 end)
 
 function close_menu_resets(pindex)
+   local p = game.get_player(pindex)
    if players[pindex].menu == "travel" then
       game.get_player(pindex).gui.screen["travel"].destroy()
       players[pindex].cursor_pos = center_of_tile(players[pindex].position)
@@ -7721,6 +7722,10 @@ function close_menu_resets(pindex)
       blueprint_menu_close(pindex)
    elseif players[pindex].menu == "blueprint_book_menu" then
       blueprint_book_menu_close(pindex)
+   end
+   
+   if p.gui.screen["cursor-jump"] ~= nil then 
+      p.gui.screen["cursor-jump"].destroy()
    end
    
    --Stop any enabled mouse entity selection
@@ -11494,6 +11499,8 @@ script.on_event(defines.events.on_gui_confirmed,function(event)
          if valid_coords then
             players[pindex].cursor_pos = {x = new_x, y = new_y}
             printout("Cursor jumped to " .. new_x .. ", " .. new_y, pindex)
+            cursor_highlight(pindex)
+            sync_build_cursor_graphics(pindex)
          else
             printout("Invalid input", pindex)
          end
@@ -12011,35 +12018,47 @@ script.on_event("inventory-remove-all-equipment-and-armor", function(event)
    
 end)
 
-script.on_event("shoot-weapon-fa", function(event) --WIP
+script.on_event("shoot-weapon-fa", function(event) --WIP todo*** consumes shoot event and so it can simply not shoot if atomic bomb in range
    local pindex = event.player_index
    if not check_for_player(pindex) then
       return
    end
+   local p = game.get_player(pindex)
    if p.character == nil then
       return
    end
    local p = game.get_player(pindex)
+   local main_inv = p.get_inventory(defines.inventory.character_main)
    local ammo_inv = p.get_inventory(defines.inventory.character_ammo)
+   local ammos_count = #ammo_inv - ammo_inv.count_empty_stacks()
    local selected_ammo = ammo_inv[p.character.selected_gun_index]
    local target_pos = p.shooting_state.position
    local abort_missle = false 
    
-   if selected_ammo == nil or selected_ammo.valid_for_read == false or target_pos == nil then
+   if selected_ammo == nil or selected_ammo.valid_for_read == false then
       return
    end
    
-   local aim_dist = util.distance(p.position, target_pos)
-   if aim_dist < 35 and selected_ammo.name == "atomic-bomb" then
-      abort_missle = true
+   if target_pos == nil then
+      target_pos = players[pindex].cursor_pos
    end
    
+   local aim_dist_1 = util.distance(p.position, target_pos)
+   local aim_dist_2 = util.distance(p.position, players[pindex].cursor_pos)
+   if (aim_dist_1 < 30 or aim_dist_2 < 30) and selected_ammo.name == "atomic-bomb" then
+      abort_missle = true
+   end  
+   --p.print("abort check")
    if abort_missle then
-      --Unequip the missile
       
+      --Remove all atomic bombs
+      force_remove_atomic_bombs(pindex)
+
       --Warn the player
+      p.play_sound{path = "utility/cannot_build"}
+      printout("Range alert, target is too close, disarmed all atomic bombs.", pindex) --todo*** schedule re-equipping the bombs 
    else
-      --Suppress alerts for 5 seconds?
+      --Suppress alerts for 10 seconds?
    end
    
 end)
