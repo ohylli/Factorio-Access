@@ -4039,7 +4039,8 @@ function rescan(pindex,filter_dir, mute)
    players[pindex].nearby.index = 1
    players[pindex].nearby.selection = 1
    first_player = game.get_player(pindex)
-   players[pindex].nearby.ents = scan_area(math.floor(players[pindex].cursor_pos.x)-2500, math.floor(players[pindex].cursor_pos.y)-2500, 5000, 5000, pindex, filter_dir)
+   players[pindex].nearby.ents = scan_nearby_trees(pindex, filter_dir, 25)
+   players[pindex].nearby.ents = scan_area(math.floor(players[pindex].cursor_pos.x)-2500, math.floor(players[pindex].cursor_pos.y)-2500, 5000, 5000, pindex, filter_dir, true)
    populate_categories(pindex)
    players[pindex].nearby.index = 1
    players[pindex].nearby.selection = 1
@@ -4067,11 +4068,14 @@ function index_of_entity(array, value)
 end
 
 --The entity scanner runs here
-function scan_area(x,y,w,h, pindex, filter_direction)
+function scan_area(x,y,w,h, pindex, filter_direction, start_with_existing_list)
    local first_player = game.get_player(pindex)
    local surf = first_player.surface
    local ents = surf.find_entities_filtered{area = {{x, y},{x+w, y+h}}, type = {"resource", "tree", "highlight-box", "flying-text"}, invert = true} --Get all ents in the area except for these types
    local result = {}
+   if start_with_existing_list == true then
+      result = players[pindex].nearby.ents
+   end
    local pos = players[pindex].position
    local forest_density = nil
    local close_object_limit = 10.1
@@ -4139,7 +4143,7 @@ function scan_area(x,y,w,h, pindex, filter_direction)
          if index == nil then --The entry is not already indexed, so add a new entry line to the list
             table.insert(result, {name = scan_entry, count = 1, ents = {ents[i]}, aggregate = false}) 
 
-         elseif #result[index] >= 100 then --If there are more than 100 instanes of this specific entry (?), replace a random one of them to add this
+         elseif #result[index] >= 100 then --If there are more than 100 instances of this specific entry (?), replace a random one of them to add this
             table.remove(result[index].ents, math.random(100))
             table.insert(result[index].ents, ents[i])
             result[index].count = result[index].count + 1
@@ -4153,8 +4157,10 @@ function scan_area(x,y,w,h, pindex, filter_direction)
    end
    
    --Sort the list
-   if players[pindex].nearby.count == false or players[pindex].nearby.count == nil then
+   if players[pindex].nearby.count == nil then
       players[pindex].nearby.count = false
+   end 
+   if players[pindex].nearby.count == false then
       --Sort results by distance to player position when first creating the scanner list
       table.sort(result, function(k1, k2) 
          local pos = players[pindex].position
@@ -4188,7 +4194,54 @@ function scan_area(x,y,w,h, pindex, filter_direction)
       end)
    end
    return result
+end
 
+--Copies the "Insert entities to the initial list" part from scan_area but for trees only
+function scan_nearby_trees(pindex, filter_direction, radius_in)
+   local p = game.get_player(pindex)
+   local pos = players[pindex].position
+   local surf = first_player.surface
+   local radius_s = radius_in or 25
+    local close_object_limit = 10.1
+   local result = {}
+   local ents = surf.find_entities_filtered{position = p.position, radius = radius_s, type = "tree", limit = 200}
+   if ents == nil or #ents == 0 then
+      return result
+   end
+   
+   local scan_entry = "tree"--**laterdo localise here 
+   
+   --Insert entities to the initial list
+   for i=1, #ents, 1 do
+      local index = index_of_entity(result, scan_entry)
+      --Filter check 1: Is the entity in the filter diection? (If a filter is set at all)
+      local dir_of_ent = get_direction_of_that_from_this(ents[i].position,pos)
+      local filter_passed = (filter_direction == nil or filter_direction == dir_of_ent)
+      if not filter_passed then
+         --Filter check 2: Is the entity nearby and almost within the filter diection?
+         if util.distance(ents[i].position,pos) < close_object_limit then
+            local new_dir_of_ent = get_balanced_direction_of_that_from_this(ents[i].position,pos)--Check with less bias towards diagonal directions to preserve 135 degrees FOV
+            local CW_dir = (filter_direction + 1) % (2 * dirs.south)
+            local CCW_dir = (filter_direction - 1) % (2 * dirs.south)
+            filter_passed = (new_dir_of_ent == filter_direction or new_dir_of_ent == CW_dir or new_dir_of_ent == CCW_dir)
+         end
+      end
+      if filter_passed then 
+         if index == nil then --The entry is not already indexed, so add a new entry line to the list
+            table.insert(result, {name = scan_entry, count = 1, ents = {ents[i]}, aggregate = false}) 
+         elseif #result[index] >= 100 then --If there are more than 100 instances of this specific entry (?), replace a random one of them to add this
+            table.remove(result[index].ents, math.random(100))
+            table.insert(result[index].ents, ents[i])
+            result[index].count = result[index].count + 1
+         else
+            table.insert(result[index].ents, ents[i]) --Add this ent as another instance of the entry
+            result[index].count = result[index].count + 1        
+   --         result[index] = ents[i]
+         end
+      end
+   end
+   
+   return result 
 end
 
 function toggle_cursor(pindex)
@@ -7165,6 +7218,7 @@ script.on_event("scan-facing-direction", function(event)
    if not check_for_player(pindex) then
       return
    end
+   local p = game.get_player(pindex)
    if p.character == nil then
       return
    end
