@@ -197,6 +197,9 @@ function get_selected_ent(pindex)
       if not ent then
          print(serpent.line(tile.ents),tile.index,ent)
       end
+      -- if ent.valid then
+         -- game.print(ent.name)
+      -- end
       if ent.valid and (ent.type ~= 'character' or players[pindex].cursor or ent.player ~= pindex) then
          return ent
       end
@@ -3014,7 +3017,7 @@ function populate_categories(pindex)
             table.insert(players[pindex].nearby.players, ent)
          elseif ent.ents[1].type == "unit" or ent.ents[1].type == "unit-spawner" or ent.ents[1].type == "turret" then
             table.insert(players[pindex].nearby.enemies, ent)
-         elseif ent.ents[1].type == "simple-entity" or ent.ents[1].type == "simple-entity-with-owner" or ent.ents[1].type == "entity-ghost" or ent.ents[1].type == "item-entity" then
+         else--if ent.ents[1].type == "simple-entity" or ent.ents[1].type == "simple-entity-with-owner" or ent.ents[1].type == "entity-ghost" or ent.ents[1].type == "item-entity" then --(allowing all makes it include corpses/remnants as well)
             table.insert(players[pindex].nearby.other, ent)
          end
       end
@@ -4282,7 +4285,11 @@ function refresh_player_tile(pindex)
    local excluded_names = {"highlight-box","flying-text"}
    players[pindex].tile.ents = surf.find_entities_filtered{area = search_area, name  = excluded_names, invert = true}
    --rendering.draw_rectangle{left_top = search_area[1], right_bottom = search_area[2], color = {1,0,1}, surface = surf, time_to_live = 100}--
-   
+   local wide_area = {{x = math.floor(c_pos.x)-0.01,y = math.floor(c_pos.y)-0.01} , {x = math.ceil(c_pos.x)+0.01,y = math.ceil(c_pos.y)+0.01}}
+   local remnants = surf.find_entities_filtered{area = wide_area, type = "corpse"}
+   for i, remnant in ipairs(remnants) do 
+      table.insert(players[pindex].tile.ents, remnant)
+   end   
    players[pindex].tile.index = #players[pindex].tile.ents == 0 and 0 or 1
    if not(pcall(function()
       players[pindex].tile.tile =  surf.get_tile(players[pindex].cursor_pos.x, players[pindex].cursor_pos.y).name
@@ -4845,7 +4852,7 @@ function read_coords(pindex, start_phrase)
          --Give vehicle coords and orientation and speed --laterdo find exact speed coefficient
          local vehicle = game.get_player(pindex).vehicle
          result = result .. " in " .. vehicle.name .. " " 
-         if vehicle.speed > 0 then
+         if vehicle.speed > 0 then --todo *** maybe use "effective_speed" instead
             result = result .. " heading " .. get_heading(vehicle) .. " at " .. math.floor(vehicle.speed * 215) .. " kilometers per hour, past the point " 
          elseif vehicle.speed < 0 then
             result = result .. " facing" .. get_heading(vehicle) .. " while reversing at "  .. math.floor(-vehicle.speed * 215) .. " kilometers per hour, past the point " 
