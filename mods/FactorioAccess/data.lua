@@ -21,19 +21,41 @@ resource_map_node.picture = {
 	direction_count = 1
 }
 
---Changes to Vanilla Objects (Mostly removal of collisions with the player)
+--Make selected vanilla objects not collide with players
+--  Pipes
 local pipe = data.raw.pipe.pipe
 pipe.collision_mask = {"object-layer", "floor-layer", "water-tile"}
-
 local pipe_to_ground = data.raw["pipe-to-ground"]["pipe-to-ground"]
 pipe_to_ground.collision_mask = {"object-layer", "floor-layer", "water-tile"}
 
+--  Small & medium electric poles
 local small_electric_pole = data.raw["electric-pole"]["small-electric-pole"]
 small_electric_pole.collision_mask = {"object-layer", "floor-layer", "water-tile"}
-
-
 local medium_electric_pole = data.raw["electric-pole"]["medium-electric-pole"]
 medium_electric_pole.collision_mask = {"object-layer", "floor-layer", "water-tile"}
+
+--  Constant combinators (because of when they are placed to explain transport belts)
+local constant_combinator = data.raw["constant-combinator"]["constant-combinator"]
+constant_combinator.collision_mask = {"object-layer", "floor-layer", "water-tile"}
+
+--  Inserters
+local inserter = data.raw["inserter"]["inserter"]
+inserter.collision_mask = {"object-layer", "floor-layer", "water-tile"}
+local burner_inserter = data.raw["inserter"]["burner-inserter"]
+burner_inserter.collision_mask = {"object-layer", "floor-layer", "water-tile"}
+local fast_inserter = data.raw["inserter"]["fast-inserter"]
+fast_inserter.collision_mask = {"object-layer", "floor-layer", "water-tile"}
+local long_handed_inserter = data.raw["inserter"]["long-handed-inserter"]
+long_handed_inserter.collision_mask = {"object-layer", "floor-layer", "water-tile"}
+local stack_inserter = data.raw["inserter"]["stack-inserter"]
+stack_inserter.collision_mask = {"object-layer", "floor-layer", "water-tile"}
+
+--  Filter inserters
+local filter_inserter = data.raw["inserter"]["filter-inserter"]
+filter_inserter.collision_mask = {"object-layer", "floor-layer", "water-tile"}
+local stack_filter_inserter = data.raw["inserter"]["stack-filter-inserter"]
+stack_filter_inserter.collision_mask = {"object-layer", "floor-layer", "water-tile"}
+
 
 --Add new radar type that does long distance scanning
 local ar_tint = {r=0.5,g=0.5,b=0.5,a=0.9}
