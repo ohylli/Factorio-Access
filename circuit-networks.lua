@@ -87,6 +87,8 @@ function drag_wire_and_read(pindex)
    players[pindex].last_wire_ent = c_ent
 end
 
+--**** test ent.circuit_connected_entities and ent.circuit_connection_definitions
+
 function wire_neighbours_info(ent, read_network_ids)
    --List connected electric poles
    local neighbour_count = 0
