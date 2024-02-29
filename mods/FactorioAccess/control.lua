@@ -1062,7 +1062,7 @@ function ent_info(pindex, ent, description)
    end
 
    --Explain the entity facing direction
-   if (ent.prototype.is_building and ent.supports_direction) or ent.name == "entity-ghost" then
+   if (ent.prototype.is_building and ent.supports_direction) or (ent.name == "entity-ghost" and ent.ghost_prototype.is_building and ent.ghost_prototype.supports_direction) then
       result = result .. ", Facing " .. direction_lookup(ent.direction) 
    elseif ent.name == "locomotive" or ent.prototype.type == "car" then
       result = result .. " facing " .. get_heading(ent)
@@ -6927,6 +6927,30 @@ script.on_event("release-cursor", function(event)
    end
    printout("cursor released",pindex)
    cursor_highlight(pindex, nil, nil)
+end)
+
+script.on_event("cursor-bookmark-save", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local pos = players[pindex].cursor_pos
+   players[pindex].cursor_bookmark = pos
+   printout("Saved cursor bookmark at " .. math.floor(pos.x) .. ", " .. math.floor(pos.y) ,pindex)
+   game.get_player(pindex).play_sound{path = "Close-Inventory-Sound"}
+end)
+
+script.on_event("cursor-bookmark-load", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local pos = players[pindex].cursor_bookmark
+   players[pindex].cursor_pos = pos
+   cursor_highlight(pindex, nil, nil)
+   sync_build_cursor_graphics(pindex)
+   printout("Loaded cursor bookmark at " .. math.floor(pos.x) .. ", " .. math.floor(pos.y) ,pindex)
+   game.get_player(pindex).play_sound{path = "Close-Inventory-Sound"}
 end)
 
 script.on_event("type-cursor-target", function(event)
