@@ -922,6 +922,7 @@ function ent_info(pindex, ent, description)
       local inputs = ent.belt_neighbours["inputs"]
       local outputs = ent.belt_neighbours["outputs"]
       local outload_dir = nil
+      local outload_is_corner = false
       local this_dir = ent.direction
       for i, belt in pairs(inputs) do
          if ent.direction ~= belt.direction then
@@ -932,10 +933,14 @@ function ent_info(pindex, ent, description)
       end
       for i, belt in pairs(outputs) do
          outload_count = outload_count + 1
-         outload_dir = belt.direction--Note: there should be only one of these belts anyway.
+         outload_dir = belt.direction--Note: there should be only one of these belts anyway.2
+         if belt.belt_shape == "right" or belt.belt_shape == "left" then
+            outload_is_corner = true
+         end
       end
       --Check what the neighbor info reveals about the belt
-      result = result .. transport_belt_junction_info(sideload_count, backload_count, outload_count, this_dir, outload_dir)
+      local say_middle = false
+      result = result .. transport_belt_junction_info(sideload_count, backload_count, outload_count, this_dir, outload_dir, say_middle, outload_is_corner)
       
       --Check contents
       local left = ent.get_transport_line(1).get_contents()
@@ -1567,60 +1572,89 @@ function get_heat_connection_target_positions(ent_name, ent_position, ent_direct
 end
 
 --Explain whether the belt is some type of corner or sideloading junction or etc.
-function transport_belt_junction_info(sideload_count, backload_count, outload_count, this_dir, outload_dir, say_middle)
+function transport_belt_junction_info(sideload_count, backload_count, outload_count, this_dir, outload_dir, say_middle, outload_is_corner)
    local say_middle = say_middle or false
+   local outload_is_corner = outload_is_corner or false 
    local result = ""
    if     sideload_count == 0 and backload_count == 0 and outload_count == 0 then
-      result = result .. " unit "
+      result = " unit "
    elseif sideload_count == 0 and backload_count == 1 and outload_count == 0 then
-      result = result .. " stopping end "
+      result = " stopping end "
    elseif sideload_count == 1 and backload_count == 0 and outload_count == 0 then
-      result = result .. " stopping end corner "
+      result = " stopping end corner "
    elseif sideload_count == 1 and backload_count == 1 and outload_count == 0 then
-      result = result .. " sideloading stopping end "
+      result = " sideloading stopping end "
    elseif sideload_count == 2 and backload_count == 1 and outload_count == 0 then
-      result = result .. " double sideloading stopping end "
+      result = " double sideloading stopping end "
    elseif sideload_count == 2 and backload_count == 0 and outload_count == 0 then
-      result = result .. " safe merging stopping end "
+      result = " safe merging stopping end "
    elseif sideload_count == 0 and backload_count == 0 and outload_count == 1 and this_dir == outload_dir then
-      result = result .. " start "
+      result = " start "
    elseif sideload_count == 0 and backload_count == 1 and outload_count == 1 and this_dir == outload_dir then
       if say_middle then
-         result = result .. " middle "
+         result = " middle "
       else
-         result = result .. " " 
+         result = " " 
       end
    elseif sideload_count == 1 and backload_count == 0 and outload_count == 1 and this_dir == outload_dir then
-      result = result .. " corner "
+      result = " corner "
    elseif sideload_count == 1 and backload_count == 1 and outload_count == 1 and this_dir == outload_dir then
-      result = result .. " sideloading junction "
+      result = " sideloading junction "
    elseif sideload_count == 2 and backload_count == 1 and outload_count == 1 and this_dir == outload_dir then
-      result = result .. " double sideloading junction "
+      result = " double sideloading junction "
    elseif sideload_count == 2 and backload_count == 0 and outload_count == 1 and this_dir == outload_dir then
-      result = result .. " safe merging junction "
+      result = " safe merging junction "
    elseif sideload_count == 0 and backload_count == 0 and outload_count == 1 and this_dir ~= outload_dir then
-      result = result .. " unit pouring end "
+      if outload_is_corner == false then
+         result = " unit pouring end "
+      else
+         result = " start "
+      end
    elseif sideload_count == 0 and backload_count == 1 and outload_count == 1 and this_dir ~= outload_dir then
-      result = result .. " pouring end "
+      if outload_is_corner == false then
+         result = " pouring end "
+      else
+         if say_middle then
+            result = " middle "
+         else
+            result = " " 
+         end
+      end
    elseif sideload_count == 1 and backload_count == 0 and outload_count == 1 and this_dir ~= outload_dir then
-      result = result .. " corner pouring end "
+      if outload_is_corner == false then
+         result = " corner pouring end "
+      else
+         result = " corner "
+      end
    elseif sideload_count == 1 and backload_count == 1 and outload_count == 1 and this_dir ~= outload_dir then
-      result = result .. " sideloading pouring end "
+      if outload_is_corner == false then
+         result = " sideloading pouring end "
+      else
+         result = " sideloading junction "
+      end
    elseif sideload_count == 2 and backload_count == 1 and outload_count == 1 and this_dir ~= outload_dir then
-      result = result .. " double sideloading pouring end "
+      if outload_is_corner == false then
+         result = " double sideloading pouring end "
+      else
+         result = " double sideloading junction "
+      end
    elseif sideload_count == 2 and backload_count == 0 and outload_count == 1 and this_dir ~= outload_dir then
-      result = result .. " safe merging pouring end "
+      if outload_is_corner == false then
+         result = " safe merging pouring end "
+      else
+         result = " safe merging junction "
+      end
    elseif sideload_count + backload_count > 1 and (outload_count == 0 or (outload_count == 1 and this_dir == outload_dir)) then
-      result = result .. " unidentified junction "--this should not be reachable any more
+      result = " unidentified junction "--this should not be reachable any more
    elseif sideload_count + backload_count > 1 and outload_count == 1 and this_dir ~= outload_dir then
-      result = result .. " unidentified pouring end "
+      result = " unidentified pouring end "
    elseif outload_count > 1 then
-      result = result .. " multiple outputs " --unexpected case
+      result = " multiple outputs " --unexpected case
    else
-      result = result .. " unknown state " --unexpected case
+      result = " unknown state " --unexpected case
    end
    return result
-   --Note: A pouring end either pours into a sideloading junction, or into a corner. Lanes are preserved if the target is a corner.
+   --Note: A pouring end either pours into a sideloading junction, or into a corner and this can now be identified. Lanes are preserved if the target is a corner.
 end
 
 --Reports the charting range and how much of it has been charted so far
@@ -4445,24 +4479,41 @@ function build_preview_checks_info(stack, pindex)
          local  outload_count = 0
          local this_dir = build_dir
          local outload_dir = nil
+         local outload_is_corner = false
          
-         --Find the outloading belt and its direction, if any 
+         --Find the outloading belt and its direction and shape, if any 
          if this_dir == dirs.north and ents_north[1] ~= nil and ents_north[1].valid then
             rendering.draw_circle{color = {0.5, 0.5, 1},radius = 0.3,width = 2,target = ents_north[1].position,surface = ents_north[1].surface,time_to_live = 30}
             outload_dir = ents_north[1].direction
             outload_count = 1
+            local outload_inputs = ents_north[1].belt_neighbours["inputs"]
+            if (outload_inputs == nil or #outload_inputs == 0) and (this_dir == rotate_90(outload_dir) or this_dir == rotate_270(outload_dir)) then 
+               outload_is_corner = true
+            end
          elseif this_dir == dirs.east and ents_east[1] ~= nil and ents_east[1].valid then
             rendering.draw_circle{color = {0.5, 0.5, 1},radius = 0.3,width = 2,target = ents_east[1].position,surface = ents_east[1].surface,time_to_live = 30}
             outload_dir = ents_east[1].direction
             outload_count = 1
+            local outload_inputs = ents_east[1].belt_neighbours["inputs"]
+            if (outload_inputs == nil or #outload_inputs == 0) and (this_dir == rotate_90(outload_dir) or this_dir == rotate_270(outload_dir)) then 
+               outload_is_corner = true
+            end
          elseif this_dir == dirs.south and ents_south[1] ~= nil and ents_south[1].valid then
             rendering.draw_circle{color = {0.5, 0.5, 1},radius = 0.3,width = 2,target = ents_south[1].position,surface = ents_south[1].surface,time_to_live = 30}
             outload_dir = ents_south[1].direction
             outload_count = 1
+            local outload_inputs = ents_south[1].belt_neighbours["inputs"]
+            if (outload_inputs == nil or #outload_inputs == 0) and (this_dir == rotate_90(outload_dir) or this_dir == rotate_270(outload_dir)) then 
+               outload_is_corner = true
+            end
          elseif this_dir == dirs.west and ents_west[1] ~= nil and ents_west[1].valid then
             rendering.draw_circle{color = {0.5, 0.5, 1},radius = 0.3,width = 2,target = ents_west[1].position,surface = ents_west[1].surface,time_to_live = 30}
             outload_dir = ents_west[1].direction
             outload_count = 1
+            local outload_inputs = ents_west[1].belt_neighbours["inputs"]
+            if (outload_inputs == nil or #outload_inputs == 0) and (this_dir == rotate_90(outload_dir) or this_dir == rotate_270(outload_dir)) then 
+               outload_is_corner = true
+            end
          end
          
          --Find the backloading and sideloading belts, if any
@@ -4504,7 +4555,8 @@ function build_preview_checks_info(stack, pindex)
             
          --Determine expected junction info
          if sideload_count + backload_count + outload_count > 0 then--Skips "unit" because it is obvious
-            result = ", forms belt " .. transport_belt_junction_info(sideload_count, backload_count, outload_count, this_dir, outload_dir, true)
+            local say_middle = true
+            result = ", forms belt " .. transport_belt_junction_info(sideload_count, backload_count, outload_count, this_dir, outload_dir, say_middle, outload_is_corner)
          end
       end
    end
@@ -13130,6 +13182,10 @@ end
 
 function rotate_180(dir)
    return (dir + dirs.south) % (2 * dirs.south)
+end
+
+function rotate_270(dir)
+   return (dir + dirs.east * 3) % (2 * dirs.south)
 end
 
 function sync_build_cursor_graphics(pindex)
