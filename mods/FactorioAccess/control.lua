@@ -10954,6 +10954,16 @@ script.on_event("item-info-last-indexed", function(event)
    printout(str, pindex)
 end)
 
+--Read production statistics info for the selected item, in the hand or else selected in the inventory menu 
+script.on_event("item-production-info", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local str = selected_item_production_stats_info(pinfo)
+   printout(str, pindex)
+end)
+
 --Gives in-game time. The night darkness is from 11 to 13, and peak daylight hours are 18 to 6.
 --For realism, if we adjust by 12 hours, we get 23 to 1 as midnight and 6 to 18 as peak solar.
 script.on_event("read-time-and-research-progress", function(event)
@@ -14495,4 +14505,38 @@ function general_mod_menu_down(pindex, menu, upper_limit)
    end
 end
 
+--Report total produced in last minute, last hour, last thousand hours for the selected item, either in hand or else selected from player inventory.
+function selected_item_production_stats_info(pindex)
+   local p = game.get_player(pindex)
+   local result = ""
+   local stats = p.force.item_production_statistics
+   local item_stack = p.cursor_stack
+   if (item_stack == nil or item_stack.valid_for_read == false) and players[pindex].menu == "inventory" then
+      item_stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
+   end
+   if item_stack == nil or item_stack.valid_for_read == false then
+      result = "Error: No selected item"
+      return result
+   end
+   local interval = defines.flow_precision_index
+   local last_minute = stats.get_flow_count{name = stack.prototype.name, input = true, precision_index = interval.one_minute, count = true}
+   local last_hour   = stats.get_flow_count{name = stack.prototype.name, input = true, precision_index = interval.one_hour, count = true}
+   local thousand_hours = stats.get_flow_count{name = stack.prototype.name, input = true, precision_index = interval.one_thousand_hours, count = true}
+   last_minute = round_to_nearest_k_after_10k(last_minute)
+   last_hour = round_to_nearest_k_after_10k(last_hour)
+   thousand_hours = round_to_nearest_k_after_10k(thousand_hours)
+   result = "Produced "
+   result = result .. last_minute .. " in the last minute, "
+   result = result .. last_hour .. " in the last hour, "
+   result = result .. thousand_hours .. " in the last one thousand hours, "
+   return result 
+end
 
+--Round to the nearest thousand after 10 thousand. 
+function round_to_nearest_k_after_10k(num_in)
+   local num = num_in
+   if num > 10000 then
+      num = 1000 * math.floor(num/1000 + 0.5)
+   end
+   return num
+end
