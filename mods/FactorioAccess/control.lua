@@ -934,7 +934,7 @@ function ent_info(pindex, ent, description)
       for i, belt in pairs(outputs) do
          outload_count = outload_count + 1
          outload_dir = belt.direction--Note: there should be only one of these belts anyway.2
-         if belt.belt_shape == "right" or belt.belt_shape == "left" then
+         if belt.type == "transport-belt" and (belt.belt_shape == "right" or belt.belt_shape == "left") then
             outload_is_corner = true
          end
       end
@@ -4243,7 +4243,7 @@ function scan_nearby_trees(pindex, filter_direction, radius_in)
       return result
    end
    
-   local scan_entry = "tree"--**laterdo localise here 
+   local scan_entry = "tree type"--**laterdo localise here 
    
    --Insert entities to the initial list
    for i=1, #ents, 1 do
@@ -11012,7 +11012,7 @@ script.on_event("item-production-info", function(event)
    if not check_for_player(pindex) then
       return
    end
-   local str = selected_item_production_stats_info(pinfo)
+   local str = selected_item_production_stats_info(pindex)
    printout(str, pindex)
 end)
 
@@ -14575,9 +14575,9 @@ function selected_item_production_stats_info(pindex)
       return result
    end
    local interval = defines.flow_precision_index
-   local last_minute = stats.get_flow_count{name = stack.prototype.name, input = true, precision_index = interval.one_minute, count = true}
-   local last_hour   = stats.get_flow_count{name = stack.prototype.name, input = true, precision_index = interval.one_hour, count = true}
-   local thousand_hours = stats.get_flow_count{name = stack.prototype.name, input = true, precision_index = interval.one_thousand_hours, count = true}
+   local last_minute = stats.get_flow_count{name = item_stack.prototype.name, input = true, precision_index = interval.one_minute, count = true}
+   local last_hour   = stats.get_flow_count{name = item_stack.prototype.name, input = true, precision_index = interval.one_hour, count = true}
+   local thousand_hours = stats.get_flow_count{name = item_stack.prototype.name, input = true, precision_index = interval.one_thousand_hours, count = true}
    last_minute = round_to_nearest_k_after_10k(last_minute)
    last_hour = round_to_nearest_k_after_10k(last_hour)
    thousand_hours = round_to_nearest_k_after_10k(thousand_hours)
