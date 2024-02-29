@@ -1242,6 +1242,13 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "item-production-info",
+    key_sequence = "U",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "read-time-and-research-progress",
     key_sequence = "T",
     consuming = "none"
