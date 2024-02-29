@@ -473,6 +473,20 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "cursor-bookmark-save",
+    key_sequence = "SHIFT + B",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "cursor-bookmark-load",
+    key_sequence = "B",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "type-cursor-target",
     key_sequence = "ALT + T",
     consuming = "none"
