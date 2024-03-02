@@ -1665,9 +1665,11 @@ function logistic_network_members_info(port)
    local result = ""
    local cell = port.logistic_cell
    local nw = cell.logistic_network
-   
-   result = " Robots: Network has " .. #nw.cells .. " roboports, and " .. nw.all_logistic_robots .. " logistic robots with " .. nw.available_logistic_robots .. " available, and " ..
-            nw.all_construction_robots .. " construction robots with " .. nw.available_construction_robots .. " available "
+   if nw == nil or nw.valid == false then
+      result = " Robots: Error, no network "
+      return result
+   end
+   result = " Robots: Network has " .. #nw.cells .. " roboports, and " .. nw.all_logistic_robots .. " logistic robots with " .. nw.available_logistic_robots .. " available, and " .. nw.all_construction_robots .. " construction robots with " .. nw.available_construction_robots .. " available "
    return result
 end
 
@@ -1675,6 +1677,11 @@ function logistic_network_chests_info(port)
    local result = ""
    local cell = port.logistic_cell
    local nw = cell.logistic_network
+   
+   if nw == nil or nw.valid == false then
+      result = " Chests: Error, no network "
+      return result
+   end
    
    local storage_chest_count = 0
    for i,ent in ipairs(nw.storage_points) do 
@@ -1711,7 +1718,12 @@ end
 
 function logistic_network_items_info(port)
    local result = "Items: Network "
-   local itemset = port.logistic_cell.logistic_network.get_contents()
+   local nw = port.logistic_cell.logistic_network
+   if nw == nil or nw.valid == false then
+      result = " Items: Error, no network "
+      return result
+   end
+   local itemset = nw.get_contents()
    local itemtable = {}
    for name, count in pairs(itemset) do
       table.insert(itemtable, {name = name, count = count})

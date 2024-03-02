@@ -221,7 +221,7 @@ function delete_equipped_atomic_bombs(pindex)
    return 
 end
 
-function restore_equipped_atomic_bombs(pindex)--*****
+function restore_equipped_atomic_bombs(pindex)--
    local guns_inv = game.get_player(pindex).get_inventory(defines.inventory.character_guns)
    local ammo_inv = game.get_player(pindex).get_inventory(defines.inventory.character_ammo)
    local main_inv = game.get_player(pindex).get_inventory(defines.inventory.character_main)
