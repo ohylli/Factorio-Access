@@ -6929,6 +6929,8 @@ script.on_event("read-cursor-distance-and-direction", function(event)
       --Read recipe ingredients / products (crafting menu)
       local recipe = players[pindex].crafting.lua_recipes[players[pindex].crafting.category][players[pindex].crafting.index]
       local result = recipe_raw_ingredients_info(recipe, pindex)
+      --game.get_player(pindex).print(recipe.name)--**
+      --game.get_player(pindex).print(result)--**
       printout(result, pindex)
    else
       --Read where the cursor is with respect to the player, e.g. "at 5 west"
@@ -6946,7 +6948,7 @@ script.on_event("read-cursor-distance-and-direction", function(event)
    end
 end)
 
---Returns info text on the raw ingredients for a recipe --****Todo
+--Returns info text on the raw ingredients for a recipe.
 function recipe_raw_ingredients_info(recipe, pindex)
    local raw_ingredients = get_raw_ingredients_table(recipe, pindex)
    --Merge duplicates
@@ -6957,55 +6959,65 @@ function recipe_raw_ingredients_info(recipe, pindex)
          if ingt.name == ing.name then
             is_in_table = true
             --Add the count to the existing table count.
-            ingt.count = ingt.count + ing.count
+            ingt.amount = ingt.amount + ing.amount
          end
       end
       if is_in_table == false then
          --Add a new table entry 
-         table.insert(merged_table, nil, ing)
+         table.insert(merged_table, ing)
       end
    end
    
    --Construct result string
-   local result = "Raw ingredients: "
+   local result = "Raw materials needed: "
    for j, ingt in ipairs(merged_table) do
       local localised_name = ingt.name
       local ingredient_prototype = game.item_prototypes[ingt.name]
       
-      if ingredient_prototype ~= nil then
-         localised_name = localising.get(ingredient_prototype)
+      if ingredient_prototype then
+         localised_name = localising.get(ingredient_prototype, pindex)
       else
          ingredient_prototype = game.fluid_prototypes[ingt.name]
          if ingredient_prototype ~= nil then
-            localised_name = localising.get(ingredient_prototype)
+            localised_name = localising.get(ingredient_prototype, pindex)
          else
             localised_name = ingt.name
          end
       end
       
-      result = result .. localised_name .. " times " .. ingt.count .. ", "
+      result = result .. localised_name .. ", " --" times " .. ingt.amount .. ", "
    end
    return result
 end
 
---Explores a recipe and its sub-recipes and returns a table that contains all ingredients that do not have their own sub-recipes. The same ingredient may appear multiple times in the table, so its entries need to be merged.--****Todo test
-function get_raw_ingredients_table(recipe, pindex)
+--Explores a recipe and its sub-recipes and returns a table that contains all ingredients that do not have their own sub-recipes. The same ingredient may appear multiple times in the table, so its entries need to be merged.--***Todo fix: The counts are incorrect because we need non-integer ratios of ings to prods
+function get_raw_ingredients_table(recipe, pindex, count_in)
+   local count = count_in or 1
    local raw_ingredients_table = {}
    for i, ing in ipairs(recipe.ingredients) do
       --Check if a recipe of the ingredient's name exists
       local sub_recipe = game.recipe_prototypes[ing.name]
-      if sub_recipe ~= nil and sub_recipe.valid then 
+      if ing.name == "iron-plate" or ing.name == "copper-plate" or ing.name == "steel-plate" or ing.name == "stone-brick" or ing.name == "sulfur" or ing.name == "plastic-bar" then
+         --For selected items, finish the search there
+         for i = 1,count,1 do 
+            table.insert(raw_ingredients_table, ing)
+         end
+      elseif sub_recipe ~= nil and sub_recipe.valid then 
          --If the sub-recipe exists, check it recursively
-         local sub_table = get_raw_ingredients_table(sub_recipe, pindex)
+         local sub_table = get_raw_ingredients_table(sub_recipe, pindex)--, ing.amount)
          if sub_table ~= nil then 
             --Copy the sub_table to the main table
             for j, ing2 in ipairs(sub_table) do 
-               table.insert(raw_ingredients_table,nil, ing2)
+               for i = 1,count,1 do 
+                  table.insert(raw_ingredients_table, ing2)
+               end
             end
          end
       else 
          --If its own recipe does not exist, add this ingredient to the main table
-         table.insert(raw_ingredients_table,nil, ing)
+         for i = 1,count,1 do 
+            table.insert(raw_ingredients_table, ing)
+         end
       end
    end
    return raw_ingredients_table
