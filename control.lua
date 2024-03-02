@@ -961,7 +961,7 @@ function ent_info(pindex, ent, description)
          return k1.count > k2.count
       end)
       if #contents > 0 then
-         result = result .. " carrying " .. localising.get_item_from_name(contents[1].name,pindex)--****localize
+         result = result .. " carrying " .. localising.get_item_from_name(contents[1].name,pindex)--***localize
          if #contents > 1 then
             result = result .. ", and " .. localising.get_item_from_name(contents[2].name,pindex)
             if #contents > 2 then
@@ -6925,19 +6925,91 @@ script.on_event("read-cursor-distance-and-direction", function(event)
    if not check_for_player(pindex) then
       return
    end
-   --Read where the cursor is with respect to the player, e.g. "at 5 west"
-   local dir_dist = dir_dist_locale(players[pindex].position, players[pindex].cursor_pos)
-   local cursor_location_description = "At"
-   local cursor_production = " "
-   local cursor_description_of = " "
-   local result={"access.thing-producing-listpos-dirdist",cursor_location_description}
-   table.insert(result,cursor_production)--no production
-   table.insert(result,cursor_description_of)--listpos
-   table.insert(result,dir_dist)
-   printout(result,pindex)
-   game.get_player(pindex).print(result,{volume_modifier=0})
-   rendering.draw_circle{color = {1, 0.2, 0}, radius = 0.1, width = 5, target = players[pindex].cursor_pos, surface = game.get_player(pindex).surface, time_to_live = 180}
+   if players[pindex].menu == "crafting" then
+      --Read recipe ingredients / products (crafting menu)
+      local recipe = players[pindex].crafting.lua_recipes[players[pindex].crafting.category][players[pindex].crafting.index]
+      local result = recipe_raw_ingredients_info(recipe, pindex)
+      printout(result, pindex)
+   else
+      --Read where the cursor is with respect to the player, e.g. "at 5 west"
+      local dir_dist = dir_dist_locale(players[pindex].position, players[pindex].cursor_pos)
+      local cursor_location_description = "At"
+      local cursor_production = " "
+      local cursor_description_of = " "
+      local result={"access.thing-producing-listpos-dirdist",cursor_location_description}
+      table.insert(result,cursor_production)--no production
+      table.insert(result,cursor_description_of)--listpos
+      table.insert(result,dir_dist)
+      printout(result,pindex)
+      game.get_player(pindex).print(result,{volume_modifier=0})
+      rendering.draw_circle{color = {1, 0.2, 0}, radius = 0.1, width = 5, target = players[pindex].cursor_pos, surface = game.get_player(pindex).surface, time_to_live = 180}
+   end
 end)
+
+--Returns info text on the raw ingredients for a recipe --****Todo
+function recipe_raw_ingredients_info(recipe, pindex)
+   local raw_ingredients = get_raw_ingredients_table(recipe, pindex)
+   --Merge duplicates
+   local merged_table = {}
+   for i, ing in ipairs(raw_ingredients) do
+      local is_in_table = false
+      for j, ingt in ipairs(merged_table) do 
+         if ingt.name == ing.name then
+            is_in_table = true
+            --Add the count to the existing table count.
+            ingt.count = ingt.count + ing.count
+         end
+      end
+      if is_in_table == false then
+         --Add a new table entry 
+         table.insert(merged_table, nil, ing)
+      end
+   end
+   
+   --Construct result string
+   local result = "Raw ingredients: "
+   for j, ingt in ipairs(merged_table) do
+      local localised_name = ingt.name
+      local ingredient_prototype = game.item_prototypes[ingt.name]
+      
+      if ingredient_prototype ~= nil then
+         localised_name = localising.get(ingredient_prototype)
+      else
+         ingredient_prototype = game.fluid_prototypes[ingt.name]
+         if ingredient_prototype ~= nil then
+            localised_name = localising.get(ingredient_prototype)
+         else
+            localised_name = ingt.name
+         end
+      end
+      
+      result = result .. localised_name .. " times " .. ingt.count .. ", "
+   end
+   return result
+end
+
+--Explores a recipe and its sub-recipes and returns a table that contains all ingredients that do not have their own sub-recipes. The same ingredient may appear multiple times in the table, so its entries need to be merged.--****Todo test
+function get_raw_ingredients_table(recipe, pindex)
+   local raw_ingredients_table = {}
+   for i, ing in ipairs(recipe.ingredients) do
+      --Check if a recipe of the ingredient's name exists
+      local sub_recipe = game.recipe_prototypes[ing.name]
+      if sub_recipe ~= nil and sub_recipe.valid then 
+         --If the sub-recipe exists, check it recursively
+         local sub_table = get_raw_ingredients_table(sub_recipe, pindex)
+         if sub_table ~= nil then 
+            --Copy the sub_table to the main table
+            for j, ing2 in ipairs(sub_table) do 
+               table.insert(raw_ingredients_table,nil, ing2)
+            end
+         end
+      else 
+         --If its own recipe does not exist, add this ingredient to the main table
+         table.insert(raw_ingredients_table,nil, ing)
+      end
+   end
+   return raw_ingredients_table
+end
 
 script.on_event("read-character-coords", function(event)
    pindex = event.player_index
@@ -9055,7 +9127,7 @@ script.on_event("click-menu", function(event)
             local input = frame.add{type="textfield", name = "input"}
             input.focus()
             input.select(1, 0)
-         elseif players[pindex].travel.index.x == 3 then --Relocate to current character position ****
+         elseif players[pindex].travel.index.x == 3 then --Relocate to current character position
             players[pindex].travel[players[pindex].travel.index.y].position = center_of_tile(players[pindex].position)
             printout("Relocated point ".. players[pindex].travel[players[pindex].travel.index.y].name .. " to " .. math.floor(players[pindex].position.x) .. ", " .. math.floor(players[pindex].position.y), pindex)
             players[pindex].cursor_pos = players[pindex].position
@@ -11032,7 +11104,7 @@ script.on_event("read-time-and-research-progress", function(event)
    --Get total playtime
    local total_hours = math.floor(game.tick/216000)
    local total_minutes = math.floor((game.tick % 216000)/3600)
-   local total_time_string = " The total mission time is " .. total_hours .. " hours and " .. total_minutes .. "minutes "
+   local total_time_string = " The total mission time is " .. total_hours .. " hours and " .. total_minutes .. " minutes "
    
    --Add research progress info
    local progress_string = " No research in progress, "
