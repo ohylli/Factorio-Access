@@ -2454,7 +2454,7 @@ function build_rail_bypass_junction(anchor_rail, pindex)
    
 end
 
---Builds a starter for a rail bypass junction with 3 rails ****todo complete and test
+--Builds a starter for a rail bypass junction with 3 rails ***todo complete and test
 function build_rail_bypass_junction_triple(anchor_rail, pindex)
    local build_comment = ""
    local surf = game.get_player(pindex).surface

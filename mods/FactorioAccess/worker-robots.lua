@@ -2130,7 +2130,7 @@ end
    9. Clear this blueprint 
    10. Export this blueprint as a text string
    11. Import a text string to overwrite this blueprint
-   12. Use the last selected area to reselect this blueprint --todo add****
+   12. Use the last selected area to reselect this blueprint --todo add***
 
    This menu opens when you press RIGHT BRACKET on a blueprint in hand 
 ]]
