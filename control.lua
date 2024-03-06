@@ -3344,17 +3344,25 @@ function factorio_default_sort(k1, k2)
 end
 
 
-function get_recipes(pindex, building)
+function get_recipes(pindex, building, load_all)
    if not building then
       return {}
    end
    local category_filters={}
+   --Load the supported recipe categories for this entity
    for category_name, _ in pairs(building.prototype.crafting_categories) do
       table.insert(category_filters, {filter="category", category=category_name})
-   end
+   end   
    local all_machine_recipes = game.get_filtered_recipe_prototypes(category_filters)
    local unlocked_machine_recipes = {}
    local force_recipes = game.get_player(pindex).force.recipes
+   
+   --Load all crafting categories if instructed
+   if load_all == true then
+      all_machine_recipes = force_recipes
+   end
+   
+   --Load only the unlocked recipes
    for recipe_name, recipe in pairs(all_machine_recipes) do
       if force_recipes[recipe_name] ~= nil and force_recipes[recipe_name].enabled then
          if unlocked_machine_recipes[recipe.group.name] == nil then
@@ -3447,14 +3455,10 @@ function read_crafting_slot(pindex, start_phrase, new_category)
    start_phrase = start_phrase or ""
    recipe = players[pindex].crafting.lua_recipes[players[pindex].crafting.category][players[pindex].crafting.index]
    if recipe.valid == true then
-      if recipe.category == "smelting" then
-         printout(start_phrase .. localising.get(recipe,pindex) .. " can only be crafted by a furnace.", pindex)
-      else
-         if new_category == true then
-            start_phrase = start_phrase .. localising.get_alt(recipe.group,pindex) .. ", "
-         end
-         printout(start_phrase .. localising.get(recipe,pindex) .. ", can craft " .. game.get_player(pindex).get_craftable_count(recipe.name), pindex)
+      if new_category == true then
+         start_phrase = start_phrase .. localising.get_alt(recipe.group,pindex) .. ", "
       end
+      printout(start_phrase .. localising.get_recipe_from_name(recipe.name,pindex) .. ", can craft " .. game.get_player(pindex).get_craftable_count(recipe.name), pindex)
    else
       printout("Blank",pindex)
    end
@@ -7815,7 +7819,7 @@ function open_player_inventory(tick,pindex)
    players[pindex].inventory.max = #players[pindex].inventory.lua_inventory
    players[pindex].inventory.index = 1
    read_inventory_slot(pindex, "Inventory, ")
-   players[pindex].crafting.lua_recipes = get_recipes(pindex, game.get_player(pindex).character)
+   players[pindex].crafting.lua_recipes = get_recipes(pindex, game.get_player(pindex).character, true)
    players[pindex].crafting.max = #players[pindex].crafting.lua_recipes
    players[pindex].crafting.category = 1
    players[pindex].crafting.index = 1
@@ -8787,6 +8791,7 @@ script.on_event("click-menu", function(event)
    if players[pindex].last_click_tick == event.tick then
       return
    end
+   local p = game.get_player(pindex)
    if players[pindex].in_menu then
       players[pindex].last_click_tick = event.tick
       if players[pindex].menu == "inventory" then
@@ -8797,6 +8802,35 @@ script.on_event("click-menu", function(event)
             players[pindex].inventory.max = #players[pindex].inventory.lua_inventory
          --read_inventory_slot(pindex)
       elseif players[pindex].menu == "crafting" then
+         --Check recipe category
+         local recipe = players[pindex].crafting.lua_recipes[players[pindex].crafting.category][players[pindex].crafting.index]
+         if p.cheat_mode == false or (p.cheat_mode == true and recipe.subgroup == "fluid-recipes") then
+            if recipe.category == "advanced-crafting" then
+               printout("An assembling machine is required to craft this", pindex)
+               return
+            elseif recipe.category == "centrifuging" then
+               printout("A centrifuge is required to craft this", pindex)
+               return
+            elseif recipe.category == "chemistry" then
+               printout("A chemical plant is required to craft this", pindex)
+               return
+            elseif recipe.category == "crafting-with-fluid" then
+               printout("An advanced assembling machine is required to craft this", pindex)
+               return
+            elseif recipe.category == "oil-processing" then
+               printout("An oil refinery is required to craft this", pindex)
+               return
+            elseif recipe.category == "rocket-building" then
+               printout("A rocket silo is required to craft this", pindex)
+               return
+            elseif recipe.category == "smelting" then
+               printout("A furnace is required to craft this", pindex)
+               return
+            elseif recipe.hidden_from_player_crafting == true or p.force.get_hand_crafting_disabled_for_recipe(recipe) == true then
+               printout("This recipe cannot be crafted by hand", pindex)
+               return
+            end
+         end
          --Craft 1
          local T = {
             count = 1,
