@@ -1515,6 +1515,11 @@ function ent_info(pindex, ent, description)
    if ent.type == "constant-combinator" then
       result = result .. constant_combinator_signals_info(ent, pindex)
    end
+   if ent.to_be_deconstructed() == true then
+      result = result .. " marked for deconstruction, "
+   elseif ent.to_be_upgraded() == true then
+      result = result .. " marked for upgrading, "
+   end
    return result
 end
 
