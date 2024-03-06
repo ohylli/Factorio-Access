@@ -9454,6 +9454,15 @@ function clicked_on_entity(ent,pindex)
             printout("Switched off",pindex)
          end
       end
+   elseif ent.type == "constant-combinator" then  
+      --Toggle it 
+      ent.get_control_behavior().enabled = not (ent.get_control_behavior().enabled)
+      local enabled = ent.get_control_behavior().enabled
+      if enabled == true then
+         printout("Switched on",pindex)
+      elseif enabled == false then
+         printout("Switched off",pindex)
+      end
    elseif ent.operable and ent.prototype.is_building then
       --If checking an operable building, open its menu
       open_operable_building(ent,pindex)
