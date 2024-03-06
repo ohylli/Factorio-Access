@@ -14718,26 +14718,64 @@ function selected_item_production_stats_info(pindex)
    local p = game.get_player(pindex)
    local result = ""
    local stats = p.force.item_production_statistics
-   local item_stack = p.cursor_stack
-   if (item_stack == nil or item_stack.valid_for_read == false) and players[pindex].menu == "inventory" then
-      item_stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
+   local internal_name = nil
+   local item_stack = nil
+   local recipe = nil
+   
+   --Select the cursor stack
+   item_stack = p.cursor_stack
+   if item_stack and item_stack.valid_for_read then
+      internal_name = item_stack.prototype.name
    end
-   if item_stack == nil or item_stack.valid_for_read == false then
-      result = "Error: No selected item"
+   
+   --Otherwise select the selected inventory stack
+   if internal_name == nil and players[pindex].menu == "inventory" then
+      item_stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
+      if item_stack and item_stack.valid_for_read then
+         internal_name = item_stack.prototype.name
+      end
+   end
+   
+   --Otherwise select the selected crafting recipe
+   if internal_name == nil and players[pindex].menu == "crafting" then
+      recipe = players[pindex].crafting.lua_recipes[players[pindex].crafting.category][players[pindex].crafting.index]
+      if recipe and recipe.valid and recipe.products and recipe.products[1] then
+         local prototype = nil
+         if recipe.products[1].type == "item" then
+            --Select product item #1
+            prototype = game.item_prototypes[recipe.products[1].name]
+            if prototype then
+               internal_name = prototype.name 
+               result = result .. localising.get_item_from_name(recipe.products[1].name,pindex) .. " "
+            end
+         elseif recipe.products[1].type == "fluid" then
+            --Select product fluid #1
+            stats = p.force.fluid_production_statistics
+            prototype = game.fluid_prototypes[recipe.name]
+            if prototype then
+               internal_name = prototype.name 
+               result = result .. localising.get_fluid_from_name(recipe.products[1].name,pindex) .. " "
+            end
+         end
+      end  
+   end
+   
+   if internal_name == nil then
+      result = "Error: No selected item or fluid"
       return result
    end
    local interval = defines.flow_precision_index
-   local last_minute = stats.get_flow_count{name = item_stack.prototype.name, input = true, precision_index = interval.one_minute, count = true}
-   local last_10minutes = stats.get_flow_count{name = item_stack.prototype.name, input = true, precision_index = interval.ten_minutes, count = true}
-   local last_hour   = stats.get_flow_count{name = item_stack.prototype.name, input = true, precision_index = interval.one_hour, count = true}
-   local thousand_hours = stats.get_flow_count{name = item_stack.prototype.name, input = true, precision_index = interval.one_thousand_hours, count = true}
+   local last_minute     = stats.get_flow_count{name = internal_name, input = true, precision_index = interval.one_minute, count = true}
+   local last_10_minutes = stats.get_flow_count{name = internal_name, input = true, precision_index = interval.ten_minutes, count = true}
+   local last_hour       = stats.get_flow_count{name = internal_name, input = true, precision_index = interval.one_hour, count = true}
+   local thousand_hours  = stats.get_flow_count{name = internal_name, input = true, precision_index = interval.one_thousand_hours, count = true}
    last_minute = round_to_nearest_k_after_10k(last_minute)
-   last_10minutes = round_to_nearest_k_after_10k(last_10minutes)
+   last_10_minutes = round_to_nearest_k_after_10k(last_10_minutes)
    last_hour = round_to_nearest_k_after_10k(last_hour)
    thousand_hours = round_to_nearest_k_after_10k(thousand_hours)
-   result = "Produced "
+   result = " Produced "
    result = result .. last_minute .. " in the last minute, "
-   result = result .. last_10minutes .. " in the last 10 minutes, "
+   result = result .. last_10_minutes .. " in the last 10 minutes, "
    result = result .. last_hour .. " in the last hour, "
    result = result .. thousand_hours .. " in the last one thousand hours, "
    return result 
