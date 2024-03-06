@@ -411,6 +411,32 @@ data:extend({
     linked_game_control = "move-right",
     consuming = "none"
 },
+
+{
+    type = "custom-input",
+    name = "cursor-skip-north",
+    key_sequence = "SHIFT + W", 
+    consuming = "none"
+},
+{
+    type = "custom-input",
+    name = "cursor-skip-south",
+    key_sequence = "SHIFT + S", 
+    consuming = "none"
+},
+{
+    type = "custom-input",
+    name = "cursor-skip-west",
+    key_sequence = "SHIFT + A", 
+    consuming = "none"
+},
+{
+    type = "custom-input",
+    name = "cursor-skip-east",
+    key_sequence = "SHIFT + D", 
+    consuming = "none"
+},
+
 {
     type = "custom-input",
     name = "nudge-up",
