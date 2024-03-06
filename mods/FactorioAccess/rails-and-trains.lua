@@ -3813,7 +3813,7 @@ function train_menu(menu_index, pindex, clicked, other_input)
             printout("The train must have locomotives for it to be named.", pindex)
             return
          end
-         printout("Enter a new name for this train, then press ENTER to confirm.", pindex)
+         printout("Enter a new name for this train, then press 'ENTER' to confirm, or press 'ESC' to cancel.", pindex)
          players[pindex].train_menu.renaming = true
          local frame = game.get_player(pindex).gui.screen.add{type = "frame", name = "train-rename"}
          frame.bring_to_front()
@@ -4045,7 +4045,7 @@ function train_stop_menu(menu_index, pindex, clicked, other_input)
       if not clicked then
          printout("Select here to rename this train stop.", pindex)
       else
-         printout("Enter a new name for this train stop, then press ENTER to confirm.", pindex)
+         printout("Enter a new name for this train stop, then press 'ENTER' to confirm, or press 'ESC' to cancel.", pindex)
          players[pindex].train_stop_menu.renaming = true
          local frame = game.get_player(pindex).gui.screen.add{type = "frame", name = "train-stop-rename"}
          frame.bring_to_front()

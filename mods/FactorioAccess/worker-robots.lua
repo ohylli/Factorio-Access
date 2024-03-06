@@ -1508,7 +1508,7 @@ function roboport_menu(menu_index, pindex, clicked)
       if not clicked then
          printout("Click here to rename this network", pindex)
       else
-         printout("Enter a new name for this network, then press 'ENTER' to confirm.", pindex)
+         printout("Enter a new name for this network, then press 'ENTER' to confirm, or press 'ESC' to cancel.", pindex)
          players[pindex].roboport_menu.renaming = true
          local frame = game.get_player(pindex).gui.screen.add{type = "frame", name = "network-rename"}
          frame.bring_to_front()
@@ -2318,7 +2318,7 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
    elseif index == 6 then
       --Edit the label of this blueprint
       if not clicked then
-         local result = "Rename this blueprint by editing its label"
+         local result = "Rename this blueprint"
          printout(result, pindex)
       else
          players[pindex].blueprint_menu.edit_label = true
@@ -2326,9 +2326,9 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
          frame.bring_to_front()
          frame.force_auto_center()
          frame.focus()
-         local input = frame.add{type="textfield", name = "input", text = get_blueprint_label(bp)}
+         local input = frame.add{type="textfield", name = "input"}
          input.focus()
-         local result = "Edit the label text box for this blueprint and press ENTER to confirm"
+         local result = "Type in a new name for this blueprint and press 'ENTER' to confirm, or press 'ESC' to cancel."
          printout(result, pindex)
       end
    elseif index == 7 then
@@ -2344,7 +2344,7 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
          frame.focus()
          local input = frame.add{type="textfield", name = "input", text = get_blueprint_description(bp)}
          input.focus()
-         local result = "Edit the description text box for this blueprint and press ENTER to confirm"
+         local result = "Edit the description text box for this blueprint and press 'ENTER' to confirm, or press 'ESC' to cancel."
          printout(result, pindex)
       end
    elseif index == 8 then
