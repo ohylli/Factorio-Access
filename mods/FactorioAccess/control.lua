@@ -5,6 +5,7 @@ require('worker-robots')
 require('equipment-and-combat')
 require('circuit-networks')
 require('help-system')
+require('settings-menus')
 localising=require('localising')
 
 groups = {}
@@ -14886,11 +14887,8 @@ function regenerate_all_uncharted_spawners(surface_in)
    end 
 end
 
-function general_mod_menu_up(pindex, menu, limit_in)--todo*** use
-   local lower_limit = 0 
-   if limit_in ~= nil then
-      lower_limit = limit_in
-   end
+function general_mod_menu_up(pindex, menu, lower_limit_in)--todo*** use
+   local lower_limit = lower_limit_in or 0 
    menu.index = menu.index - 1
    if menu.index < lower_limit then
       menu.index = lower_limit
