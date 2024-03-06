@@ -14576,13 +14576,16 @@ function selected_item_production_stats_info(pindex)
    end
    local interval = defines.flow_precision_index
    local last_minute = stats.get_flow_count{name = item_stack.prototype.name, input = true, precision_index = interval.one_minute, count = true}
+   local last_10minutes = stats.get_flow_count{name = item_stack.prototype.name, input = true, precision_index = interval.ten_minutes, count = true}
    local last_hour   = stats.get_flow_count{name = item_stack.prototype.name, input = true, precision_index = interval.one_hour, count = true}
    local thousand_hours = stats.get_flow_count{name = item_stack.prototype.name, input = true, precision_index = interval.one_thousand_hours, count = true}
    last_minute = round_to_nearest_k_after_10k(last_minute)
+   last_10minutes = round_to_nearest_k_after_10k(last_10minutes)
    last_hour = round_to_nearest_k_after_10k(last_hour)
    thousand_hours = round_to_nearest_k_after_10k(thousand_hours)
    result = "Produced "
    result = result .. last_minute .. " in the last minute, "
+   result = result .. last_10minutes .. " in the last 10 minutes, "
    result = result .. last_hour .. " in the last hour, "
    result = result .. thousand_hours .. " in the last one thousand hours, "
    return result 
