@@ -8728,6 +8728,32 @@ function clear_obstacles_in_rectangle(left_top, right_bottom, pindex)
    return (trees_cleared + rocks_cleared + remnants_cleared + ground_items_cleared), comment
 end
 
+function teleport_player_out_of_build_area(left_top, right_bottom, pindex)
+   local p = game.get_player(pindex)
+   local pos = p.position
+   if pos.x < left_top.x or pos.x > right_bottom.x or pos.y < left_top.y or pos.y > right_bottom.y then
+      return
+   end
+   local exits = {}
+   exits[1] = {x = left_top.x - 1, y = left_top.y - 0}
+   exits[2] = {x = left_top.x - 0, y = left_top.y - 1}
+   exits[3] = {x = left_top.x - 1, y = left_top.y - 1}
+   exits[4] = {x = left_top.x - 2, y = left_top.y - 0}
+   exits[5] = {x = left_top.x - 0, y = left_top.y - 2}
+   exits[6] = {x = left_top.x - 2, y = left_top.y - 2}
+   
+   --Teleport to exit spots if possible
+   for i,pos in ipairs(exits) do 
+      if p.surface.can_place_entity{name = "character", position = pos} then
+         teleport_to_closest(pindex, pos, false, true)
+         return
+      end
+   end
+   
+   --Teleport best effort to -2, -2
+   teleport_to_closest(pindex, exits[6], false, true)
+end
+
 --Right click actions in menus (click_menu)
 script.on_event("click-menu-right", function(event)
    pindex = event.player_index
@@ -10008,6 +10034,9 @@ function build_item_in_hand(pindex, free_place_straight_rail)
             
       --Clear build area obstacles 
       clear_obstacles_in_rectangle(players[pindex].building_footprint_left_top, players[pindex].building_footprint_right_bottom, pindex)
+      
+      --Teleport player out of build area  
+      teleport_player_out_of_build_area(players[pindex].building_footprint_left_top, players[pindex].building_footprint_right_bottom, pindex)
       
 	  --Try to build it
       local building = {
