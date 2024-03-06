@@ -6164,7 +6164,7 @@ function menu_cursor_right(pindex)
          end
       end
       read_warnings_slot(pindex)
-   elseif players[pindex].menu == "travel" then--fast_travel menu
+   elseif players[pindex].menu == "travel" then
       fast_travel_menu_right(pindex)
    elseif players[pindex].menu == "structure-travel" then
       move_cursor_structure(pindex, 2)
@@ -11584,6 +11584,8 @@ function fast_travel_menu_open(pindex)
       players[pindex].move_queue = {}
       players[pindex].travel.index = {x = 1, y = 0}
       players[pindex].travel.creating = false
+      players[pindex].travel.renaming = false
+      players[pindex].travel.describing = false
       printout("Navigate up and down with W and S to select a fast travel location, and jump to it with LEFT BRACKET.  Alternatively, select an option by navigating left and right with A and D.", pindex)
       local screen = game.get_player(pindex).gui.screen
       local frame = screen.add{type = "frame", name = "travel"}
@@ -11630,6 +11632,10 @@ function read_travel_slot(pindex)
 end
 
 function fast_travel_menu_click(pindex)
+   local frame = game.get_player(pindex).gui.screen["travel"]
+   if frame ~= nil then
+      game.get_player(pindex).gui.screen["travel"].destroy()
+   end
    if #global.players[pindex].travel == 0 and players[pindex].travel.index.x < 4 then
       printout("Move towards the right and select Create to get started.", pindex)
    elseif players[pindex].travel.index.y == 0 and players[pindex].travel.index.x < 4 then
@@ -11656,25 +11662,43 @@ function fast_travel_menu_click(pindex)
       else
          cursor_highlight(pindex, nil, nil)
       end
-
-   elseif players[pindex].travel.index.x == 2 then --Rename
+   elseif players[pindex].travel.index.x == 2 then --Read description
+      local desc = players[pindex].travel[players[pindex].travel.index.y].description
+      if desc == nil or desc == "" then
+         desc = "No description"
+         players[pindex].travel[players[pindex].travel.index.y].description = desc
+      end
+      printout(desc, pindex)
+   elseif players[pindex].travel.index.x == 3 then --Rename
       printout("Enter a new name for this fast travel point, then press 'ENTER' to confirm.", pindex)
       players[pindex].travel.renaming = true
       local frame = game.get_player(pindex).gui.screen["travel"]
       local input = frame.add{type="textfield", name = "input"}
       input.focus()
       input.select(1, 0)
-   elseif players[pindex].travel.index.x == 3 then --Relocate to current character position
+   elseif players[pindex].travel.index.x == 4 then --Edit description
+      local desc = players[pindex].travel[players[pindex].travel.index.y].description
+      if desc == nil then
+         desc = ""
+         players[pindex].travel[players[pindex].travel.index.y].description = desc
+      end
+      printout("Edit the existing description text, then press 'ENTER' to confirm.", pindex)
+      players[pindex].travel.describing = true
+      local frame = game.get_player(pindex).gui.screen["travel"]
+      local input = frame.add{type="textfield", name = "input", text = desc}
+      input.focus()
+      input.select(1, 0)
+   elseif players[pindex].travel.index.x == 5 then --Relocate to current character position
       players[pindex].travel[players[pindex].travel.index.y].position = center_of_tile(players[pindex].position)
       printout("Relocated point ".. players[pindex].travel[players[pindex].travel.index.y].name .. " to " .. math.floor(players[pindex].position.x) .. ", " .. math.floor(players[pindex].position.y), pindex)
       players[pindex].cursor_pos = players[pindex].position
       cursor_highlight(pindex)
-   elseif players[pindex].travel.index.x == 4 then --Delete
+   elseif players[pindex].travel.index.x == 6 then --Delete
       printout("Deleted " .. global.players[pindex].travel[players[pindex].travel.index.y].name, pindex)
       table.remove(global.players[pindex].travel, players[pindex].travel.index.y)
       players[pindex].travel.x = 1
       players[pindex].travel.index.y = players[pindex].travel.index.y - 1
-   elseif players[pindex].travel.index.x == 5 then --Create new 
+   elseif players[pindex].travel.index.x == 7 then --Create new 
       printout("Enter a name for this fast travel point, then press 'ENTER' to confirm.", pindex)
       players[pindex].travel.creating = true
       local frame = game.get_player(pindex).gui.screen["travel"]
@@ -11690,6 +11714,7 @@ function fast_travel_menu_up(pindex)
       players[pindex].travel.index.y = players[pindex].travel.index.y - 1
    else
       players[pindex].travel.index.y = 1
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
    end
    players[pindex].travel.index.x = 1
    read_travel_slot(pindex)
@@ -11701,6 +11726,7 @@ function fast_travel_menu_down(pindex)
       players[pindex].travel.index.y = players[pindex].travel.index.y + 1
    else
       players[pindex].travel.index.y = #players[pindex].travel
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
    end
    players[pindex].travel.index.x = 1
    read_travel_slot(pindex)
@@ -11710,16 +11736,22 @@ function fast_travel_menu_right(pindex)
    if players[pindex].travel.index.x < 5 then
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
       players[pindex].travel.index.x = players[pindex].travel.index.x + 1
+   else
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
    end
    if players[pindex].travel.index.x == 1 then
       printout("Travel", pindex)
    elseif players[pindex].travel.index.x == 2 then
-      printout("Rename", pindex)
+      printout("Read description", pindex)
    elseif players[pindex].travel.index.x == 3 then
-      printout("Relocate to current character position", pindex)
+      printout("Rename", pindex)
    elseif players[pindex].travel.index.x == 4 then
-      printout("Delete", pindex)
+      printout("Edit description", pindex)
    elseif players[pindex].travel.index.x == 5 then
+      printout("Relocate to current character position", pindex)
+   elseif players[pindex].travel.index.x == 6 then
+      printout("Delete", pindex)
+   elseif players[pindex].travel.index.x == 7 then
       printout("Create New", pindex)
    end
 end
@@ -11728,16 +11760,22 @@ function fast_travel_menu_left(pindex)
    if players[pindex].travel.index.x > 1 then
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
       players[pindex].travel.index.x = players[pindex].travel.index.x - 1
+   else
+      game.get_player(pindex).play_sound{path = "inventory-edge"}
    end
    if players[pindex].travel.index.x == 1 then
       printout("Travel", pindex)
    elseif players[pindex].travel.index.x == 2 then
-      printout("Rename", pindex)
+      printout("Read description", pindex)
    elseif players[pindex].travel.index.x == 3 then
-      printout("Relocate to current character position", pindex)
+      printout("Rename", pindex)
    elseif players[pindex].travel.index.x == 4 then
-      printout("Delete", pindex)
+      printout("Edit description", pindex)
    elseif players[pindex].travel.index.x == 5 then
+      printout("Relocate to current character position", pindex)
+   elseif players[pindex].travel.index.x == 6 then
+      printout("Delete", pindex)
+   elseif players[pindex].travel.index.x == 7 then
       printout("Create New", pindex)
    end
 end
@@ -11789,7 +11827,7 @@ script.on_event(defines.events.on_gui_confirmed,function(event)
       --Edit a travel point
       local result = event.element.text
       if result == nil or result == "" then 
-         result = "unknown"
+         result = "blank"
       end
       if players[pindex].travel.creating then
          --Create new point
@@ -11804,6 +11842,11 @@ script.on_event(defines.events.on_gui_confirmed,function(event)
          players[pindex].travel.renaming = false
          players[pindex].travel[players[pindex].travel.index.y].name = result
          read_travel_slot(pindex)
+      elseif players[pindex].travel.describing then
+         --Save the new description 
+         players[pindex].travel.describing = false
+         players[pindex].travel[players[pindex].travel.index.y].description = result
+         printout("Description updated", pindex)
       end
       players[pindex].travel.index.x = 1
       event.element.destroy()
