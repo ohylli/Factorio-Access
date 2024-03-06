@@ -200,10 +200,16 @@ function constant_combinator_signals_info(ent, pindex)
    local combinator = ent.get_control_behavior()
    local max_signals_count = combinator.signals_count
    local valid_signals_count = constant_combinator_count_valid_signals(ent)
-   local result = " with signals " 
-   if valid_signals_count == 0 then
-      result = " with no signals "
+   local result = nil
+   if combinator.enabled then
+      result = " switched on, "
    else
+      result = " switched off, "
+   end
+   if valid_signals_count == 0 then
+      result = result .. " with no signals "
+   else
+      result = result .. " with signals " 
       for i = 1,max_signals_count,1 do 
          local signal = combinator.get_signal(i)
          if signal.signal ~= nil then
