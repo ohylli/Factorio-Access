@@ -14783,7 +14783,7 @@ function selected_item_production_stats_info(pindex)
             prototype = game.item_prototypes[recipe.products[1].name]
             if prototype then
                internal_name = prototype.name 
-               result .. localising.get_item_from_name(recipe.products[1].name,pindex) .. " "
+               result = localising.get_item_from_name(recipe.products[1].name,pindex) .. " "
             end
          end
          if recipe.products[1].type == "fluid" then
@@ -14792,7 +14792,7 @@ function selected_item_production_stats_info(pindex)
             prototype = game.fluid_prototypes[recipe.name]
             if prototype then
                internal_name = prototype.name 
-               result .. localising.get_fluid_from_name(recipe.products[1].name,pindex) .. " "
+               result = localising.get_fluid_from_name(recipe.products[1].name,pindex) .. " "
             end
          end
          if (recipe.products[2] and recipe.products[2].type == "fluid") then
@@ -14801,7 +14801,7 @@ function selected_item_production_stats_info(pindex)
             prototype = game.fluid_prototypes[recipe.products[2].name]
             if prototype then
                internal_name = prototype.name 
-               result .. localising.get_fluid_from_name(recipe.products[2].name,pindex) .. " "
+               result = localising.get_fluid_from_name(recipe.products[2].name,pindex) .. " "
             end
          end
       end  
@@ -14831,8 +14831,12 @@ end
 --Round to the nearest thousand after 10 thousand. 
 function round_to_nearest_k_after_10k(num_in)
    local num = num_in
+   num = math.ceil(num)
    if num > 10000 then
       num = 1000 * math.floor(num/1000 + 0.5)
+   end
+   if num > 1000000 then
+      num = 100000 * math.floor(num/100000 + 0.5)
    end
    return num
 end
