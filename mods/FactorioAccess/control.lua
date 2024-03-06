@@ -4406,7 +4406,7 @@ function read_tile(pindex, start_text)
       --game.get_player(pindex).print(result)--
       players[pindex].tile.previous = ent
    end
-   if not ent or ent.type == "resource" then--possible bug with the h box being a new tile ent
+   if not ent or ent.type == "resource" then--possible bug here with the h box being a new tile ent
       local stack = game.get_player(pindex).cursor_stack
       --Run build preview checks
       if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then
@@ -4415,7 +4415,7 @@ function read_tile(pindex, start_text)
       end
    end
      
-   --If the player is holding a cut or copy tool, every entity being read gets mined as soon as you read a new tile.
+   --If the player is holding a cut-paste tool, every entity being read gets mined as soon as you read a new tile.
    local stack = game.get_player(pindex).cursor_stack
    if stack and stack.valid_for_read and stack.name == "cut-paste-tool" and not players[pindex].vanilla_mode then
       if ent and ent.valid then--not while loop, because it causes crashes
@@ -10150,6 +10150,10 @@ function build_offshore_pump_in_hand(pindex)
    end
 end
 
+--Builds the same structure repeatedly in a specific direction, with spacing
+function build_in_a_line(pindex, start_pos, direction, build_count, spacing)--*****
+   
+end
 
 script.on_event("crafting-all", function(event)
    pindex = event.player_index
@@ -12086,6 +12090,121 @@ script.on_event("open-structure-travel-menu", function(event)
    end
 
 end)
+
+script.on_event("cursor-skip-north", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) or players[pindex].vanilla_mode then
+      return
+   end
+   cursor_skip(pindex, defines.direction.north)
+end)
+
+script.on_event("cursor-skip-south", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) or players[pindex].vanilla_mode then
+      return
+   end
+   cursor_skip(pindex, defines.direction.south)
+end)
+
+script.on_event("cursor-skip-west", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) or players[pindex].vanilla_mode then
+      return
+   end
+   cursor_skip(pindex, defines.direction.west)
+end)
+
+script.on_event("cursor-skip-east", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) or players[pindex].vanilla_mode then
+      return
+   end
+   cursor_skip(pindex, defines.direction.east)
+end)
+
+--Runs the cursor skip iteration and reads out results *****
+function cursor_skip(pindex, direction, iteration_limit)
+   local p = game.get_player(pindex)
+   local limit = iteration_limit or 100
+   local result = ""
+   
+   --Run the iteration and play sound
+   local moved_count = cursor_skip_iteration(pindex, direction, limit)
+   p.play_sound{path = "inventory-wrap-around"}
+   
+   if moved_count < 0 then
+      --No change found within the limit
+      result = "Skipped " .. limit .. " tiles without a change, "
+   else
+      --Change found
+      result = "Skipped " .. moved_count .. " tiles, "
+   end
+   
+   --Read the tile reached 
+   read_tile(pindex, result)
+   sync_build_cursor_graphics(pindex)
+end
+
+--Moves the cursor in the same direction multiple times until the reported entity changes. Change includes: new entity name or new direction for entites with the same name, or changing between nil and ent. Returns move count.
+function cursor_skip_iteration(pindex, direction, iteration_limit)
+   local p = game.get_player(pindex)
+   local start = get_selected_ent(pindex)
+   local current = nil
+   local limit = iteration_limit or 100
+   local moved = 1
+
+   --Iterate first tile 
+   players[pindex].cursor_pos = offset_position(players[pindex].cursor_pos, direction, 1)
+   current = get_selected_ent(pindex)
+   
+   --Run checks and skip when needed
+   while moved < limit do
+      if current == nil or current.valid == false then
+         if start == nil or start.valid == false then
+            --Both are nil: skip 
+         else
+            --Valid start to nil
+            return moved
+         end
+      else
+         if start == nil or start.valid == false then
+            --Nil start to valid
+            return moved
+         else
+            --Both are valid
+            if start.unit_number == current.unit_number then
+               --They are the same ent: skip
+            else
+               --They are differemt ents 
+               if start.name ~= current.name then
+                  --They have different names: return
+                  return moved
+               else
+                  --They have the same name
+                  if current.supports_direction == false then
+                     --They both do not support direction: skip
+                  else
+                     --They support direction
+                     if current.direction == start.direction then
+                        --They have different directions: return
+                        return moved
+                     else
+                        --They have same direction: skip
+                     end
+                  end
+               end
+            end
+         end
+      end
+      --Skip case: Move 1 more tile
+      players[pindex].cursor_pos = offset_position(players[pindex].cursor_pos, direction, 1)
+      current = get_selected_ent(pindex)
+      moved = moved + 1
+   end
+   --Reached limit
+   return -1
+end
 
 script.on_event("nudge-up", function(event)
    nudge_key(defines.direction.north,event)
