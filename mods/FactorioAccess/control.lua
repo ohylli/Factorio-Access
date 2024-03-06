@@ -14783,15 +14783,25 @@ function selected_item_production_stats_info(pindex)
             prototype = game.item_prototypes[recipe.products[1].name]
             if prototype then
                internal_name = prototype.name 
-               result = result .. localising.get_item_from_name(recipe.products[1].name,pindex) .. " "
+               result .. localising.get_item_from_name(recipe.products[1].name,pindex) .. " "
             end
-         elseif recipe.products[1].type == "fluid" then
+         end
+         if recipe.products[1].type == "fluid" then
             --Select product fluid #1
             stats = p.force.fluid_production_statistics
             prototype = game.fluid_prototypes[recipe.name]
             if prototype then
                internal_name = prototype.name 
-               result = result .. localising.get_fluid_from_name(recipe.products[1].name,pindex) .. " "
+               result .. localising.get_fluid_from_name(recipe.products[1].name,pindex) .. " "
+            end
+         end
+         if (recipe.products[2] and recipe.products[2].type == "fluid") then
+            --Select product fluid #2 (instead)
+            stats = p.force.fluid_production_statistics
+            prototype = game.fluid_prototypes[recipe.products[2].name]
+            if prototype then
+               internal_name = prototype.name 
+               result .. localising.get_fluid_from_name(recipe.products[2].name,pindex) .. " "
             end
          end
       end  
@@ -14810,7 +14820,7 @@ function selected_item_production_stats_info(pindex)
    last_10_minutes = round_to_nearest_k_after_10k(last_10_minutes)
    last_hour = round_to_nearest_k_after_10k(last_hour)
    thousand_hours = round_to_nearest_k_after_10k(thousand_hours)
-   result = " Produced "
+   result = result .. " Produced "
    result = result .. last_minute .. " in the last minute, "
    result = result .. last_10_minutes .. " in the last 10 minutes, "
    result = result .. last_hour .. " in the last hour, "
