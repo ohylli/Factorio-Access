@@ -2316,7 +2316,7 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
          --p.print(result)--
       end
    elseif index == 6 then
-      --Edit the label of this blueprint
+      --Rename this blueprint (edit its label)
       if not clicked then
          local result = "Rename this blueprint"
          printout(result, pindex)
@@ -2332,9 +2332,9 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
          printout(result, pindex)
       end
    elseif index == 7 then
-      --Edit the description of this blueprint
+      --Rewrite the description of this blueprint
       if not clicked then
-         local result = "Edit the description of this blueprint"
+         local result = "Rewrite the description of this blueprint"
          printout(result, pindex)
       else
          players[pindex].blueprint_menu.edit_description = true
@@ -2342,9 +2342,9 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
          frame.bring_to_front()
          frame.force_auto_center()
          frame.focus()
-         local input = frame.add{type="textfield", name = "input", text = get_blueprint_description(bp)}
+         local input = frame.add{type="textfield", name = "input"}--, text = get_blueprint_description(bp)}
          input.focus()
-         local result = "Edit the description text box for this blueprint and press 'ENTER' to confirm, or press 'ESC' to cancel."
+         local result = "Type in the new description text box for this blueprint and press 'ENTER' to confirm, or press 'ESC' to cancel."
          printout(result, pindex)
       end
    elseif index == 8 then
