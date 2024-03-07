@@ -1110,6 +1110,13 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "open-circuit-menu",
+    key_sequence = "N",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "repair-area",
     key_sequence = "CONTROL + SHIFT + LEFTBRACKET",
     consuming = "none"

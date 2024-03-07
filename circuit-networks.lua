@@ -554,10 +554,24 @@ function circuit_network_menu(pindex, ent, menu_index, clicked, other_input)
       return
    end
    local circuit_cond = control.circuit_condition
-   
+   local nw1 = control.get_circuit_network(defines.wire_type.red)
+   local nw2 = control.get_circuit_network(defines.wire_type.green)
+   local nw_name = nil
+   if nw1 == nil and nw2 == nil then
+      printout("No circuit network connected", pindex)
+      return 
+   elseif nw1 ~= nil and nw2 == nil then 
+      nw_name = " red " .. nw1.network_id
+   elseif nw1 == nil and nw2 ~= nil then 
+      nw_name = " green " .. nw2.network_id
+   elseif nw1 ~= nil and nw2 ~= nil then 
+      nw_name = " red " .. nw1.network_id .. " and green " .. nw2.network_id
+   end
    if ent.type == "electric-pole" then
       if index == 0 then
          --Menu info
+         local result = localising.get(ent,pindex) .. " in circuit network " .. nw_name
+         printout(result, pindex)
       elseif index == 1 then
          --List all active signals of this network
       elseif index == 2 then
@@ -591,7 +605,7 @@ function circuit_network_menu(pindex, ent, menu_index, clicked, other_input)
 end
 CIRCUIT_NETWORK_MENU_LENGTH = 7
 
-function circuit_network_menu_open(pindex)
+function circuit_network_menu_open(pindex, ent)
    if players[pindex].vanilla_mode then
       return 
    end
@@ -610,10 +624,10 @@ function circuit_network_menu_open(pindex)
    
    --Load menu 
    local cn_menu = players[pindex].circuit_network_menu
-   circuit_network_menu(pindex, nil, cn_menu.index, false)
+   circuit_network_menu(pindex, ent, cn_menu.index, false)
 end
 
-function circuit_network_close(pindex, mute_in)
+function circuit_network_menu_close(pindex, mute_in)
    local mute = mute_in
    --Set the player menu tracker to none
    players[pindex].menu = "none"
@@ -636,30 +650,6 @@ function circuit_network_close(pindex, mute_in)
    end
 end
 
-function circuit_network_menu_up(pindex)
-   players[pindex].circuit_network_menu.index = players[pindex].circuit_network_menu.index - 1
-   if players[pindex].circuit_network_menu.index < 0 then
-      players[pindex].circuit_network_menu.index = 0
-      game.get_player(pindex).play_sound{path = "inventory-edge"}
-   else
-      --Play sound
-      game.get_player(pindex).play_sound{path = "Inventory-Move"}
-   end
-   --Load menu
-   local cn_menu = players[pindex].circuit_network_menu
-   circuit_network_menu(pindex, nil, cn_menu.index, false)
-end
+function circuit_network_members_info(pindex, nw) --****todo
 
-function circuit_network_menu_down(pindex)
-   players[pindex].circuit_network_menu.index = players[pindex].circuit_network_menu.index + 1
-   if players[pindex].circuit_network_menu.index > CIRCUIT_NETWORK_MENU_LENGTH then
-      players[pindex].circuit_network_menu.index = CIRCUIT_NETWORK_MENU_LENGTH
-      game.get_player(pindex).play_sound{path = "inventory-edge"}
-   else
-      --Play sound
-      game.get_player(pindex).play_sound{path = "Inventory-Move"}
-   end
-   --Load menu
-   local cn_menu = players[pindex].circuit_network_menu
-   circuit_network_menu(pindex, nil, cn_menu.index, false)
-end
+end 
