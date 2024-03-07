@@ -9523,6 +9523,38 @@ function clicked_on_entity(ent,pindex)
    end
 end
 
+--For a building, opens circuit menu
+script.on_event("open-circuit-menu", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local p = game.get_player(pindex)
+   --In a building menu
+   if players[pindex].menu == "building" then
+      local ent = p.opened
+      if ent == nil or ent.valid == false then
+         printout("Error: Missing building interface",pindex)
+         return
+      end 
+      --Building has control behavior
+      local control = ent.get_control_behavior()
+      if control == nil then 
+         printout("No control behavior for this building",pindex)
+         return
+      end
+      --Building has a circuit network
+      local nw1 = control.get_circuit_network(defines.wire_type.red)
+      local nw2 = control.get_circuit_network(defines.wire_type.green)
+      if nw1 == nil and nw2 == nil then 
+         printout("Not connected to a circuit network",pindex)
+         return
+      end
+      --Open the menu
+      --***later: circuit_network_menu_open(pindex, ent)
+   end
+end)
+
 script.on_event("repair-area", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -10149,11 +10181,6 @@ function build_offshore_pump_in_hand(pindex)
          players[pindex].pump.index = 0
       end
    end
-end
-
---Builds the same structure repeatedly in a specific direction, with spacing
-function build_in_a_line(pindex, start_pos, direction, build_count, spacing)--*****
-   
 end
 
 script.on_event("crafting-all", function(event)
