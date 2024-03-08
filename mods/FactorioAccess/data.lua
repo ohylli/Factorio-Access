@@ -376,6 +376,30 @@ data:extend({
 },
 
 {
+   type = "sound",
+   name = "train-honk-low-long",
+   filename = "__FactorioAccess__/Audio/train-honk-long-pixabay-modified-lower-diesel-horn-02-98042.wav",
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "car-honk",
+   filename = "__FactorioAccess__/Audio/car-horn-zapsplat_transport_car_horn_single_beep_external_toyota_corolla_002_18246.wav",
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "tank-honk",
+   filename = "__FactorioAccess__/Audio/tank-horn-zapsplat-Blastwave_FX_FireTruckHornHonk_SFXB.458.wav",
+   volume = 1,
+   preload = true
+},
+
+{
     type = "custom-input",
     name = "pause-game-fa",
     key_sequence = "ESCAPE",
@@ -1587,6 +1611,13 @@ data:extend({
     name = "shoot-weapon-fa",
     key_sequence = "SPACE",
     --linked_game_control = "shoot-enemy",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "honk",
+    key_sequence = "V",
     consuming = "none"
 },
 
