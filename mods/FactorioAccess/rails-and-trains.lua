@@ -4966,3 +4966,16 @@ function check_and_honk_at_trains_in_same_block(tick,pindex)
    game.get_player(pindex).play_sound{path="train-honk-long"}
    players[pindex].last_honk_tick = tick
 end
+
+--Play a sound to indicate the train is turning
+function check_and_play_sound_for_turning_trains(pindex)
+   local p = game.get_player(pindex)
+   if p.vehicle == nil or p.vehicle.valid == false or p.vehicle.train == nil then
+      return 
+   end
+   local ori = p.vehicle.orientation
+   if players[pindex].last_train_orientation ~= ori then
+      p.play_sound{path = "train-clack"}
+   end
+   players[pindex].last_train_orientation = ori
+end

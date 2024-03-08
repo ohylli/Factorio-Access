@@ -6359,6 +6359,7 @@ function on_tick(event)
       for pindex, player in pairs(players) do
          check_and_honk_at_trains_in_same_block(event.tick,pindex)
          check_and_honk_at_closed_signal(event.tick,pindex)
+         check_and_play_sound_for_turning_trains(pindex)
       end
    elseif event.tick % 30 == 7 then
       --Update menu visuals
