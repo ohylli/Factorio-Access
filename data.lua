@@ -361,6 +361,14 @@ data:extend({
 
 {
    type = "sound",
+   name = "train-clack",
+   filename = "__FactorioAccess__/Audio/train-clack-zapsplat-cut-transport_steam_train_arrive_at_station_with_tannoy_announcement.wav",
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
    name = "train-honk-short",
    filename = "__FactorioAccess__/Audio/train-honk-short-2x-GotLag.ogg",
    volume = 1,
