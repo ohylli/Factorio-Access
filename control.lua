@@ -1368,16 +1368,15 @@ function ent_info(pindex, ent, description)
          position.x = position.x - increment
       end
 --         result = result .. math.floor(position.x) .. " " .. math.floor(position.y) .. " " .. direction .. " "
+      local pickup = ent.pickup_target
+      if pickup ~= nil and pickup.valid then
+         result = result .. " pickup from " .. localising.get(pickup)
+      end
       if math.floor(players[pindex].cursor_pos.x) == math.floor(position.x) and math.floor(players[pindex].cursor_pos.y) == math.floor(position.y) then
-         result = result .. ", Output " .. increment .. " "
-         if direction == 0 then
-            result = result .. "North "
-         elseif direction == 2 then
-            result = result .. "South "
-         elseif direction == 3 then
-            result = result .. "West " 
-         elseif direction == 1 then
-            result = result .. "East "
+         result = result .. ", drop " .. increment .. " " .. direction_lookup(direction)
+         local target = ent.drop_target
+         if target ~= nil and target.valid then
+            result = result .. " to " .. localising.get(target)
          end
       end
    end
@@ -1394,10 +1393,14 @@ function ent_info(pindex, ent, description)
             dict[resource.name] = dict[resource.name] + resource.amount
          end
       end
+      local target = ent.drop_target
+      if target ~= nil and target.valid then
+         result = result .. " outputs to " .. localising.get(target)
+      end
       if table_size(dict) > 0 then
          result = result .. ", Mining From "
          for i, amount in pairs(dict) do
-            result = result .. " " .. i .. " x " .. amount
+            result = result .. " " .. i .. " times " .. amount
          end
       end
    end
