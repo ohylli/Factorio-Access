@@ -1073,7 +1073,7 @@ function ent_info(pindex, ent, description)
    --Explain the entity facing direction
    if (ent.prototype.is_building and ent.supports_direction) or (ent.name == "entity-ghost" and ent.ghost_prototype.is_building and ent.ghost_prototype.supports_direction) then
       result = result .. ", Facing " .. direction_lookup(ent.direction) 
-   elseif ent.name == "locomotive" or ent.prototype.type == "car" then
+   elseif ent.type == "locomotive" or ent.type == "car" then
       result = result .. " facing " .. get_heading(ent)
    end
    if ent.prototype.type == "generator" then
@@ -8623,7 +8623,7 @@ script.on_event("mine-area", function(event)
    
    --Print result 
    local result = " Cleared away " .. cleared_total .. " objects "
-   if stacks_collected > 0 then
+   if stacks_collected >= 0 then
       result = result .. " and collected " .. stacks_collected .. " item stacks."
    end
    printout(result, pindex)
