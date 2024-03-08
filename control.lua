@@ -3459,7 +3459,7 @@ end
 
 function read_crafting_slot(pindex, start_phrase, new_category)
    start_phrase = start_phrase or ""
-   recipe = players[pindex].crafting.lua_recipes[players[pindex].crafting.category][players[pindex].crafting.index]
+   local recipe = players[pindex].crafting.lua_recipes[players[pindex].crafting.category][players[pindex].crafting.index]
    if recipe.valid == true then
       if new_category == true then
          start_phrase = start_phrase .. localising.get_alt(recipe.group,pindex) .. ", "
@@ -3468,6 +3468,29 @@ function read_crafting_slot(pindex, start_phrase, new_category)
    else
       printout("Blank",pindex)
    end
+end
+
+function recipe_missing_ingredients_info(pindex, recipe_in)
+   local recipe = recipe_in or players[pindex].crafting.lua_recipes[players[pindex].crafting.category][players[pindex].crafting.index]
+   local p = game.get_player(pindex)
+   local inv = p.get_main_inventory()
+   local result = "Missing "
+   local missing = 0
+   for i, ing in ipairs(recipe.ingredients) do 
+      local on_hand = inv.get_item_count(ing.name)
+      local needed = ing.count - on_hand
+      if needed > 0 then
+         missing = missing + 1
+         if missing > 1 then
+            result = result .. " and " 
+         end
+         result = result .. needed .. " " .. localising.get_item_from_name(ing.name)
+      end
+   end 
+   if missing == 0 then
+      result = ""
+   end
+   return result
 end
 
 --Reads a player inventory slot
@@ -8874,7 +8897,8 @@ script.on_event("click-menu", function(event)
             local total_count = count_in_crafting_queue(T.recipe.name, pindex)
             printout("Started crafting " .. count .. " " .. localising.get_alt(T.recipe,pindex) .. ", " .. total_count .. " total in queue", pindex)
          else
-            printout("Not enough ingredients", pindex)
+            local result = recipe_missing_ingredients_info(pindex)
+            printout(result, pindex)
          end
 
       elseif players[pindex].menu == "crafting_queue" then
@@ -11676,12 +11700,32 @@ script.on_event("open-warnings-menu", function(event)
    end
 end)
 
+script.on_event("honk", function(event) 
+   pindex = event.player_index
+   if not check_for_player(pindex) or players[pindex].vanilla_mode then
+      return
+   end
+   local p = game.get_player(pindex)
+   if p.driving == true then
+      local vehicle = p.vehicle
+      if vehicle.type == "locomotive" or vehicle.train ~= nil then
+         game.play_sound{path = "train-honk-low-long", position = vehicle.position}
+      elseif vehicle.name == "tank" then
+         game.play_sound{path = "tank-honk", position = vehicle.position}
+      else
+         game.play_sound{path = "car-honk", position = vehicle.position}
+      end
+   end
+end)
+
 script.on_event("open-fast-travel-menu", function(event) 
    pindex = event.player_index
    if not check_for_player(pindex) or players[pindex].vanilla_mode then
       return
    end
-   fast_travel_menu_open(pindex)
+   if game.get_player(pindex).driving ~= true then
+      fast_travel_menu_open(pindex)
+   end
 end)
 
 function fast_travel_menu_open(pindex)
