@@ -1340,50 +1340,40 @@ function ent_info(pindex, ent, description)
       end
       result = result .. label
    end
-   --Give drop position (like for inserters)
-   if ent.drop_position ~= nil then
-      --Also for inserters, announce if they are holding something
-      if ent.type == "inserter" and ent.held_stack ~= nil and ent.held_stack.valid_for_read and ent.held_stack.valid then
+   --Inserters: Explain held items, pickup and drop positions 
+   if ent.type == "inserter" then
+      --Read held item
+      if ent.held_stack ~= nil and ent.held_stack.valid_for_read and ent.held_stack.valid then
          result = result .. ", holding " .. ent.held_stack.name
          if ent.held_stack.count > 1 then
             result = result .. " times " .. ent.held_stack.count
          end
-      elseif ent.type == "inserter" and (ent.held_stack == nil) then 
-         result = result .. ", holding nothing "
       end
-      --Next explain drop position
-      local position = table.deepcopy(ent.drop_position)
-      local direction = ent.direction /2
-      local increment = 1
-      if ent.type == "inserter" then
-         direction = (direction + 2) % 4
-         if ent.name == "long-handed-inserter" then
-            increment = 2
-         end
-      end
-      if direction == 0 then
-         position.y = position.y + increment
-      elseif direction == 2 then
-         position.y = position.y - increment
-      elseif direction == 3 then
-         position.x = position.x + increment
-      elseif direction == 1 then
-         position.x = position.x - increment
-      end
---         result = result .. math.floor(position.x) .. " " .. math.floor(position.y) .. " " .. direction .. " "
-      if ent.type == "inserter" then
-         local pickup = ent.pickup_target
-         if pickup ~= nil and pickup.valid then
-            result = result .. " pickup from " .. localising.get(pickup,pindex)
-         end
-      end
-      if math.floor(players[pindex].cursor_pos.x) == math.floor(position.x) and math.floor(players[pindex].cursor_pos.y) == math.floor(position.y) then
-         result = result .. ", drop " .. increment .. " " .. direction_lookup(direction)
-         local target = ent.drop_target
-         if target ~= nil and target.valid then
-            result = result .. " to " .. localising.get(target,pindex)
-         end
-      end
+      --Take note of long handed inserters
+      local pickup_dist_dir = " at 1 " .. direction_lookup(ent.direction)
+      local drop_dist_dir   = " at 1 " .. direction_lookup(rotate_180(ent.direction))
+      if ent.name == "long-handed-inserter" then
+         pickup_dist_dir = " at 2 " .. direction_lookup(ent.direction)
+         drop_dist_dir   = " at 2 " .. direction_lookup(rotate_180(ent.direction))
+      end 
+      --Read the pickup position
+      local pickup = ent.pickup_target
+      local pickup_name = nil
+      if pickup ~= nil and pickup.valid then
+         pickup_name = localising.get(pickup,pindex)
+      else
+         pickup_name = "ground"
+      end      
+      result = result .. " picks up from " .. pickup_name .. pickup_dist_dir
+      --Read the drop position 
+      local drop = ent.drop_target
+      local drop_name = nil  
+      if drop ~= nil and drop.valid then
+         drop_name = localising.get(drop,pindex)
+      else
+         drop_name = "ground"
+      end 
+      result = result .. ", drops to " .. drop_name .. drop_dist_dir
    end
    if ent.type == "mining-drill"  then
       local pos = ent.position
@@ -1412,6 +1402,9 @@ function ent_info(pindex, ent, description)
             end
          end
       end
+      if ent.status = defines.entity_status.waiting_for_space_in_destination then
+         result = result .. " output full "
+      end
    end
    --Explain if no fuel 
    if ent.prototype.burner_prototype ~= nil then
@@ -1431,9 +1424,9 @@ function ent_info(pindex, ent, description)
    end 
    --Explain power connected status 
    if ent.prototype.electric_energy_source_prototype ~= nil and ent.is_connected_to_electric_network() == false then
-      result = result .. " Not Connected"
+      result = result .. " power not Connected"
    elseif ent.prototype.electric_energy_source_prototype ~= nil and ent.energy == 0 and ent.type ~= "solar-panel" then
-      result = result .. " Connected but no power "
+      result = result .. " out of power "
    end
    if ent.type == "accumulator" then
       local level = math.ceil(ent.energy / 50000) --In percentage
