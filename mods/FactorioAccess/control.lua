@@ -644,6 +644,9 @@ function nudge_key(direction, event)--
             end
          end
       end
+      
+      --Update ent connections after teleporting it
+      ent.update_connections()
    else
       printout("Nudged nothing.", pindex)
    end
@@ -8522,6 +8525,10 @@ script.on_event("mine-area", function(event)
       return
    end
    
+   --Get initial inventory size
+   local init_empty_stacks = game.get_player(pindex).get_main_inventory().count_empty_stacks()
+   
+   --Begin clearing
    players[pindex].allow_reading_flying_text = false
    if ent then 
       local surf = ent.surface
@@ -8610,7 +8617,15 @@ script.on_event("mine-area", function(event)
       end
    end
    
-   printout(" Cleared away " .. cleared_total .. " objects. ", pindex)
+   --Calculate collected stack count
+   local stacks_collected = init_empty_stacks - game.get_player(pindex).get_main_inventory().count_empty_stacks()
+   
+   --Print result 
+   local result = " Cleared away " .. cleared_total .. " objects "
+   if stacks_collected > 0 then
+      result = result .. " and collected " .. stacks_collected .. " item stacks."
+   end
+   printout(result, pindex)
 end)
 
 --Cut-paste-tool. NOTE: This keybind needs to be the same as that for the cut paste tool (default CONTROL + X). laterdo maybe keybind to game control somehow
@@ -8649,7 +8664,7 @@ function clear_obstacles_in_circle(position, radius, pindex)
    local remnants_cleared = 0
    local ground_items_cleared = 0
    players[pindex].allow_reading_flying_text = false
-   
+      
    --Find and mine trees
    local trees = surf.find_entities_filtered{position = position, radius = radius, type = "tree"}
    for i,tree_ent in ipairs(trees) do
@@ -8686,7 +8701,8 @@ function clear_obstacles_in_circle(position, radius, pindex)
       game.get_player(pindex).mine_entity(ground_item,true)
       ground_items_cleared = ground_items_cleared + 1
    end
-         
+   
+   --Report clear and pickup counts
    if trees_cleared + rocks_cleared + ground_items_cleared + remnants_cleared > 0 then
       comment = "cleared " .. trees_cleared .. " trees and " .. rocks_cleared .. " rocks and " .. remnants_cleared .. " remnants and " .. ground_items_cleared .. " ground items "
    end
