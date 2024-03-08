@@ -4974,7 +4974,7 @@ function check_and_play_sound_for_turning_trains(pindex)
       return 
    end
    local ori = p.vehicle.orientation
-   if players[pindex].last_train_orientation ~= ori then
+   if players[pindex].last_train_orientation ~= nil and players[pindex].last_train_orientation ~= ori then
       p.play_sound{path = "train-clack"}
    end
    players[pindex].last_train_orientation = ori

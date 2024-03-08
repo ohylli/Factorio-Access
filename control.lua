@@ -6845,6 +6845,7 @@ script.on_event(defines.events.on_player_driving_changed_state, function(event)
    end
    reset_bump_stats(pindex)
    game.get_player(pindex).clear_cursor()
+   players[pindex].last_train_orientation = nil 
    if game.get_player(pindex).driving then
       players[pindex].last_vehicle = game.get_player(pindex).vehicle
       printout("Entered " .. game.get_player(pindex).vehicle.name ,pindex)
@@ -11734,7 +11735,9 @@ script.on_event("honk", function(event)
    local p = game.get_player(pindex)
    if p.driving == true then
       local vehicle = p.vehicle
-      if vehicle.type == "locomotive" or vehicle.train ~= nil then
+      if vehicle == nil or vehicle.valid == false then
+         return
+      elseif vehicle.type == "locomotive" or vehicle.train ~= nil then
          game.play_sound{path = "train-honk-low-long", position = vehicle.position}
       elseif vehicle.name == "tank" then
          game.play_sound{path = "tank-honk", position = vehicle.position}
@@ -12223,18 +12226,24 @@ end)
 
 --Runs the cursor skip iteration and reads out results *****
 function cursor_skip(pindex, direction, iteration_limit)
+   if players[pindex].cursor == false then
+      return
+   end 
    local p = game.get_player(pindex)
    local limit = iteration_limit or 100
    local result = ""
    
    --Run the iteration and play sound
    local moved_count = cursor_skip_iteration(pindex, direction, limit)
-   p.play_sound{path = "inventory-wrap-around"}
    if moved_count < 0 then
       --No change found within the limit
+      p.play_sound{path = "inventory-wrap-around"}
       result = "Skipped " .. limit .. " tiles without a change, "
+   elseif moved_count == 1 then
+      p.play_sound{path = "Close-Inventory-Sound"}
    elseif moved_count > 1 then
       --Change found, with more than 1 tile moved
+      p.play_sound{path = "inventory-wrap-around"}
       result = "Skipped " .. moved_count .. " tiles, "
    end
    
@@ -12250,6 +12259,7 @@ function cursor_skip_iteration(pindex, direction, iteration_limit)
    local current = nil
    local limit = iteration_limit or 100
    local moved = 1
+   local comment = ""
 
    --Iterate first tile 
    players[pindex].cursor_pos = offset_position(players[pindex].cursor_pos, direction, 1)
@@ -12277,6 +12287,7 @@ function cursor_skip_iteration(pindex, direction, iteration_limit)
                --They are differemt ents 
                if start.name ~= current.name then
                   --They have different names: return
+                  --p.print("RET 1, start: " .. start.name .. ", current: " .. current.name .. ", comment:" .. comment)--
                   return moved
                else
                   --They have the same name
@@ -12284,16 +12295,29 @@ function cursor_skip_iteration(pindex, direction, iteration_limit)
                      --They both do not support direction: skip
                   else
                      --They support direction
-                     if current.direction == start.direction then
+                     if current.direction ~= start.direction then
                         --They have different directions: return
+                        --p.print("RET 2, start: " .. start.name .. ", current: " .. current.name .. ", comment:" .. comment)--
                         return moved
                      else
                         --They have same direction: skip
+                        
+                        --Exception for transport belts facing the same direction: Return if neighbor counts or shapes are different
+                        if start.type == "transport-belt" then
+                           local start_input_neighbors = #start.belt_neighbours["inputs"]
+                           local start_output_neighbors = #start.belt_neighbours["outputs"]
+                           local current_input_neighbors = #current.belt_neighbours["inputs"]
+                           local current_output_neighbors = #current.belt_neighbours["outputs"]
+                           if start_input_neighbors ~= current_input_neighbors or start_output_neighbors ~= current_output_neighbors or start.belt_shape ~= current.belt_shape then
+                              --p.print("RET 3, start: " .. start.name .. ", current: " .. current.name .. ", comment:" .. comment)--
+                              return moved
+                           end
+                        end
                      end
                   end
                end
             end
-            --p.print("start: " .. start.name .. ", current: " .. current.name)--
+            --p.print("start: " .. start.name .. ", current: " .. current.name .. ", comment:" .. comment)--
          end
       end
       --Skip case: Move 1 more tile
