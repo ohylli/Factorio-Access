@@ -1363,6 +1363,12 @@ function ent_info(pindex, ent, description)
          pickup_name = localising.get(pickup,pindex)
       else
          pickup_name = "ground"
+         local area_ents = ent.surface.find_entities_filtered{position = ent.pickup_position}
+         for i, area_ent in ipairs(area_ents) do 
+            if area_ent.type == "straight-rail" or area_ent.type == "curved-rail" then
+               pickup_name = localising.get(area_ent,pindex)
+            end
+         end
       end      
       result = result .. " picks up from " .. pickup_name .. pickup_dist_dir
       --Read the drop position 
@@ -1372,6 +1378,12 @@ function ent_info(pindex, ent, description)
          drop_name = localising.get(drop,pindex)
       else
          drop_name = "ground"
+         local drop_area_ents = ent.surface.find_entities_filtered{position = ent.drop_position}
+         for i, drop_area_ent in ipairs(drop_area_ents) do 
+            if drop_area_ent.type == "straight-rail" or drop_area_ent.type == "curved-rail" then
+               drop_name = localising.get(drop_area_ent,pindex)
+            end
+         end
       end 
       result = result .. ", drops to " .. drop_name .. drop_dist_dir
    end
@@ -1388,9 +1400,21 @@ function ent_info(pindex, ent, description)
             dict[resource.name] = dict[resource.name] + resource.amount
          end
       end
-      local target = ent.drop_target
-      if target ~= nil and target.valid then
-         result = result .. " outputs to " .. localising.get(target,pindex)
+      local drop = ent.drop_target
+      local drop_name = nil  
+      if drop ~= nil and drop.valid then
+         drop_name = localising.get(drop,pindex)
+      else
+         drop_name = "ground"
+         local drop_area_ents = ent.surface.find_entities_filtered{position = ent.drop_position}
+         for i, drop_area_ent in ipairs(drop_area_ents) do 
+            if drop_area_ent.type == "straight-rail" or drop_area_ent.type == "curved-rail" then
+               drop_name = localising.get(drop_area_ent,pindex)
+            end
+         end
+      end 
+      if drop ~= nil and drop.valid then
+         result = result .. " outputs to " .. drop_name
       end
       if table_size(dict) > 0 then
          result = result .. ", Mining from "
@@ -1398,11 +1422,11 @@ function ent_info(pindex, ent, description)
             if i == "crude-oil" then
                result = result .. " " .. i .. " times " .. math.floor(amount/3000)/10 .. " per second "
             else
-               result = result .. " " .. i .. " times " .. amount
+               result = result .. " " .. i .. " times " .. round_to_nearest_k_after_10k(amount)
             end
          end
       end
-      if ent.status = defines.entity_status.waiting_for_space_in_destination then
+      if ent.status == defines.entity_status.waiting_for_space_in_destination then
          result = result .. " output full "
       end
    end
