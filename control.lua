@@ -1371,15 +1371,17 @@ function ent_info(pindex, ent, description)
          position.x = position.x - increment
       end
 --         result = result .. math.floor(position.x) .. " " .. math.floor(position.y) .. " " .. direction .. " "
-      local pickup = ent.pickup_target
-      if pickup ~= nil and pickup.valid then
-         result = result .. " pickup from " .. localising.get(pickup)
+      if ent.type == "inserter" then
+         local pickup = ent.pickup_target
+         if pickup ~= nil and pickup.valid then
+            result = result .. " pickup from " .. localising.get(pickup,pindex)
+         end
       end
       if math.floor(players[pindex].cursor_pos.x) == math.floor(position.x) and math.floor(players[pindex].cursor_pos.y) == math.floor(position.y) then
          result = result .. ", drop " .. increment .. " " .. direction_lookup(direction)
          local target = ent.drop_target
          if target ~= nil and target.valid then
-            result = result .. " to " .. localising.get(target)
+            result = result .. " to " .. localising.get(target,pindex)
          end
       end
    end
@@ -1398,12 +1400,16 @@ function ent_info(pindex, ent, description)
       end
       local target = ent.drop_target
       if target ~= nil and target.valid then
-         result = result .. " outputs to " .. localising.get(target)
+         result = result .. " outputs to " .. localising.get(target,pindex)
       end
       if table_size(dict) > 0 then
-         result = result .. ", Mining From "
+         result = result .. ", Mining from "
          for i, amount in pairs(dict) do
-            result = result .. " " .. i .. " times " .. amount
+            if i == "crude-oil" then
+               result = result .. " " .. i .. " times " .. math.floor(amount/3000)/10 .. " per second "
+            else
+               result = result .. " " .. i .. " times " .. amount
+            end
          end
       end
    end
@@ -4404,7 +4410,7 @@ function refresh_player_tile(pindex)
    local remnants = surf.find_entities_filtered{area = wide_area, type = "corpse"}
    for i, remnant in ipairs(remnants) do 
       table.insert(players[pindex].tile.ents, remnant)
-   end   
+   end
    players[pindex].tile.index = #players[pindex].tile.ents == 0 and 0 or 1
    if not(pcall(function()
       players[pindex].tile.tile =  surf.get_tile(players[pindex].cursor_pos.x, players[pindex].cursor_pos.y).name
@@ -12224,12 +12230,11 @@ function cursor_skip(pindex, direction, iteration_limit)
    --Run the iteration and play sound
    local moved_count = cursor_skip_iteration(pindex, direction, limit)
    p.play_sound{path = "inventory-wrap-around"}
-   
    if moved_count < 0 then
       --No change found within the limit
       result = "Skipped " .. limit .. " tiles without a change, "
-   else
-      --Change found
+   elseif moved_count > 1 then
+      --Change found, with more than 1 tile moved
       result = "Skipped " .. moved_count .. " tiles, "
    end
    
@@ -12248,6 +12253,7 @@ function cursor_skip_iteration(pindex, direction, iteration_limit)
 
    --Iterate first tile 
    players[pindex].cursor_pos = offset_position(players[pindex].cursor_pos, direction, 1)
+   refresh_player_tile(pindex)
    current = get_selected_ent(pindex)
    
    --Run checks and skip when needed
@@ -12287,10 +12293,12 @@ function cursor_skip_iteration(pindex, direction, iteration_limit)
                   end
                end
             end
+            --p.print("start: " .. start.name .. ", current: " .. current.name)--
          end
       end
       --Skip case: Move 1 more tile
       players[pindex].cursor_pos = offset_position(players[pindex].cursor_pos, direction, 1)
+      refresh_player_tile(pindex)
       current = get_selected_ent(pindex)
       moved = moved + 1
    end
