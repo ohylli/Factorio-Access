@@ -11770,7 +11770,7 @@ end)
 
 script.on_event("honk", function(event) 
    pindex = event.player_index
-   if not check_for_player(pindex) or players[pindex].vanilla_mode then
+   if not check_for_player(pindex) then
       return
    end
    local p = game.get_player(pindex)
