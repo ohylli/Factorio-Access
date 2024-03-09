@@ -6,6 +6,9 @@ function localising.get(object,pindex)
       game.print("localising: pindex is nil error")
       return nil
    end
+   if object == nil then
+      return nil
+   end
    if object.valid and string.sub(object.object_name,-9) ~= "Prototype" then
       object = object.prototype
    end
@@ -24,6 +27,9 @@ end
 function localising.get_alt(object,pindex)
    if pindex == nil then
       printout("localising: pindex is nil error")
+      return nil
+   end
+   if object == nil then
       return nil
    end
    local result = players[pindex].localisations
