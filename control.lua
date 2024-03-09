@@ -1342,6 +1342,28 @@ function ent_info(pindex, ent, description)
    end
    --Inserters: Explain held items, pickup and drop positions 
    if ent.type == "inserter" then
+      --Declare filters
+      if ent.filter_slot_count > 0 then
+         local filter_result = " Filters for " 
+         local active_filter_count = 0
+         for i = 1, ent.filter_slot_count, 1 do 
+            local filt = ent.get_filter(i)
+            if filt ~= nil then
+               active_filter_count = active_filter_count + 1
+               if active_filter_count > 1 then
+                  filter_result = filter_result .. " and "
+               end
+               local local_name = localising.get(game.item_prototypes[filt],pindex)
+               if local_name == nil then
+                  local_name = filt or " unknown item "
+               end
+               filter_result = filter_result .. local_name
+            end
+         end
+         if active_filter_count > 0 then
+            result = result .. filter_result .. ", "
+         end
+      end
       --Read held item
       if ent.held_stack ~= nil and ent.held_stack.valid_for_read and ent.held_stack.valid then
          result = result .. ", holding " .. ent.held_stack.name
@@ -12530,6 +12552,9 @@ script.on_event("set-entity-filter-from-hand", function(event)
          elseif ent.type == "constant-combinator" then
             --Remove the last signal
             constant_combinator_remove_last_signal(ent, pindex)
+         elseif ent.type == "inserter" then
+            local result = set_inserter_filter_by_hand(pindex, ent)
+            printout(result,pindex)
          end
       else
          if ent.type == "splitter" then
@@ -12539,6 +12564,9 @@ script.on_event("set-entity-filter-from-hand", function(event)
          elseif ent.type == "constant-combinator" then
             --Add a new signal
             constant_combinator_add_stack_signal(ent, stack, pindex)
+         elseif ent.type == "inserter" then
+            local result = set_inserter_filter_by_hand(pindex, ent)
+            printout(result,pindex)
          end
       end
    end
@@ -13666,6 +13694,39 @@ function splitter_priority_info(ent)
       result = result .. " output filtering " .. item_name .. " from the " .. output .. ", "
    end
    return result
+end
+
+function set_inserter_filter_by_hand(pindex, ent)
+   local stack = game.get_player(pindex).cursor_stack
+   if ent.filter_slot_count == 0 then
+      return "This inserter has no filters to set"
+   end
+   if stack == nil or stack.valid_for_read == false then
+      --Delete last filter
+      for i = ent.filter_slot_count, 1, -1 do 
+         local filt = ent.get_filter(i)
+         if filt ~= nil then
+            ent.set_filter(i,nil)
+            return "Last filter cleared"
+         end
+      end
+      return "All filters cleared"
+   else
+      --Add item in hand as next filter
+      for i = 1, ent.filter_slot_count, 1 do 
+         local filt = ent.get_filter(i)
+         if filt == nil then
+            ent.set_filter(i,stack.name)
+            if ent.get_filter(i) == stack.name then 
+               return "Added filter"
+            else
+               return "Filter setting failed"
+            end
+         end
+      end
+      return "All filters full"
+   end
+   
 end
 
 function rotate_90(dir)
