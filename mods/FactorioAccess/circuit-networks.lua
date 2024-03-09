@@ -537,17 +537,24 @@ end
    
    0) Menu info: "Electric Poles of Circuit Network <id_no> <color>, with # members." + instructions
    1) List all active signals of the network
-   2) Read machine behavior summary: "Reading none and enabled when X < Y"
-   3) Toggle machine reading mode: None / Read held contents / Pulse passing contents
-   4) Toggle machine control mode: None / Enabled condition
-   5) Toggle enabled condition comparing rule: greater than / less than / equal to / not equal to
-   6) Set enabled condition first signal: Use the signal selector
-   7) Set enabled condition second signal: Press LB to use the signal selector or press ENTER to type in a constant
+   2) List all members of this network
+   3) Read machine behavior summary: "Reading none and enabled when X < Y"
+   4) Toggle machine reading mode: None / Read held contents / Pulse passing contents
+   5) Toggle machine control mode: None / Enabled condition
+   6) Toggle enabled condition comparing rule: greater than / less than / equal to / not equal to
+   7) Set enabled condition first signal: Use the signal selector
+   8) Set enabled condition second signal: Press LB to use the signal selector or press ENTER to type in a constant
 
    This menu opens when you press KEY when a building menu is open.
 ]]
-function circuit_network_menu(pindex, ent, menu_index, clicked, other_input)
+function circuit_network_menu(pindex, ent_in, menu_index, clicked, other_input)
    local index = menu_index
+   local p = game.get_player(pindex)
+   local ent = ent_in or p.opened
+   if ent == nil or ent.valid == false then
+      printout("Error: Missing entity" , pindex)
+      return
+   end
    local control = ent.get_control_behavior()
    if control == nil then
       printout("No circuit network interface for this entity" , pindex)
@@ -571,39 +578,101 @@ function circuit_network_menu(pindex, ent, menu_index, clicked, other_input)
       if index == 0 then
          --Menu info
          local result = localising.get(ent,pindex) .. " in circuit network " .. nw_name
+         .. ", Navigate up and down with 'W' and 'S' and select an option with 'LEFT BRACKET', or exit with 'ESC'"
          printout(result, pindex)
       elseif index == 1 then
          --List all active signals of this network
+         if not clicked then
+            printout("List all active signals of this network",pindex)
+         else
+            --***
+         end
       elseif index == 2 then
          --List all members of this network
+         if not clicked then
+            printout("List all members of this network",pindex)
+         else
+            --***
+         end
       elseif index == 3 then
          --List buildings connected to this electric pole
+         if not clicked then
+            printout("List buildings connected to this electric pole",pindex)
+         else
+            --***
+         end
       elseif index > 3 then
          --(inventory edge: play sound and set index and call this menu again)
+         p.play_sound{path = "inventory-edge"}
+         circuit_network_menu(pindex, ent, 3, false, other_input)
       end
       return
    else
       if index == 0 then
          --Menu info
+         local result = localising.get(ent,pindex) .. " in circuit network " .. nw_name
+         .. ", Navigate up and down with 'W' and 'S' and select an option with 'LEFT BRACKET', or exit with 'ESC'"
       elseif index == 1 then
          --List all active signals of this network
+         if not clicked then
+            printout("List all active signals of this network",pindex)
+         else
+            --***
+         end
       elseif index == 2 then
-         --Read machine behavior summary
+         --List all members of this network
+         if not clicked then
+            printout("List all members of this network",pindex)
+         else
+            --***
+         end
       elseif index == 3 then
-         --Toggle machine reading mode
+         --Read machine behavior summary
+         if not clicked then
+            printout("Read machine behavior summary",pindex)
+         else
+            --***
+         end
       elseif index == 4 then
-         --Toggle machine control mode
+         --Toggle machine reading mode
+         if not clicked then
+            printout("Toggle machine reading mode",pindex)
+         else
+            --***
+         end
       elseif index == 5 then
-         --Toggle enabled condition comparing rule
+         --Toggle machine control mode
+         if not clicked then
+            printout("Toggle machine control mode",pindex)
+         else
+            --***
+         end
       elseif index == 6 then
-         --Set enabled condition first signal
+         --Toggle enabled condition comparing rule
+         if not clicked then
+            printout("Toggle enabled condition comparing rule",pindex)
+         else
+            --***
+         end
       elseif index == 7 then
+         --Set enabled condition first signal
+         if not clicked then
+            printout("Set enabled condition first signal",pindex)
+         else
+            --***
+         end
+      elseif index == 8 then
          --Set enabled condition second signal
+         if not clicked then
+            printout("Set enabled condition second signal",pindex)
+         else
+            --***
+         end
       end
       return
    end
 end
-CIRCUIT_NETWORK_MENU_LENGTH = 7
+CIRCUIT_NETWORK_MENU_LENGTH = 8
 
 function circuit_network_menu_open(pindex, ent)
    if players[pindex].vanilla_mode then
