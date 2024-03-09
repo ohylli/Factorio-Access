@@ -5742,6 +5742,9 @@ function menu_cursor_up(pindex)
       blueprint_menu_up(pindex)
    elseif players[pindex].menu == "blueprint_book_menu" then
       blueprint_book_menu_up(pindex)
+   elseif players[pindex].menu == "circuit_network_menu" then
+      general_mod_menu_up(pindex, players[pindex].circuit_network_menu, 0)
+      circuit_network_menu(pindex, nil, players[pindex].circuit_network_menu.index, false)
    end
    
    --Adjust camera if in cursor mode
@@ -5970,6 +5973,9 @@ function menu_cursor_down(pindex)
       blueprint_menu_down(pindex)
    elseif players[pindex].menu == "blueprint_book_menu" then
       blueprint_book_menu_down(pindex)
+   elseif players[pindex].menu == "circuit_network_menu" then
+      general_mod_menu_down(pindex, players[pindex].circuit_network_menu, CIRCUIT_NETWORK_MENU_LENGTH)
+      circuit_network_menu(pindex, nil, players[pindex].circuit_network_menu.index, false)
    end
    
    --Adjust camera if in cursor mode
@@ -8012,6 +8018,8 @@ function close_menu_resets(pindex)
       blueprint_menu_close(pindex)
    elseif players[pindex].menu == "blueprint_book_menu" then
       blueprint_book_menu_close(pindex)
+   elseif players[pindex].menu == "circuit_network_menu" then
+      circuit_network_menu_close(pindex, false)
    end
    
    if p.gui.screen["cursor-jump"] ~= nil then 
@@ -9298,6 +9306,8 @@ script.on_event("click-menu", function(event)
       elseif players[pindex].menu == "blueprint_book_menu" then
          local bpb_menu = players[pindex].blueprint_book_menu
          blueprint_book_menu(pindex, bpb_menu.index, bpb_menu.list_mode, true, false)
+      elseif players[pindex].menu == "circuit_network_menu" then
+         circuit_network_menu(pindex, nil, players[pindex].circuit_network_menu.index, true, false)--*****
       end      
    end
 end)
@@ -9676,7 +9686,7 @@ script.on_event("open-circuit-menu", function(event)
          return
       end
       --Open the menu
-      --***later: circuit_network_menu_open(pindex, ent)
+      circuit_network_menu_open(pindex, ent)
    end
 end)
 
@@ -9862,9 +9872,13 @@ function open_operable_building(ent,pindex)--open_building
       else
          --No building sectors
          if game.get_player(pindex).opened ~= nil then
-            printout(ent.name .. ", this menu has no options ", pindex)
+            local result = localising.get(ent,pindex) .. ", this menu has no options "
+            if ent.get_control_behavior() ~= nil then
+               result = result .. ", press 'N' to open the circuit network menu "
+            end
+            printout(result, pindex)
          else
-            printout(ent.name .. " has no menu ", pindex)
+            printout(localising.get(ent,pindex) .. " has no menu ", pindex)
          end
       end
    else
