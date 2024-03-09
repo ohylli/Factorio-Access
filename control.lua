@@ -4175,7 +4175,7 @@ function index_of_entity(array, value)
 end
 
 --The entity scanner runs here
-function scan_area(x,y,w,h, pindex, filter_direction, start_with_existing_list)
+function scan_area(x,y,w,h, pindex, filter_direction, start_with_existing_list, close_object_limit_in)
    local first_player = game.get_player(pindex)
    local surf = first_player.surface
    local ents = surf.find_entities_filtered{area = {{x, y},{x+w, y+h}}, type = {"resource", "tree", "highlight-box", "flying-text"}, invert = true} --Get all ents in the area except for these types
@@ -4185,7 +4185,7 @@ function scan_area(x,y,w,h, pindex, filter_direction, start_with_existing_list)
    end
    local pos = players[pindex].position
    local forest_density = nil
-   local close_object_limit = 10.1
+   local close_object_limit = close_object_limit_in or 10.1
    
    --Find the nearest edges of already-loaded resource groups according to player pos, and insert them to the initial list as aggregates
    for name, resource in pairs(players[pindex].resources) do
@@ -4202,8 +4202,8 @@ function scan_area(x,y,w,h, pindex, filter_direction, start_with_existing_list)
             --Filter check 2: Is the entity nearby and almost within the filter diection?
             if util.distance(nearest_edge,pos) < close_object_limit then
                local new_dir_of_ent = get_balanced_direction_of_that_from_this(nearest_edge,pos)--Check with less bias towards diagonal directions to preserve 135 degrees FOV
-               local CW_dir = (filter_direction + 1) % (2 * dirs.south)
-               local CCW_dir = (filter_direction - 1) % (2 * dirs.south)
+               local CW_dir = (filter_direction + dirs.northeast) % (2 * dirs.south)
+               local CCW_dir = (filter_direction - dirs.northeast) % (2 * dirs.south)
                filter_passed = (new_dir_of_ent == filter_direction or new_dir_of_ent == CW_dir or new_dir_of_ent == CCW_dir)
             end
          end
@@ -6399,6 +6399,19 @@ function on_tick(event)
             check_and_play_enemy_alert_sound(1)
          end
       end
+   elseif event.tick % 15 == 2 then
+      for pindex, player in pairs(players) do
+         local check_further = check_and_play_driving_alert_sound(pindex, event.tick, 1)
+         if event.tick % 30 == 2 and check_further then
+            check_further = check_and_play_driving_alert_sound(pindex, event.tick, 2)
+            if event.tick % 60 == 2 and check_further then
+               check_further = check_and_play_driving_alert_sound(pindex, event.tick, 3)
+               if event.tick % 120 == 2 and check_further then
+                  check_further = check_and_play_driving_alert_sound(pindex, event.tick, 4)
+               end
+            end
+         end
+      end
    elseif event.tick % 30 == 6 then
       --Check and play train horns
       for pindex, player in pairs(players) do
@@ -7380,6 +7393,26 @@ script.on_event("read-rail-structure-ahead", function(event)
    elseif ent ~= nil and ent.valid and (ent.name == "straight-rail" or ent.name == "curved-rail") then
       --Report what is along the rail
       rail_read_next_rail_entity_ahead(pindex, ent, true)
+   end
+end)
+
+script.on_event("read-driving-structure-ahead", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local p = game.get_player(pindex)
+   if p.driving and (p.vehicle.train ~= nil or p.vehicle.type == "car") then
+      local ent = players[pindex].last_driving_alert_ent 
+      if ent and ent.valid then
+         local dir = get_heading_value(p.vehicle)
+         local dir_ent = get_direction_of_that_from_this(ent.position,p.vehicle.position)
+         if p.vehicle.speed >= 0 and dir_ent == dir then
+            printout(localising.get(ent,pindex) .. " ahead ", pindex)
+         elseif p.vehicle.speed < 0 and dir_ent == rotate_180(dir) then
+            printout(localising.get(ent,pindex) .. " behind ", pindex)
+         end
+      end
    end
 end)
 
@@ -12866,7 +12899,9 @@ script.on_event("logistic-request-read", function(event)
    if not check_for_player(pindex) then
       return
    end
-   logistics_info_key_handler(pindex)
+   if game.get_player(pindex).driving == false then
+      logistics_info_key_handler(pindex)
+   end
 end)
 
 script.on_event("logistic-request-increment-min", function(event)
