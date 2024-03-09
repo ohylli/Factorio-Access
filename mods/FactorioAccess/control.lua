@@ -1061,7 +1061,6 @@ function ent_info(pindex, ent, description)
          result = result .. " producing " .. localising.get_recipe_from_name(ent.get_recipe().name, pindex)
       end
    end)
-   
    --State the name of a train stop
    if ent.name == "train-stop" then
       result = result .. " " .. ent.backer_name .. " "
@@ -1069,13 +1068,19 @@ function ent_info(pindex, ent, description)
    elseif ent.name == "locomotive" or ent.name == "cargo-wagon" or ent.name == "fluid-wagon" then
       result = result .. " of train " .. get_train_name(ent.train)
    end
-
-   --Explain the entity facing direction
+   --Report the entity facing direction
    if (ent.prototype.is_building and ent.supports_direction) or (ent.name == "entity-ghost" and ent.ghost_prototype.is_building and ent.ghost_prototype.supports_direction) then
       result = result .. ", Facing " .. direction_lookup(ent.direction) 
    elseif ent.type == "locomotive" or ent.type == "car" then
       result = result .. " facing " .. get_heading(ent)
    end
+   --Report if marked for deconstruction or upgrading
+   if ent.to_be_deconstructed() == true then
+      result = result .. " marked for deconstruction, "
+   elseif ent.to_be_upgraded() == true then
+      result = result .. " marked for upgrading, "
+   end
+   --Generator power production
    if ent.prototype.type == "generator" then
       result = result .. ", "
       local power1 = ent.energy_generated_last_tick * 60
@@ -1438,6 +1443,9 @@ function ent_info(pindex, ent, description)
       if drop ~= nil and drop.valid then
          result = result .. " outputs to " .. drop_name
       end
+      if ent.status == defines.entity_status.waiting_for_space_in_destination then
+         result = result .. " output full "
+      end
       if table_size(dict) > 0 then
          result = result .. ", Mining from "
          for i, amount in pairs(dict) do
@@ -1447,9 +1455,6 @@ function ent_info(pindex, ent, description)
                result = result .. " " .. i .. " times " .. round_to_nearest_k_after_10k(amount)
             end
          end
-      end
-      if ent.status == defines.entity_status.waiting_for_space_in_destination then
-         result = result .. " output full "
       end
    end
    --Explain if no fuel 
@@ -1566,11 +1571,6 @@ function ent_info(pindex, ent, description)
    end
    if ent.type == "constant-combinator" then
       result = result .. constant_combinator_signals_info(ent, pindex)
-   end
-   if ent.to_be_deconstructed() == true then
-      result = result .. " marked for deconstruction, "
-   elseif ent.to_be_upgraded() == true then
-      result = result .. " marked for upgrading, "
    end
    return result
 end
@@ -3529,13 +3529,13 @@ function recipe_missing_ingredients_info(pindex, recipe_in)
    local missing = 0
    for i, ing in ipairs(recipe.ingredients) do 
       local on_hand = inv.get_item_count(ing.name)
-      local needed = ing.count - on_hand
+      local needed = ing.amount - on_hand
       if needed > 0 then
          missing = missing + 1
          if missing > 1 then
             result = result .. " and " 
          end
-         result = result .. needed .. " " .. localising.get_item_from_name(ing.name)
+         result = result .. needed .. " " .. localising.get_item_from_name(ing.name,pindex)
       end
    end 
    if missing == 0 then
@@ -7002,7 +7002,7 @@ function recipe_raw_ingredients_info(recipe, pindex)
    end
    
    --Construct result string
-   local result = "Raw materials needed: "
+   local result = "Base ingredients: "
    for j, ingt in ipairs(merged_table) do
       local localised_name = ingt.name
       local ingredient_prototype = game.item_prototypes[ingt.name]
@@ -7030,24 +7030,26 @@ function get_raw_ingredients_table(recipe, pindex, count_in)
    for i, ing in ipairs(recipe.ingredients) do
       --Check if a recipe of the ingredient's name exists
       local sub_recipe = game.recipe_prototypes[ing.name]
-      if ing.name == "iron-plate" or ing.name == "copper-plate" or ing.name == "steel-plate" or ing.name == "stone-brick" or ing.name == "sulfur" or ing.name == "plastic-bar" then
-         --For selected items, finish the search there
-         for i = 1,count,1 do 
-            table.insert(raw_ingredients_table, ing)
-         end
-      elseif sub_recipe ~= nil and sub_recipe.valid then 
-         --If the sub-recipe exists, check it recursively
-         local sub_table = get_raw_ingredients_table(sub_recipe, pindex)--, ing.amount)
-         if sub_table ~= nil then 
-            --Copy the sub_table to the main table
-            for j, ing2 in ipairs(sub_table) do 
-               for i = 1,count,1 do 
-                  table.insert(raw_ingredients_table, ing2)
+      if sub_recipe ~= nil and sub_recipe.valid then 
+         --If the sub-recipe cannot be crafted by hand, add this ingredient to the main table
+         if sub_recipe.category ~= "basic-crafting" and sub_recipe.category ~= "crafting"  and sub_recipe.category ~= ""  and sub_recipe.category ~= nil then
+            for i = 1,count,1 do 
+               table.insert(raw_ingredients_table, ing)
+            end
+         else
+            --Check the sub-recipe recursively
+            local sub_table = get_raw_ingredients_table(sub_recipe, pindex)--, ing.amount)
+            if sub_table ~= nil then 
+               --Copy the sub_table to the main table
+               for j, ing2 in ipairs(sub_table) do 
+                  for i = 1,count,1 do 
+                     table.insert(raw_ingredients_table, ing2)
+                  end
                end
             end
          end
-      else 
-         --If its own recipe does not exist, add this ingredient to the main table
+      else  
+         --If a sub-recipe does not exist, add this ingredient to the main table
          for i = 1,count,1 do 
             table.insert(raw_ingredients_table, ing)
          end
@@ -8947,7 +8949,7 @@ script.on_event("click-menu", function(event)
             elseif recipe.category == "smelting" then
                printout("A furnace is required to craft this", pindex)
                return
-            elseif recipe.hidden_from_player_crafting == true or p.force.get_hand_crafting_disabled_for_recipe(recipe) == true then
+            elseif p.force.get_hand_crafting_disabled_for_recipe(recipe) == true then
                printout("This recipe cannot be crafted by hand", pindex)
                return
             end
