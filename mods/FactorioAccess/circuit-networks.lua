@@ -370,6 +370,7 @@ function get_circuit_operation_mode_name(ent)
    elseif ent.type == "power-switch" then
       if control.circuit_condition ~= nil or control.disabled == true then
          result = "Enable with condition"
+         uses_condition = true
       else
          result = "None"
       end
@@ -506,7 +507,8 @@ function read_circuit_condition(ent, comparator_in_words)
    return result 
 end
 
-function toggle_condition_comparator(circuit_condition, pindex)
+function toggle_condition_comparator(ent, pindex, comparator_in_words)
+   local circuit_condition = ent.get_control_behavior().circuit_condition
    local cond = circuit_condition.condition
    local comparator = cond.comparator
    if comparator == "=" then
@@ -524,8 +526,27 @@ function toggle_condition_comparator(circuit_condition, pindex)
    else
       comparator = "="
    end
-   printout(comparator, pindex)
-   return 
+   ent.get_control_behavior().circuit_condition.condition.comparator = comparator
+   
+   if comparator_in_words == true then
+      if comparator == "=" then
+         comparator = "equals"
+      elseif comparator == "≠" then
+         comparator = "not equals"
+      elseif comparator == ">" then
+         comparator = "greater than"
+      elseif comparator == "≥" then
+         comparator = "greater than or equal to"
+      elseif comparator == "<" then
+         comparator = "less than"
+      elseif comparator == "≤" then
+         comparator = "less than or equal to"
+      else
+         comparator = "compared to"
+      end
+   end
+   
+   return comparator
 end
 
 function write_condition_first_signal_item(circuit_condition, stack)
@@ -708,7 +729,7 @@ function circuit_network_menu(pindex, ent_in, menu_index, clicked, other_input)
       elseif index == 5 then
          --Toggle machine reading mode
          if not clicked then
-            printout("Toggle machine reading mode",pindex)
+            printout("Toggle reading mode",pindex)
          else
             local result = toggle_circuit_read_mode(ent)
             printout(result,pindex)
@@ -716,30 +737,43 @@ function circuit_network_menu(pindex, ent_in, menu_index, clicked, other_input)
       elseif index == 6 then
          --Toggle machine control mode
          if not clicked then
-            printout("Toggle machine control mode",pindex)
+            printout("Toggle operation mode",pindex)
          else
-            --***
+            local result = toggle_circuit_operation_mode(ent)
+            printout(result,pindex)
          end
       elseif index == 7 then
          --Toggle enabled condition comparing rule
          if not clicked then
             printout("Toggle enabled condition comparing rule",pindex)
          else
-            --***
+            local result = "No condition used"
+            if uses_condition == true then 
+               result = toggle_condition_comparator(ent, pindex, true)
+            end
+            printout(result,pindex)
          end
       elseif index == 8 then
          --Set enabled condition first signal
          if not clicked then
             printout("Set enabled condition first signal",pindex)
          else
-            --***
+            local result = "No condition used"
+            if uses_condition == true then 
+               result = "toggle"--****
+            end
+            printout(result,pindex)
          end
       elseif index == 9 then
          --Set enabled condition second signal
          if not clicked then
             printout("Set enabled condition second signal",pindex)
          else
-            --***
+            local result = "No condition used"
+            if uses_condition == true then 
+               result = "toggle"--****
+            end
+            printout(result,pindex)
          end
       end
       return
