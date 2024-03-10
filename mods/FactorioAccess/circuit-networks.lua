@@ -161,10 +161,14 @@ function wire_neighbours_info(ent, read_network_ids)
 end
 
 function localise_signal_name(signal,pindex)--todo*** actually localise
+   if signal == nil then
+      return "nil"
+   end
    local sig_name = signal.name
    local sig_type = signal.type
    if sig_name == nil then
       sig_name = "nil"
+      sig_type = "nil"
    end
    if sig_type == nil then
       sig_type = "nil"
@@ -255,51 +259,51 @@ function get_circuit_read_mode_name(ent)
    if ent.type == "inserter" then
       if control.circuit_read_hand_contents == true then
          if control.circuit_hand_read_mode == dcb.inserter.hand_read_mode.hold then
-            result = "Read held items" 
+            result = "Reading held items" 
          elseif control.circuit_hand_read_mode == dcb.inserter.hand_read_mode.pulse then
-            result = "Pulse passing items" 
+            result = "pulsing passing items" 
          end
       end
    elseif ent.type == "transport-belt" then
       if control.read_contents == true then
          if control.read_contents_mode == dcb.transport_belt.content_read_mode.hold then
-            result = "Read held items" 
+            result = "Reading held items" 
          elseif control.read_contents_mode == dcb.transport_belt.content_read_mode.pulse then
-            result = "Pulse passing items"
+            result = "pulsing passing items"
          end
       end
    elseif ent.type == "container" or ent.type == "logistic-container" or ent.type == "storage-tank" then
-      result = "Read contents"
+      result = "Reading contents"
    elseif ent.type == "gate" then
-      result = "Read player presence in virtual signal G"
+      result = "Reading player presence in virtual signal G"
    elseif ent.type == "rail-signal" or ent.type == "rail-chain-signal" then
-      result = "Read virtual color signals for rail signal states"
+      result = "Reading virtual color signals for rail signal states"
    elseif ent.type == "train-stop" then
-      result = "Read train ID in virtual signal T and en route train count in virtual signal C" 
+      result = "Reading train ID in virtual signal T and en route train count in virtual signal C" 
    elseif ent.type == "accumulator" then
-      result = "Read charge percentage in virtual signal A"
+      result = "Reading charge percentage in virtual signal A"
    elseif ent.type == "roboport" then
-      result = "Read something "--todo explain other read modes***
+      result = "Reading something "--todo explain other read modes***
    elseif ent.type == "mining-drill" then
-      result = "Read something "--todo explain other read modes***
+      result = "Reading something "--todo explain other read modes***
    elseif ent.type == "pumpjack" then
-      result = "Read something "--todo explain other read modes***
+      result = "Reading something "--todo explain other read modes***
    end
    return result
 end
 
 function toggle_circuit_read_mode(ent)
-   local result = "No change"
+   local result = ""
    local control = ent.get_control_behavior()
    if ent.type == "inserter" then
       if control.circuit_read_hand_contents == false then
          control.circuit_read_hand_contents = true
          control.circuit_hand_read_mode = dcb.inserter.hand_read_mode.hold
-         result = "Read held items" 
+         result = "Reading held items" 
       elseif control.circuit_hand_read_mode == dcb.inserter.hand_read_mode.hold then
          control.circuit_read_hand_contents = true
          control.circuit_hand_read_mode = dcb.inserter.hand_read_mode.pulse
-         result = "Pulse passing items"
+         result = "pulsing passing items"
       else --if control.circuit_hand_read_mode == dcb.inserter.hand_read_mode.pulse then
          control.circuit_read_hand_contents = false
          result = "None"
@@ -308,11 +312,11 @@ function toggle_circuit_read_mode(ent)
       if control.read_contents == false then
          control.read_contents = true
          control.read_contents_mode = dcb.transport_belt.content_read_mode.hold 
-         result = "Read held items" 
+         result = "Reading held items" 
       elseif control.read_contents_mode == dcb.transport_belt.content_read_mode.hold then
          control.read_contents = true
          control.read_contents_mode = dcb.transport_belt.content_read_mode.pulse
-         result = "Pulse passing items"
+         result = "pulsing passing items"
       else --if control.read_contents_mode == dcb.transport_belt.content_read_mode.pulse then
          control.read_contents = false
          result = "None"
@@ -467,7 +471,7 @@ function toggle_circuit_operation_mode(ent)
    return result
 end
 
-function read_circuit_condition(ent)
+function read_circuit_condition(ent, comparator_in_words)
    local control = ent.get_control_behavior()
    local cond = control.circuit_condition.condition
    local fulfilled = control.circuit_condition.fulfilled
@@ -479,6 +483,23 @@ function read_circuit_condition(ent)
       second_signal_name = cond.constant
       if cond.constant == nil then
          second_signal_name = 0
+      end
+   end
+   if comparator_in_words == true then
+      if comparator == "=" then
+         comparator = "equals"
+      elseif comparator == "≠" then
+         comparator = "not equals"
+      elseif comparator == ">" then
+         comparator = "greater than"
+      elseif comparator == "≥" then
+         comparator = "greater than or equal to"
+      elseif comparator == "<" then
+         comparator = "less than"
+      elseif comparator == "≤" then
+         comparator = "less than or equal to"
+      else
+         comparator = "compared to"
       end
    end
    local result = first_signal_name .. " " .. comparator .. " " .. second_signal_name
@@ -580,7 +601,7 @@ function circuit_network_menu(pindex, ent_in, menu_index, clicked, other_input)
    elseif index == 1 then
       --List all active signals of this network
       if not clicked then
-         printout("List all active signals of this network",pindex)
+         printout("List active signals of this network",pindex)
       else
          local result = ""
          if nwr ~= nil then
@@ -603,7 +624,7 @@ function circuit_network_menu(pindex, ent_in, menu_index, clicked, other_input)
    elseif index == 2 then
       --List all members of this network
       if not clicked then
-         printout("List all members of this network",pindex)
+         printout("List members of this network",pindex)
       else
          local result = ""
          if nwr ~= nil then
@@ -626,7 +647,7 @@ function circuit_network_menu(pindex, ent_in, menu_index, clicked, other_input)
    elseif index == 3 then
       --List network members directly connected to this building
       if not clicked then
-         printout("List network members directly connected to this building",pindex)
+         printout("List directly connected network members for this " .. localising.get(ent,pindex),pindex)
       else
          local result = ""
       if nwr ~= nil then
@@ -653,7 +674,8 @@ function circuit_network_menu(pindex, ent_in, menu_index, clicked, other_input)
       if index > 3 then
          --(inventory edge: play sound and set index and call this menu again)
          p.play_sound{path = "inventory-edge"}
-         circuit_network_menu(pindex, ent, 3, false, false)
+         players[pindex].circuit_network_menu.index = 3
+         circuit_network_menu(pindex, ent, players[pindex].circuit_network_menu.index, false, false)
       end
       return
    else
@@ -665,22 +687,31 @@ function circuit_network_menu(pindex, ent_in, menu_index, clicked, other_input)
       end
       local control_has_no_circuit_conditions = ent.type == "container" or ent.type == "logistic-container" or ent.type == "storage-tank" or ent.type == "rail-chain-signal" or ent.type == "accumulator" or ent.type == "roboport"
       local circuit_cond = nil 
+      local read_mode = get_circuit_read_mode_name(ent)
+      local op_mode, uses_condition = get_circuit_operation_mode_name(ent)
       if control_has_no_circuit_conditions == false then 
          circuit_cond = control.circuit_condition
       end
       if index == 4 then
          --Read machine behavior summary
          if not clicked then
-            printout("Read machine behavior summary",pindex)
+            printout("Read machine circuit behavior summary",pindex)
          else
-            --***
+            local result = ""
+            result = result .. "Reading mode: " .. read_mode .. ", "
+            result = result .. "Operation mode: " .. op_mode .. ", "
+            if uses_condition == true then
+               result = result .. read_circuit_condition(ent, true)
+            end
+            printout(result,pindex)
          end
       elseif index == 5 then
          --Toggle machine reading mode
          if not clicked then
             printout("Toggle machine reading mode",pindex)
          else
-            --***
+            local result = toggle_circuit_read_mode(ent)
+            printout(result,pindex)
          end
       elseif index == 6 then
          --Toggle machine control mode
@@ -772,13 +803,15 @@ function circuit_network_neighbors_info(pindex, ent, wire_type) --****todo
       return "Error: invalid wire type"
    end
    local connected_circuit_count = ent.get_circuit_network(wire_type).connected_circuit_count
-   local members_list = add_neighbors_to_circuit_network_member_list({},ent,color,1,1)
+   local members_list = add_neighbors_to_circuit_network_member_list({},ent,color,1,2)
    if members_list == nil or #members_list == 0 then
       return "Error: No members"
    end
-   local result = "Neighbors are "
+   local result = "Connected to "
    for i, member in ipairs(members_list) do
-      result = result .. localising.get(member,pindex) .. " at " .. math.ceil(util.distance(member.position,ent.position)) .. " " .. direction_lookup(get_direction_of_that_from_this(member.position,ent.position)) .. ", "
+      if member.unit_number ~= ent.unit_number then
+         result = result .. localising.get(member,pindex) .. " at " .. math.ceil(util.distance(member.position,ent.position)) .. " " .. direction_lookup(get_direction_of_that_from_this(member.position,ent.position)) .. ", "
+      end
    end
    return result 
 end 
@@ -800,7 +833,7 @@ function circuit_network_members_info(pindex, ent, wire_type) --****todo
    end
    local pole_counter = 0
    local ent_counter = 0
-   local result = "Network has " .. connected_circuit_count .. " members including "
+   local result = "Total of " .. connected_circuit_count .. " members, including "
    for i, member in ipairs(members_list) do
       if member.type == "electric-pole" then
          pole_counter = pole_counter + 1
@@ -812,7 +845,7 @@ function circuit_network_members_info(pindex, ent, wire_type) --****todo
    if ent_counter > 0 then
       result = result .. " and "
    end
-   result = result .. pole_counter .. " electric poles "
+   result = result .. pole_counter .. " electric poles, "
    return result 
 end 
 
@@ -862,7 +895,7 @@ function circuit_network_signals_info(pindex, nw) --****todo
    local signals = nw.signals 
    local result = ""
    local total_signal_count = 0
-   if signals == nil 
+   if signals == nil then
       result = "No signals at the moment"
       return result
    end
@@ -875,16 +908,16 @@ function circuit_network_signals_info(pindex, nw) --****todo
       total_signal_count = total_signal_count + 1
       local sig_name = sig.signal.name
       local sig_type = sig.signal.type
-      local sig_count = signal.count
+      local sig_count = sig.count
       local sig_local_name = sig_name
       if sig_type == "item" then
-         sig_local_name = localising.get(game.item_prototpyes[sig_name],pindex)
+         sig_local_name = localising.get(game.item_prototypes[sig_name],pindex)
       elseif sig_type == "fluid" then
-         sig_local_name = localising.get(game.fluid_prototpyes[sig_name],pindex)
+         sig_local_name = localising.get(game.fluid_prototypes[sig_name],pindex)
       elseif sig_type == "virtual" then      
-         sig_local_name = localising.get(game.virtual_signal_prototpyes[sig_name],pindex)
+         sig_local_name = localising.get(game.virtual_signal_prototypes[sig_name],pindex)
       end
-      result = result .. sig_local_name .. " times " .. signals_count .. ", "
+      result = result .. sig_local_name .. " times " .. sig_count .. ", "
    end
    return result
 end 

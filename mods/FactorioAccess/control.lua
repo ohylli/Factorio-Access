@@ -6526,6 +6526,16 @@ function update_menu_visuals()
                update_overhead_sprite("utility.search_white",2,1.25,pindex)
                update_custom_GUI_sprite(nil,1,pindex)
             end
+         elseif (players[pindex].menu == "building_no_sectors" or players[pindex].menu == "vehicle_no_sectors") then
+            if game.get_player(pindex).opened == nil then
+               --Open building menu with no GUI
+               update_overhead_sprite("utility.search_white",2,1.25,pindex)
+               update_custom_GUI_sprite("utility.search_white", 3, pindex,"utility.questionmark")
+            else
+               --A building with a GUI is open
+               update_overhead_sprite("utility.search_white",2,1.25,pindex)
+               update_custom_GUI_sprite(nil,1,pindex)
+            end
          elseif player.menu == "structure-travel" then
             update_overhead_sprite("utility.expand_dots_white",2,1.25,pindex)
             update_custom_GUI_sprite("utility.expand_dots_white",3,pindex)
@@ -9674,7 +9684,7 @@ script.on_event("open-circuit-menu", function(event)
    end
    local p = game.get_player(pindex)
    --In a building menu
-   if players[pindex].menu == "building" then
+   if players[pindex].menu == "building" or players[pindex].menu == "building_no_sectors" then
       local ent = p.opened
       if ent == nil or ent.valid == false then
          printout("Error: Missing building interface",pindex)
@@ -9909,7 +9919,7 @@ function open_operable_building(ent,pindex)--open_building
          if game.get_player(pindex).opened ~= nil then
             players[pindex].building.ent = ent
             players[pindex].in_menu = true
-            players[pindex].menu = "building"
+            players[pindex].menu = "building_no_sectors"
             local result = localising.get(ent,pindex) .. ", this menu has no options "
             if ent.get_control_behavior() ~= nil then
                result = result .. ", press 'N' to open the circuit network menu "
@@ -10023,7 +10033,7 @@ function open_operable_vehicle(ent,pindex)--open_vehicle
          if game.get_player(pindex).opened ~= nil then
             players[pindex].building.ent = ent
             players[pindex].in_menu = true
-            players[pindex].menu = "vehicle"
+            players[pindex].menu = "vehicle_no_sectors"
             printout(ent.name .. ", this menu has no options ", pindex)
          else
             printout(ent.name .. " has no menu ", pindex)
