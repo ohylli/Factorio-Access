@@ -6507,6 +6507,9 @@ function update_menu_visuals()
          elseif player.menu == "blueprint_book_menu" then
             update_overhead_sprite("item.blueprint-book",2,1.25,pindex)
             update_custom_GUI_sprite("item.blueprint-book", 3, pindex)
+         elseif player.menu == "circuit_network_menu" then
+            update_overhead_sprite("item.electronic-circuit",2,1.25,pindex)
+            update_custom_GUI_sprite("item.electronic-circuit", 3, pindex)
          elseif player.menu == "pump" then
             update_overhead_sprite("item.offshore-pump",2,1.25,pindex)
             update_custom_GUI_sprite("item.offshore-pump", 3, pindex)
@@ -7728,6 +7731,11 @@ script.on_event("scan-sort-by-distance", function(event)
       return
    end
    if not (players[pindex].in_menu) then
+      local ent = game.get_player(pindex).selected
+      if ent ~= nil and ent.valid == true and (ent.get_control_behavior() ~= nil or ent.type == "electric-pole") then
+         --Open the circuit network menu for the selected ent instead.
+         return
+      end
       players[pindex].nearby.index = 1
       players[pindex].nearby.count = false
       printout("Sorting scan results by distance from character position", pindex)
@@ -9672,6 +9680,11 @@ script.on_event("open-circuit-menu", function(event)
          printout("Error: Missing building interface",pindex)
          return
       end 
+      if ent.type == "electric-pole" then
+         --Open the menu
+         circuit_network_menu_open(pindex, ent)
+         return
+      end
       --Building has control behavior
       local control = ent.get_control_behavior()
       if control == nil then 
@@ -9682,7 +9695,29 @@ script.on_event("open-circuit-menu", function(event)
       local nw1 = control.get_circuit_network(defines.wire_type.red)
       local nw2 = control.get_circuit_network(defines.wire_type.green)
       if nw1 == nil and nw2 == nil then 
-         printout("Not connected to a circuit network",pindex)
+         printout(" not connected to a circuit network",pindex)
+         return
+      end
+      --Open the menu
+      circuit_network_menu_open(pindex, ent)
+   elseif players[pindex].in_menu == false then
+      local ent = p.selected
+      if ent == nil or ent.valid == false or (ent.get_control_behavior() == nil and ent.type ~= "electric-pole") then
+         --Sort scan results instead
+         return
+      end 
+      --Building has a circuit network
+      p.opened = ent
+      if ent.type == "electric-pole" then
+         --Open the menu
+         circuit_network_menu_open(pindex, ent)
+         return
+      end
+      local control = ent.get_control_behavior()
+      local nw1 = control.get_circuit_network(defines.wire_type.red)
+      local nw2 = control.get_circuit_network(defines.wire_type.green)
+      if nw1 == nil and nw2 == nil then 
+         printout(localising.get(ent,pindex) .. " not connected to a circuit network",pindex)
          return
       end
       --Open the menu
@@ -9872,6 +9907,9 @@ function open_operable_building(ent,pindex)--open_building
       else
          --No building sectors
          if game.get_player(pindex).opened ~= nil then
+            players[pindex].building.ent = ent
+            players[pindex].in_menu = true
+            players[pindex].menu = "building"
             local result = localising.get(ent,pindex) .. ", this menu has no options "
             if ent.get_control_behavior() ~= nil then
                result = result .. ", press 'N' to open the circuit network menu "
@@ -9983,6 +10021,9 @@ function open_operable_vehicle(ent,pindex)--open_vehicle
          read_building_slot(pindex, true)
       else
          if game.get_player(pindex).opened ~= nil then
+            players[pindex].building.ent = ent
+            players[pindex].in_menu = true
+            players[pindex].menu = "vehicle"
             printout(ent.name .. ", this menu has no options ", pindex)
          else
             printout(ent.name .. " has no menu ", pindex)
