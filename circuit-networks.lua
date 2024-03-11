@@ -294,8 +294,10 @@ end
 
 function toggle_circuit_read_mode(ent)
    local result = ""
+   local changed = false
    local control = ent.get_control_behavior()
    if ent.type == "inserter" then
+      changed = true
       if control.circuit_read_hand_contents == false then
          control.circuit_read_hand_contents = true
          control.circuit_hand_read_mode = dcb.inserter.hand_read_mode.hold
@@ -309,6 +311,7 @@ function toggle_circuit_read_mode(ent)
          result = "None"
       end
    elseif ent.type == "transport-belt" then 
+      changed = true
       if control.read_contents == false then
          control.read_contents = true
          control.read_contents_mode = dcb.transport_belt.content_read_mode.hold 
@@ -322,9 +325,10 @@ function toggle_circuit_read_mode(ent)
          result = "None"
       end
    else
-      result = "No change" --laterdo** allow toggling some other read modes
+      changed = false
+      result = get_circuit_read_mode_name(ent)--laterdo** allow toggling some other read modes
    end
-   return result
+   return result, changed
 end
 
 function get_circuit_operation_mode_name(ent)
@@ -400,15 +404,14 @@ end
 
 function toggle_circuit_operation_mode(ent)
    local result = "None"
+   local changed = false
    local control = ent.get_control_behavior()
    if ent.type == "inserter" then 
+      changed = true
       if control.circuit_mode_of_operation == dcb.inserter.circuit_mode_of_operation.none then
          control.circuit_mode_of_operation = dcb.inserter.circuit_mode_of_operation.enable_disable
          result = "Enable with condition"
       elseif control.circuit_mode_of_operation == dcb.inserter.circuit_mode_of_operation.enable_disable then
-         control.circuit_mode_of_operation = dcb.inserter.circuit_mode_of_operation.read_hand_contents
-         result = "Only read hand contents"
-      elseif control.circuit_mode_of_operation == dcb.inserter.circuit_mode_of_operation.read_hand_contents then
          control.circuit_mode_of_operation = dcb.inserter.circuit_mode_of_operation.none
          result = "None"
       else
@@ -416,6 +419,7 @@ function toggle_circuit_operation_mode(ent)
          result = "None"
       end
    elseif ent.type == "transport-belt" then 
+      changed = true
       if control.enable_disable == true then
          control.enable_disable = false
          result = "None"
@@ -424,6 +428,7 @@ function toggle_circuit_operation_mode(ent)
          result = "Enable with condition"
       end
    elseif ent.name == "logistic-requester-chest" then
+      changed = true
       if control.circuit_mode_of_operation == dcb.logistic_container.circuit_mode_of_operation.set_requests then
          control.circuit_mode_of_operation = dcb.logistic_container.circuit_mode_of_operation.send_contents
          result = "Only read contents"
@@ -445,6 +450,7 @@ function toggle_circuit_operation_mode(ent)
    elseif ent.type == "pumpjack" then
       result = "Undefined"--**laterdo
    elseif ent.type == "power-switch" then
+      changed = true
       if control.circuit_condition ~= nil or control.disabled == true then--**laterdo
          result = "Enable with condition"
       else
@@ -455,21 +461,24 @@ function toggle_circuit_operation_mode(ent)
    elseif ent.type == "lamp" then
       result = "Undefined"--**laterdo
    elseif ent.type == "offshore-pump" then
+      changed = true
       if control.circuit_condition ~= nil or control.disabled == true then--**laterdo
          result = "Enable with condition"
       else
          result = "None"
       end
    elseif ent.type == "pump" then
+      changed = true
       if control.circuit_condition ~= nil or control.disabled == true then--**laterdo
          result = "Enable with condition"
       else
          result = "None"
       end
    else
+      changed = false
       result = "None"
    end
-   return result
+   return result, changed
 end
 
 function read_circuit_condition(ent, comparator_in_words)
@@ -526,7 +535,9 @@ function toggle_condition_comparator(ent, pindex, comparator_in_words)
    else
       comparator = "="
    end
-   ent.get_control_behavior().circuit_condition.condition.comparator = comparator
+   cond.comparator = comparator
+   circuit_condition.condition = cond
+   ent.get_control_behavior().circuit_condition = circuit_condition
    
    if comparator_in_words == true then
       if comparator == "=" then
@@ -585,8 +596,9 @@ end
    5) Toggle machine reading mode: None / Read held contents / Pulse passing contents
    6) Toggle machine control mode: None / Enabled condition
    7) Toggle enabled condition comparing rule: greater than / less than / equal to / not equal to
-   8) Set enabled condition first signal: Use the signal selector
-   9) Set enabled condition second signal: Press LB to use the signal selector or press ENTER to type in a constant
+   8) Set enabled condition first signal from the signal selector
+   9) Set enabled condition second signal from the signal selector
+   10) Type in a constant for the Set enabled condition second signal
 
    This menu opens when you press KEY when a building menu is open.
 ]]
@@ -729,57 +741,80 @@ function circuit_network_menu(pindex, ent_in, menu_index, clicked, other_input)
       elseif index == 5 then
          --Toggle machine reading mode
          if not clicked then
-            printout("Toggle reading mode",pindex)
+            printout("Toggle reading mode: " .. read_mode,pindex)
          else
-            local result = toggle_circuit_read_mode(ent)
+            local result, changed = toggle_circuit_read_mode(ent)
             printout(result,pindex)
+            p.play_sound{path = "Inventory-Move"}
+            if changed == false then
+                p.play_sound{path = "inventory-edge"}
+            end
          end
       elseif index == 6 then
          --Toggle machine control mode
          if not clicked then
-            printout("Toggle operation mode",pindex)
+            printout("Toggle operation mode: " .. op_mode,pindex)
          else
-            local result = toggle_circuit_operation_mode(ent)
+            local result, changed = toggle_circuit_operation_mode(ent)
             printout(result,pindex)
+            p.play_sound{path = "Inventory-Move"}
+            if changed == false then
+                p.play_sound{path = "inventory-edge"}
+            end
          end
       elseif index == 7 then
          --Toggle enabled condition comparing rule
          if not clicked then
-            printout("Toggle enabled condition comparing rule",pindex)
+            printout("Toggle enabled condition comparing rule ",pindex)
          else
-            local result = "No condition used"
+            local result = "Not using a condition"
             if uses_condition == true then 
                result = toggle_condition_comparator(ent, pindex, true)
             end
             printout(result,pindex)
+            p.play_sound{path = "Inventory-Move"}
          end
       elseif index == 8 then
          --Set enabled condition first signal
          if not clicked then
-            printout("Set enabled condition first signal",pindex)
+            printout("Set enabled condition first signal from the signal selector",pindex)
          else
-            local result = "No condition used"
+            local result = "Not using a condition"
             if uses_condition == true then 
                result = "toggle"--****
             end
             printout(result,pindex)
+            p.play_sound{path = "Inventory-Move"}
          end
       elseif index == 9 then
          --Set enabled condition second signal
          if not clicked then
-            printout("Set enabled condition second signal",pindex)
+            printout("Set enabled condition second signal from the signal selector",pindex)
          else
-            local result = "No condition used"
+            local result = "Not using a condition"
             if uses_condition == true then 
                result = "toggle"--****
             end
             printout(result,pindex)
+            p.play_sound{path = "Inventory-Move"}
+         end
+      elseif index == 10 then
+         --Set enabled condition second signal as a constant number
+         if not clicked then
+            printout("Set enabled condition second signal as a constant number",pindex)
+         else
+            local result = "Not using a condition"
+            if uses_condition == true then 
+               result = "toggle"--****
+            end
+            printout(result,pindex)
+            p.play_sound{path = "Inventory-Move"}
          end
       end
       return
    end
 end
-CIRCUIT_NETWORK_MENU_LENGTH = 9
+CIRCUIT_NETWORK_MENU_LENGTH = 10
 
 function circuit_network_menu_open(pindex, ent)
    if players[pindex].vanilla_mode then
