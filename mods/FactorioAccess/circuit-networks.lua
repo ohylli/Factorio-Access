@@ -173,7 +173,7 @@ function localise_signal_name(signal,pindex)--todo*** actually localise
    if sig_type == nil then
       sig_type = "nil"
    end
-   local result = (sig_type .. " " .. sig_name) 
+   local result = (sig_name .. " " .. sig_type) 
    return result 
 end
 
@@ -991,3 +991,146 @@ function circuit_network_signals_info(pindex, nw) --****todo
    return result
 end 
 
+function build_signal_selector(pindex)
+   local item_group_names = {}
+   local groups = game.item_group_prototypes
+   for i, group in ipairs(groups) do 
+      table.insert(item_group_names,group.name)
+   end
+   players[pindex].signal_selector = {
+      signal_index = 1, 
+      group_index = 1, 
+      group_names = item_group_names, 
+      signals = {}
+   }
+   --Populate signal groups 
+   for i, group in ipairs(item_group_names) do 
+      players[pindex].signal_selector.signals[group] = {}
+      if group == "fluids" then
+         players[pindex].signal_selector.signals[group] = game.fluid_prototypes
+      elseif group == "signals" then
+         players[pindex].signal_selector.signals[group] = game.virtual_signal_prototypes
+      else
+         for j, item in ipairs(game.item_prototypes) do 
+            if item.group == group then
+               table.insert(players[pindex].signal_selector.signals[group],item)
+            end
+         end
+      end
+   end
+end
+
+function get_selected_signal_with_type(pindex)
+   if players[pindex].signal_selector == nil then
+      build_signal_selector(pindex)
+   end
+   local group_index = players[pindex].signal_selector.group_index
+   local signal_index = players[pindex].signal_selector.signal_index
+   local group_name = players[pindex].signal_selector.group_names[group_index]
+   local signal = players[pindex].signal_selector.signals[group_name][signal_index]
+   local signal_type = "item"
+   if group_name == "fluids" then
+      signal_type = "fluid"
+   elseif group_name == "signals" then
+      signal_type = "virtual"
+   end
+   return signal, signal_type
+end
+
+function read_selected_signal_slot(pindex, start_phrase_in)
+   local start_phrase = start_phrase_in or ""
+   local prototype, signal_type = get_selected_signal_with_type(pindex)
+   local sig_name = localising.get(prototype,pindex)
+   local result = start_phrase .. sig_name .. " " .. signal_type
+   printout(result,pindex)
+end
+
+function signal_selector_group_up(pindex)
+   if players[pindex].signal_selector == nil then
+      build_signal_selector(pindex)
+   end
+   game.get_player(pindex).play_sound{path = "Inventory-Move"}
+   local jumps = 1
+   if players[pindex].signal_selector.group_index <= 1 then
+      players[pindex].signal_selector.group_index = #players[pindex].signal_selector.group_names
+   else
+      players[pindex].signal_selector.group_index = players[pindex].signal_selector.group_index - 1
+   end
+   
+   local group_index = players[pindex].signal_selector.group_index 
+   local group_name = players[pindex].signal_selector.group_names[group_index]
+   local group = players[pindex].signal_selector.signals[group_name]
+   
+   --Go further up if this group is empty
+   while (group == nil or #group == 0) and jumps < 10 do 
+      jumps = jumps + 1
+      if players[pindex].signal_selector.group_index <= 1 then
+         players[pindex].signal_selector.group_index = #players[pindex].signal_selector.group_names
+      else
+         players[pindex].signal_selector.group_index = players[pindex].signal_selector.group_index - 1
+      end
+      group_index = players[pindex].signal_selector.group_index 
+      group_name = players[pindex].signal_selector.group_names[group_index]
+      group = players[pindex].signal_selector.signals[group_name]
+   end
+   --Reset signal level
+   players[pindex].signal_selector.signal_index = 1
+   return jumps
+end
+
+function signal_selector_group_down(pindex)
+   if players[pindex].signal_selector == nil then
+      build_signal_selector(pindex)
+   end
+   game.get_player(pindex).play_sound{path = "Inventory-Move"}
+   local jumps = 1
+   if players[pindex].signal_selector.group_index <= #players[pindex].signal_selector.group_names then
+      players[pindex].signal_selector.group_index = players[pindex].signal_selector.group_index + 1
+   else
+      players[pindex].signal_selector.group_index = 1
+   end
+   
+   local group_index = players[pindex].signal_selector.group_index 
+   local group_name = players[pindex].signal_selector.group_names[group_index]
+   local group = players[pindex].signal_selector.signals[group_name]
+   
+   --Go further up if this group is empty
+   while (group == nil or #group == 0) and jumps < 10 do 
+      jumps = jumps + 1
+      if players[pindex].signal_selector.group_index <= #players[pindex].signal_selector.group_names then
+         players[pindex].signal_selector.group_index = players[pindex].signal_selector.group_index + 1
+      else
+         players[pindex].signal_selector.group_index = 1
+      end
+      group_index = players[pindex].signal_selector.group_index 
+      group_name = players[pindex].signal_selector.group_names[group_index]
+      group = players[pindex].signal_selector.signals[group_name]
+   end
+   --Reset signal level
+   players[pindex].signal_selector.signal_index = 1
+   return jumps
+end
+
+function signal_selector_signal_next(pindex)
+   local group_index = players[pindex].signal_selector.group_index
+   local group_name = players[pindex].signal_selector.group_names[group_index]
+   local group = players[pindex].signal_selector.signals[group_name]
+   
+   if players[pindex].signal_selector.signal_index <= #group then
+      players[pindex].signal_selector.signal_index = players[pindex].signal_selector.signal_index + 1
+   else
+      players[pindex].signal_selector.signal_index = 1
+   end
+end
+
+function signal_selector_signal_prev(pindex)
+   local group_index = players[pindex].signal_selector.group_index
+   local group_name = players[pindex].signal_selector.group_names[group_index]
+   local group = players[pindex].signal_selector.signals[group_name]
+   
+   if players[pindex].signal_selector.signal_index > 1 then
+      players[pindex].signal_selector.signal_index = players[pindex].signal_selector.signal_index - 1
+   else
+      players[pindex].signal_selector.signal_index = #group 
+   end
+end
