@@ -9340,7 +9340,7 @@ script.on_event("click-menu", function(event)
       elseif players[pindex].menu == "circuit_network_menu" then
          circuit_network_menu(pindex, nil, players[pindex].circuit_network_menu.index, true, false)--*****
       elseif players[pindex].menu == "signal_selector" then
-         apply_selected_signal_slot(pindex, players[pindex].signal_selector.edited_condition, players[pindex].signal_selector.editing_first_slot)
+         apply_selected_signal_slot(pindex, players[pindex].signal_selector.ent, players[pindex].signal_selector.editing_first_slot)
       end      
    end
 end)
