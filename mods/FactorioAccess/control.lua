@@ -9709,6 +9709,12 @@ script.on_event("open-circuit-menu", function(event)
          --Open the menu
          circuit_network_menu_open(pindex, ent)
          return
+      elseif ent.type == "constant-combinator" then
+         open_signal_selector(pindex, ent, nil)
+         return
+      elseif ent.type == "arithmetic-combinator" or ent.type == "decider-combinator" then
+         printout("Error: This combinator is not supported", pindex)
+         return
       end
       --Building has control behavior
       local control = ent.get_control_behavior()
@@ -9736,6 +9742,12 @@ script.on_event("open-circuit-menu", function(event)
       if ent.type == "electric-pole" then
          --Open the menu
          circuit_network_menu_open(pindex, ent)
+         return
+      elseif ent.type == "constant-combinator" then
+         open_signal_selector(pindex, ent, nil)
+         return
+      elseif ent.type == "arithmetic-combinator" or ent.type == "decider-combinator" then
+         printout("Error: This combinator is not supported", pindex)
          return
       end
       local control = ent.get_control_behavior()
