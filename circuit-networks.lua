@@ -254,6 +254,15 @@ function constant_combinator_add_stack_signal(ent, stack, pindex)
    printout("Added signal for " .. localising.get(stack, pindex), pindex)
 end
 
+function constant_combinator_add_selector_signal(prototype,signal_type,ent,pindex)
+   local combinator = ent.get_control_behavior()
+   local first_empty_slot = constant_combinator_get_first_empty_slot_id(ent)
+   local new_signal_id = {type = signal_type, name = prototype.name}
+   local new_signal  = {signal = new_signal_id, count = 1}
+   combinator.set_signal(first_empty_slot, new_signal)
+   printout("Added signal for " .. localising.get(prototype, pindex), pindex)
+end
+
 function constant_combinator_remove_last_signal(ent, pindex)
    local combinator = ent.get_control_behavior()
    local max_signals_count = combinator.signals_count
@@ -734,7 +743,7 @@ function circuit_network_menu(pindex, ent_in, menu_index, clicked, other_input)
          printout("No circuit network interface for this entity" , pindex)
          return
       end
-      local control_has_no_circuit_conditions = ent.type == "container" or ent.type == "logistic-container" or ent.type == "storage-tank" or ent.type == "rail-chain-signal" or ent.type == "accumulator" or ent.type == "roboport"
+      local control_has_no_circuit_conditions = ent.type == "container" or ent.type == "logistic-container" or ent.type == "storage-tank" or ent.type == "rail-chain-signal" or ent.type == "accumulator" or ent.type == "roboport" or ent.type == "constant-combinator"
       local circuit_cond = nil 
       local read_mode = get_circuit_read_mode_name(ent)
       local op_mode, uses_condition = get_circuit_operation_mode_name(ent)
@@ -1017,7 +1026,7 @@ function build_signal_selector(pindex)
       table.insert(item_group_names,group.name)
    end
    players[pindex].signal_selector = {
-      signal_index = 1, 
+      signal_index = 0, 
       group_index = 1, 
       group_names = item_group_names, 
       signals = {},
@@ -1091,17 +1100,22 @@ function read_selected_signal_slot(pindex, start_phrase_in)
    printout(result,pindex)
 end
 
+--For an enabled condition, updates the relevant signal from the signal selector. For a constant combinator, the selected signal gets added.
 function apply_selected_signal_to_enabled_condition(pindex, ent, first)
    local start_phrase = start_phrase_in or ""
    local prototype, signal_type = get_selected_signal_slot_with_type(pindex)
-   local control = ent.get_control_behavior()
-   local circuit_condition = control.circuit_condition
-   local cond = control.circuit_condition.condition 
-   local set_message = "Set first signal to "
    if prototype == nil or prototype.valid == false then
       game.get_player(pindex).play_sound{path = "utility/cannot_build"}
       return
    end
+   if ent.type == "constant-combinator" then
+      constant_combinator_add_selector_signal(prototype,signal_type,ent,pindex)
+      return
+   end
+   local control = ent.get_control_behavior()
+   local circuit_condition = control.circuit_condition
+   local cond = control.circuit_condition.condition 
+   local set_message = "Set first signal to "
    if first == true then
       cond.first_signal = {name = prototype.name, type = signal_type} 
       set_message = "Set first signal to "
