@@ -782,6 +782,7 @@ function circuit_network_menu(pindex, ent_in, menu_index, clicked, other_input)
             local result = "Not using a condition"
             if uses_condition == true then 
                result = "toggle"--****
+               open_signal_selector(pindex, circuit_cond.condition, true)
             end
             printout(result,pindex)
             p.play_sound{path = "Inventory-Move"}
@@ -794,6 +795,7 @@ function circuit_network_menu(pindex, ent_in, menu_index, clicked, other_input)
             local result = "Not using a condition"
             if uses_condition == true then 
                result = "toggle"--****
+               open_signal_selector(pindex, circuit_cond.condition, false)
             end
             printout(result,pindex)
             p.play_sound{path = "Inventory-Move"}
@@ -1017,10 +1019,19 @@ function build_signal_selector(pindex)
             end
          end
       end
+      game.print("Created group " .. group .. " with " .. #players[pindex].signal_selector.signals[group] .. " items ")--*****
    end
 end
 
-function get_selected_signal_with_type(pindex)
+function open_signal_selector(pindex, condition, first)--****
+   players[pindex].menu = "signal_selector"
+   build_signal_selector(pindex)
+   players[pindex].signal_selector.edited_condition = condition
+   players[pindex].signal_selector.editing_first_slot = first
+end
+
+--Returns the currently selected item/fluid/virtual signal prototype and the signal type
+function get_selected_signal_slot_with_type(pindex)
    if players[pindex].signal_selector == nil then
       build_signal_selector(pindex)
    end
@@ -1037,12 +1048,38 @@ function get_selected_signal_with_type(pindex)
    return signal, signal_type
 end
 
+function read_selected_signal_group(pindex, start_phrase_in)
+   local start_phrase = start_phrase_in or ""
+   local group_index = players[pindex].signal_selector.group_index
+   local signal_index = players[pindex].signal_selector.signal_index
+   local group_name = players[pindex].signal_selector.group_names[group_index]
+   local local_name = localising.get(game.item_group_prototypes[group_name],pindex)
+   local result = start_phrase .. local_name
+   printout(result,pindex)
+end
+
 function read_selected_signal_slot(pindex, start_phrase_in)
    local start_phrase = start_phrase_in or ""
-   local prototype, signal_type = get_selected_signal_with_type(pindex)
+   local prototype, signal_type = get_selected_signal_slot_with_type(pindex)
    local sig_name = localising.get(prototype,pindex)
    local result = start_phrase .. sig_name .. " " .. signal_type
    printout(result,pindex)
+end
+
+function apply_selected_signal_slot(pindex, condition, first)--****
+   local start_phrase = start_phrase_in or ""
+   local prototype, signal_type = get_selected_signal_slot_with_type(pindex)
+   local cond = condition
+   if first == true then
+      cond.first_signal.name = prototype.name
+      cond.first_signal.type = signal_type
+   elseif first == false then
+      cond.second_signal.name = prototype.name
+      cond.second_signal.type = signal_type
+   end
+   circuit_condition.condition = cond
+   ent.get_control_behavior().circuit_condition = circuit_condition
+   players[pindex].menu = "circuit_network_menu"
 end
 
 function signal_selector_group_up(pindex)
