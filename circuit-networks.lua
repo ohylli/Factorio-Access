@@ -781,8 +781,8 @@ function circuit_network_menu(pindex, ent_in, menu_index, clicked, other_input)
          else
             local result = "Not using a condition"
             if uses_condition == true then 
-               result = "toggle"--****
-               open_signal_selector(pindex, circuit_cond.condition, true)
+               result = "Navigate item groups with W and S and inidividual signals with A and D."
+               open_signal_selector(pindex, ent, true)
             end
             printout(result,pindex)
             p.play_sound{path = "Inventory-Move"}
@@ -794,8 +794,8 @@ function circuit_network_menu(pindex, ent_in, menu_index, clicked, other_input)
          else
             local result = "Not using a condition"
             if uses_condition == true then 
-               result = "toggle"--****
-               open_signal_selector(pindex, circuit_cond.condition, false)
+               result = "Navigate item groups with W and S and inidividual signals with A and D."
+               open_signal_selector(pindex, ent, false)
             end
             printout(result,pindex)
             p.play_sound{path = "Inventory-Move"}
@@ -995,38 +995,47 @@ end
 
 function build_signal_selector(pindex)
    local item_group_names = {}
-   local groups = game.item_group_prototypes
+   local groups = get_iterable_array(game.item_group_prototypes)--game.item_group_prototypes
+   game.print("#groups: " .. #groups)--*****
+   --local item_group_array = get_iterable_array(game.item_group_prototypes)
    for i, group in ipairs(groups) do 
       table.insert(item_group_names,group.name)
    end
+   
+   game.print("#item_group_names: " .. #item_group_names)--*****
    players[pindex].signal_selector = {
       signal_index = 1, 
       group_index = 1, 
       group_names = item_group_names, 
-      signals = {}
+      signals = {},
+      ent = ent,
+      editing_first_slot = nil
    }
    --Populate signal groups 
+   local items = get_iterable_array(game.item_prototypes)
+   game.print("#items: " .. #items)--*****
    for i, group in ipairs(item_group_names) do 
       players[pindex].signal_selector.signals[group] = {}
       if group == "fluids" then
-         players[pindex].signal_selector.signals[group] = game.fluid_prototypes
+         players[pindex].signal_selector.signals[group] = get_iterable_array(game.fluid_prototypes)
       elseif group == "signals" then
-         players[pindex].signal_selector.signals[group] = game.virtual_signal_prototypes
+         players[pindex].signal_selector.signals[group] = get_iterable_array(game.virtual_signal_prototypes)
       else
-         for j, item in ipairs(game.item_prototypes) do 
-            if item.group == group then
+         for j, item in ipairs(items) do 
+            if item.group.name == group then
                table.insert(players[pindex].signal_selector.signals[group],item)
             end
          end
       end
       game.print("Created group " .. group .. " with " .. #players[pindex].signal_selector.signals[group] .. " items ")--*****
    end
+   game.print("ready!")--*****
 end
 
-function open_signal_selector(pindex, condition, first)--****
+function open_signal_selector(pindex, ent, first)--****
    players[pindex].menu = "signal_selector"
    build_signal_selector(pindex)
-   players[pindex].signal_selector.edited_condition = condition
+   players[pindex].signal_selector.ent = ent
    players[pindex].signal_selector.editing_first_slot = first
 end
 
@@ -1053,8 +1062,13 @@ function read_selected_signal_group(pindex, start_phrase_in)
    local group_index = players[pindex].signal_selector.group_index
    local signal_index = players[pindex].signal_selector.signal_index
    local group_name = players[pindex].signal_selector.group_names[group_index]
-   local local_name = localising.get(game.item_group_prototypes[group_name],pindex)
-   local result = start_phrase .. local_name
+   local local_name = localising.get_alt(game.item_group_prototypes[group_name],pindex)
+   local group = players[pindex].signal_selector.signals[group_name]
+   if local_name == nil then
+      game.get_player(pindex).print("localizing failed",{volume_modifier=0})
+      local_name = group_name
+   end
+   local result = start_phrase ..  local_name .. ", " .. #group
    printout(result,pindex)
 end
 
@@ -1066,20 +1080,27 @@ function read_selected_signal_slot(pindex, start_phrase_in)
    printout(result,pindex)
 end
 
-function apply_selected_signal_slot(pindex, condition, first)--****
+function apply_selected_signal_slot(pindex, ent, first)--****
    local start_phrase = start_phrase_in or ""
    local prototype, signal_type = get_selected_signal_slot_with_type(pindex)
-   local cond = condition
+   local control = ent.get_control_behavior()
+   local circuit_condition = control.circuit_condition
+   local cond = control.circuit_condition.condition 
+   if prototype == nil or prototype.valid == false then
+      game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+      return
+   end
    if first == true then
-      cond.first_signal.name = prototype.name
-      cond.first_signal.type = signal_type
+      cond.first_signal = {name = prototype.name, type = signal_type} 
+      read_selected_signal_slot(pindex, "Set first signal to ")
    elseif first == false then
-      cond.second_signal.name = prototype.name
-      cond.second_signal.type = signal_type
+      cond.second_signal = {name = prototype.name, type = signal_type} 
+      read_selected_signal_slot(pindex, "Set second signal to ")
    end
    circuit_condition.condition = cond
    ent.get_control_behavior().circuit_condition = circuit_condition
    players[pindex].menu = "circuit_network_menu"
+   players[pindex].signal_selector = nil 
 end
 
 function signal_selector_group_up(pindex)
@@ -1111,7 +1132,7 @@ function signal_selector_group_up(pindex)
       group = players[pindex].signal_selector.signals[group_name]
    end
    --Reset signal level
-   players[pindex].signal_selector.signal_index = 1
+   players[pindex].signal_selector.signal_index = 0
    return jumps
 end
 
@@ -1144,7 +1165,7 @@ function signal_selector_group_down(pindex)
       group = players[pindex].signal_selector.signals[group_name]
    end
    --Reset signal level
-   players[pindex].signal_selector.signal_index = 1
+   players[pindex].signal_selector.signal_index = 0
    return jumps
 end
 
