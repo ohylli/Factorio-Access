@@ -5745,6 +5745,9 @@ function menu_cursor_up(pindex)
    elseif players[pindex].menu == "circuit_network_menu" then
       general_mod_menu_up(pindex, players[pindex].circuit_network_menu, 0)
       circuit_network_menu(pindex, nil, players[pindex].circuit_network_menu.index, false)
+   elseif players[pindex].menu == "signal_selector" then 
+      signal_selector_group_up(pindex)
+      read_selected_signal_group(pindex, "")
    end
    
    --Adjust camera if in cursor mode
@@ -5976,6 +5979,9 @@ function menu_cursor_down(pindex)
    elseif players[pindex].menu == "circuit_network_menu" then
       general_mod_menu_down(pindex, players[pindex].circuit_network_menu, CIRCUIT_NETWORK_MENU_LENGTH)
       circuit_network_menu(pindex, nil, players[pindex].circuit_network_menu.index, false)
+   elseif players[pindex].menu == "signal_selector" then 
+      signal_selector_group_down(pindex)
+      read_selected_signal_group(pindex, "")
    end
    
    --Adjust camera if in cursor mode
@@ -6110,7 +6116,9 @@ function menu_cursor_left(pindex)
       fast_travel_menu_left(pindex)
    elseif players[pindex].menu == "structure-travel" then
       move_cursor_structure(pindex, 6)
-
+   elseif players[pindex].menu == "signal_selector" then 
+      signal_selector_signal_prev(pindex)
+      read_selected_signal_slot(pindex, "")
    end
 end
 
@@ -6258,7 +6266,9 @@ function menu_cursor_right(pindex)
       fast_travel_menu_right(pindex)
    elseif players[pindex].menu == "structure-travel" then
       move_cursor_structure(pindex, 2)
-
+   elseif players[pindex].menu == "signal_selector" then 
+      signal_selector_signal_next(pindex)
+      read_selected_signal_slot(pindex, "")
    end
 end
 
@@ -6510,6 +6520,9 @@ function update_menu_visuals()
          elseif player.menu == "circuit_network_menu" then
             update_overhead_sprite("item.electronic-circuit",2,1.25,pindex)
             update_custom_GUI_sprite("item.electronic-circuit", 3, pindex)
+         elseif player.menu == "signal_selector" then
+            update_overhead_sprite("item.advanced-circuit",2,1.25,pindex)
+            update_custom_GUI_sprite("item.advanced-circuit", 3, pindex)
          elseif player.menu == "pump" then
             update_overhead_sprite("item.offshore-pump",2,1.25,pindex)
             update_custom_GUI_sprite("item.offshore-pump", 3, pindex)
@@ -9326,6 +9339,8 @@ script.on_event("click-menu", function(event)
          blueprint_book_menu(pindex, bpb_menu.index, bpb_menu.list_mode, true, false)
       elseif players[pindex].menu == "circuit_network_menu" then
          circuit_network_menu(pindex, nil, players[pindex].circuit_network_menu.index, true, false)--*****
+      elseif players[pindex].menu == "signal_selector" then
+         apply_selected_signal_slot(pindex, players[pindex].signal_selector.edited_condition, players[pindex].signal_selector.editing_first_slot)
       end      
    end
 end)
