@@ -9338,9 +9338,9 @@ script.on_event("click-menu", function(event)
          local bpb_menu = players[pindex].blueprint_book_menu
          blueprint_book_menu(pindex, bpb_menu.index, bpb_menu.list_mode, true, false)
       elseif players[pindex].menu == "circuit_network_menu" then
-         circuit_network_menu(pindex, nil, players[pindex].circuit_network_menu.index, true, false)--*****
+         circuit_network_menu(pindex, nil, players[pindex].circuit_network_menu.index, true, false)
       elseif players[pindex].menu == "signal_selector" then
-         apply_selected_signal_slot(pindex, players[pindex].signal_selector.ent, players[pindex].signal_selector.editing_first_slot)
+         apply_selected_signal_to_enabled_condition(pindex, players[pindex].signal_selector.ent, players[pindex].signal_selector.editing_first_slot)
       end      
    end
 end)
@@ -12132,11 +12132,9 @@ script.on_event(defines.events.on_gui_confirmed,function(event)
       local result = event.element.text
       if result ~= nil and result ~= "" then 
          local new_x = tonumber(get_substring_before_space(result))
-         local new_y = tonumber(get_substring_after_space(result))
-         
+         local new_y = tonumber(get_substring_after_space(result))  
          --Check if valid numbers
-         local valid_coords = new_x ~= nil and new_y ~= nil
-         
+         local valid_coords = new_x ~= nil and new_y ~= nil 
          --Change cursor position or return error
          if valid_coords then
             players[pindex].cursor_pos = {x = new_x, y = new_y}
@@ -12146,6 +12144,8 @@ script.on_event(defines.events.on_gui_confirmed,function(event)
          else
             printout("Invalid input", pindex)
          end
+      else
+         printout("Invalid input", pindex)
       end
       event.element.destroy()
       --Set the player menu tracker to none
@@ -12158,6 +12158,44 @@ script.on_event(defines.events.on_gui_confirmed,function(event)
       --Destroy text fields
       if p.gui.screen["cursor-jump"] ~= nil then 
          p.gui.screen["cursor-jump"].destroy()
+      end
+      if p.opened ~= nil then
+         p.opened = nil
+      end
+   elseif players[pindex].menu == "circuit_network_menu" then
+      --Take the constant number  
+      local result = event.element.text
+      if result ~= nil and result ~= "" then
+         local constant = tonumber(result) 
+         local valid_number = constant ~= nil
+         --Apply the valid number
+         if valid_number then
+            local control = players[pindex].signal_selector.ent.get_control_behavior()
+            local circuit_condition = control.circuit_condition
+            local cond = control.circuit_condition.condition 
+            cond.second_signal = nil--{name = nil, type = signal_type} 
+            cond.constant = constant
+            circuit_condition.condition = cond
+            players[pindex].signal_selector.ent.get_control_behavior().circuit_condition = circuit_condition
+            printout("Set " .. result .. ", condition now checks if " .. read_circuit_condition(players[pindex].signal_selector.ent, true) , pindex)
+         else
+            printout("Invalid input", pindex)
+         end
+      else
+         printout("Invalid input", pindex)
+      end
+      event.element.destroy()
+      players[pindex].signal_selector = nil
+      --Set the player menu tracker to none
+      players[pindex].menu = "none"
+      players[pindex].in_menu = false
+      --play sound
+      if not mute then
+         p.play_sound{path="Close-Inventory-Sound"}
+      end
+      --Destroy text fields
+      if p.gui.screen["circuit-condition-constant"] ~= nil then 
+         p.gui.screen["circuit-condition-constant"].destroy()
       end
       if p.opened ~= nil then
          p.opened = nil
