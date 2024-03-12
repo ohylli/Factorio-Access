@@ -79,7 +79,7 @@ function drag_wire_and_read(pindex)
             result = " Disconnected " .. wire_name 
          end
       end
-      p.print(result)--***
+      p.print(result,{volume_modifier=0})--***
       printout(result, pindex)
    else
       p.play_sound{path = "utility/cannot_build"}
@@ -87,7 +87,7 @@ function drag_wire_and_read(pindex)
    players[pindex].last_wire_ent = c_ent
 end
 
---**** test ent.circuit_connected_entities and ent.circuit_connection_definitions
+--*** later: test ent.circuit_connection_definitions
 
 function wire_neighbours_info(ent, read_network_ids)
    --List connected electric poles
@@ -160,7 +160,7 @@ function wire_neighbours_info(ent, read_network_ids)
    return result 
 end
 
-function localise_signal_name(signal,pindex)--todo*** actually localise
+function localise_signal_name(signal,pindex)--todo**** actually localise
    if signal == nil then
       return "nil"
    end
@@ -170,10 +170,26 @@ function localise_signal_name(signal,pindex)--todo*** actually localise
       sig_name = "nil"
       sig_type = "nil"
    end
-   if sig_type == nil then
+   if sig_type == nil or sig_type == "nil" then
+      sig_name = "nil"
       sig_type = "nil"
+   elseif sig_type == "item" then
+      sig_name = localising.get(game.item_prototypes[signal.name],pindex)
+      if sig_name == nil then
+         sig_name = signal.name
+      end
+   elseif sig_type == "fluid" then
+      sig_name = localising.get(game.fluid_prototypes[signal.name],pindex)
+      if sig_name == nil then
+         sig_name = signal.name
+      end
+   elseif sig_type == "virtual" then
+      sig_name = localising.get(game.virtual_signal_prototypes[signal.name],pindex)
+      if sig_name == nil then
+         sig_name = signal.name
+      end
    end
-   local result = (sig_name .. " " .. sig_type) 
+   local result = (sig_name) 
    return result 
 end
 
@@ -807,7 +823,7 @@ function circuit_network_menu(pindex, ent_in, menu_index, clicked, other_input)
          else
             local result = "Not using a condition"
             if uses_condition == true then 
-               result = "toggle"--****
+               result = type_circuit_condition_constant(pindex, ent)
             end
             printout(result,pindex)
             p.play_sound{path = "Inventory-Move"}
@@ -864,7 +880,7 @@ function circuit_network_menu_close(pindex, mute_in)
 end
 
 --Reads the total list of the circuit network neighbors of this entity. Gives details.
-function circuit_network_neighbors_info(pindex, ent, wire_type) --****todo
+function circuit_network_neighbors_info(pindex, ent, wire_type) 
    local color = nil
    if wire_type == defines.wire_type.red then
       color = "red"
@@ -888,7 +904,7 @@ function circuit_network_neighbors_info(pindex, ent, wire_type) --****todo
 end 
 
 --Reads the total list of the circuit network neighbors of this entity, and then their neighbors, and then their neighbors recursively.
-function circuit_network_members_info(pindex, ent, wire_type) --****todo
+function circuit_network_members_info(pindex, ent, wire_type) 
    local color = nil
    if wire_type == defines.wire_type.red then
       color = "red"
@@ -962,7 +978,7 @@ function add_neighbors_to_circuit_network_member_list(list_in,ent_in,color_in,it
 end
 
 --Lists first 10 signals in a circuit network
-function circuit_network_signals_info(pindex, nw) --****todo
+function circuit_network_signals_info(pindex, nw) --****todo?
    local signals = nw.signals 
    local result = ""
    local total_signal_count = 0
@@ -996,13 +1012,10 @@ end
 function build_signal_selector(pindex)
    local item_group_names = {}
    local groups = get_iterable_array(game.item_group_prototypes)--game.item_group_prototypes
-   game.print("#groups: " .. #groups)--*****
    --local item_group_array = get_iterable_array(game.item_group_prototypes)
    for i, group in ipairs(groups) do 
       table.insert(item_group_names,group.name)
    end
-   
-   game.print("#item_group_names: " .. #item_group_names)--*****
    players[pindex].signal_selector = {
       signal_index = 1, 
       group_index = 1, 
@@ -1013,7 +1026,6 @@ function build_signal_selector(pindex)
    }
    --Populate signal groups 
    local items = get_iterable_array(game.item_prototypes)
-   game.print("#items: " .. #items)--*****
    for i, group in ipairs(item_group_names) do 
       players[pindex].signal_selector.signals[group] = {}
       if group == "fluids" then
@@ -1027,12 +1039,11 @@ function build_signal_selector(pindex)
             end
          end
       end
-      game.print("Created group " .. group .. " with " .. #players[pindex].signal_selector.signals[group] .. " items ")--*****
+      --game.print("Created group " .. group .. " with " .. #players[pindex].signal_selector.signals[group] .. " items ")
    end
-   game.print("ready!")--*****
 end
 
-function open_signal_selector(pindex, ent, first)--****
+function open_signal_selector(pindex, ent, first)
    players[pindex].menu = "signal_selector"
    build_signal_selector(pindex)
    players[pindex].signal_selector.ent = ent
@@ -1080,27 +1091,41 @@ function read_selected_signal_slot(pindex, start_phrase_in)
    printout(result,pindex)
 end
 
-function apply_selected_signal_slot(pindex, ent, first)--****
+function apply_selected_signal_to_enabled_condition(pindex, ent, first)
    local start_phrase = start_phrase_in or ""
    local prototype, signal_type = get_selected_signal_slot_with_type(pindex)
    local control = ent.get_control_behavior()
    local circuit_condition = control.circuit_condition
    local cond = control.circuit_condition.condition 
+   local set_message = "Set first signal to "
    if prototype == nil or prototype.valid == false then
       game.get_player(pindex).play_sound{path = "utility/cannot_build"}
       return
    end
    if first == true then
       cond.first_signal = {name = prototype.name, type = signal_type} 
-      read_selected_signal_slot(pindex, "Set first signal to ")
+      set_message = "Set first signal to "
    elseif first == false then
       cond.second_signal = {name = prototype.name, type = signal_type} 
-      read_selected_signal_slot(pindex, "Set second signal to ")
+      set_message = "Set second signal to "
    end
    circuit_condition.condition = cond
    ent.get_control_behavior().circuit_condition = circuit_condition
    players[pindex].menu = "circuit_network_menu"
    players[pindex].signal_selector = nil 
+   printout(set_message .. localising.get(prototype,pindex) .. ", condition now checks if " .. read_circuit_condition(ent, true),pindex)
+end
+
+function type_circuit_condition_constant(pindex, ent)
+   players[pindex].signal_selector = {}
+   players[pindex].signal_selector.ent = ent
+   local frame = game.get_player(pindex).gui.screen.add{type = "frame", name = "circuit-condition-constant"}
+   frame.bring_to_front()
+   frame.force_auto_center()
+   frame.focus()
+   local input = frame.add{type="textfield", name = "input"}
+   input.focus()
+   return "Type in a number for comparing and press 'ENTER' to confirm, or press 'ESC' to exit"
 end
 
 function signal_selector_group_up(pindex)
