@@ -14567,7 +14567,7 @@ function menu_search_open(pindex)
       printout("This menu does not support searching.",pindex)
       return
    end
-   if players[pindex].menu ~= "inventory" and players[pindex].menu ~= "building" and players[pindex].menu ~= "crafting" and players[pindex].menu ~= "technology" then
+   if players[pindex].menu ~= "inventory" and players[pindex].menu ~= "building" and players[pindex].menu ~= "crafting" and players[pindex].menu ~= "technology" and players[pindex].menu ~= "signal_selector" then
       printout(players[pindex].menu .. " menu does not support searching.",pindex)
       return
    end
@@ -14599,7 +14599,7 @@ function menu_search_get_next(pindex, str, start_phrase_in)
       printout("This menu does not support searching.",pindex)
       return
    end
-   if players[pindex].menu ~= "inventory" and players[pindex].menu ~= "building" and players[pindex].menu ~= "crafting" and players[pindex].menu ~= "technology"then
+   if players[pindex].menu ~= "inventory" and players[pindex].menu ~= "building" and players[pindex].menu ~= "crafting" and players[pindex].menu ~= "technology"and players[pindex].menu ~= "signal_selector" then
       printout(players[pindex].menu .. " menu does not support searching.",pindex)
       return
    end
@@ -14684,6 +14684,31 @@ function menu_search_get_next(pindex, str, start_phrase_in)
             players[pindex].technology.category = 1
          end
       end
+   elseif players[pindex].menu == "signal_selector" then
+      --Search the currently selected group
+      local group_index = players[pindex].signal_selector.group_index 
+      local group_name = players[pindex].signal_selector.group_names[group_index]
+      local group = players[pindex].signal_selector.signals[group_name]
+      local starting_group_index = group_index
+      local tries = 0
+      new_index = prototypes_find_index_of_next_name_match(group, search_index, str, pindex)
+      while new_index <= 0 and tries < #players[pindex].signal_selector.group_names + 1 do 
+         players[pindex].menu_search_last_name = "(none)"
+         signal_selector_group_down(pindex)
+         group_index = players[pindex].signal_selector.group_index 
+         group_name = players[pindex].signal_selector.group_names[group_index]
+         group = players[pindex].signal_selector.signals[group_name]
+         new_index = prototypes_find_index_of_next_name_match(group, 0, str, pindex)
+         if tries > 0 and group_index == starting_group_index then
+            game.get_player(pindex).play_sound{path = "inventory-wrap-around"}--sound for having cicled around 
+         end
+         tries = tries + 1
+      end
+      if new_index <= 0 then
+         players[pindex].signal_selector.group_index = starting_group_index
+         players[pindex].signal_selector.signal_index = 0 
+      end
+      --game.print("tries: " .. tries,{volume_modifier=0})--
    else
       printout("This menu or building sector does not support searching.",pindex)
       return
@@ -14692,6 +14717,7 @@ function menu_search_get_next(pindex, str, start_phrase_in)
    if new_index <= 0 then
       printout("Could not find " .. str,pindex)
       game.get_player(pindex).print("Could not find " .. str,{volume_modifier = 0})
+      players[pindex].menu_search_last_name = "(none)"
       return
    elseif players[pindex].menu == "inventory" then
       players[pindex].menu_search_index = new_index
@@ -14729,6 +14755,10 @@ function menu_search_get_next(pindex, str, start_phrase_in)
       players[pindex].menu_search_index = new_index
       players[pindex].technology.index = new_index
       read_technology_slot(pindex, note)
+   elseif players[pindex].menu == "signal_selector" then
+      players[pindex].menu_search_index = new_index
+      players[pindex].signal_selector.signal_index = new_index
+      read_selected_signal_slot(pindex, start_phrase)
    else
       printout("Search error",pindex)
       return
@@ -14816,7 +14846,7 @@ function inventory_find_index_of_next_name_match(inv,index,str,pindex)
    game.get_player(pindex).play_sound{path = "inventory-wrap-around"}--sound for having cicled around 
    for i=1, index, 1 do
       local stack = inv[i]
-      if stack ~= nil and (stack.object_name == "LuaTechnology" or stack.valid_for_read) then 
+      if stack ~= nil and (stack.object_name == "LuaTechnology" or stack.valid_for_read) then
          local name = string.lower(localising.get(stack.prototype,pindex))
          local result = string.find(name, str)
          if result ~= nil then 
@@ -14956,6 +14986,35 @@ function crafting_find_index_of_next_name_match(str,pindex,last_i, last_j, recip
    end
    --No matches found at all
    return -1, -1 
+end
+
+--Returns the index for the next prototypes array item to match the search term.
+function prototypes_find_index_of_next_name_match(array,index,str,pindex)
+   local repeat_i = -1
+   if index < 1 then
+      index = 1
+   end
+   --Iterate until the end of the inventory for a match
+   for i=index, #array, 1 do
+      local prototype = array[i]
+      if prototype ~= nil and prototype.valid then  
+         local name = string.lower(localising.get(prototype,pindex))
+         local result = string.find(name, str)
+         if result ~= nil then 
+            if name ~= players[pindex].menu_search_last_name then
+               players[pindex].menu_search_last_name = name 
+               game.get_player(pindex).play_sound{path = "Inventory-Move"}--sound for finding the next
+               --game.print("found: " .. i .. " : " .. name .. " vs. " .. str .. ", last: " .. players[pindex].menu_search_last_name,{volume_modifier=0})--
+               return i
+            else
+               repeat_i = i
+            end
+         end
+         --game.print(i .. " : " .. name .. " vs. " .. str .. ", last: " .. players[pindex].menu_search_last_name,{volume_modifier=0})--
+      end
+   end
+   --End of array reached, assume failed and will move on to next. 
+   return -1 
 end
 
 script.on_event(defines.events.on_string_translated,localising.handler)
