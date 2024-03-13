@@ -12496,6 +12496,29 @@ function cursor_skip_iteration(pindex, direction, iteration_limit)
    local moved = 1
    local comment = ""
 
+   --For underground belts and pipes in the relevant direction, apply a special case where you jump to the underground neighbour
+   if start.type == "pipe-to-ground" then
+      local connections = start.fluidbox.get_pipe_connections(1)
+      for i,con in ipairs(connections) do
+         if con.target ~= nil then
+            local dist = math.ceil(util.distance(start.position,con.target.get_pipe_connections(1)[1].position)) - 1
+            local dir_neighbor = get_direction_of_that_from_this(con.target_position,start.position)
+            if con.connection_type == "underground" and dir_neighbor == direction then
+                return dist
+            end 
+         end
+      end
+   elseif start.type == "underground-belt" then
+      local neighbours = start.neighbours
+      if neighbours and #neighbours > 0 then 
+         local other_end = neighbours[1]
+         local dist = math.ceil(util.distance(start.position,other_end.position) - 1--****review dist
+         local dir_neighbor = get_direction_of_that_from_this(other_end.position,start.position)
+         if dir_neighbor == direction then
+             return dist
+         end 
+      end
+   end
    --Iterate first tile 
    players[pindex].cursor_pos = offset_position(players[pindex].cursor_pos, direction, 1)
    refresh_player_tile(pindex)
