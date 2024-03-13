@@ -12554,25 +12554,31 @@ function cursor_skip_iteration(pindex, direction, iteration_limit)
    local comment = ""
 
    --For underground belts and pipes in the relevant direction, apply a special case where you jump to the underground neighbour
-   if start.type == "pipe-to-ground" then
+   if start ~= nil and start.valid and start.type == "pipe-to-ground" then
       local connections = start.fluidbox.get_pipe_connections(1)
       for i,con in ipairs(connections) do
          if con.target ~= nil then
-            local dist = math.ceil(util.distance(start.position,con.target.get_pipe_connections(1)[1].position)) - 1
+            local dist = math.ceil(util.distance(start.position,con.target.get_pipe_connections(1)[1].position)) 
             local dir_neighbor = get_direction_of_that_from_this(con.target_position,start.position)
             if con.connection_type == "underground" and dir_neighbor == direction then
-                return dist
+               players[pindex].cursor_pos = con.target.get_pipe_connections(1)[1].position
+               refresh_player_tile(pindex)
+               current = get_selected_ent(pindex)
+               return dist
             end 
          end
       end
-   elseif start.type == "underground-belt" then
-      local neighbours = start.neighbours
-      if neighbours and #neighbours > 0 then 
-         local other_end = neighbours[1]
-         local dist = math.ceil(util.distance(start.position,other_end.position)) - 1--****review dist
+   elseif start ~= nil and start.valid and start.type == "underground-belt" then
+      local neighbour = start.neighbours
+      if neighbour then
+         local other_end = neighbour
+         local dist = math.ceil(util.distance(start.position,other_end.position)) 
          local dir_neighbor = get_direction_of_that_from_this(other_end.position,start.position)
-         if dir_neighbor == direction then
-             return dist
+         if dir_neighbor == direction then 
+            players[pindex].cursor_pos = other_end.position
+            refresh_player_tile(pindex)
+            current = get_selected_ent(pindex)
+            return dist
          end 
       end
    end
@@ -13244,6 +13250,14 @@ script.on_event("logistic-request-toggle-personal-logistics", function(event)
       return
    end
    logistics_request_toggle_handler(pindex)
+end)
+
+script.on_event("send-selected-stack-to-logistic-trash", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   send_selected_stack_to_logistic_trash(pindex)
 end)
 
 script.on_event(defines.events.on_gui_opened, function(event)

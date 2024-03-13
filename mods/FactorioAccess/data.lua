@@ -1791,6 +1791,13 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "send-selected-stack-to-logistic-trash",
+    key_sequence = "O",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "fa-pda-driving-assistant-info",
     key_sequence = "L",
     consuming = "none"
