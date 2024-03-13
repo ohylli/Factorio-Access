@@ -5116,3 +5116,55 @@ function check_and_play_driving_alert_sound(pindex, tick, mode_in)--wip****
       return true
    end
 end
+
+--Interfacing with Pavement Driving Assist
+function fa_pda_get_state_of_cruise_control(pindex)
+   if remote.interfaces.PDA and remote.interfaces.PDA.get_state_of_cruise_control then
+      return remote.call("PDA", "get_state_of_cruise_control",pindex)
+   else
+      return nil
+   end
+end
+
+function fa_pda_set_state_of_cruise_control(pindex,new_state)
+   if remote.interfaces.PDA and remote.interfaces.PDA.set_state_of_cruise_control then
+      remote.call("PDA", "set_state_of_cruise_control",pindex,new_state)
+      return 1
+   else
+      return nil
+   end
+end
+
+function fa_pda_get_cruise_control_limit(pindex)
+   if remote.interfaces.PDA and remote.interfaces.PDA.get_cruise_control_limit then
+      return remote.call("PDA", "get_cruise_control_limit",pindex)
+   else
+      return nil
+   end
+end
+
+function fa_pda_set_cruise_control_limit(pindex,new_state)
+   if remote.interfaces.PDA and remote.interfaces.PDA.set_cruise_control_limit then
+      remote.call("PDA", "set_cruise_control_limit",pindex,new_state)
+      return 1
+   else
+      return nil
+   end
+end
+
+function fa_pda_get_state_of_driving_assistant(pindex)
+   if remote.interfaces.PDA and remote.interfaces.PDA.get_state_of_driving_assistant then
+      return remote.call("PDA", "get_state_of_driving_assistant",pindex)
+   else
+      return nil
+   end
+end
+
+function fa_pda_set_state_of_driving_assistant(pindex,new_state)
+   if remote.interfaces.PDA and remote.interfaces.PDA.set_state_of_driving_assistant then
+      remote.call("PDA", "set_state_of_driving_assistant",pindex,new_state)
+      return 1
+   else
+      return nil
+   end
+end

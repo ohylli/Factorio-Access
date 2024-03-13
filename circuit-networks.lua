@@ -278,6 +278,33 @@ function constant_combinator_remove_last_signal(ent, pindex)
    printout("No signals to remove", pindex)
 end
 
+function constant_combinator_type_last_signal_count(pindex, ent)
+   players[pindex].signal_selector = {}
+   players[pindex].signal_selector.ent = ent
+   local frame = game.get_player(pindex).gui.screen.add{type = "frame", name = "circuit-condition-constant"}
+   frame.bring_to_front()
+   frame.force_auto_center()
+   frame.focus()
+   local input = frame.add{type="textfield", name = "input"}
+   input.focus()
+   return "Type in a number press 'ENTER' to confirm, or press 'ESC' to exit"
+end
+
+function constant_combinator_set_last_signal_count(value, ent, pindex)
+   local combinator = ent.get_control_behavior()
+   local max_signals_count = combinator.signals_count
+   for i = max_signals_count,1,-1 do 
+      local signal = combinator.get_signal(i)
+      if signal.signal ~= nil then
+         local signal_name = localise_signal_name(signal.signal,pindex)
+         signal.count = value
+         combinator.set_signal(i , signal)
+         return true
+      end
+   end 
+   return false
+end
+
 function get_circuit_read_mode_name(ent)
    local result = "None"
    local control = ent.get_control_behavior()
@@ -616,6 +643,14 @@ end
    Electric Poles
    4) (Inventory edge, call 3)
    
+   Constant Combinators
+   4) Read combinator signals
+   5) Add a signal from the selector
+   6) Set a new count for the last signal
+   7) Delete last signal
+   8) Switch on/off
+   9) (Inventory edge, call last)
+   
    Other Ents
    4) Read machine behavior summary: "Reading none and enabled when X < Y"
    5) Toggle machine reading mode: None / Read held contents / Pulse passing contents
@@ -653,7 +688,7 @@ function circuit_network_menu(pindex, ent_in, menu_index, clicked, other_input)
    --First 3 lines of the menus are in common
    if index == 0 then
       --Menu info
-      local result = localising.get(ent,pindex) .. " in circuit network " .. nw_name
+      local result = " Circuit network " .. nw_name .. ", menu for " .. localising.get(ent,pindex)
       .. ", Navigate up and down with 'W' and 'S' and select an option with 'LEFT BRACKET', or exit with 'ESC'"
       printout(result, pindex)
    elseif index == 1 then
@@ -733,6 +768,58 @@ function circuit_network_menu(pindex, ent_in, menu_index, clicked, other_input)
          --(inventory edge: play sound and set index and call this menu again)
          p.play_sound{path = "inventory-edge"}
          players[pindex].circuit_network_menu.index = 3
+         circuit_network_menu(pindex, ent, players[pindex].circuit_network_menu.index, false, false)
+      end
+      return
+   elseif ent.type == "constant-combinator" then
+      --Menu for constant combinators
+      if index == 4 then
+         --Read combinator signals
+         if not clicked then
+            printout("Read combinator signals",pindex)
+         else
+            local result = constant_combinator_signals_info(ent, pindex)
+            printout(result,pindex)
+         end
+      elseif index == 5 then
+         --Add a signal from the selector
+         if not clicked then
+            printout("Add a signal from the selector",pindex)
+         else
+            open_signal_selector(pindex, ent, nil)
+         end
+      elseif index == 6 then
+         --Set a new count for the last signal
+         if not clicked then
+            printout("Set a new count for the last signal",pindex)
+         else
+            result = constant_combinator_type_last_signal_count(pindex, ent)
+            printout(result,pindex)
+            p.play_sound{path = "Inventory-Move"}
+         end
+      elseif index == 7 then
+         --Delete the last signal
+         if not clicked then
+            printout("Delete the last signal",pindex)
+         else
+            constant_combinator_remove_last_signal(ent, pindex)
+         end
+      elseif index == 8 then
+         --Toggle switch
+         if not clicked then
+            printout("Toggle switch",pindex)
+         else
+            ent.get_control_behavior().enabled = not (ent.get_control_behavior().enabled)
+            if enabled == true then
+               printout("Switched on",pindex)
+            elseif enabled == false then
+               printout("Switched off",pindex)
+            end
+         end
+      elseif index > 8 then
+         --(inventory edge: play sound and set index and call this menu again)
+         p.play_sound{path = "inventory-edge"}
+         players[pindex].circuit_network_menu.index = 8
          circuit_network_menu(pindex, ent, players[pindex].circuit_network_menu.index, false, false)
       end
       return

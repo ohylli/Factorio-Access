@@ -9724,7 +9724,7 @@ script.on_event("open-circuit-menu", function(event)
          circuit_network_menu_open(pindex, ent)
          return
       elseif ent.type == "constant-combinator" then
-         open_signal_selector(pindex, ent, nil)
+         circuit_network_menu_open(pindex, ent)
          return
       elseif ent.type == "arithmetic-combinator" or ent.type == "decider-combinator" then
          printout("Error: This combinator is not supported", pindex)
@@ -12213,14 +12213,25 @@ script.on_event(defines.events.on_gui_confirmed,function(event)
          local valid_number = constant ~= nil
          --Apply the valid number
          if valid_number then
-            local control = players[pindex].signal_selector.ent.get_control_behavior()
-            local circuit_condition = control.circuit_condition
-            local cond = control.circuit_condition.condition 
-            cond.second_signal = nil--{name = nil, type = signal_type} 
-            cond.constant = constant
-            circuit_condition.condition = cond
-            players[pindex].signal_selector.ent.get_control_behavior().circuit_condition = circuit_condition
-            printout("Set " .. result .. ", condition now checks if " .. read_circuit_condition(players[pindex].signal_selector.ent, true) , pindex)
+            if players[pindex].signal_selector.ent.type == "constant-combinator" then
+               --Constant combinators (set last signal value)
+               local success = constant_combinator_set_last_signal_count(constant, players[pindex].signal_selector.ent, pindex)
+               if success then 
+                  printout("Set " .. result, pindex)
+               else
+                  printout("Error: No signals found", pindex)
+               end
+            else
+               --Other devices (set enabled condition)
+               local control = players[pindex].signal_selector.ent.get_control_behavior()
+               local circuit_condition = control.circuit_condition
+               local cond = control.circuit_condition.condition 
+               cond.second_signal = nil--{name = nil, type = signal_type} 
+               cond.constant = constant
+               circuit_condition.condition = cond
+               players[pindex].signal_selector.ent.get_control_behavior().circuit_condition = circuit_condition
+               printout("Set " .. result .. ", condition now checks if " .. read_circuit_condition(players[pindex].signal_selector.ent, true) , pindex)
+            end
          else
             printout("Invalid input", pindex)
          end
