@@ -1060,6 +1060,30 @@ function chest_logistic_request_decrement_min(item_stack,chest, pindex)
    chest_logistic_request_read(item_stack,chest,pindex,false)
 end
 
+function send_selected_stack_to_logistic_trash(pindex)
+   local p = game.get_player(pindex)
+   local stack = p.cursor_stack
+   --Check cursor stack 
+   if stack == nil or stack.valid_for_read == false or stack.is_deconstruction_item or stack.is_upgrade_item then
+      stack = p.get_main_inventory()[players[pindex].inventory.index]
+   end
+   --Check inventory stack
+   if players[pindex].menu ~= "inventory" or stack == nil or stack.valid_for_read == false or stack.is_deconstruction_item or stack.is_upgrade_item then
+      return
+   end
+   local trash_inv = p.get_inventory(defines.inventory.character_trash)
+   if trash_inv.can_insert(stack) then
+      local inserted_count = trash_inv.insert(stack)
+      if inserted_count < stack.count then
+         stack.set_stack({name = stack.name, count = stack.count - inserted_count})
+         printout("Partially sent stack to logistic trash",pindex)
+      else
+         stack.set_stack(nil)
+         printout("Sent stack to logistic trash",pindex)
+      end
+   end
+end
+
 function spidertron_logistic_requests_summary_info(spidertron,pindex)
    --***todo improve: "y of z personal logistic requests fulfilled, x items in trash, missing items include [3], take an item in hand and press L to check its request status." maybe use logistics_networks_info(ent,pos_in)
    local p = game.get_player(pindex)
