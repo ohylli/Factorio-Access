@@ -672,7 +672,7 @@ data:extend({
 {
     type = "custom-input",
     name = "read-driving-structure-ahead",
-    key_sequence = "L",
+    key_sequence = "J",
     consuming = "none"
 },
 
@@ -1792,14 +1792,14 @@ data:extend({
 {
     type = "custom-input",
     name = "fa-pda-driving-assistant-info",
-    key_sequence = "U",
+    key_sequence = "L",
     consuming = "none"
 },
 
 {
     type = "custom-input",
     name = "fa-pda-cruise-control-info",
-    key_sequence = "SHIFT + U",
+    key_sequence = "O",
     consuming = "none"
 },
 

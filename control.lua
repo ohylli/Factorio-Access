@@ -11391,6 +11391,9 @@ script.on_event("item-production-info", function(event)
    if not check_for_player(pindex) then
       return
    end
+   if game.get_player(pindex).driving then
+      return
+   end
    local str = selected_item_production_stats_info(pindex)
    printout(str, pindex)
 end)
@@ -15514,11 +15517,7 @@ function selected_item_production_stats_info(pindex)
    local internal_name = nil
    local item_stack = nil
    local recipe = nil
-   
-   if p.driving then
-      return
-   end
-   
+
    --Select the cursor stack
    item_stack = p.cursor_stack
    if item_stack and item_stack.valid_for_read then
