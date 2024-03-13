@@ -5008,7 +5008,7 @@ function check_and_play_sound_for_turning_trains(pindex)
    players[pindex].last_train_orientation = ori
 end
 
---Plays an alert depending on the distance to the entity ahead. Returns whether a larger radius check is needed.
+--Plays an alert depending on the distance to the entity ahead. Returns whether a larger radius check is needed. Driving proximity alert
 function check_and_play_driving_alert_sound(pindex, tick, mode_in)--wip****
    for pindex, player in pairs(players) do
       local mode = mode_in or 1
@@ -5073,7 +5073,9 @@ function check_and_play_driving_alert_sound(pindex, tick, mode_in)--wip****
                local ent_straight_rails = surf.find_entities_filtered{position = ent.position, radius = 2, type = {"straight-rail"}}
                local ent_curved_rails = surf.find_entities_filtered{position = ent.position, radius = 4, type = {"curved-rail"}}
                if (ent_straight_rails ~= nil and #ent_straight_rails > 0) or (ent_curved_rails ~= nil and #ent_curved_rails > 0) then
-                  table.insert(ents_ahead,ent)
+                  if not (ent.train and ent.train.id == v.train.id) then
+                     table.insert(ents_ahead,ent)
+                  end
                end
             end
          elseif mode < 2 and util.distance(v.position, ent.position) < 5 and (math.abs(dir_ent - dir) == 1 or math.abs(dir_ent - dir) == 7) then
@@ -5086,7 +5088,7 @@ function check_and_play_driving_alert_sound(pindex, tick, mode_in)--wip****
                local ent_straight_rails = surf.find_entities_filtered{position = ent.position, radius = 2, type = {"straight-rail"}}
                local ent_curved_rails = surf.find_entities_filtered{position = ent.position, radius = 4, type = {"curved-rail"}}
                if (ent_straight_rails ~= nil and #ent_straight_rails > 0) or (ent_curved_rails ~= nil and #ent_curved_rails > 0) then
-                  if not (v.speed < 0 and ent.train and ent.train.id == v.train.id) then
+                  if not (ent.train and ent.train.id == v.train.id) then
                      table.insert(ents_ahead,ent)
                   end
                end

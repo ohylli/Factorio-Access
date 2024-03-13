@@ -3558,17 +3558,16 @@ function read_inventory_slot(pindex, start_phrase_in)
    players[pindex].inventory.index = index
    local stack = players[pindex].inventory.lua_inventory[index]
    if stack == nil or not stack.valid_for_read then
+      printout(start_phrase .. "Empty Slot",pindex)
       return 
    end
    if stack.is_blueprint then
       printout(get_blueprint_info(stack,false),pindex)
-   elseif stack.valid then
+   elseif stack.valid_for_read then
       if stack.health < 1 then
          start_phrase = start_phrase .. " damaged "
       end
       printout(start_phrase .. localising.get(stack,pindex) .. " x " .. stack.count .. " " .. stack.prototype.subgroup.name , pindex)
-   else
-      printout(start_phrase .. "Empty Slot",pindex)
    end
 end
 
@@ -5041,7 +5040,7 @@ function read_coords(pindex, start_phrase)
                result = result .. " parked facing " .. get_heading(vehicle)  
             end
          end
-         result = result .. " in " .. localising.get(vehicle) .. " at point "
+         result = result .. " in " .. localising.get(vehicle,pindex) .. " at point "
          printout(result .. math.floor(vehicle.position.x) .. ", " .. math.floor(vehicle.position.y), pindex)
       else
          --Simply give coords
@@ -8117,6 +8116,8 @@ script.on_event("read-menu-name", function(event)--read_menu_name
             menu_name = menu_name .. ", " .. pb.sectors[pb.sector].name
          elseif players[pindex].building.recipe_selection == true then
             menu_name = menu_name .. ", recipe selection"
+         elseif players[pindex].building.sector_name == "player_inventory" then
+            menu_name = menu_name .. ", player inventory"
          else
             menu_name = menu_name .. ", other section"
          end
@@ -8265,12 +8266,14 @@ script.on_event("switch-menu-or-gun", function(event)
 
          if players[pindex].building.sector <= #players[pindex].building.sectors then
             read_building_slot(pindex, true)
+            players[pindex].building.sector_name = "other"
 --            if inventory == players[pindex].building.sectors[players[pindex].building.sector+1].inventory then
 --               printout("Big Problem!", pindex)
   --          end
          elseif players[pindex].building.recipe_list == nil then
             if players[pindex].building.sector == (#players[pindex].building.sectors + 1) then
-			   read_inventory_slot(pindex, "Player Inventory, ")
+               read_inventory_slot(pindex, "Player Inventory, ")
+               players[pindex].building.sector_name = "player_inventory"
             else
                players[pindex].building.sector = 1
                read_building_slot(pindex, true)
@@ -8278,8 +8281,10 @@ script.on_event("switch-menu-or-gun", function(event)
          else
             if players[pindex].building.sector == #players[pindex].building.sectors + 1 then     --Recipe selection sector
                read_building_recipe(pindex, "Select a Recipe, ")
+               players[pindex].building.sector_name = "recipe_selection"
             elseif players[pindex].building.sector == #players[pindex].building.sectors + 2 then --Player inventory sector
                read_inventory_slot(pindex, "Player Inventory, ")
+               players[pindex].building.sector_name = "player_inventory"
             else
                players[pindex].building.sector = 1
                read_building_slot(pindex, true)
@@ -8392,23 +8397,28 @@ script.on_event("reverse-switch-menu-or-gun", function(event)
 
          if players[pindex].building.sector < 1 then
             if players[pindex].building.recipe_list == nil then
-               players[pindex].building.sector = #players[pindex].building.sectors + 1
+               players[pindex].building.sector = #players[pindex].building.sectors + 1 
             else
-               players[pindex].building.sector = #players[pindex].building.sectors + 2
+               players[pindex].building.sector = #players[pindex].building.sectors + 2 
             end
+            players[pindex].building.sector_name = "player_inventory"
             read_inventory_slot(pindex, "Player Inventory, ")
             
          elseif players[pindex].building.sector <= #players[pindex].building.sectors then
             read_building_slot(pindex, true)
+            players[pindex].building.sector_name = "other"
          elseif players[pindex].building.recipe_list == nil then
             if players[pindex].building.sector == (#players[pindex].building.sectors + 1) then
                read_inventory_slot(pindex, "Player Inventory, ")
+               players[pindex].building.sector_name = "player_inventory"
             end
          else
             if players[pindex].building.sector == #players[pindex].building.sectors + 1 then
                read_building_recipe(pindex, "Select a Recipe, ")
+               players[pindex].building.sector_name = "recipe_selection"
             elseif players[pindex].building.sector == #players[pindex].building.sectors + 2 then
                read_inventory_slot(pindex, "Player Inventory, ")
+               players[pindex].building.sector_name = "player_inventory"
             end
          end
 
@@ -9713,7 +9723,7 @@ script.on_event("open-circuit-menu", function(event)
    end
    local p = game.get_player(pindex)
    --In a building menu
-   if players[pindex].menu == "building" or players[pindex].menu == "building_no_sectors" then
+   if players[pindex].menu == "building" or players[pindex].menu == "building_no_sectors" or players[pindex].menu == "belt" then
       local ent = p.opened
       if ent == nil or ent.valid == false then
          printout("Error: Missing building interface",pindex)
@@ -9758,7 +9768,7 @@ script.on_event("open-circuit-menu", function(event)
          circuit_network_menu_open(pindex, ent)
          return
       elseif ent.type == "constant-combinator" then
-         open_signal_selector(pindex, ent, nil)
+         circuit_network_menu_open(pindex, ent)
          return
       elseif ent.type == "arithmetic-combinator" or ent.type == "decider-combinator" then
          printout("Error: This combinator is not supported", pindex)
@@ -10451,7 +10461,7 @@ script.on_event("crafting-all", function(event)
    end
 end)
 
-
+--Transfers a stack from one inventory to another. Preserves BP data.
 script.on_event("transfer-one-stack", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -10660,7 +10670,7 @@ end)
 function do_multi_stack_transfer(ratio,pindex)
    local result = {""}
    local sector = players[pindex].building.sectors[players[pindex].building.sector]
-   if sector and #sector.inventory > 0 and sector.name ~= "Fluid" then
+   if sector and sector.name ~= "Fluid" and players[pindex].building.sector_name ~= "player_inventory" then
       --This is the section where we move from the building to the player.
       local item_name=""
       local stack = sector.inventory[players[pindex].building.index]
@@ -10678,8 +10688,19 @@ function do_multi_stack_transfer(ratio,pindex)
       else
          game.get_player(pindex).play_sound{path = "utility/inventory_move"}
          local item_list={""}
+         local other_items = 0
+         local listed_count = 0
          for name, amount in pairs(moved) do
-            table.insert(item_list,{"access.item-quantity",game.item_prototypes[name].localised_name,amount})
+            if listed_count <= 5 then
+               table.insert(item_list,{"access.item-quantity",game.item_prototypes[name].localised_name,amount})
+               table.insert(item_list,", ")
+            else
+               other_items = other_items + amount
+            end
+            listed_count = listed_count + 1
+         end
+         if other_items > 0 then
+            table.insert(item_list,{"access.item-quantity", "other items",other_items})--***todo localize "other items
             table.insert(item_list,", ")
          end
          --trim traling comma off
@@ -10687,12 +10708,15 @@ function do_multi_stack_transfer(ratio,pindex)
          table.insert(result,{"access.grabbed-stuff",item_list})
       end
       
+   elseif sector and sector.name == "fluid" then
+      --Do nothing
    else
       local offset = 1
       if players[pindex].building.recipe_list ~= nil then
          offset = offset + 1
       end
-      if players[pindex].building.sector == #players[pindex].building.sectors + offset then
+      if players[pindex].building.sector_name == "player_inventory" then
+         game.print("path 3b")
          --This is the section where we move from the player to the building.
          local item_name=""
          local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
@@ -10700,7 +10724,7 @@ function do_multi_stack_transfer(ratio,pindex)
             item_name = stack.name
          end
          
-         local moved, full = transfer_inventory{from=game.players[pindex].get_main_inventory(),to=players[pindex].building.ent,name=item_name,ratio=ratio}
+         local moved, full = transfer_inventory{from=game.get_player(pindex).get_main_inventory(),to=players[pindex].building.ent,name=item_name,ratio=ratio}
          
          if full then
             table.insert(result,"Inventory full or not applicable, ")
@@ -10710,17 +10734,29 @@ function do_multi_stack_transfer(ratio,pindex)
          else
             game.get_player(pindex).play_sound{path = "utility/inventory_move"}
             local item_list={""}
+            local other_items = 0
+            local listed_count = 0
             for name, amount in pairs(moved) do
-               table.insert(item_list,{"access.item-quantity",game.item_prototypes[name].localised_name,amount})
+               if listed_count <= 5 then
+                  table.insert(item_list,{"access.item-quantity",game.item_prototypes[name].localised_name,amount})
+                  table.insert(item_list,", ")
+               else
+                  other_items = other_items + amount
+               end
+               listed_count = listed_count + 1
+            end
+            if other_items > 0 then
+               table.insert(item_list,{"access.item-quantity", "other items",other_items})--***todo localize "other items
                table.insert(item_list,", ")
             end
-            --trim traling comma off
+            --trim trailing comma off
             item_list[#item_list]=nil
             table.insert(result,{"access.placed-stuff",breakup_string(item_list)})
          end
       end
    end
    printout(result, pindex)
+   game.print(players[pindex].building.sector_name or "(nil)")--****
 end
 
 --[[Transfers multiple stacks of a specific item (or all items) to/from the player inventory from/to a building inventory.
@@ -10732,34 +10768,33 @@ function transfer_inventory(args)
    args.name = args.name or ""
    args.ratio = args.ratio or 1
    local transfer_list={}
-   if args.name ~= "" and args.name ~= "blueprint" and args.name ~= "blueprint-book" then
+   if args.name ~= "" then
+      --Known name: transfer only this
       transfer_list[args.name] = args.from.get_item_count(args.name)
+   elseif args.name == "blueprint" or args.name == "blueprint-book" then
+      return {}, false
    else
+      --No name: Transfer everything
       transfer_list = args.from.get_contents()
    end
    local full=false
-   local res = {}
-   local others_counter = 0
+   local res = {} 
    for name, amount in pairs(transfer_list) do
-      amount = math.ceil(amount * args.ratio)
-      local actual_amount = args.to.insert({name=name, count=amount})
-      if actual_amount ~= amount then
-         print(name,amount,actual_amount)
-         amount = actual_amount
-         full = true
-      end
-      if amount > 0 then
-         if #res <= 5 then
-            res[name] = amount
-         else
-            others_counter = others_counter + 1
+      if name ~= "blueprint" and name ~= "blueprint-book" then
+         amount = math.ceil(amount * args.ratio)
+         local actual_amount = args.to.insert({name=name, count=amount})
+         if actual_amount ~= amount then
+            print(name,amount,actual_amount)
+            amount = actual_amount
+            full = true
          end
-         args.from.remove({name=name, count=amount})
+         if amount > 0 then
+            res[name] = amount
+            args.from.remove({name=name, count=amount})
+         end
       end
    end
-   if #res > 5 then
-      res["other item types"] = others_counter
-   end
+   game.print("run 1x: " .. args.name)--****
    return res, full
 end
 

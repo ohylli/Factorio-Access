@@ -160,7 +160,7 @@ function wire_neighbours_info(ent, read_network_ids)
    return result 
 end
 
-function localise_signal_name(signal,pindex)--todo**** actually localise
+function localise_signal_name(signal,pindex)
    if signal == nil then
       return "nil"
    end
@@ -675,8 +675,9 @@ function circuit_network_menu(pindex, ent_in, menu_index, clicked, other_input)
    local nwg = ent.get_circuit_network(defines.wire_type.green)
    local nw_name = nil
    if nwr == nil and nwg == nil then
-      printout("No circuit network connected", pindex)
-      return 
+      nw_name = " none "
+      -- printout("No circuit network connected", pindex)
+      -- return 
    elseif nwr ~= nil and nwg == nil then 
       nw_name = " red " .. nwr.network_id
    elseif nwr == nil and nwg ~= nil then 
@@ -696,6 +697,10 @@ function circuit_network_menu(pindex, ent_in, menu_index, clicked, other_input)
       if not clicked then
          printout("List active signals of this network",pindex)
       else
+         if nwr == nil and nwg == nil then
+            printout("No circuit network connected", pindex)
+            return 
+         end
          local result = ""
          if nwr ~= nil then
             if nwg ~= nil then
@@ -719,6 +724,10 @@ function circuit_network_menu(pindex, ent_in, menu_index, clicked, other_input)
       if not clicked then
          printout("List members of this network",pindex)
       else
+         if nwr == nil and nwg == nil then
+            printout("No circuit network connected", pindex)
+            return 
+         end
          local result = ""
          if nwr ~= nil then
             if nwg ~= nil then
@@ -742,23 +751,27 @@ function circuit_network_menu(pindex, ent_in, menu_index, clicked, other_input)
       if not clicked then
          printout("List directly connected network members for this " .. localising.get(ent,pindex),pindex)
       else
+         if nwr == nil and nwg == nil then
+            printout("No circuit network connected", pindex)
+            return 
+         end
          local result = ""
-      if nwr ~= nil then
-         if nwg ~= nil then
-            result = result .. "Red network: "
-         end
-         result = result .. circuit_network_neighbors_info(pindex, ent, defines.wire_type.red)
-      end
-      if nwg ~= nil then
          if nwr ~= nil then
-            result = result .. "Green network: "
+            if nwg ~= nil then
+               result = result .. "Red network: "
+            end
+            result = result .. circuit_network_neighbors_info(pindex, ent, defines.wire_type.red)
          end
-         result = result .. circuit_network_neighbors_info(pindex, ent, defines.wire_type.green)
-      end
-      if result == "" then
-         result = "Error: No network"
-      end
-      printout(result,pindex)
+         if nwg ~= nil then
+            if nwr ~= nil then
+               result = result .. "Green network: "
+            end
+            result = result .. circuit_network_neighbors_info(pindex, ent, defines.wire_type.green)
+         end
+         if result == "" then
+            result = "Error: No network"
+         end
+         printout(result,pindex)
       end
    end
    --Rest of the menu depends on ent type 
@@ -829,6 +842,10 @@ function circuit_network_menu(pindex, ent_in, menu_index, clicked, other_input)
       if control == nil then
          printout("No circuit network interface for this entity" , pindex)
          return
+      end
+      if nwr == nil and nwg == nil then
+         printout("No circuit network connected", pindex)
+         return 
       end
       local control_has_no_circuit_conditions = ent.type == "container" or ent.type == "logistic-container" or ent.type == "storage-tank" or ent.type == "rail-chain-signal" or ent.type == "accumulator" or ent.type == "roboport" or ent.type == "constant-combinator"
       local circuit_cond = nil 
@@ -1074,7 +1091,7 @@ function add_neighbors_to_circuit_network_member_list(list_in,ent_in,color_in,it
 end
 
 --Lists first 10 signals in a circuit network
-function circuit_network_signals_info(pindex, nw) --****todo?
+function circuit_network_signals_info(pindex, nw) 
    local signals = nw.signals 
    local result = ""
    local total_signal_count = 0
