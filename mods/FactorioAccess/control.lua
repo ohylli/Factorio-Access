@@ -3281,9 +3281,10 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
             index = index + input_item_count
             for i, v in pairs(recipe.ingredients) do
                if v.type == "fluid" and i == index then
-                  name = name .. " input " .. v.name
+                  local localised_name = localising.get(game.fluid_prototypes[v.name],pindex)
+                  name = name .. " input " .. localised_name .. " times " .. v.amount 
                   if prev_name ~= "Any" then
-                     name = "input " .. prev_name .. " x " .. math.floor(0.5 + amount)
+                     name = "input " .. prev_name .. " times " .. math.floor(0.5 + amount)
                   end
                end
             end
@@ -3292,15 +3293,16 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
             index = index + output_item_count
             for i, v in pairs(recipe.products) do
                if v.type == "fluid" and i == index then
-                  name = name .. " output " .. v.name
+                  local localised_name = localising.get(game.fluid_prototypes[v.name],pindex)
+                  name = name .. " output " .. localised_name .. " times " .. v.amount 
                   if prev_name ~= "Any" then
-                     name = "output " .. prev_name .. " x " .. math.floor(0.5 + amount)
+                     name = "output " .. prev_name .. " times " .. math.floor(0.5 + amount)
                   end
                end
             end
          end
       else
-         name = name .. " x " .. math.floor(0.5 + amount)
+         name = name .. " times " .. math.floor(0.5 + amount)
       end
       --Read the fluid found, including amount if any
       printout(start_phrase .. " " .. name, pindex)
@@ -3357,7 +3359,8 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
                result = result .. " reserved for "
                for i, v in pairs(recipe.ingredients) do
                   if v.type == "item" and i == players[pindex].building.index then
-                     result = result .. v.name --.. " or "
+                     local localised_name = localising.get(game.item_prototypes[v.name],pindex)
+                     result = result .. localised_name .. " times " .. v.amount
                   end
                end
                --result = result .. "nothing"
@@ -3366,7 +3369,8 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
                result = result .. " reserved for "
                for i, v in pairs(recipe.products) do
                   if v.type == "item" and i == players[pindex].building.index then
-                     result = result .. v.name --does not localise?**
+                     local localised_name = localising.get(game.item_prototypes[v.name],pindex)
+                     result = result .. localised_name .. " times " .. v.amount 
                   end
                end
                --result = result .. "nothing"
@@ -5134,11 +5138,21 @@ function read_coords(pindex, start_phrase)
       local recipe = players[pindex].crafting.lua_recipes[players[pindex].crafting.category][players[pindex].crafting.index]
       result = result .. "Ingredients: "
       for i, v in pairs(recipe.ingredients) do
-         result = result .. ", " .. v.name .. " x" .. v.amount
+         local proto = game.item_prototypes[v.name]
+         if proto == nil then
+            proto = game.fluid_prototypes[v.name]
+         end
+         local localised_name = localising.get(proto,pindex)
+         result = result .. ", " .. localised_name .. " times " .. v.amount
       end
       result = result .. ", Products: "
       for i, v in pairs(recipe.products) do
-         result = result .. ", " .. v.name .. " x" .. v.amount
+         local proto = game.item_prototypes[v.name]
+         if proto == nil then
+            proto = game.fluid_prototypes[v.name]
+         end
+         local localised_name = localising.get(proto,pindex)
+         result = result .. ", " .. localised_name .. " times " .. v.amount
       end
       result = result .. ", time " .. recipe.energy .. " seconds by default."
       printout(result, pindex)
@@ -5180,11 +5194,21 @@ function read_coords(pindex, start_phrase)
       local recipe = players[pindex].building.recipe_list[players[pindex].building.category][players[pindex].building.index]
       result = result .. "Ingredients: "
       for i, v in pairs(recipe.ingredients) do
-         result = result .. ", " .. v.name .. " x" .. v.amount
+         local proto = game.item_prototypes[v.name]
+         if proto == nil then
+            proto = game.fluid_prototypes[v.name]
+         end
+         local localised_name = localising.get(proto,pindex)
+         result = result .. ", " .. localised_name .. " x" .. v.amount
       end
       result = result .. ", products: "
       for i, v in pairs(recipe.products) do
-         result = result .. ", " .. v.name .. " x" .. v.amount
+         local proto = game.item_prototypes[v.name]
+         if proto == nil then
+            proto = game.fluid_prototypes[v.name]
+         end
+         local localised_name = localising.get(proto,pindex)
+         result = result .. ", " .. localised_name .. " x" .. v.amount
       end
       result = result .. ", craft time " .. recipe.energy .. " seconds at default speed."
       printout(result, pindex)
