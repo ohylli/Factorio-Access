@@ -11230,16 +11230,25 @@ script.on_event("item-info", function(event)
          if recipe ~= nil and #recipe.products > 0 then
             local product_name = recipe.products[1].name
             local product = game.item_prototypes[product_name]
-                     local str = ""
-                  if product.place_result ~= nil then
-                     str = product.place_result.localised_description
-                  else
-                     str = product.localised_description
-                  end
-                  if str == nil or str == "" then
-                     str = "No description found for this item"
-                  end
-                  printout(str, pindex)
+            local product_is_item = true
+            if product == nil then
+               product = game.fluid_prototypes[product_name]
+               product_is_item = false
+            elseif (product_name == "empty-barrel" and recipe.products[2] ~= nil) then
+               product_name = recipe.products[2].name
+               product = game.fluid_prototypes[product_name]
+               product_is_item = false
+            end
+            local str = ""
+            if product_is_item and product.place_result ~= nil then
+               str = product.place_result.localised_description
+            else
+               str = product.localised_description
+            end
+            if str == nil or str == "" then
+               str = "No description found for this"
+            end
+            printout(str, pindex)
          else
             printout("No description found, menu error", pindex)
          end
@@ -11252,7 +11261,7 @@ script.on_event("item-info", function(event)
                local str = ""
                str = product.localised_description
                if str == nil or str == "" then
-                  str = "No description found for this item"
+                  str = "No description found for this"
                end
                printout(str, pindex)
             else
