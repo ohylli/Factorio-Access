@@ -1791,6 +1791,20 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "fa-pda-driving-assistant-info",
+    key_sequence = "U",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "fa-pda-cruise-control-info",
+    key_sequence = "SHIFT + U",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "access-config-version1-DO-NOT-EDIT",
     key_sequence = "A",
     consuming = "none"
