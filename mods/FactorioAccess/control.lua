@@ -808,10 +808,6 @@ function ent_info(pindex, ent, description)
    if game.players[pindex].name == "Crimso" then
       result = result .. " " .. ent.type .. " "
    end
-   if game.get_player(pindex).driving then--Note: this is also checked in read_tile
-      result = result .. ", cannot check details while driving. "
-      return result
-   end
    if ent.type == "resource" then
       if ent.name ~= "crude-oil" then
          result = result .. ", x " .. ent.amount
@@ -4388,6 +4384,9 @@ function toggle_cursor_mode(pindex)
       target(pindex)
       players[pindex].player_direction = p.character.direction
       players[pindex].build_lock = false
+      if p.driving and p.vehicle then
+         p.vehicle.active = true
+      end
       read_tile(pindex, "Cursor mode disabled, ")
    end
    if players[pindex].cursor_size < 2 then 
@@ -5030,15 +5029,17 @@ function read_coords(pindex, start_phrase)
       if game.get_player(pindex).driving then
          --Give vehicle coords and orientation and speed --laterdo find exact speed coefficient
          local vehicle = game.get_player(pindex).vehicle 
+         local speed = vehicle.speed * 215
          if vehicle.type ~= "spider-vehicle" then
-            local speed = vehicle.speed
             if speed > 0 then 
-               result = result .. " heading " .. get_heading(vehicle) .. " at " .. math.floor(speed * 215) .. " kilometers per hour " 
+               result = result .. " heading " .. get_heading(vehicle) .. " at " .. math.floor(speed) .. " kilometers per hour " 
             elseif speed < 0 then
-               result = result .. " facing " .. get_heading(vehicle) .. " while reversing at "  .. math.floor(-speed * 215) .. " kilometers per hour " 
+               result = result .. " facing " .. get_heading(vehicle) .. " while reversing at "  .. math.floor(-speed) .. " kilometers per hour " 
             else
                result = result .. " parked facing " .. get_heading(vehicle)  
             end
+         else
+            result = result .. " moving at "  .. math.floor(speed) .. " kilometers per hour " 
          end
          result = result .. " in " .. localising.get(vehicle,pindex) .. " at point "
          printout(result .. math.floor(vehicle.position.x) .. ", " .. math.floor(vehicle.position.y), pindex)
@@ -6820,19 +6821,23 @@ function move_key(direction,event, force_single_tile)
 end
 
 --Move the cursor, and conduct area scans for larger cursors. Does not work while dirving if the vehicle is moving
-function cursor_mode_move(direction, pindex, single_only)
+function cursor_mode_move(direction, pindex, single_only)--*****
    local diff = players[pindex].cursor_size * 2 + 1
    if single_only then
       diff = 1
    end
    local p = game.get_player(pindex)
 
-   if p.driving and p.vehicle then
-      if math.abs(p.vehicle.speed) < 10 then
-         p.vehicle.speed = 0
+   if p.driving and p.vehicle and (p.vehicle.type == "car" or p.vehicle.type == "locomotive") then
+      if math.abs(p.vehicle.speed * 215) < 25 then
+         schedule(15,"stop_vehicle",pindex)
+         schedule(30,"stop_vehicle",pindex)
+         schedule(60,"stop_vehicle",pindex)
+         p.vehicle.active = false
       else
-         printout("Error: you are moving too fast!",pindex)
-         return 
+         schedule(15,"halve_vehicle_speed",pindex)
+         schedule(30,"halve_vehicle_speed",pindex)
+         schedule(60,"halve_vehicle_speed",pindex)
       end
    end
    
@@ -7452,10 +7457,12 @@ script.on_event("read-driving-structure-ahead", function(event)
       if ent and ent.valid then
          local dir = get_heading_value(p.vehicle)
          local dir_ent = get_direction_of_that_from_this(ent.position,p.vehicle.position)
-         if p.vehicle.speed >= 0 and dir_ent == dir then
-            printout(localising.get(ent,pindex) .. " ahead ", pindex)
+         if p.vehicle.speed >= 0 and (dir_ent == dir or math.abs(dir_ent - dir) == 1 or math.abs(dir_ent - dir) == 7) then
+            local dist = math.floor(util.distance(p.vehicle.position,ent.position))
+            printout(localising.get(ent,pindex) .. " ahead in " .. dist .. " meters", pindex)
          elseif p.vehicle.speed < 0 and dir_ent == rotate_180(dir) then
-            printout(localising.get(ent,pindex) .. " behind ", pindex)
+            local dist = math.floor(util.distance(p.vehicle.position,ent.position))
+            printout(localising.get(ent,pindex) .. " behind in " .. dist .. " meters", pindex)
          end
       end
    end
@@ -10756,13 +10763,14 @@ function do_multi_stack_transfer(ratio,pindex)
       end
    end
    printout(result, pindex)
-   game.print(players[pindex].building.sector_name or "(nil)")--****
+   --game.print(players[pindex].building.sector_name or "(nil)")--**
 end
 
 --[[Transfers multiple stacks of a specific item (or all items) to/from the player inventory from/to a building inventory.
 * item name / empty string to indicate transfering everything
 * ratio (between 0 and 1), the ratio of the total count to transder for each item.
 * Has no checks or printouts!
+* persistent bug: only 1 inv transfer from player inv to chest can work, after that for some reason it always both inserts and takes back todo ***
 ]]
 function transfer_inventory(args)
    args.name = args.name or ""
@@ -10794,7 +10802,7 @@ function transfer_inventory(args)
          end
       end
    end
-   game.print("run 1x: " .. args.name)--****
+   --game.print("run 1x: " .. args.name)--**
    return res, full
 end
 
@@ -12505,7 +12513,7 @@ script.on_event("cursor-skip-east", function(event)
    cursor_skip(pindex, defines.direction.east)
 end)
 
---Runs the cursor skip iteration and reads out results *****
+--Runs the cursor skip iteration and reads out results 
 function cursor_skip(pindex, direction, iteration_limit)
    if players[pindex].cursor == false then
       return
