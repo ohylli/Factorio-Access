@@ -6521,8 +6521,9 @@ function update_menu_visuals()
             update_overhead_sprite("item.electronic-circuit",2,1.25,pindex)
             update_custom_GUI_sprite("item.electronic-circuit", 3, pindex)
          elseif player.menu == "signal_selector" then
-            update_overhead_sprite("item.advanced-circuit",2,1.25,pindex)
-            update_custom_GUI_sprite("item.advanced-circuit", 3, pindex)
+            local sprite = "item-group.signals"
+            update_overhead_sprite(sprite,1,1.25,pindex)
+            update_custom_GUI_sprite(sprite, 0.5, pindex)
          elseif player.menu == "pump" then
             update_overhead_sprite("item.offshore-pump",2,1.25,pindex)
             update_custom_GUI_sprite("item.offshore-pump", 3, pindex)
@@ -13017,12 +13018,73 @@ script.on_event("debug-test-key", function(event)
    local ent =  get_selected_ent(pindex)
    local stack = game.get_player(pindex).cursor_stack
    
-   get_blueprint_corners(pindex, true)
-   if ent and ent.valid then
-      game.print("tile width: " .. game.entity_prototypes[ent.name].tile_width)
-   end
+   --get_blueprint_corners(pindex, true)
+   --if ent and ent.valid then
+   --   game.print("tile width: " .. game.entity_prototypes[ent.name].tile_width)
+   --end
+   show_sprite_demo(pindex)
 
 end)
+
+function show_sprite_demo(pindex)
+   --Set these 5 sprites to sprites that you want to demo
+   local sprite1 = "item-group.intermediate-products"
+   local sprite2 = "item-group.effects"
+   local sprite3 = "item-group.environment"
+   local sprite4 = "item-group.other"
+   local sprite5 = "item.iron-gear-wheel"
+   --Let the gunction do the rest. Clear it with CTRL + ALT + R 
+   local player = players[pindex]
+   local p = game.get_player(pindex)
+   local scale = scale_in
+   
+   local f = nil
+   local s1 = nil
+   local s2 = nil
+   local s3 = nil
+   local s4 = nil
+   local s5 = nil
+   --Set the frame
+   if f == nil or not f.valid then
+      f = game.get_player(pindex).gui.screen.add{type="frame"}
+      f.force_auto_center()
+      f.bring_to_front()
+   end
+   --Set the main sprite
+   if s1 == nil or not s1.valid then
+      s1 = f.add{type="sprite",caption = "custom menu"}
+   end
+   if s1.sprite ~= sprite1 then 
+      s1.sprite = sprite1
+   end
+   if s2 == nil or not s2.valid then
+      s2 = f.add{type="sprite",caption = "custom menu"}
+   end
+   if s2.sprite ~= sprite2 then 
+      s2.sprite = sprite2
+   end
+   if s3 == nil or not s3.valid then
+      s3 = f.add{type="sprite",caption = "custom menu"}
+   end
+   if s3.sprite ~= sprite3 then 
+      s3.sprite = sprite3
+   end
+   if s4 == nil or not s4.valid then
+      s4 = f.add{type="sprite",caption = "custom menu"}
+   end
+   if s4.sprite ~= sprite4 then 
+      s4.sprite = sprite4
+   end
+   if s5 == nil or not s5.valid then
+      s5 = f.add{type="sprite",caption = "custom menu"}
+   end
+   if s5.sprite ~= sprite5 then 
+      s5.sprite = sprite5
+   end
+   
+   --test style changes...
+   s5.style.size = 5
+end
 
 script.on_event("logistic-request-read", function(event)
    local pindex = event.player_index
