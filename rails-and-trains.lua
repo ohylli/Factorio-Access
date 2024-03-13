@@ -5038,13 +5038,13 @@ function check_and_play_driving_alert_sound(pindex, tick, mode_in)--wip****
       --Set the trigger distance 
       local trigger = 1
       if mode == 1 then
-         trigger = 2.5
+         trigger = 3
       elseif mode == 2 then
          trigger = 10
       elseif mode == 3 then
-         trigger = 20
+         trigger = 25
       else
-         trigger = 40
+         trigger = 50
       end
       
       --Scan for entities within the radius
@@ -5119,6 +5119,28 @@ function check_and_play_driving_alert_sound(pindex, tick, mode_in)--wip****
    end
 end
 
+function stop_vehicle(pindex)
+   local vehicle = game.get_player(pindex).vehicle
+   if vehicle and vehicle.valid then
+      if vehicle.train == nil then
+         vehicle.speed = 0
+      elseif vehicle.train.state == defines.train_state.manual_control then
+         vehicle.train.speed = 0
+      end
+   end
+end
+
+function halve_vehicle_speed(pindex)
+   local vehicle = game.get_player(pindex).vehicle
+   if vehicle and vehicle.valid then
+      if vehicle.train == nil then
+         vehicle.speed = vehicle.speed / 2
+      elseif vehicle.train.state == defines.train_state.manual_control then
+         vehicle.train.speed = vehicle.train.speed / 2
+      end
+   end
+end
+
 --Interfacing with Pavement Driving Assist
 function fa_pda_get_state_of_cruise_control(pindex)
    if remote.interfaces.PDA and remote.interfaces.PDA.get_state_of_cruise_control then
@@ -5145,9 +5167,9 @@ function fa_pda_get_cruise_control_limit(pindex)
    end
 end
 
-function fa_pda_set_cruise_control_limit(pindex,new_state)
+function fa_pda_set_cruise_control_limit(pindex,new_value)
    if remote.interfaces.PDA and remote.interfaces.PDA.set_cruise_control_limit then
-      remote.call("PDA", "set_cruise_control_limit",pindex,new_state)
+      remote.call("PDA", "set_cruise_control_limit",pindex,new_value)
       return 1
    else
       return nil
@@ -5194,5 +5216,6 @@ function read_PDA_cruise_control_toggled_info(pindex)
       else
          printout("Missing cruise control",pindex)
       end
+      fa_pda_set_cruise_control_limit(pindex,0.1)
    end
 end
