@@ -12523,7 +12523,7 @@ function cursor_skip_iteration(pindex, direction, iteration_limit)
       local neighbours = start.neighbours
       if neighbours and #neighbours > 0 then 
          local other_end = neighbours[1]
-         local dist = math.ceil(util.distance(start.position,other_end.position) - 1--****review dist
+         local dist = math.ceil(util.distance(start.position,other_end.position)) - 1--****review dist
          local dir_neighbor = get_direction_of_that_from_this(other_end.position,start.position)
          if dir_neighbor == direction then
              return dist
@@ -15472,6 +15472,10 @@ function selected_item_production_stats_info(pindex)
    local item_stack = nil
    local recipe = nil
    
+   if p.driving then
+      return
+   end
+   
    --Select the cursor stack
    item_stack = p.cursor_stack
    if item_stack and item_stack.valid_for_read then
@@ -15553,3 +15557,12 @@ function round_to_nearest_k_after_10k(num_in)
    end
    return num
 end
+
+script.on_event("fa-pda-driving-assistant-info", function(event)
+   read_PDA_assistant_toggled_info(event.player_index) 
+end)
+
+script.on_event("fa-pda-cruise-control-info", function(event)
+   read_PDA_cruise_control_toggled_info(event.player_index) 
+end)
+

@@ -5168,3 +5168,29 @@ function fa_pda_set_state_of_driving_assistant(pindex,new_state)
       return nil
    end
 end
+
+function read_PDA_assistant_toggled_info(pindex)
+   if game.get_player(pindex).driving then 
+      local is_on = fa_pda_get_state_of_driving_assistant(pindex)
+      if is_on == true then
+         printout("Enabled pavement driving asssitant",pindex)
+      elseif is_on == false then
+         printout("Disabled pavement driving asssitant",pindex)
+      else
+         printout("Missing pavement driving asssitant",pindex)
+      end
+   end
+end
+
+function read_PDA_cruise_control_toggled_info(pindex)
+   if game.get_player(pindex).driving then 
+      local is_on = not fa_pda_get_state_of_cruise_control(pindex)
+      if is_on == true then
+         printout("Enabled cruise control",pindex)
+      elseif is_on == false then
+         printout("Disabled cruise control",pindex)
+      else
+         printout("Missing cruise control",pindex)
+      end
+   end
+end
