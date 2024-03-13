@@ -24,3 +24,31 @@ data.raw.character.character.has_belt_immunity = true
 for _,item in pairs(vanilla_tip_and_tricks_item_table) do
    remove_tip_and_tricks_item(item);
 end
+
+--Modifications for Pavement Driving Assist Continued
+data:extend({
+    {
+        type = "custom-input",
+        name = "toggle_drive_assistant",
+        key_sequence = "U",
+        consuming = "game-only"
+    },
+    {
+        type = "custom-input",
+        name = "toggle_cruise_control",
+        key_sequence = "SHIFT + U",
+        consuming = "game-only"
+    },
+    {
+        type = "custom-input",
+        name = "set_cruise_control_limit",
+        key_sequence = "CONTROL + U",
+        consuming = "game-only"
+    },
+    {
+        type = "custom-input",
+        name = "confirm_set_cruise_control_limit",
+        key_sequence = "",
+        linked_game_control = "confirm-gui"
+    },
+})
