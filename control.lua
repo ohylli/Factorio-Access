@@ -2385,6 +2385,7 @@ function generate_production_network(pindex)
    return {hash = hash, lines = lines}
 end
 
+--Create warnings list
 function scan_for_warnings(L,H,pindex)
    local prod =       generate_production_network(pindex)
    local surf = game.get_player(pindex).surface
@@ -2399,7 +2400,8 @@ function scan_for_warnings(L,H,pindex)
    warnings ["notConnected"] = {}
    for i, ent in pairs(ents) do
       if ent.prototype.burner_prototype ~= nil then
-         if ent.energy == 0 then
+         local fuel_inv = ent.get_fuel_inventory()
+         if ent.energy == 0 and (fuel_inv == nil or (fuel_inv and fuel_inv.valid and fuel_inv.is_empty())) then
             table.insert(warnings["noFuel"], ent)
          end
       end
@@ -4351,7 +4353,7 @@ function scan_nearby_trees(pindex, filter_direction, radius_in)
    return result 
 end
 
-function toggle_cursor(pindex)
+function toggle_cursor_mode(pindex)
    local p = game.get_player(pindex)
    if p.character == nil then
       players[pindex].cursor = true
@@ -5028,15 +5030,18 @@ function read_coords(pindex, start_phrase)
       end
       if game.get_player(pindex).driving then
          --Give vehicle coords and orientation and speed --laterdo find exact speed coefficient
-         local vehicle = game.get_player(pindex).vehicle
-         result = result .. " in " .. vehicle.name .. " " 
-         if vehicle.speed > 0 then --todo *** maybe use "effective_speed" instead
-            result = result .. " heading " .. get_heading(vehicle) .. " at " .. math.floor(vehicle.speed * 215) .. " kilometers per hour, past the point " 
-         elseif vehicle.speed < 0 then
-            result = result .. " facing" .. get_heading(vehicle) .. " while reversing at "  .. math.floor(-vehicle.speed * 215) .. " kilometers per hour, past the point " 
-         else
-            result = result .. " parked facing " .. get_heading(vehicle) .. " at point "
+         local vehicle = game.get_player(pindex).vehicle 
+         if vehicle.type ~= "spider-vehicle" then
+            local speed = vehicle.speed
+            if speed > 0 then 
+               result = result .. " heading " .. get_heading(vehicle) .. " at " .. math.floor(speed * 215) .. " kilometers per hour " 
+            elseif speed < 0 then
+               result = result .. " facing " .. get_heading(vehicle) .. " while reversing at "  .. math.floor(-speed * 215) .. " kilometers per hour " 
+            else
+               result = result .. " parked facing " .. get_heading(vehicle)  
+            end
          end
+         result = result .. " in " .. localising.get(vehicle) .. " at point "
          printout(result .. math.floor(vehicle.position.x) .. ", " .. math.floor(vehicle.position.y), pindex)
       else
          --Simply give coords
@@ -6815,20 +6820,28 @@ function move_key(direction,event, force_single_tile)
    end
 end
 
---Move the cursor, and conduct area scans for larger cursors
+--Move the cursor, and conduct area scans for larger cursors. Does not work while dirving if the vehicle is moving
 function cursor_mode_move(direction, pindex, single_only)
    local diff = players[pindex].cursor_size * 2 + 1
    if single_only then
       diff = 1
    end
    local p = game.get_player(pindex)
+
+   if p.driving and p.vehicle then
+      if math.abs(p.vehicle.speed) < 10 then
+         p.vehicle.speed = 0
+      else
+         printout("Error: you are moving too fast!",pindex)
+         return 
+      end
+   end
+   
    players[pindex].cursor_pos = center_of_tile(offset_position(players[pindex].cursor_pos, direction, diff))
    
    if players[pindex].cursor_size == 0 then
       -- Cursor size 0 ("1 by 1"): Read tile
-      if not p.driving then
-         read_tile(pindex)
-      end
+      read_tile(pindex)
       
       --Update drawn cursor
       local stack = p.cursor_stack
@@ -6848,7 +6861,7 @@ function cursor_mode_move(direction, pindex, single_only)
       else
          cursor_highlight(pindex, nil, nil)
       end
-   elseif not p.driving then
+   else
       -- Larger cursor sizes: scan area
       local scan_left_top = {math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size,math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size}
       local scan_right_bottom = {math.floor(players[pindex].cursor_pos.x)+players[pindex].cursor_size+1,math.floor(players[pindex].cursor_pos.y)+players[pindex].cursor_size+1}
@@ -7221,7 +7234,7 @@ script.on_event("toggle-cursor", function(event)
    end
    if not (players[pindex].in_menu) then
       players[pindex].move_queue = {}
-      toggle_cursor(pindex)
+      toggle_cursor_mode(pindex)
    end
 end)
 
@@ -10719,13 +10732,14 @@ function transfer_inventory(args)
    args.name = args.name or ""
    args.ratio = args.ratio or 1
    local transfer_list={}
-   if args.name ~= "" then
+   if args.name ~= "" and args.name ~= "blueprint" and args.name ~= "blueprint-book" then
       transfer_list[args.name] = args.from.get_item_count(args.name)
    else
       transfer_list = args.from.get_contents()
    end
    local full=false
-   res = {}
+   local res = {}
+   local others_counter = 0
    for name, amount in pairs(transfer_list) do
       amount = math.ceil(amount * args.ratio)
       local actual_amount = args.to.insert({name=name, count=amount})
@@ -10735,9 +10749,16 @@ function transfer_inventory(args)
          full = true
       end
       if amount > 0 then
-         res[name] = amount
+         if #res <= 5 then
+            res[name] = amount
+         else
+            others_counter = others_counter + 1
+         end
          args.from.remove({name=name, count=amount})
       end
+   end
+   if #res > 5 then
+      res["other item types"] = others_counter
    end
    return res, full
 end
