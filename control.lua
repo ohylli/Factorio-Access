@@ -3056,10 +3056,10 @@ function read_technology_slot(pindex, start_phrase)
       if tech.valid then
          printout(start_phrase .. localising.get(tech,pindex), pindex)
       else
-         printout("Error loading technology", pindex)
+         printout(start_phrase .. "Error loading technology", pindex)
       end
    else
-      printout("No technologies in this category yet", pindex)
+      printout(start_phrase .. "No technologies in this category yet", pindex)
    end
 end
 
@@ -5112,7 +5112,7 @@ function read_coords(pindex, start_phrase)
          end
          printout(result,pindex)
       end
-   elseif players[pindex].menu == "inventory" or ((players[pindex].menu == "building" or players[pindex].menu == "vehicle") and players[pindex].building.sector > offset + #players[pindex].building.sectors) then
+   elseif players[pindex].menu == "inventory" or players[pindex].menu == "player_trash" or ((players[pindex].menu == "building" or players[pindex].menu == "vehicle") and players[pindex].building.sector > offset + #players[pindex].building.sectors) then
       --Give slot coords (player inventory)
       local x = players[pindex].inventory.index %10
       local y = math.floor(players[pindex].inventory.index/10) + 1
@@ -5120,7 +5120,7 @@ function read_coords(pindex, start_phrase)
          x = x + 10
          y = y - 1
       end
-      printout(result .. x .. ", " .. y, pindex)
+      printout(result .. " item " .. x .. ", on row " .. y, pindex)
    elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") and players[pindex].building.recipe_selection == false then
       --Give slot coords (chest/building inventory)
       local x = -1 --Col number
@@ -5132,7 +5132,7 @@ function read_coords(pindex, start_phrase)
          x = x + row_length
          y = y - 1
       end
-      printout(result .. x .. ", " .. y, pindex)
+      printout(result .. " item " .. x .. ", on row " .. y, pindex)
 
    elseif players[pindex].menu == "crafting" then
       --Read recipe ingredients / products (crafting menu)
@@ -8359,6 +8359,10 @@ script.on_event("switch-menu-or-gun", function(event)
       return
    end
    
+   --Check if logistics have been researched
+   local trash_inv = game.get_player(pindex).get_inventory(defines.inventory.character_trash) 
+   local logistics_researched = (trash_inv ~= nil and trash_inv.valid and #trash_inv > 0)
+   
    if players[pindex].in_menu and players[pindex].menu ~= "prompt" then
       game.get_player(pindex).play_sound{path="Change-Menu-Tab-Sound"}
       if (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then
@@ -8413,8 +8417,13 @@ script.on_event("switch-menu-or-gun", function(event)
          players[pindex].menu = "technology"
          read_technology_slot(pindex, "Technology, Researchable Technologies, ")
       elseif players[pindex].menu == "technology" then
-         players[pindex].menu = "player_trash"
-         read_inventory_slot(pindex, "Logistic trash, ", game.get_player(pindex).get_inventory(defines.inventory.character_trash))
+         if logistics_researched then
+            players[pindex].menu = "player_trash"
+            read_inventory_slot(pindex, "Logistic trash, ", game.get_player(pindex).get_inventory(defines.inventory.character_trash))
+         else
+            players[pindex].menu = "inventory"
+            read_inventory_slot(pindex, "Inventory, ")
+         end
       elseif players[pindex].menu == "player_trash" then
          players[pindex].menu = "inventory"
          read_inventory_slot(pindex, "Inventory, ")
@@ -8493,6 +8502,11 @@ script.on_event("reverse-switch-menu-or-gun", function(event)
    if not check_for_player(pindex) then
       return
    end
+   
+   --Check if logistics have been researched
+   local trash_inv = game.get_player(pindex).get_inventory(defines.inventory.character_trash) 
+   local logistics_researched = (trash_inv ~= nil and trash_inv.valid and #trash_inv > 0)
+   
    if players[pindex].in_menu and players[pindex].menu ~= "prompt" then
       game.get_player(pindex).play_sound{path="Change-Menu-Tab-Sound"}
       if (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then
@@ -8539,8 +8553,13 @@ script.on_event("reverse-switch-menu-or-gun", function(event)
 
 
       elseif players[pindex].menu == "inventory" then
-         players[pindex].menu = "player_trash"
-         read_inventory_slot(pindex, "Logistic trash, ", game.get_player(pindex).get_inventory(defines.inventory.character_trash))
+         if logistics_researched then
+            players[pindex].menu = "player_trash"
+            read_inventory_slot(pindex, "Logistic trash, ", game.get_player(pindex).get_inventory(defines.inventory.character_trash))
+         else
+            players[pindex].menu = "technology"
+            read_technology_slot(pindex, "Technology, Researchable Technologies, ")
+         end
       elseif players[pindex].menu == "player_trash" then
          players[pindex].menu = "technology"
          read_technology_slot(pindex, "Technology, Researchable Technologies, ")
@@ -11365,8 +11384,11 @@ script.on_event("item-info", function(event)
          printout("Nothing selected, use this key to describe an entity or item that you select.", pindex)
       end
    elseif players[pindex].in_menu then
-      if players[pindex].menu == "inventory" or ((players[pindex].menu == "building" or players[pindex].menu == "vehicle") and players[pindex].building.sector > offset + #players[pindex].building.sectors) then
+      if players[pindex].menu == "inventory" or players[pindex].menu == "player_trash" or ((players[pindex].menu == "building" or players[pindex].menu == "vehicle") and players[pindex].building.sector > offset + #players[pindex].building.sectors) then
          local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
+         if players[pindex].menu == "player_trash" then
+            stack = game.get_player(pindex).get_inventory(defines.inventory.character_trash)[players[pindex].inventory.index]
+         end
          if stack and stack.valid_for_read and stack.valid == true then
             local str = ""
             if stack.prototype.place_result ~= nil then
@@ -14881,7 +14903,7 @@ function menu_search_open(pindex)
       printout("This menu does not support searching.",pindex)
       return
    end
-   if players[pindex].menu ~= "inventory" and players[pindex].menu ~= "building" and players[pindex].menu ~= "crafting" and players[pindex].menu ~= "technology" and players[pindex].menu ~= "signal_selector" then
+   if players[pindex].menu ~= "inventory" and players[pindex].menu ~= "building" and players[pindex].menu ~= "vehicle" and players[pindex].menu ~= "crafting" and players[pindex].menu ~= "technology" and players[pindex].menu ~= "signal_selector" and players[pindex].menu ~= "player_trash" then
       printout(players[pindex].menu .. " menu does not support searching.",pindex)
       return
    end
@@ -14913,7 +14935,7 @@ function menu_search_get_next(pindex, str, start_phrase_in)
       printout("This menu does not support searching.",pindex)
       return
    end
-   if players[pindex].menu ~= "inventory" and players[pindex].menu ~= "building" and players[pindex].menu ~= "crafting" and players[pindex].menu ~= "technology"and players[pindex].menu ~= "signal_selector" then
+   if players[pindex].menu ~= "inventory" and players[pindex].menu ~= "building" and players[pindex].menu ~= "vehicle" and players[pindex].menu ~= "crafting" and players[pindex].menu ~= "technology"and players[pindex].menu ~= "signal_selector" and players[pindex].menu ~= "player_trash" then
       printout(players[pindex].menu .. " menu does not support searching.",pindex)
       return
    end
@@ -14943,11 +14965,11 @@ function menu_search_get_next(pindex, str, start_phrase_in)
    if players[pindex].menu == "inventory" then
       inv = game.get_player(pindex).get_main_inventory()
       new_index = inventory_find_index_of_next_name_match(inv, search_index, str, pindex)
+   elseif players[pindex].menu == "player_trash" then
+      inv = game.get_player(pindex).get_inventory(defines.inventory.character_trash)
+      new_index = inventory_find_index_of_next_name_match(inv, search_index, str, pindex)
    elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") and pb.sectors and pb.sectors[pb.sector] and pb.sectors[pb.sector].name == "Output" then
       inv = game.get_player(pindex).opened.get_output_inventory()
-      new_index = inventory_find_index_of_next_name_match(inv, search_index, str, pindex)
-   elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") and players[pindex].building.sector_name == "player_inventory"  then
-      inv = game.get_player(pindex).get_main_inventory()
       new_index = inventory_find_index_of_next_name_match(inv, search_index, str, pindex)
    elseif players[pindex].menu == "crafting" then
       new_index, new_index_2 = crafting_find_index_of_next_name_match(str,pindex, search_index, search_index_2, players[pindex].crafting.lua_recipes)
@@ -15040,6 +15062,10 @@ function menu_search_get_next(pindex, str, start_phrase_in)
       players[pindex].menu_search_index = new_index
       players[pindex].inventory.index = new_index
       read_inventory_slot(pindex, start_phrase)
+   elseif players[pindex].menu == "player_trash" then
+      players[pindex].menu_search_index = new_index
+      players[pindex].inventory.index = new_index
+      read_inventory_slot(pindex, start_phrase, inv)
    elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") and pb.sectors and pb.sectors[pb.sector] and pb.sectors[pb.sector].name == "Output" then
       players[pindex].menu_search_index = new_index
       players[pindex].building.index = new_index
