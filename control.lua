@@ -7879,7 +7879,7 @@ script.on_event("scan-sort-by-distance", function(event)
       return
    end
    if not (players[pindex].in_menu) then
-      local ent = game.get_player(pindex).selected
+      local ent = game.get_player(pindex).selected or get_selected_ent(pindex)
       if ent ~= nil and ent.valid == true and (ent.get_control_behavior() ~= nil or ent.type == "electric-pole") then
          --Open the circuit network menu for the selected ent instead.
          return
@@ -9898,7 +9898,7 @@ script.on_event("open-circuit-menu", function(event)
       --Open the menu
       circuit_network_menu_open(pindex, ent)
    elseif players[pindex].in_menu == false then
-      local ent = p.selected
+      local ent = p.selected or get_selected_ent(pindex)
       if ent == nil or ent.valid == false or (ent.get_control_behavior() == nil and ent.type ~= "electric-pole") then
          --Sort scan results instead
          return
@@ -15770,5 +15770,9 @@ end)
 
 script.on_event("fa-pda-cruise-control-info", function(event)
    read_PDA_cruise_control_toggled_info(event.player_index) 
+end)
+
+script.on_event("fa-pda-cruise-control-set-speed-info", function(event)
+   printout("Type in the new cruise control speed and press 'ENTER' to confirm or press 'ESC' to exit",pindex)
 end)
 
