@@ -3282,7 +3282,7 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
             for i, v in pairs(recipe.ingredients) do
                if v.type == "fluid" and i == index then
                   local localised_name = localising.get(game.fluid_prototypes[v.name],pindex)
-                  name = name .. " input " .. localised_name .. " times " .. v.amount 
+                  name = name .. " input " .. localised_name .. " times " .. v.amount .. " per cycle "
                   if prev_name ~= "Any" then
                      name = "input " .. prev_name .. " times " .. math.floor(0.5 + amount)
                   end
@@ -3294,7 +3294,7 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
             for i, v in pairs(recipe.products) do
                if v.type == "fluid" and i == index then
                   local localised_name = localising.get(game.fluid_prototypes[v.name],pindex)
-                  name = name .. " output " .. localised_name .. " times " .. v.amount 
+                  name = name .. " output " .. localised_name .. " times " .. v.amount .. " per cycle "
                   if prev_name ~= "Any" then
                      name = "output " .. prev_name .. " times " .. math.floor(0.5 + amount)
                   end
@@ -3360,7 +3360,7 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
                for i, v in pairs(recipe.ingredients) do
                   if v.type == "item" and i == players[pindex].building.index then
                      local localised_name = localising.get(game.item_prototypes[v.name],pindex)
-                     result = result .. localised_name .. " times " .. v.amount
+                     result = result .. localised_name .. " times " .. v.amount .. " per cycle "
                   end
                end
                --result = result .. "nothing"
@@ -3370,7 +3370,7 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
                for i, v in pairs(recipe.products) do
                   if v.type == "item" and i == players[pindex].building.index then
                      local localised_name = localising.get(game.item_prototypes[v.name],pindex)
-                     result = result .. localised_name .. " times " .. v.amount 
+                     result = result .. localised_name .. " times " .. v.amount .. " per cycle "
                   end
                end
                --result = result .. "nothing"
@@ -5143,7 +5143,7 @@ function read_coords(pindex, start_phrase)
             proto = game.fluid_prototypes[v.name]
          end
          local localised_name = localising.get(proto,pindex)
-         result = result .. ", " .. localised_name .. " times " .. v.amount
+         result = result .. ", " .. localised_name .. " times " .. v.amount .. " per cycle "
       end
       result = result .. ", Products: "
       for i, v in pairs(recipe.products) do
@@ -5152,7 +5152,7 @@ function read_coords(pindex, start_phrase)
             proto = game.fluid_prototypes[v.name]
          end
          local localised_name = localising.get(proto,pindex)
-         result = result .. ", " .. localised_name .. " times " .. v.amount
+         result = result .. ", " .. localised_name .. " times " .. v.amount .. " per cycle "
       end
       result = result .. ", time " .. recipe.energy .. " seconds by default."
       printout(result, pindex)
@@ -5199,7 +5199,7 @@ function read_coords(pindex, start_phrase)
             proto = game.fluid_prototypes[v.name]
          end
          local localised_name = localising.get(proto,pindex)
-         result = result .. ", " .. localised_name .. " x" .. v.amount
+         result = result .. ", " .. localised_name .. " x" .. v.amount .. " per cycle "
       end
       result = result .. ", products: "
       for i, v in pairs(recipe.products) do
@@ -5208,7 +5208,7 @@ function read_coords(pindex, start_phrase)
             proto = game.fluid_prototypes[v.name]
          end
          local localised_name = localising.get(proto,pindex)
-         result = result .. ", " .. localised_name .. " x" .. v.amount
+         result = result .. ", " .. localised_name .. " x" .. v.amount .. " per cycle "
       end
       result = result .. ", craft time " .. recipe.energy .. " seconds at default speed."
       printout(result, pindex)
@@ -14854,6 +14854,9 @@ function menu_search_get_next(pindex, str, start_phrase_in)
    elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") and pb.sectors and pb.sectors[pb.sector] and pb.sectors[pb.sector].name == "Output" then
       inv = game.get_player(pindex).opened.get_output_inventory()
       new_index = inventory_find_index_of_next_name_match(inv, search_index, str, pindex)
+   elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") and players[pindex].building.sector_name == "player_inventory"  then
+      inv = game.get_player(pindex).get_main_inventory()
+      new_index = inventory_find_index_of_next_name_match(inv, search_index, str, pindex)
    elseif players[pindex].menu == "crafting" then
       new_index, new_index_2 = crafting_find_index_of_next_name_match(str,pindex, search_index, search_index_2, players[pindex].crafting.lua_recipes)
    elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") and pb.recipe_selection == true then
@@ -14938,7 +14941,7 @@ function menu_search_get_next(pindex, str, start_phrase_in)
    --Return a menu output according to the index found 
    if new_index <= 0 then
       printout("Could not find " .. str,pindex)
-      game.get_player(pindex).print("Could not find " .. str,{volume_modifier = 0})
+      game.get_player(pindex).print("Menu search: Could not find " .. str,{volume_modifier = 0})
       players[pindex].menu_search_last_name = "(none)"
       return
    elseif players[pindex].menu == "inventory" then
@@ -14949,6 +14952,11 @@ function menu_search_get_next(pindex, str, start_phrase_in)
       players[pindex].menu_search_index = new_index
       players[pindex].building.index = new_index
       read_building_slot(pindex,false)
+   elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") and players[pindex].building.sector_name == "player_inventory"  then
+      players[pindex].menu_search_index = new_index
+      players[pindex].building.index = new_index
+      players[pindex].inventory.index = new_index
+      read_inventory_slot(pindex,false)
    elseif players[pindex].menu == "crafting" then
       players[pindex].menu_search_index = new_index
       players[pindex].menu_search_index_2 = new_index_2
