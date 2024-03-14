@@ -1812,6 +1812,13 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "fa-pda-cruise-control-set-speed-info",
+    key_sequence = "CONTROL + O",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "access-config-version1-DO-NOT-EDIT",
     key_sequence = "A",
     consuming = "none"

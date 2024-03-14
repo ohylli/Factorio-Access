@@ -326,20 +326,30 @@ function get_circuit_read_mode_name(ent)
       end
    elseif ent.type == "container" or ent.type == "logistic-container" or ent.type == "storage-tank" then
       result = "Reading contents"
-   elseif ent.type == "gate" then
-      result = "Reading player presence in virtual signal G"
+   elseif ent.type == "gate" or ent.type == "wall" then
+      if control.read_sensor == true then
+         result = "Reading player presence in virtual signal 'G'"
+      elseif control.read_sensor == false then
+         result = "None"
+      else
+         result = "Nil"
+      end
    elseif ent.type == "rail-signal" or ent.type == "rail-chain-signal" then
       result = "Reading virtual color signals for rail signal states"
    elseif ent.type == "train-stop" then
-      result = "Reading train ID in virtual signal T and en route train count in virtual signal C" 
+      result = "None"--"Reading train ID in virtual signal T and en route train count in virtual signal 'C'" 
    elseif ent.type == "accumulator" then
-      result = "Reading charge percentage in virtual signal A"
+      result = "Reading charge percentage in virtual signal 'A'"
    elseif ent.type == "roboport" then
-      result = "Reading something "--todo explain other read modes***
+      result = "Reading logistic network contents "--todo add alternate mode***
    elseif ent.type == "mining-drill" then
-      result = "Reading something "--todo explain other read modes***
+      if control.resource_read_mode == dcb.mining_drill.resource_read_mode.this_miner then
+         result = "Reading resources that this drill can mine "
+      elseif  control.resource_read_mode == dcb.mining_drill.resource_read_mode.entire_patch then 
+         result = "Reading all resources in this ore patch. "
+      end
    elseif ent.type == "pumpjack" then
-      result = "Reading something "--todo explain other read modes***
+      result = "Reading crude oil output rate per second "--todo explain other read modes***
    end
    return result
 end
@@ -375,6 +385,25 @@ function toggle_circuit_read_mode(ent)
       else --if control.read_contents_mode == dcb.transport_belt.content_read_mode.pulse then
          control.read_contents = false
          result = "None"
+      end
+   elseif ent.type == "mining-drill" then
+      changed = true
+      if control.resource_read_mode == dcb.mining_drill.resource_read_mode.this_miner then
+         control.resource_read_mode = dcb.mining_drill.resource_read_mode.entire_patch   
+         result = "Reading all resources in this ore patch. "
+      elseif control.resource_read_mode == dcb.mining_drill.resource_read_mode.entire_patch then
+         control.resource_read_mode = dcb.mining_drill.resource_read_mode.this_miner
+         result = "Reading resources that this drill can mine "
+      end
+   elseif ent.type == "gate" or ent.type == "wall" then
+      changed = true
+      control.read_sensor = not control.read_sensor
+      if control.read_sensor == true then
+         result = "Reading player presence in virtual signal 'G'"
+      elseif control.read_sensor == false then
+         result = "None"
+      else
+         result = "Nil"
       end
    else
       changed = false
@@ -413,16 +442,23 @@ function get_circuit_operation_mode_name(ent)
       else
          result = "Other"
       end
-   elseif ent.type == "gate" then
-      result = "Undefined"--**laterdo
+   elseif ent.type == "gate" or ent.type == "wall" then
+      if control.open_gate == true then
+         result = "Open gate with condition"
+         uses_condition = true
+      elseif control.open_gate == false then
+         result = "None"
+      else
+         result = "Nil"
+      end 
    elseif ent.type == "rail-signal" then
-      result = "Undefined"--**laterdo
+      result = "None"--"Undefined"--**laterdo
    elseif ent.type == "train-stop" then
-      result = "Undefined"--**laterdo
+      result = "Send signals to parked train"--"Undefined"--**laterdo
    elseif ent.type == "mining-drill" then
-      result = "Undefined"--**laterdo
+      result = "None"--"Undefined"--**laterdo
    elseif ent.type == "pumpjack" then
-      result = "Undefined"--**laterdo
+      result = "None"--"Undefined"--**laterdo
    elseif ent.type == "power-switch" then
       if control.circuit_condition ~= nil or control.disabled == true then
          result = "Enable with condition"
@@ -491,8 +527,16 @@ function toggle_circuit_operation_mode(ent)
          control.circuit_mode_of_operation = dcb.logistic_container.circuit_mode_of_operation.send_contents
          result = "Only read contents"
       end
-   elseif ent.type == "gate" then
-      result = "Undefined"--**laterdo
+   elseif ent.type == "gate" or ent.type == "wall" then
+      changed = true
+      control.open_gate = not control.open_gate
+      if control.open_gate == true then
+         result = "Open gate with condition"
+      elseif control.open_gate == false then
+         result = "None"
+      else
+         result = "Nil"
+      end 
    elseif ent.type == "rail-signal" then
       result = "Undefined"--**laterdo
    elseif ent.type == "train-stop" then
@@ -823,6 +867,7 @@ function circuit_network_menu(pindex, ent_in, menu_index, clicked, other_input)
             printout("Toggle switch",pindex)
          else
             ent.get_control_behavior().enabled = not (ent.get_control_behavior().enabled)
+            local enabled = ent.get_control_behavior().enabled
             if enabled == true then
                printout("Switched on",pindex)
             elseif enabled == false then

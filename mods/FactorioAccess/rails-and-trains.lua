@@ -5052,7 +5052,7 @@ function check_and_play_driving_alert_sound(pindex, tick, mode_in)--wip****
       if p.vehicle.type == "car" then
          local radius = trigger + 5
          --For cars, exclude anything they cannot collide with
-         ents_around = surf.find_entities_filtered{area = {{v.position.x-radius, v.position.y-radius,},{v.position.x+radius, v.position.y+radius}}, type = {"resource", "highlight-box", "flying-text", "corpse", "straight-rail", "curved-rail", "rail-signal", "rail-chain-signal", "transport-belt", "underground-belt", "splitter", "item-entity", "pipe", "pipe-to-ground", "inserter"}, invert = true}
+         ents_around = surf.find_entities_filtered{area = {{v.position.x-radius, v.position.y-radius,},{v.position.x+radius, v.position.y+radius}}, type = {"resource", "highlight-box", "flying-text", "corpse", "straight-rail", "curved-rail", "rail-signal", "rail-chain-signal", "transport-belt", "underground-belt", "splitter", "item-entity", "pipe", "pipe-to-ground", "inserter", "small-electric-pole", "medium-electric-pole"}, invert = true}
       elseif p.vehicle.train ~= nil then 
          trigger = trigger * 3
          local radius = trigger + 5
