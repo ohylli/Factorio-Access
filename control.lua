@@ -3547,16 +3547,17 @@ function recipe_missing_ingredients_info(pindex, recipe_in)
 end
 
 --Reads a player inventory slot
-function read_inventory_slot(pindex, start_phrase_in)
+function read_inventory_slot(pindex, start_phrase_in, inv_in)
    local start_phrase = start_phrase_in or ""
    local index = players[pindex].inventory.index
+   local inv = inv_in or players[pindex].inventory.lua_inventory
    if index < 1 then
       index = 1
-   elseif index > #players[pindex].inventory.lua_inventory then
-      index = #players[pindex].inventory.lua_inventory
+   elseif index > #inv  then
+      index = #inv 
    end
    players[pindex].inventory.index = index
-   local stack = players[pindex].inventory.lua_inventory[index]
+   local stack = inv[index]
    if stack == nil or not stack.valid_for_read then
       printout(start_phrase .. "Empty Slot",pindex)
       return 
@@ -5611,7 +5612,25 @@ function menu_cursor_up(pindex)
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
          read_inventory_slot(pindex)
       end      
-
+   elseif players[pindex].menu == "player_trash" then
+      local trash_inv = game.get_player(pindex).get_inventory(defines.inventory.character_trash)
+      players[pindex].inventory.index = players[pindex].inventory.index -10
+      if players[pindex].inventory.index < 1 then
+         if players[pindex].preferences.inventory_wraps_around == true then  
+            --Wrap around setting: Move to the inventory end and read slot
+            players[pindex].inventory.index = #trash_inv + players[pindex].inventory.index
+            game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
+            read_inventory_slot(pindex, "", trash_inv)
+         else 
+            --Border setting: Undo change and play "wall" sound
+            players[pindex].inventory.index = players[pindex].inventory.index +10
+            game.get_player(pindex).play_sound{path = "inventory-edge"}
+            --printout("Border.", pindex)
+         end
+      else
+         game.get_player(pindex).play_sound{path = "Inventory-Move"}
+         read_inventory_slot(pindex, "", trash_inv)
+      end 
    elseif players[pindex].menu == "crafting" then
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
       players[pindex].crafting.index = 1
@@ -5827,7 +5846,28 @@ function menu_cursor_down(pindex)
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
          read_inventory_slot(pindex)
       end
-
+   elseif players[pindex].menu == "player_trash" then
+      local trash_inv = game.get_player(pindex).get_inventory(defines.inventory.character_trash)
+      players[pindex].inventory.index = players[pindex].inventory.index +10
+      if players[pindex].inventory.index > #trash_inv then
+         if players[pindex].preferences.inventory_wraps_around == true then  
+            --Wrap around setting: Wrap over to first row
+            players[pindex].inventory.index = players[pindex].inventory.index % 10
+            if players[pindex].inventory.index == 0 then
+               players[pindex].inventory.index = 10
+            end
+            game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
+            read_inventory_slot(pindex, "", trash_inv)
+         else 
+            --Border setting: Undo change and play "wall" sound
+            players[pindex].inventory.index = players[pindex].inventory.index -10
+            game.get_player(pindex).play_sound{path = "inventory-edge"}
+            --printout("Border.", pindex)
+         end
+      else
+         game.get_player(pindex).play_sound{path = "Inventory-Move"}
+         read_inventory_slot(pindex, "", trash_inv)
+      end
    elseif players[pindex].menu == "crafting" then
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
       players[pindex].crafting.index = 1
@@ -6019,6 +6059,7 @@ function menu_cursor_down(pindex)
    -- end
 end
 
+--menu_left
 function menu_cursor_left(pindex)
    if players[pindex].item_selection then
          players[pindex].item_selector.index = math.max(1, players[pindex].item_selector.index - 1)
@@ -6042,7 +6083,25 @@ function menu_cursor_left(pindex)
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
          read_inventory_slot(pindex)
       end
-
+   elseif players[pindex].menu == "player_trash" then
+      local trash_inv = game.get_player(pindex).get_inventory(defines.inventory.character_trash)
+      players[pindex].inventory.index = players[pindex].inventory.index -1    
+      if players[pindex].inventory.index%10 == 0 then
+         if players[pindex].preferences.inventory_wraps_around == true then  
+            --Wrap around setting: Move and play move sound and read slot
+            players[pindex].inventory.index = players[pindex].inventory.index + 10
+            game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
+            read_inventory_slot(pindex, "", trash_inv)
+         else 
+            --Border setting: Undo change and play "wall" sound
+            players[pindex].inventory.index = players[pindex].inventory.index +1
+            game.get_player(pindex).play_sound{path = "inventory-edge"}
+            --printout("Border.", pindex)
+         end
+      else
+         game.get_player(pindex).play_sound{path = "Inventory-Move"}
+         read_inventory_slot(pindex, "", trash_inv)
+      end
    elseif players[pindex].menu == "crafting" then
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
       players[pindex].crafting.index = players[pindex].crafting.index -1
@@ -6151,6 +6210,7 @@ function menu_cursor_left(pindex)
    end
 end
 
+--menu_right
 function menu_cursor_right(pindex)
    if players[pindex].item_selection then
          players[pindex].item_selector.index = math.min(#players[pindex].item_cache, players[pindex].item_selector.index + 1)
@@ -6174,7 +6234,25 @@ function menu_cursor_right(pindex)
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
          read_inventory_slot(pindex)
       end
-
+   elseif players[pindex].menu == "player_trash" then
+      local trash_inv = game.get_player(pindex).get_inventory(defines.inventory.character_trash)
+      players[pindex].inventory.index = players[pindex].inventory.index +1
+      if players[pindex].inventory.index%10 == 1 then
+         if players[pindex].preferences.inventory_wraps_around == true then  
+            --Wrap around setting: Move and play move sound and read slot
+            players[pindex].inventory.index = players[pindex].inventory.index - 10
+            game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
+            read_inventory_slot(pindex, "", trash_inv)
+         else 
+            --Border setting: Undo change and play "wall" sound
+            players[pindex].inventory.index = players[pindex].inventory.index -1
+            game.get_player(pindex).play_sound{path = "inventory-edge"}
+            --printout("Border.", pindex)
+         end
+      else
+         game.get_player(pindex).play_sound{path = "Inventory-Move"}
+         read_inventory_slot(pindex, "", trash_inv)
+      end
    elseif players[pindex].menu == "crafting" then
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
       players[pindex].crafting.index = players[pindex].crafting.index +1
@@ -6519,6 +6597,9 @@ function update_menu_visuals()
          elseif player.menu == "crafting_queue" then
             update_overhead_sprite("item.repair-pack",2,1.25,pindex)
             update_custom_GUI_sprite("item.repair-pack", 3, pindex, "utility.clock")
+         elseif player.menu == "player_trash" then
+            update_overhead_sprite("utility.trash_white",2,1.25,pindex)
+            update_custom_GUI_sprite("utility.trash_white", 3, pindex)
          elseif player.menu == "travel" then
             update_overhead_sprite("utility.downloading_white",4,1.25,pindex)
             update_custom_GUI_sprite("utility.downloading_white", 3, pindex)
@@ -8323,15 +8404,18 @@ script.on_event("switch-menu-or-gun", function(event)
          end
       elseif players[pindex].menu == "inventory" then 
          players[pindex].menu = "crafting"
-		 read_crafting_slot(pindex, "Crafting, ")
+         read_crafting_slot(pindex, "Crafting, ")
       elseif players[pindex].menu == "crafting" then 
          players[pindex].menu = "crafting_queue"
          load_crafting_queue(pindex)
-		 read_crafting_queue(pindex, "Crafting queue, " .. get_crafting_que_total(pindex) .. " total, ")
+         read_crafting_queue(pindex, "Crafting queue, " .. get_crafting_que_total(pindex) .. " total, ")
       elseif players[pindex].menu == "crafting_queue" then
          players[pindex].menu = "technology"
-		 read_technology_slot(pindex, "Technology, Researchable Technologies, ")
+         read_technology_slot(pindex, "Technology, Researchable Technologies, ")
       elseif players[pindex].menu == "technology" then
+         players[pindex].menu = "player_trash"
+         read_inventory_slot(pindex, "Logistic trash, ", game.get_player(pindex).get_inventory(defines.inventory.character_trash))
+      elseif players[pindex].menu == "player_trash" then
          players[pindex].menu = "inventory"
          read_inventory_slot(pindex, "Inventory, ")
       elseif players[pindex].menu == "belt" then
@@ -8455,6 +8539,9 @@ script.on_event("reverse-switch-menu-or-gun", function(event)
 
 
       elseif players[pindex].menu == "inventory" then
+         players[pindex].menu = "player_trash"
+         read_inventory_slot(pindex, "Logistic trash, ", game.get_player(pindex).get_inventory(defines.inventory.character_trash))
+      elseif players[pindex].menu == "player_trash" then
          players[pindex].menu = "technology"
          read_technology_slot(pindex, "Technology, Researchable Technologies, ")
       elseif players[pindex].menu == "crafting_queue" then
@@ -9050,7 +9137,12 @@ script.on_event("click-menu", function(event)
          local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
          game.get_player(pindex).cursor_stack.swap_stack(stack)
             players[pindex].inventory.max = #players[pindex].inventory.lua_inventory
-         --read_inventory_slot(pindex)
+      elseif players[pindex].menu == "player_trash" then
+         local trash_inv = game.get_player(pindex).get_inventory(defines.inventory.character_trash)
+         --Swap stacks
+         game.get_player(pindex).play_sound{path = "utility/inventory_click"}
+         local stack = trash_inv[players[pindex].inventory.index]
+         game.get_player(pindex).cursor_stack.swap_stack(stack)
       elseif players[pindex].menu == "crafting" then
          --Check recipe category
          local recipe = players[pindex].crafting.lua_recipes[players[pindex].crafting.category][players[pindex].crafting.index]
