@@ -5120,7 +5120,7 @@ function read_coords(pindex, start_phrase)
          x = x + 10
          y = y - 1
       end
-      printout(result .. " item " .. x .. ", on row " .. y, pindex)
+      printout(result .. " slot " .. x .. ", on row " .. y, pindex)
    elseif (players[pindex].menu == "building" or players[pindex].menu == "vehicle") and players[pindex].building.recipe_selection == false then
       --Give slot coords (chest/building inventory)
       local x = -1 --Col number
@@ -5132,7 +5132,7 @@ function read_coords(pindex, start_phrase)
          x = x + row_length
          y = y - 1
       end
-      printout(result .. " item " .. x .. ", on row " .. y, pindex)
+      printout(result .. " slot " .. x .. ", on row " .. y, pindex)
 
    elseif players[pindex].menu == "crafting" then
       --Read recipe ingredients / products (crafting menu)
