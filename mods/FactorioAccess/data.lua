@@ -671,6 +671,13 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "read-driving-structure-ahead",
+    key_sequence = "J",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "read-rail-structure-behind",
     key_sequence = "CONTROL + J",
     consuming = "none"
@@ -1779,6 +1786,34 @@ data:extend({
     type = "custom-input",
     name = "logistic-request-toggle-personal-logistics",
     key_sequence = "CONTROL + SHIFT + L",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "send-selected-stack-to-logistic-trash",
+    key_sequence = "O",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "fa-pda-driving-assistant-info",
+    key_sequence = "L",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "fa-pda-cruise-control-info",
+    key_sequence = "O",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "fa-pda-cruise-control-set-speed-info",
+    key_sequence = "CONTROL + O",
     consuming = "none"
 },
 
