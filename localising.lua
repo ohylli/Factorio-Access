@@ -70,6 +70,15 @@ function localising.get_recipe_from_name(name,pindex)
    return result
 end
 
+function localising.get_item_group_from_name(name,pindex)
+   local proto = game.item_group_prototypes[name]
+   if proto == nil then
+      return "nil"
+   end
+   local result = localising.get_alt(proto,pindex)
+   return result
+end
+
 function localising.request_localisation(thing,pindex)
    local id = game.players[pindex].request_translation(thing.localised_name)
    local lookup=players[pindex].translation_id_lookup
