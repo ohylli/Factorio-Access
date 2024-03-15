@@ -583,7 +583,17 @@ function player_logistic_requests_summary_info(pindex)
    --Check if inside any logistic network or not (simpler than logistics network info)
    local network = p.surface.find_logistic_network_by_position(p.position, p.force)
    if network == nil or not network.valid then
-      result = result .. "Not in a network, "
+      --Check whether in construction range
+      local nearest, min_dist = find_nearest_roboport(p.surface,p.position,60)
+      if nearest == nil or min_dist > 55 then
+         result = result .. "Not in a network, "
+      else
+         result = result .. "In construction range of network " .. nearest.backer_name .. ", " 
+      end
+   else
+      --Definitely within range
+      local nearest, min_dist = find_nearest_roboport(p.surface,p.position,30)
+      result = result .. "In logistic range of network " .. nearest.backer_name .. ", " 
    end
    
    --Check if personal logistics are enabled
@@ -1506,7 +1516,7 @@ function roboport_menu(menu_index, pindex, clicked)
    elseif index == 1 then
       --1. Rename roboport networks
       if not clicked then
-         printout("Click here to rename this network", pindex)
+         printout("Rename this network", pindex)
       else
          printout("Enter a new name for this network, then press 'ENTER' to confirm, or press 'ESC' to cancel.", pindex)
          players[pindex].roboport_menu.renaming = true
@@ -1520,39 +1530,55 @@ function roboport_menu(menu_index, pindex, clicked)
       end
    elseif index == 2 then
       --2. This roboport: Check neighbor counts and dirs
-      if clicked or (not clicked) then
+      if not clicked then
+         printout("Read roboport neighbours", pindex)
+      else
          local result = roboport_neighbours_info(port)
          printout("Roboport has " .. result, pindex)
       end
    elseif index == 3 then
       --3. This roboport: Check robot counts
-      if clicked or (not clicked) then
+      if not clicked then
+         printout("Read roboport contents", pindex)
+      else
          local result = roboport_contents_info(port)
          printout("Roboport " .. result, pindex)
       end
    elseif index == 4 then
       --4. Check network roboport & robot & chest(?) counts
-      if nw ~= nil then
-         local result = logistic_network_members_info(port)
-         printout(result, pindex)
+      if not clicked then
+         printout("Read robots info for the network", pindex)
       else
-         printout("Robots: No network", pindex)
+         if nw ~= nil then
+            local result = logistic_network_members_info(port)
+            printout(result, pindex)
+         else
+            printout("Robots: No network", pindex)
+         end
       end
    elseif index == 5 then
       --5. Points/chests info
-      if nw ~= nil then
-         local result = logistic_network_chests_info(port)
-         printout(result, pindex)
+      if not clicked then
+         printout("Read chests info for the network", pindex)
       else
-         printout("Chests: No network", pindex)
+         if nw ~= nil then
+            local result = logistic_network_chests_info(port)
+            printout(result, pindex)
+         else
+            printout("Chests: No network", pindex)
+         end
       end
    elseif index == 6 then
       --6. Check network item contents
-      if nw ~= nil then
-         local result = logistic_network_items_info(port)
-         printout(result, pindex)
+      if not clicked then
+         printout("Read items info for the network", pindex)
       else
-         printout("Items: No network", pindex)
+         if nw ~= nil then
+            local result = logistic_network_items_info(port)
+            printout(result, pindex)
+         else
+            printout("Items: No network", pindex)
+         end
       end
    end
 end
@@ -1707,8 +1733,9 @@ function logistic_network_chests_info(port)
          requester_chest_count = requester_chest_count + 1
       end
    end
-   
-   result = " Chests: Network has " .. storage_chest_count .. " storage chests, " .. 
+   local total_chest_count = storage_chest_count + passive_provider_chest_count + active_provider_chest_count + requester_chest_count
+   result = " Chests: Network has " .. total_chest_count .. " chests in total, with " ..
+            storage_chest_count .. " storage chests, " .. 
             passive_provider_chest_count .. " passive provider chests, " .. 
             active_provider_chest_count .. " active provider chests, " .. 
             requester_chest_count .. " requester chests or buffer chests, "
