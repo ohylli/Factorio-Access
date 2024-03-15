@@ -7264,6 +7264,10 @@ script.on_event("release-cursor", function(event)
    if not check_for_player(pindex) then
       return
    end
+   local p = game.get_player(pindex)
+   if p.vehicle and p.vehicle.train then
+      return
+   end
    printout("cursor released",pindex)
    cursor_highlight(pindex, nil, nil)
 end)
@@ -7565,7 +7569,7 @@ script.on_event("read-driving-structure-ahead", function(event)
          if p.vehicle.speed >= 0 and (dir_ent == dir or math.abs(dir_ent - dir) == 1 or math.abs(dir_ent - dir) == 7) then
             local dist = math.floor(util.distance(p.vehicle.position,ent.position))
             printout(localising.get(ent,pindex) .. " ahead in " .. dist .. " meters", pindex)
-         elseif p.vehicle.speed < 0 and dir_ent == rotate_180(dir) then
+         elseif p.vehicle.speed <= 0 and dir_ent == rotate_180(dir) then
             local dist = math.floor(util.distance(p.vehicle.position,ent.position))
             printout(localising.get(ent,pindex) .. " behind in " .. dist .. " meters", pindex)
          end
