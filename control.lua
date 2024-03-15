@@ -5099,7 +5099,7 @@ function read_coords(pindex, start_phrase)
             if players[pindex].cursor and players[pindex].preferences.tiles_placed_from_northwest_corner then
                preview_str = ", paving preview extends " .. (player.cursor_size * 2 + 1) .. " east and " .. (player.cursor_size * 2 + 1) .. " south, starting from this tile. "
             end
-         end
+         end 
          printout(result,pindex)
       end
    elseif players[pindex].menu == "inventory" or ((players[pindex].menu == "building" or players[pindex].menu == "vehicle") and players[pindex].building.sector > offset + #players[pindex].building.sectors) then
@@ -10748,7 +10748,7 @@ script.on_event("read-entity-status", function(event)
          table.insert(result, ", can move " .. rate .. " items per second, with a hand capacity of " .. cap)
       end
       if ent.prototype ~= nil and ent.prototype.belt_speed ~= nil and ent.prototype.belt_speed > 0 then --items per minute by simple reading
-         if ent.name == "splitter" or ent.name == "fast-splitter" or ent.name == "express splitter" then
+         if ent.type == "splitter" then
             table.insert(result, ", can process " .. math.floor(ent.prototype.belt_speed * 480 * 2) .. " items per second")
          else 
             table.insert(result, ", can move " .. math.floor(ent.prototype.belt_speed * 480) .. " items per second")
@@ -13679,21 +13679,29 @@ function splitter_priority_info(ent)
    local filter = ent.splitter_filter
    if input == "none" then
       result = result .. " input balanced, "
-   else
-      result = result .. " input priority " .. input .. ", "
+   elseif input == "right" then
+      result = result .. " input priority " .. "right" .. " which is " .. direction_lookup(rotate_90(ent.direction)) .. ", "
+   elseif input == "left" then
+      result = result .. " input priority " .. "left" .. " which is " .. direction_lookup(rotate_270(ent.direction)) .. ", "
    end
    if filter == nil then
       if output == "none" then
          result = result .. " output balanced, "
-      else
-         result = result .. " output priority " .. output .. ", "
+      elseif output == "right" then
+         result = result .. " output priority " .. "right" .. " which is " .. direction_lookup(rotate_90(ent.direction)) .. ", "
+      elseif output == "left" then
+         result = result .. " output priority " .. "left" .. " which is " .. direction_lookup(rotate_270(ent.direction)) .. ", "
       end
    else
       local item_name = localising.get(filter,pindex)
       if item_name == nil or item_name == "" then
          item_name = "unknown item"
       end
-      result = result .. " output filtering " .. item_name .. " from the " .. output .. ", "
+      if output == "right" then
+         result = result .. " output filtering " .. item_name .. " towards the " .. "right" .. " which is " .. direction_lookup(rotate_90(ent.direction)) .. ", "
+      elseif output == "left" then
+         result = result .. " output filtering " .. item_name .. " towards the " .. "left" .. " which is " .. direction_lookup(rotate_270(ent.direction)) .. ", "
+      end
    end
    return result
 end
