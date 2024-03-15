@@ -665,14 +665,14 @@ data:extend({
 {
     type = "custom-input",
     name = "read-rail-structure-ahead",
-    key_sequence = "J",
+    key_sequence = "SHIFT + J",
     consuming = "none"
 },
 
 {
     type = "custom-input",
     name = "read-rail-structure-behind",
-    key_sequence = "SHIFT + J",
+    key_sequence = "CONTROL + J",
     consuming = "none"
 },
 
