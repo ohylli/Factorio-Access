@@ -1099,7 +1099,7 @@ function spidertron_logistic_requests_summary_info(spidertron,pindex)
    local p = game.get_player(pindex)
    local current_slot = nil
    local correct_slot_id = nil
-   local result = ""
+   local result = "Spidertron "
    
    --Check if logistics have been researched
    for i, tech in pairs(game.get_player(pindex).force.technologies) do
@@ -1110,9 +1110,19 @@ function spidertron_logistic_requests_summary_info(spidertron,pindex)
    end
    
    --Check if inside any logistic network or not (simpler than logistics network info)
-   local network = spidertron.surface.find_logistic_network_by_position(spidertron.position, spidertron.force)
+   local network = p.surface.find_logistic_network_by_position(spidertron.position, p.force)
    if network == nil or not network.valid then
-      result = result .. "Not in a network, "
+      --Check whether in construction range
+      local nearest, min_dist = find_nearest_roboport(p.surface,spidertron.position,60)
+      if nearest == nil or min_dist > 55 then
+         result = result .. "Not in a network, "
+      else
+         result = result .. "In construction range of network " .. nearest.backer_name .. ", " 
+      end
+   else
+      --Definitely within range
+      local nearest, min_dist = find_nearest_roboport(p.surface,spidertron.position,30)
+      result = result .. "In logistic range of network " .. nearest.backer_name .. ", " 
    end
    
    --Check if personal logistics are enabled
@@ -1558,7 +1568,7 @@ function roboport_menu(menu_index, pindex, clicked)
          printout("Read roboport neighbours", pindex)
       else
          local result = roboport_neighbours_info(port)
-         printout("Roboport has " .. result, pindex)
+         printout(result, pindex)
       end
    elseif index == 3 then
       --3. This roboport: Check robot counts
@@ -1566,7 +1576,7 @@ function roboport_menu(menu_index, pindex, clicked)
          printout("Read roboport contents", pindex)
       else
          local result = roboport_contents_info(port)
-         printout("Roboport " .. result, pindex)
+         printout(result, pindex)
       end
    elseif index == 4 then
       --4. Check network roboport & robot & chest(?) counts
@@ -1577,7 +1587,7 @@ function roboport_menu(menu_index, pindex, clicked)
             local result = logistic_network_members_info(port)
             printout(result, pindex)
          else
-            printout("Robots: No network", pindex)
+            printout("Error: No network", pindex)
          end
       end
    elseif index == 5 then
@@ -1589,7 +1599,7 @@ function roboport_menu(menu_index, pindex, clicked)
             local result = logistic_network_chests_info(port)
             printout(result, pindex)
          else
-            printout("Chests: No network", pindex)
+            printout("Error: No network", pindex)
          end
       end
    elseif index == 6 then
@@ -1601,7 +1611,7 @@ function roboport_menu(menu_index, pindex, clicked)
             local result = logistic_network_items_info(port)
             printout(result, pindex)
          else
-            printout("Items: No network", pindex)
+            printout("Error: No network", pindex)
          end
       end
    end
@@ -1716,10 +1726,10 @@ function logistic_network_members_info(port)
    local cell = port.logistic_cell
    local nw = cell.logistic_network
    if nw == nil or nw.valid == false then
-      result = " Robots: Error, no network "
+      result = " Error: no network "
       return result
    end
-   result = " Robots: Network has " .. #nw.cells .. " roboports, and " .. nw.all_logistic_robots .. " logistic robots with " .. nw.available_logistic_robots .. " available, and " .. nw.all_construction_robots .. " construction robots with " .. nw.available_construction_robots .. " available "
+   result = " Network has " .. #nw.cells .. " roboports, and " .. nw.all_logistic_robots .. " logistic robots with " .. nw.available_logistic_robots .. " available, and " .. nw.all_construction_robots .. " construction robots with " .. nw.available_construction_robots .. " available "
    return result
 end
 
@@ -1729,7 +1739,7 @@ function logistic_network_chests_info(port)
    local nw = cell.logistic_network
    
    if nw == nil or nw.valid == false then
-      result = " Chests: Error, no network "
+      result = " Error, no network "
       return result
    end
    
@@ -1758,7 +1768,7 @@ function logistic_network_chests_info(port)
       end
    end
    local total_chest_count = storage_chest_count + passive_provider_chest_count + active_provider_chest_count + requester_chest_count
-   result = " Chests: Network has " .. total_chest_count .. " chests in total, with " ..
+   result = " Network has " .. total_chest_count .. " chests in total, with " ..
             storage_chest_count .. " storage chests, " .. 
             passive_provider_chest_count .. " passive provider chests, " .. 
             active_provider_chest_count .. " active provider chests, " .. 
@@ -1768,10 +1778,10 @@ function logistic_network_chests_info(port)
 end
 
 function logistic_network_items_info(port)
-   local result = "Items: Network "
+   local result = " Network "
    local nw = port.logistic_cell.logistic_network
    if nw == nil or nw.valid == false then
-      result = " Items: Error, no network "
+      result = " Error: no network "
       return result
    end
    local itemset = nw.get_contents()
