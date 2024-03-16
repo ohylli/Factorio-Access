@@ -1521,7 +1521,7 @@ function signal_selector_group_down(pindex)
    end
    game.get_player(pindex).play_sound{path = "Inventory-Move"}
    local jumps = 1
-   if players[pindex].signal_selector.group_index <= #players[pindex].signal_selector.group_names then
+   if players[pindex].signal_selector.group_index < #players[pindex].signal_selector.group_names then
       players[pindex].signal_selector.group_index = players[pindex].signal_selector.group_index + 1
    else
       players[pindex].signal_selector.group_index = 1
@@ -1534,7 +1534,7 @@ function signal_selector_group_down(pindex)
    --Go further up if this group is empty
    while (group == nil or #group == 0) and jumps < 10 do 
       jumps = jumps + 1
-      if players[pindex].signal_selector.group_index <= #players[pindex].signal_selector.group_names then
+      if players[pindex].signal_selector.group_index < #players[pindex].signal_selector.group_names then
          players[pindex].signal_selector.group_index = players[pindex].signal_selector.group_index + 1
       else
          players[pindex].signal_selector.group_index = 1
@@ -1553,7 +1553,7 @@ function signal_selector_signal_next(pindex)
    local group_name = players[pindex].signal_selector.group_names[group_index]
    local group = players[pindex].signal_selector.signals[group_name]
    
-   if players[pindex].signal_selector.signal_index <= #group then
+   if players[pindex].signal_selector.signal_index < #group then
       players[pindex].signal_selector.signal_index = players[pindex].signal_selector.signal_index + 1
    else
       game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
