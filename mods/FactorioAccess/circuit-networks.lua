@@ -1432,6 +1432,10 @@ function read_selected_signal_slot(pindex, start_phrase_in)
    local start_phrase = start_phrase_in or ""
    local prototype, signal_type = get_selected_signal_slot_with_type(pindex)
    local sig_name = localising.get(prototype,pindex)
+   if prototype == nil or sig_name == nil then 
+      printout("Error: Missing signal",pindex)
+      return
+   end
    local result = start_phrase .. sig_name .. " " .. signal_type
    printout(result,pindex)
 end
@@ -1507,7 +1511,7 @@ function signal_selector_group_up(pindex)
       group = players[pindex].signal_selector.signals[group_name]
    end
    --Reset signal level
-   players[pindex].signal_selector.signal_index = 0
+   players[pindex].signal_selector.signal_index = 1
    return jumps
 end
 
@@ -1540,7 +1544,7 @@ function signal_selector_group_down(pindex)
       group = players[pindex].signal_selector.signals[group_name]
    end
    --Reset signal level
-   players[pindex].signal_selector.signal_index = 0
+   players[pindex].signal_selector.signal_index = 1
    return jumps
 end
 
@@ -1552,6 +1556,7 @@ function signal_selector_signal_next(pindex)
    if players[pindex].signal_selector.signal_index <= #group then
       players[pindex].signal_selector.signal_index = players[pindex].signal_selector.signal_index + 1
    else
+      game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
       players[pindex].signal_selector.signal_index = 1
    end
 end
@@ -1564,6 +1569,7 @@ function signal_selector_signal_prev(pindex)
    if players[pindex].signal_selector.signal_index > 1 then
       players[pindex].signal_selector.signal_index = players[pindex].signal_selector.signal_index - 1
    else
+      game.get_player(pindex).play_sound{path = "inventory-wrap-around"}
       players[pindex].signal_selector.signal_index = #group 
    end
 end
