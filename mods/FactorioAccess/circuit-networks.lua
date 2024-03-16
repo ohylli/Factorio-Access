@@ -697,9 +697,8 @@ function play_selected_speaker_note(ent,mute)
    end
    if mute ~= true then 
       ent.play_note(ins_id,note_id)
-   end
-   local instruments = ent.prototype.instruments
-   game.print(ins_id .. "," .. note_id .. ",   " .. #instruments,{volume_modifier=0})--****
+      --game.print(ins_id .. "," .. note_id, {volume_modifier=0})--**
+   end 
 end
 
 --[[ 
@@ -1103,10 +1102,10 @@ function circuit_network_menu(pindex, ent_in, menu_index, clicked, other_input)
                   local params = control.circuit_parameters
                   local ins_id = params.instrument_id
                   local note_id = params.note_id
-                  if ins_id < 12 then
+                  if ins_id < 11 then
                      ins_id = ins_id + 1 
                   else
-                     ins_id = 12--****
+                     ins_id = 11--*** #instruments (12) weird bug
                      --p.play_sound{path = "inventory-edge"}
                   end
                   params.instrument_id = ins_id
@@ -1172,9 +1171,24 @@ function circuit_network_menu(pindex, ent_in, menu_index, clicked, other_input)
                   play_selected_speaker_note(ent)
                end
             elseif index == 19 then
+               --Toggle allow polyphony
+               if not clicked then 
+                  printout("Toggle polyphony mode (or multiple notes at the same time)", pindex)
+               else
+                  local params = ent.parameters
+                  params.allow_polyphony = not params.allow_polyphony
+                  ent.parameters = params
+                  if ent.parameters.allow_polyphony then
+                     printout("Enabled polyphony",pindex)
+                  else
+                     printout("Disabled polyphony",pindex)
+                  end
+                  play_selected_speaker_note(ent)
+               end
+            elseif index == 20 then
                --(inventory edge: play sound and set index and call this menu again)
                p.play_sound{path = "inventory-edge"}
-               players[pindex].circuit_network_menu.index = 18
+               players[pindex].circuit_network_menu.index = 19
                circuit_network_menu(pindex, ent, players[pindex].circuit_network_menu.index, false, false)
             end
          end
