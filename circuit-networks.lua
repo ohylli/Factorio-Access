@@ -79,7 +79,7 @@ function drag_wire_and_read(pindex)
             result = " Disconnected " .. wire_name 
          end
       end
-      p.print(result,{volume_modifier=0})--***
+      --p.print(result,{volume_modifier=0})--**
       printout(result, pindex)
    else
       p.play_sound{path = "utility/cannot_build"}
@@ -341,7 +341,7 @@ function get_circuit_read_mode_name(ent)
    elseif ent.type == "accumulator" then
       result = "Reading charge percentage in virtual signal 'A'"
    elseif ent.type == "roboport" then
-      result = "Reading logistic network contents "--todo add alternate mode***
+      result = "Reading logistic network contents "--laterdo add alternate mode**
    elseif ent.type == "mining-drill" then
       if control.resource_read_mode == dcb.mining_drill.resource_read_mode.this_miner then
          result = "Reading resources that this drill can mine "
@@ -349,7 +349,7 @@ function get_circuit_read_mode_name(ent)
          result = "Reading all resources in this ore patch. "
       end
    elseif ent.type == "pumpjack" then
-      result = "Reading crude oil output rate per second "--todo explain other read modes***
+      result = "Reading crude oil output rate per second "--laterdo explain other read modes**
    elseif ent.type == "programmable-speaker" then
       result = "None"
    end
@@ -679,7 +679,7 @@ function write_condition_second_signal_constant(circuit_condition, constant)
    return 
 end
 
-function play_selected_speaker_note(ent)
+function play_selected_speaker_note(ent,mute)
    local control = ent.get_control_behavior()
    local ins_id = control.circuit_parameters.instrument_id
    if ins_id < 1 then
@@ -695,7 +695,11 @@ function play_selected_speaker_note(ent)
       params.note_id  = 1
       control.circuit_parameters = params
    end
-   ent.play_note(ins_id,note_id)
+   if mute ~= true then 
+      ent.play_note(ins_id,note_id)
+   end
+   local instruments = ent.prototype.instruments
+   game.print(ins_id .. "," .. note_id .. ",   " .. #instruments,{volume_modifier=0})--****
 end
 
 --[[ 
@@ -1020,7 +1024,8 @@ function circuit_network_menu(pindex, ent_in, menu_index, clicked, other_input)
                circuit_network_menu(pindex, ent, players[pindex].circuit_network_menu.index, false, false)
             end
          else
-            --programmable-speaker menu
+            --Programmable speaker menu
+            play_selected_speaker_note(ent,true)
             local params = ent.parameters
             local circuit_params = control.circuit_parameters
             local instruments = ent.prototype.instruments
@@ -1080,7 +1085,7 @@ function circuit_network_menu(pindex, ent_in, menu_index, clicked, other_input)
                      ins_id = ins_id - 1
                   else
                      ins_id = 1
-                     p.play_sound{path = "inventory-edge"}
+                     --p.play_sound{path = "inventory-edge"}
                   end
                   params.instrument_id = ins_id
                   params.note_id = 1
@@ -1098,11 +1103,11 @@ function circuit_network_menu(pindex, ent_in, menu_index, clicked, other_input)
                   local params = control.circuit_parameters
                   local ins_id = params.instrument_id
                   local note_id = params.note_id
-                  if ins_id < #instruments then
+                  if ins_id < 12 then
                      ins_id = ins_id + 1 
                   else
-                     ins_id = #instruments
-                     p.play_sound{path = "inventory-edge"}
+                     ins_id = 12--****
+                     --p.play_sound{path = "inventory-edge"}
                   end
                   params.instrument_id = ins_id
                   params.note_id = 1
@@ -1123,7 +1128,7 @@ function circuit_network_menu(pindex, ent_in, menu_index, clicked, other_input)
                   if note_id > 1 then
                      note_id = note_id - 1 
                   else
-                     p.play_sound{path = "inventory-edge"}
+                     --p.play_sound{path = "inventory-edge"}
                   end
                   params.note_id = note_id
                   control.circuit_parameters = params
@@ -1143,7 +1148,7 @@ function circuit_network_menu(pindex, ent_in, menu_index, clicked, other_input)
                   if note_id < #notes then
                      note_id = note_id + 1 
                   else
-                     p.play_sound{path = "inventory-edge"}
+                     --p.play_sound{path = "inventory-edge"}
                   end
                   params.note_id = note_id
                   control.circuit_parameters = params
