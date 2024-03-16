@@ -350,6 +350,8 @@ function get_circuit_read_mode_name(ent)
       end
    elseif ent.type == "pumpjack" then
       result = "Reading crude oil output rate per second "--todo explain other read modes***
+   elseif ent.type == "programmable-speaker" then
+      result = "None"
    end
    return result
 end
@@ -467,7 +469,8 @@ function get_circuit_operation_mode_name(ent)
          result = "None"
       end
    elseif ent.type == "programmable-speaker" then
-      result = "Undefined"--**laterdo
+      result = "Enable with condition" 
+      uses_condition = true
    elseif ent.type == "lamp" then
       result = "Undefined"--**laterdo
    elseif ent.type == "offshore-pump" then
@@ -552,8 +555,9 @@ function toggle_circuit_operation_mode(ent)
       else
          result = "None"
       end
-   elseif ent.type == "programmable-speaker" then
-      result = "Undefined"--**laterdo
+   elseif ent.type == "programmable-speaker" then 
+      changed = false
+      result = "Enable with condition" 
    elseif ent.type == "lamp" then
       result = "Undefined"--**laterdo
    elseif ent.type == "offshore-pump" then
@@ -673,6 +677,25 @@ function write_condition_second_signal_constant(circuit_condition, constant)
    cond.second_signal = nil
    cond.constant = constant
    return 
+end
+
+function play_selected_speaker_note(ent)
+   local control = ent.get_control_behavior()
+   local ins_id = control.circuit_parameters.instrument_id
+   if ins_id < 1 then
+      ins_id = 1
+      local params = control.circuit_parameters
+      params.instrument_id = 1
+      control.circuit_parameters = params
+   end
+   local note_id = control.circuit_parameters.note_id
+   if note_id < 1 then
+      note_id = 1
+      local params = control.circuit_parameters
+      params.note_id  = 1
+      control.circuit_parameters = params
+   end
+   ent.play_note(ins_id,note_id)
 end
 
 --[[ 
@@ -977,7 +1000,7 @@ function circuit_network_menu(pindex, ent_in, menu_index, clicked, other_input)
       elseif index == 10 then
          --Set enabled condition second signal as a constant number
          if not clicked then
-            printout("Set enabled condition second signal as a constant number",pindex)
+            printout("Set a constant number for enabled condition second signal",pindex)
          else
             local result = "Not using a condition"
             if uses_condition == true then 
@@ -986,11 +1009,175 @@ function circuit_network_menu(pindex, ent_in, menu_index, clicked, other_input)
             printout(result,pindex)
             p.play_sound{path = "Inventory-Move"}
          end
+      else
+         if ent.type ~= "programmable-speaker" or (ent.type == "programmable-speaker" and control == nil) then
+            if index == 11 then
+               printout("The rest of this menu is for network connected programmable speakers only", pindex)
+            elseif index == 12 then
+               --(inventory edge: play sound and set index and call this menu again)
+               p.play_sound{path = "inventory-edge"}
+               players[pindex].circuit_network_menu.index = 11
+               circuit_network_menu(pindex, ent, players[pindex].circuit_network_menu.index, false, false)
+            end
+         else
+            --programmable-speaker menu
+            local params = ent.parameters
+            local circuit_params = control.circuit_parameters
+            local instruments = ent.prototype.instruments
+            if index == 11 then
+               --Toggle local or global playback
+               if not clicked then 
+                  printout("Toggle local or global playback", pindex)
+               else
+                  local params = ent.parameters
+                  params.playback_globally = not params.playback_globally
+                  ent.parameters = params
+                  if ent.parameters.playback_globally then
+                     printout("Global",pindex)
+                  else
+                     printout("Local",pindex)
+                  end
+                  play_selected_speaker_note(ent)
+               end
+            elseif index == 12 then
+               --Switch local playback volume up 
+               if not clicked then 
+                  printout("Switch volume up for local playback", pindex)
+               else
+                  local params = ent.parameters
+                  params.playback_volume = params.playback_volume + 0.1
+                  if params.playback_volume > 1 then
+                     params.playback_volume = 1
+                  end
+                  ent.parameters = params
+                  printout(ent.parameters.playback_volume,pindex)
+                  play_selected_speaker_note(ent)                  
+               end
+            elseif index == 13 then
+               --Switch local playback volume down 
+               if not clicked then 
+                  printout("Switch volume down for local playback", pindex)
+               else
+                  local params = ent.parameters
+                  params.playback_volume = params.playback_volume - 0.1
+                  if params.playback_volume < 0 then
+                     params.playback_volume = 0
+                  end
+                  ent.parameters = params
+                  printout(ent.parameters.playback_volume,pindex)
+                  play_selected_speaker_note(ent)                  
+               end
+            elseif index == 14 then
+               --Switch instrument up
+               if not clicked then 
+                  printout("Switch instrument up ", pindex)
+               else
+                  --Switch up
+                  local params = control.circuit_parameters
+                  local ins_id = params.instrument_id
+                  local note_id = params.note_id
+                  if ins_id > 1 then
+                     ins_id = ins_id - 1
+                  else
+                     ins_id = 1
+                     p.play_sound{path = "inventory-edge"}
+                  end
+                  params.instrument_id = ins_id
+                  params.note_id = 1
+                  control.circuit_parameters = params
+                  --Read instrument
+                  printout(instruments[ins_id].name, pindex)
+                  play_selected_speaker_note(ent)
+               end
+            elseif index == 15 then
+               --Switch instrument down
+               if not clicked then 
+                  printout("Switch instrument down ", pindex)
+               else
+                  --Switch down
+                  local params = control.circuit_parameters
+                  local ins_id = params.instrument_id
+                  local note_id = params.note_id
+                  if ins_id < #instruments then
+                     ins_id = ins_id + 1 
+                  else
+                     ins_id = #instruments
+                     p.play_sound{path = "inventory-edge"}
+                  end
+                  params.instrument_id = ins_id
+                  params.note_id = 1
+                  control.circuit_parameters = params
+                  --Read instrument
+                  printout(instruments[ins_id].name, pindex)
+                  play_selected_speaker_note(ent)
+               end
+            elseif index == 16 then
+               --Switch note up
+               if not clicked then 
+                  printout("Switch note or subtype up ", pindex)
+               else
+                  local params = control.circuit_parameters
+                  local ins_id = params.instrument_id
+                  local note_id = params.note_id
+                  local notes = instruments[ins_id].notes
+                  if note_id > 1 then
+                     note_id = note_id - 1 
+                  else
+                     p.play_sound{path = "inventory-edge"}
+                  end
+                  params.note_id = note_id
+                  control.circuit_parameters = params
+                  --Read note
+                  printout(notes[note_id], pindex)
+                  play_selected_speaker_note(ent)
+               end
+            elseif index == 17 then
+               --Switch note down
+               if not clicked then 
+                  printout("Switch note or subtype down ", pindex)
+               else
+                  local params = control.circuit_parameters
+                  local ins_id = params.instrument_id
+                  local note_id = params.note_id
+                  local notes = instruments[ins_id].notes
+                  if note_id < #notes then
+                     note_id = note_id + 1 
+                  else
+                     p.play_sound{path = "inventory-edge"}
+                  end
+                  params.note_id = note_id
+                  control.circuit_parameters = params
+                  --Read note
+                  printout(notes[note_id], pindex)
+                  play_selected_speaker_note(ent)
+               end
+            elseif index == 18 then
+               --Toggle if signal value is pitch
+               if not clicked then 
+                  printout("Toggle if signal value determines note pitch", pindex)
+               else
+                  local params = control.circuit_parameters
+                  params.signal_value_is_pitch = not params.signal_value_is_pitch
+                  control.circuit_parameters = params
+                  if control.circuit_parameters.signal_value_is_pitch then
+                     printout("Enabled", pindex)
+                  else
+                     printout("Disabled", pindex)
+                  end
+                  play_selected_speaker_note(ent)
+               end
+            elseif index == 19 then
+               --(inventory edge: play sound and set index and call this menu again)
+               p.play_sound{path = "inventory-edge"}
+               players[pindex].circuit_network_menu.index = 18
+               circuit_network_menu(pindex, ent, players[pindex].circuit_network_menu.index, false, false)
+            end
+         end
       end
       return
    end
 end
-CIRCUIT_NETWORK_MENU_LENGTH = 10
+CIRCUIT_NETWORK_MENU_LENGTH = 20
 
 function circuit_network_menu_open(pindex, ent)
    if players[pindex].vanilla_mode then
@@ -1011,7 +1198,7 @@ function circuit_network_menu_open(pindex, ent)
    
    --Load menu 
    local cn_menu = players[pindex].circuit_network_menu
-   circuit_network_menu(pindex, ent, cn_menu.index, false)
+   circuit_network_menu(pindex, ent, 0, false)
 end
 
 function circuit_network_menu_close(pindex, mute_in)
