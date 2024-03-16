@@ -13280,8 +13280,11 @@ script.on_event("debug-test-key", function(event)
    --if ent and ent.valid then
    --   game.print("tile width: " .. game.entity_prototypes[ent.name].tile_width)
    --end
-   show_sprite_demo(pindex)
-
+   if ent and ent.type == "programmable-speaker" then
+      --ent.play_note(12,1)
+      --play_selected_speaker_note(ent)
+   end 
+   --show_sprite_demo(pindex)
 end)
 
 function show_sprite_demo(pindex)
