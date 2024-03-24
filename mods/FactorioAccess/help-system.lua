@@ -58,6 +58,8 @@ function load_tutorial(pindex)
    --Load Chapter 0 strings
    tutorial.chapter_0_messages = { {"tutorial.tutorial-chapter-0-message-1"}, {"tutorial.tutorial-chapter-0-message-2"}, 
                                    {"tutorial.tutorial-chapter-0-message-3"}, {"tutorial.tutorial-chapter-0-message-4"} }
+   tutorial.chapter_0_headers = { {"tutorial.tutorial-chapter-0-header-1"}, {"tutorial.tutorial-chapter-0-header-2"}, 
+                                   {"tutorial.tutorial-chapter-0-header-3"}, {"tutorial.tutorial-chapter-0-header-4"} }
    
    --Load other tutorial strings
    --...
@@ -287,13 +289,19 @@ function tutorial_menu(pindex, reading_the_header, clicked)
    local p = game.get_player(pindex)
 	if chap == 0 and step == 1 then
 		--Read out chapter 0 start message
-      printout(tutorial.chapter_0_messages[step],pindex)
-      game.get_player(pindex).print("Tutorial start message " .. step .. ":",{volume_modifier=0})--
-      game.get_player(pindex).print(tutorial.chapter_0_messages[step],{volume_modifier=0})
+      if reading_the_header == false then
+         printout(tutorial.chapter_0_messages[step],pindex)
+         game.get_player(pindex).print("Tutorial start message " .. step .. ":",{volume_modifier=0})--
+         game.get_player(pindex).print(tutorial.chapter_0_messages[step],{volume_modifier=0})
+      else
+         printout(tutorial.chapter_0_headers[step],pindex)
+         game.get_player(pindex).print("Tutorial start message " .. step .. ":",{volume_modifier=0})--
+         game.get_player(pindex).print(tutorial.chapter_0_headers[step],{volume_modifier=0})
+      end
       
       --Give rocket fuel
       if players[pindex].tutorial.rocket_fuel_provided ~= true then
-         p.insert{name = "rocket-fuel", count = 8}
+         p.insert{name = "solid-fuel", count = 9}
       end 
       
       --Reload tutorial
@@ -303,9 +311,15 @@ function tutorial_menu(pindex, reading_the_header, clicked)
       
    elseif chap == 0 and step > 1 then
       --Read out chapter 0 start message
-      printout(tutorial.chapter_0_messages[step],pindex)
-      game.get_player(pindex).print("Tutorial start message " .. step .. ":",{volume_modifier=0})--
-      game.get_player(pindex).print(tutorial.chapter_0_messages[step],{volume_modifier=0})
+      if reading_the_header == false then
+         printout(tutorial.chapter_0_messages[step],pindex)
+         game.get_player(pindex).print("Tutorial start message " .. step .. ":",{volume_modifier=0})--
+         game.get_player(pindex).print(tutorial.chapter_0_messages[step],{volume_modifier=0})
+      else
+         printout(tutorial.chapter_0_headers[step],pindex)
+         game.get_player(pindex).print("Tutorial start message " .. step .. ":",{volume_modifier=0})--
+         game.get_player(pindex).print(tutorial.chapter_0_headers[step],{volume_modifier=0})
+      end
       
 	elseif chap == -1 and step == -1 then --Example
 		--Do a specific action for this step, e.g. provide an item or run a check
