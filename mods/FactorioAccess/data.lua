@@ -1212,7 +1212,7 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "free-place-straight-rail",
+    name = "fa-alternate-build",
     key_sequence = "CONTROL + LEFTBRACKET",
     consuming = "none"
 },

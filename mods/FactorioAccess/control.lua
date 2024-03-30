@@ -10774,7 +10774,7 @@ script.on_event("transfer-all-stacks", function(event)
 end)
 
 --Default is control clicking
-script.on_event("free-place-straight-rail", function(event)
+script.on_event("fa-alternate-build", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
@@ -10786,9 +10786,13 @@ script.on_event("free-place-straight-rail", function(event)
       --Not in a menu
       local stack = game.get_player(pindex).cursor_stack
       local ent =  get_selected_ent(pindex)
-      if stack and stack.valid_for_read and stack.valid and stack.name == "rail" then
+      if stack == nil or stack.valid_for_read == false or stack.valid == false then
+         return
+      elseif stack.name == "rail" then
          --Straight rail free placement
          build_item_in_hand(pindex, true)
+      elseif stack.name == "steam-engine" then
+         snap_place_steam_engine_to_a_boiler(pindex)
       end
    end
 end)
@@ -15791,3 +15795,66 @@ script.on_event("fa-pda-cruise-control-set-speed-info", function(event)
    printout("Type in the new cruise control speed and press 'ENTER' and then 'E' to confirm, or press 'ESC' to exit",pindex)
 end)
 
+--Assuming there is a steam engine in hand, this function will automatically build it next to a suitable boiler.
+function snap_place_steam_engine_to_a_boiler(pindex)
+   local p = game.get_player(pindex)
+   local found_empty_spot = false
+   local found_valid_spot = false
+   --Locate all boilers within 10m
+   local boilers = p.surface.find_entities_filtered{name = "boiler", position = p.position, radius = 10}
+   
+   --If none then locate all boilers within 25m
+   if boilers == nil or #boilers == 0 then
+      boilers = p.surface.find_entities_filtered{name = "boiler", position = p.position, radius = 25}
+   end
+   
+   if boilers == nil or #boilers == 0 then
+      p.play_sound{path = "utility/cannot_build"}
+      printout("Error: No boilers found nearby",pindex)
+      return
+   end
+   
+   --For each boiler found:
+   for i,boiler in ipairs(boilers) do
+      --Check if there is any entity in front of it
+      local output_location = offset_position(boiler.position,boiler.direction,1.5)
+      rendering.draw_circle{color = {1, 1, 0.25},radius = 1,width = 1,target = output_location, surface = p.surface, time_to_live = 60, draw_on_ground = false}
+      local output_ent = p.surface.find_entities_filtered{position = output_location, radius = 1, type = {"resource","boiler"}, invert = true}
+      if output_ent == nil or output_ent.valid == false then
+         --Determine engine position based on boiler direction
+         found_empty_spot = true          
+         local engine_position = output_location
+         local dir = boiler.direction
+         local old_building_dir = players[pindex].building_direction
+         players[pindex].building_direction = dir
+         if dir == dirs.east then
+            engine_position = offset_position(engine_position, dirs.north,1)--*****may need to adjust to place from the center of the engine instead
+         elseif dir == dirs.south then
+            engine_position = offset_position(engine_position, dirs.west,1)
+         elseif dir == dirs.west then
+            engine_position = offset_position(engine_position, dirs.north,1)
+            engine_position = offset_position(engine_position, dirs.west,5)
+         elseif dir == dirs.north then
+            engine_position = offset_position(engine_position, dirs.north,5)
+            engine_position = offset_position(engine_position, dirs.west,1)
+         end
+         --Check if can build from cursor to the relative position
+         if p.can_build_from_cursor{position = engine_position, direction = dir}
+            p.build_from_cursor{position = engine_position, direction = dir}
+            found_valid_spot = true
+            printout("Placed steam engine near boiler at " .. math.floor(boiler.position.x) .. "," .. math.floor(boiler.position.y),pindex)
+            return
+         end 
+      end
+   end
+   --If all have been skipped and none were found then play error
+   if found_empty_spot == false then
+      p.play_sound{path = "utility/cannot_build"}
+      printout("Error: All boilers nearby are blocked or already connected.",pindex)
+      return
+   elseif found_valid_spot == false then
+      p.play_sound{path = "utility/cannot_build"}
+      printout("Error: Boilers found but unable to build in front of them, check build area for obstacles.",pindex)
+      return
+   end
+end

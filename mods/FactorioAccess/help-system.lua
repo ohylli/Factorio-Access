@@ -10,15 +10,15 @@ function load_tutorial(pindex)
    --Load tutorial header and detail strings
    tutorial.step_headers =  {} --2D array of localised strings
    tutorial.step_details =  {} --2D array of localised strings
-   local CHAPTER_1_LENGTH = 28 --Lengths are constants depending on how we write the "en" strings.
-   local CHAPTER_2_LENGTH = 22
-   local CHAPTER_3_LENGTH = 08
-   local CHAPTER_4_LENGTH = 15
-   local CHAPTER_5_LENGTH = 19
-   local CHAPTER_6_LENGTH = 13
-   local CHAPTER_7_LENGTH = 13
-   local CHAPTER_8_LENGTH = 19
-   local CHAPTER_9_LENGTH = 22
+   local CHAPTER_1_LENGTH = 21 --Lengths are constants depending on how we write the "en" strings.
+   local CHAPTER_2_LENGTH = 30
+   local CHAPTER_3_LENGTH = 27
+   local CHAPTER_4_LENGTH = 31
+   local CHAPTER_5_LENGTH = 34
+   local CHAPTER_6_LENGTH = 24
+   local CHAPTER_7_LENGTH = 99
+   local CHAPTER_8_LENGTH = 99
+   local CHAPTER_9_LENGTH = 99
 
    tutorial.chapter_lengths = {CHAPTER_1_LENGTH, CHAPTER_2_LENGTH, CHAPTER_3_LENGTH, CHAPTER_4_LENGTH, CHAPTER_5_LENGTH, CHAPTER_6_LENGTH, CHAPTER_7_LENGTH, CHAPTER_8_LENGTH, CHAPTER_9_LENGTH}
    
