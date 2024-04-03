@@ -18,7 +18,7 @@ function load_tutorial(pindex)
    local CHAPTER_6_LENGTH = 24
    local CHAPTER_7_LENGTH = 45
    local CHAPTER_8_LENGTH = 26
-   local CHAPTER_9_LENGTH = 36
+   local CHAPTER_9_LENGTH = 37
    local CHAPTER_10_LENGTH = 37
    local CHAPTER_11_LENGTH = 37
    local CHAPTER_12_LENGTH = 14
