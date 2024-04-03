@@ -4029,12 +4029,14 @@ function scan_index(pindex)
          table.insert(result,extra_info_for_scan_list(ent,pindex,true))
          table.insert(result,{"description.of", players[pindex].nearby.selection , #ents[players[pindex].nearby.index].ents})--"X of Y"
          table.insert(result,dir_dist)
+         table.insert(result,cursor_visibility_info(pindex))
          printout(result,pindex)
       else
          --Read the entity in terms of count, and give the direction and distance of an example
-         printout({"access.item_and_quantity-example-at-dirdist",
-            {"access.item-quantity",ent_name_locale(ent),ents[players[pindex].nearby.index].count},
-            dir_dist} , pindex)
+         local result = {"access.item_and_quantity-example-at-dirdist",
+            {"access.item-quantity",ent_name_locale(ent),ents[players[pindex].nearby.index].count}, dir_dist}
+         table.insert(result,cursor_visibility_info(pindex))
+         printout( result, pindex)
       end
    end
    
@@ -4540,6 +4542,9 @@ function read_tile(pindex, start_text)
          end
       end
    end
+   
+   --Add info on whether the tile is uncharted or blurred or distant
+   result = result .. cursor_visibility_info(pindex)
    printout(result, pindex)
    --game.get_player(pindex).print(result)--**
 end
@@ -7168,6 +7173,32 @@ script.on_event("read-cursor-distance-and-direction", function(event)
       table.insert(result,cursor_production)--no production
       table.insert(result,cursor_description_of)--listpos
       table.insert(result,dir_dist)
+      printout(result,pindex)
+      game.get_player(pindex).print(result,{volume_modifier=0})
+      rendering.draw_circle{color = {1, 0.2, 0}, radius = 0.1, width = 5, target = players[pindex].cursor_pos, surface = game.get_player(pindex).surface, time_to_live = 180}
+   end
+end)
+
+--Get distance and direction of cursor from player as a vector with a horizontal component and vertical component.
+script.on_event("read-cursor-distance-vector", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].menu ~= "crafting" then
+      local c_pos = players[pindex].cursor_pos
+      local p_pos = players[pindex].position
+      local diff_x = math.floor(c_pos.x - p_pos.x)
+      local diff_y = math.floor(c_pos.y - p_pos.y)
+      local dir_x = dirs.east
+      if diff_x < 0 then
+         dir_x = dirs.west
+      end
+      local dir_y = dirs.south
+      if diff_y < 0 then
+         dir_y = dirs.north
+      end
+      local result = "At " .. diff_x .. " " .. direction_lookup(dir_x) .. " and " .. diff_y .. " " .. direction_lookup(dir_y)
       printout(result,pindex)
       game.get_player(pindex).print(result,{volume_modifier=0})
       rendering.draw_circle{color = {1, 0.2, 0}, radius = 0.1, width = 5, target = players[pindex].cursor_pos, surface = game.get_player(pindex).surface, time_to_live = 180}
@@ -16037,3 +16068,19 @@ function is_a_pipe_end(ent,pindex)--****todo integrate and test
       return false
    end
 end--****
+
+--Reports if the cursor tile is uncharted/blurred and also if it is distant (offscreen)
+function cursor_visibility_info(pindex)
+   local p = game.get_player(pindex)
+   local result = ""
+   local pos = players[pindex].cursor_pos
+   local chunk_pos = {x = math.floor(pos.x/32), y = math.floor(pos.y/32)}
+   if p.force.is_chunk_charted(p.surface,chunk_pos) == false then
+      result = result .. " uncharted "
+   elseif p.force.is_chunk_visible(p.surface,chunk_pos) == false then
+      result = result .. " blurred "
+   end
+   if cursor_position_is_on_screen_with_player_centered(pindex) == false then
+      result = result .. " distant "
+   return result
+end

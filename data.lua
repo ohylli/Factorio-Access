@@ -510,6 +510,13 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "read-cursor-distance-vector",
+    key_sequence = "ALT + K",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "read-character-coords",
     key_sequence = "CONTROL + K",
     consuming = "none"
