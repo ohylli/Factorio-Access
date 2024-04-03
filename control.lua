@@ -4496,7 +4496,7 @@ function read_tile(pindex, start_text)
       players[pindex].tile.previous = nil
       local tile = players[pindex].tile.tile
       result = result .. localising.get(tile)--**** todo test 
-      if tile.name == "water" or tile.name == "deepwater" or tile.name == "water-green" or tile.name == "deepwater-green" or tile.name = "water-shallow" or tile.name == "water-mud" or tile.name == "water-wube" then
+      if tile.name == "water" or tile.name == "deepwater" or tile.name == "water-green" or tile.name == "deepwater-green" or tile.name == "water-shallow" or tile.name == "water-mud" or tile.name == "water-wube" then
          --Identify shores and crevices and so on for water tiles
          result = result .. identify_water_shores(pindex)
       end
@@ -15893,7 +15893,7 @@ function snap_place_steam_engine_to_a_boiler(pindex)
             engine_position = offset_position(engine_position, dirs.west,1)
          end
          --Check if can build from cursor to the relative position
-         if p.can_build_from_cursor{position = engine_position, direction = dir}
+         if p.can_build_from_cursor{position = engine_position, direction = dir} then 
             p.build_from_cursor{position = engine_position, direction = dir}
             found_valid_spot = true
             printout("Placed steam engine near boiler at " .. math.floor(boiler.position.x) .. "," .. math.floor(boiler.position.y),pindex)
@@ -15937,7 +15937,7 @@ function identify_water_shores(pindex)--****todo test
    if (tile_east and #tile_east > 0) then
       tile_east = 1
    end
-   if tile_west and #tile_west > 0) then
+   if (tile_west and #tile_west > 0) then
       tile_west = 1
    end
    
