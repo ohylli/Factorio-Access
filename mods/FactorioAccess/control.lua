@@ -1067,6 +1067,10 @@ function ent_info(pindex, ent, description)
    --Report the entity facing direction
    if (ent.prototype.is_building and ent.supports_direction) or (ent.name == "entity-ghost" and ent.ghost_prototype.is_building and ent.ghost_prototype.supports_direction) then
       result = result .. ", Facing " .. direction_lookup(ent.direction) 
+      if ent.type == "generator" then
+         --For steam engines and steam turbines, north = south and east = west 
+         result = result .. " or " .. direction_lookup(rotate_180(ent.direction)) 
+      end
    elseif ent.type == "locomotive" or ent.type == "car" then
       result = result .. " facing " .. get_heading(ent)
    end
@@ -3213,7 +3217,7 @@ end
       
 
 function read_building_slot(pindex, prefix_inventory_size_and_name)
-   local building_sector=players[pindex].building.sectors[players[pindex].building.sector]
+   local building_sector = players[pindex].building.sectors[players[pindex].building.sector]
    if building_sector.name == "Filters" then 
       local inventory = building_sector.inventory
       local start_phrase = #inventory .. " " .. building_sector.name .. ", "
@@ -3228,7 +3232,7 @@ function read_building_slot(pindex, prefix_inventory_size_and_name)
       end
       local box = building_sector.inventory
       if #box == 0 then
-         printout(start_phrase .. "No fluid" , pindex)
+         printout("No fluid" , pindex)
          return
       elseif players[pindex].building.index > #box or players[pindex].building.index == 0 then
          players[pindex].building.index = 1
@@ -8787,6 +8791,35 @@ script.on_event("mine-tiles", function(event)
          end
       end
    end
+end)
+
+--Flush the selected fluid
+script.on_event("flush-fluid", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].building.ent ~= nil and players[pindex].building.ent.valid and players[pindex].building.ent.type == "fluid-turret" and players[pindex].building.index ~= 1 then
+      --Prevent fluid turret crashes
+      players[pindex].building.index = 1
+   end
+   local building_sector = players[pindex].building.sectors[players[pindex].building.sector]
+   local box = building_sector.inventory--= players[pindex].building.fluidbox
+   if #box == 0 then
+      printout("No fluid" , pindex)
+      return
+   end
+   local fluid = box[players[pindex].building.index]
+   local len = #box 
+   local name  = "Nothing"
+   local amount = 0
+   if fluid ~= nil then
+      amount = fluid.amount
+      name = fluid.name--does not locallise..?**
+   end
+   --Read the fluid found, including amount if any
+   printout(" Flushed away " .. name, pindex)
+   box.flush(players[pindex].building.index)
 end)
 
 --Mines groups of entities depending on the name or type. Includes trees and rocks, rails.
