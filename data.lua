@@ -1085,6 +1085,14 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "flush-fluid",
+    key_sequence = "X",
+    linked_game_control = "mine",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "mine-area",
     key_sequence = "SHIFT + X",
     consuming = "none"
