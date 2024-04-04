@@ -5174,7 +5174,7 @@ function read_coords(pindex, start_phrase)
             proto = game.fluid_prototypes[v.name]
          end
          local localised_name = localising.get(proto,pindex)
-         result = result .. ", " .. localised_name .. " times " .. v.amount .. " per cycle "
+         result = result .. ", " .. localised_name .. " times " .. v.amount 
       end
       result = result .. ", Products: "
       for i, v in pairs(recipe.products) do
@@ -5183,7 +5183,7 @@ function read_coords(pindex, start_phrase)
             proto = game.fluid_prototypes[v.name]
          end
          local localised_name = localising.get(proto,pindex)
-         result = result .. ", " .. localised_name .. " times " .. v.amount .. " per cycle "
+         result = result .. ", " .. localised_name .. " times " .. v.amount 
       end
       result = result .. ", time " .. recipe.energy .. " seconds by default."
       printout(result, pindex)
@@ -10544,6 +10544,7 @@ function build_item_in_hand(pindex, free_place_straight_rail)
       teleport_player_out_of_build_area(players[pindex].building_footprint_left_top, players[pindex].building_footprint_right_bottom, pindex)
       
 	  --Try to build it
+      local build_successful = false
       local building = {
          position = position,
          --position = center_of_tile(position),
@@ -10555,6 +10556,7 @@ function build_item_in_hand(pindex, free_place_straight_rail)
          --Build it
          game.get_player(pindex).build_from_cursor(building)  
          schedule(2,"read_tile",pindex) 
+         build_successful = true 
       else
          --Report errors
          game.get_player(pindex).play_sound{path = "utility/cannot_build"}
@@ -10589,6 +10591,10 @@ function build_item_in_hand(pindex, free_place_straight_rail)
          if stack and stack.valid_for_read and stack.valid and stack.prototype.place_result.type == "underground-belt" then
             stack.set_stack({name = stack.name, count = stack.count})
          end
+      end
+      --Flip pipe-to-ground in hand 
+      if stack and stack.valid_for_read and stack.valid and stack.prototype.place_as_tile_result ~= nil and stack.prototype.place_as_tile_result.name == "pipe-to-ground" then
+         players[pindex].building_direction = rotate_180(players[pindex].building_direction)
       end
    elseif stack and stack.valid_for_read and stack.valid and stack.prototype.place_as_tile_result ~= nil then
    --Tile placement 
@@ -11256,14 +11262,19 @@ script.on_event("read-entity-status", function(event)
       table.insert(result, {"access.percent-health",  math.floor(ent.get_health_ratio() * 100) })
    end
    
-   if ent.name == "straight-rail" then
-      -- Report nearest rail intersection position -- laterdo find better keybind
+   -- Report nearest rail intersection position -- laterdo find better keybind
+   if ent.name == "straight-rail" then   
       local nearest, dist = find_nearest_intersection(ent, pindex)
       if nearest == nil then
          table.insert(result, ", no rail intersections within " .. dist .. " tiles " )
       else
          table.insert(result, ", nearest rail intersection at " .. dist .. " " .. direction_lookup(get_direction_of_that_from_this(nearest.position,ent.position)))
       end
+   end
+   
+   --Spawners: Report evolution factor
+   if ent.type == "unit-spawner" then
+      table.insert(result, ", evolution factor " .. math.floor(1000 * ent.force.evolution_factor)/1000 )
    end
    
    printout(result ,pindex)
