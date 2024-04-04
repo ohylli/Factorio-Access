@@ -305,7 +305,7 @@ function tutorial_menu(pindex, reading_the_header, clicked)
       
       --Give rocket fuel
       if players[pindex].tutorial.rocket_fuel_provided ~= true then
-         p.insert{name = "solid-fuel", count = 8}
+         p.insert{name = "coal", count = 50}
       end 
       
       --Reload tutorial
