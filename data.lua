@@ -67,7 +67,7 @@ access_radar.icons = {
     tint = ar_tint
   }
 }
---This radar scans a new sector every 5 seconds instead of 33, and it refreshes its short range every 5 seconds (precisely fast enough) instead of 1 second, but the short range is smaller and the radar costs double the power.
+--New building: This radar scans a new sector every 5 seconds instead of 33, and it refreshes its short range every 5 seconds (precisely fast enough) instead of 1 second, but the short range is smaller and the radar costs double the power.
 access_radar.name = "access-radar"
 access_radar.energy_usage = "600kW"  --Default: "300kW"
 access_radar.energy_per_sector = "3MJ" --Default: "10MJ"
@@ -99,7 +99,6 @@ access_radar_recipe.ingredients = {{"electronic-circuit", 10}, {"iron-gear-wheel
 
 data:extend{access_radar,access_radar_item}
 data:extend{access_radar_item,access_radar_recipe}
-
 
 --Map generation preset attempts
 resource_def={richness = 4}

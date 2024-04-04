@@ -25,7 +25,7 @@ for _,item in pairs(vanilla_tip_and_tricks_item_table) do
    remove_tip_and_tricks_item(item);
 end
 
---Modifications for Pavement Driving Assist Continued
+--Modifications to Pavement Driving Assist Continued controls
 data:extend({
     {
         type = "custom-input",
@@ -52,3 +52,20 @@ data:extend({
         linked_game_control = "confirm-gui"
     },
 })
+
+--Modify base prototypes to remove their default descriptions 
+local SP1= data.raw["tool"]["automation-science-pack"]
+SP1.localised_decription = nil
+local SP2= data.raw["tool"]["logistic-science-pack"]
+SP2.localised_decription = nil
+local SP3= data.raw["tool"]["military-science-pack"]
+SP3.localised_decription = nil
+local SP4= data.raw["tool"]["chemical-science-pack"]
+SP4.localised_decription = nil
+local SP5= data.raw["tool"]["production-science-pack"]
+SP5.localised_decription = nil
+local SP6= data.raw["tool"]["utility-science-pack"]
+SP6.localised_decription = nil
+local SP7= data.raw["tool"]["space-science-pack"]
+SP7.localised_decription = nil
+ 
