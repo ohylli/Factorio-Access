@@ -9668,11 +9668,11 @@ script.on_event("click-hand", function(event)
       elseif stack.is_repair_tool then
          --If holding a repair pack, try to use it (will not work on enemies)
          repair_pack_used(ent,pindex)
-      elseif stack.is_blueprint and stack.is_blueprint_setup() then
+      elseif stack.is_blueprint and stack.is_blueprint_setup() and players[pindex].blueprint_reselecting ~= true then
          --Paste a ready blueprint 
          players[pindex].last_held_blueprint = stack
          paste_blueprint(pindex)
-      elseif stack.is_blueprint and not stack.is_blueprint_setup() then
+      elseif stack.is_blueprint and (stack.is_blueprint_setup() == false or players[pindex].blueprint_reselecting == true) then
          --Select blueprint 
          local pex = players[pindex]
          if pex.bp_selecting ~= true then
@@ -9682,7 +9682,12 @@ script.on_event("click-hand", function(event)
          else
             pex.bp_selecting = false
             pex.bp_select_point_2 = pex.cursor_pos
-            create_blueprint(pindex, pex.bp_select_point_1, pex.bp_select_point_2)
+            local bp_data = nil 
+            if players[pindex].blueprint_reselecting == true then 
+               bp_data = get_bp_data_for_edit(stack)
+            end
+            create_blueprint(pindex, pex.bp_select_point_1, pex.bp_select_point_2, bp_data)
+            players[pindex].blueprint_reselecting = false 
          end
       elseif stack.is_blueprint_book then
          blueprint_book_menu_open(pindex, true)
@@ -11700,6 +11705,7 @@ script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
    end
    delete_empty_planners_in_inventory(pindex)
    players[pindex].bp_selecting = false
+   players[pindex].blueprint_reselecting = false 
    sync_build_cursor_graphics(pindex)
 end)
 

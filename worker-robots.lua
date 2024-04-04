@@ -1846,7 +1846,7 @@ function get_blueprint_description(stack)
 end
 
 function set_blueprint_label(stack,label)
-   bp_data=get_bp_data_for_edit(stack)
+   local bp_data=get_bp_data_for_edit(stack)
    bp_data.blueprint.label = label
    set_stack_bp_from_data(stack,bp_data)
 end
@@ -1867,7 +1867,7 @@ function get_top_left_and_bottom_right(pos_1, pos_2)
 end
 
 --Create a blueprint from a rectangle between any two points and give it to the player's hand
-function create_blueprint(pindex, point_1, point_2)
+function create_blueprint(pindex, point_1, point_2, prior_bp_data)
    local top_left, bottom_right = get_top_left_and_bottom_right(point_1, point_2)
    local p = game.get_player(pindex)
    if not p.cursor_stack.valid_for_read or p.cursor_stack.valid_for_read and not (p.cursor_stack.is_blueprint and p.cursor_stack.is_blueprint_setup() == false) then
@@ -1887,6 +1887,16 @@ function create_blueprint(pindex, point_1, point_2)
       printout("Blueprint selection area was empty.", pindex)
    else
       printout("Blueprint with " .. ent_count .. " entities created in hand.", pindex)
+   end
+   
+   --Copy label and description and icons from previous version
+   if prior_bp_data ~= nil then
+      local bp_data = get_bp_data_for_edit(p.cursor_stack)
+      bp_data.blueprint.label = prior_bp_data.blueprint.label
+      bp_data.blueprint.label_color = prior_bp_data.blueprint.label_color
+      bp_data.blueprint.description = prior_bp_data.blueprint.description
+      bp_data.blueprint.icons = prior_bp_data.blueprint.icons
+      set_stack_bp_from_data(p.cursor_stack,bp_data) 
    end
 end 
 
@@ -2191,7 +2201,8 @@ end
    9. Clear this blueprint 
    10. Export this blueprint as a text string
    11. Import a text string to overwrite this blueprint
-   12. Use the last selected area to reselect this blueprint --todo add***
+   12. Reselect the area for this blueprint 
+   13. Use the last selected area to reselect this blueprint --todo add***
 
    This menu opens when you press RIGHT BRACKET on a blueprint in hand 
 ]]
@@ -2462,9 +2473,19 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
          local result = "Paste a copied blueprint text string in this box and then press ENTER to load it"
          printout(result, pindex)
       end
+   elseif index == 12 then
+      --Reselect the area for this blueprint
+      if not clicked then
+         local result = "Reselect the area for this blueprint"
+         printout(result, pindex)
+      else
+         players[pindex].blueprint_reselecting = true
+         local result = "Select the first point now."
+         printout(result, pindex)
+      end
    end
 end
-BLUEPRINT_MENU_LENGTH = 11
+BLUEPRINT_MENU_LENGTH = 12
 
 function blueprint_menu_open(pindex)
    if players[pindex].vanilla_mode then
