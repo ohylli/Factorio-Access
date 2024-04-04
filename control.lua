@@ -1093,7 +1093,7 @@ function ent_info(pindex, ent, description)
       result = result .. ", Facing " .. direction_lookup(ent.direction) 
       if ent.type == "generator" then
          --For steam engines and steam turbines, north = south and east = west 
-         result = result .. " or " .. direction_lookup(rotate_180(ent.direction)) 
+         result = result .. " and " .. direction_lookup(rotate_180(ent.direction)) 
       end
    elseif ent.type == "locomotive" or ent.type == "car" then
       result = result .. " facing " .. get_heading(ent)
@@ -8532,6 +8532,10 @@ script.on_event("switch-menu-or-gun", function(event)
    if p.character == nil then
       return
    end
+   if p.vehicle ~= nil then
+      --laterdo tank weapon naming ***
+      return
+   end
    local guns_inv = p.get_inventory(defines.inventory.character_guns)
    local ammo_inv = game.get_player(pindex).get_inventory(defines.inventory.character_ammo)
    local result = ""
@@ -8676,6 +8680,10 @@ script.on_event("reverse-switch-menu-or-gun", function(event)
    --Gun related changes (Vanilla Factorio DOES NOT have shift + tab weapon revserse switching, so we add it without prediction needed)
    local p = game.get_player(pindex)
    if p.character == nil then
+      return
+   end
+   if p.vehicle ~= nil then
+      --laterdo tank weapon naming ***
       return
    end
    local guns_inv = p.get_inventory(defines.inventory.character_guns)
