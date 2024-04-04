@@ -524,6 +524,10 @@ function extra_info_for_scan_list(ent,pindex,info_comes_after_indexing)
       end
       result = result .. label
    elseif ent.name == "pipe" or ent.name == "storage-tank" then
+      --Pipe ends are labelled to distinguish them
+      if ent.name == "pipe" and is_a_pipe_end(ent,pindex) then
+         result = result .. " end "
+      end
       --Pipes and storage tanks are separated depending on the fluid they contain 
       local dict = ent.get_fluid_contents()
       local fluids = {}
@@ -906,7 +910,11 @@ function ent_info(pindex, ent, description)
             result = result .. ", in network" .. network_name
          end
       end 
-   end  
+   end 
+   --Pipe ends are labelled to distinguish them
+   if ent.name == "pipe" and is_a_pipe_end(ent,pindex) then
+      result = result .. " end "
+   end 
    --Explain the contents of a pipe or storage tank or etc.
    if ent.type == "pipe" or ent.type == "pipe-to-ground" or ent.type == "storage-tank" or ent.type == "pump" or ent.name == "boiler" or ent.name == "heat-exchanger" or ent.type == "generator" then
       local dict = ent.get_fluid_contents()
@@ -16008,7 +16016,7 @@ function identify_water_shores(pindex)--****todo test
 end
 
 --Identifies if a pipe is a pipe end, so that it can be singled out. The motivation is that pipe ends generally should not exist because the pipes should connect to something.
-function is_a_pipe_end(ent,pindex)--****todo integrate and test
+function is_a_pipe_end(ent,pindex)--****todo test, esp pipe to ground neighbor rotation 
    local p = game.get_player(pindex)
    local pos = players[pindex].cursor_pos
    local ents_north = p.surface.find_entities_filtered{position = {x = pos.x+0, y = pos.y-1} }
