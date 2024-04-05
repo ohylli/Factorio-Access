@@ -17,7 +17,7 @@ function localising.get(object,pindex)
    result = result and result[object.name]
    --for debugging
    if not result then
-      --game.print("translation fallback for " .. object.object_name .. " " .. object.name )
+      game.get_player(pindex).print("translation fallback for " .. object.object_name .. " " .. object.name,{volume_modifier=0})
    end
    result = result or object.name
    return result
@@ -37,7 +37,7 @@ function localising.get_alt(object,pindex)
    result = result and result[object.name]
    --for debugging
    if not result then
-      --game.print("translation fallback for " .. object.object_name .. " " .. object.name )
+      game.get_player(pindex).print("translation fallback for " .. object.object_name .. " " .. object.name,{volume_modifier=0})
    end
    result = result or object.name
    return result

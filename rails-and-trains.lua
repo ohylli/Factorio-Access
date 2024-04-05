@@ -51,13 +51,13 @@ function rail_ent_info(pindex, ent, description)
          is_horz_or_vert = true
          
       elseif ent.direction == dirs.northeast then
-         result = result .. " on falling diagonal left "
+         result = result .. " on falling diagonal, left half "
       elseif ent.direction == dirs.southwest then
-         result = result .. " on falling diagonal right "
+         result = result .. " on falling diagonal, right half "
       elseif ent.direction == dirs.southeast then
-         result = result .. " on rising diagonal left "
+         result = result .. " on rising diagonal, left half "
       elseif ent.direction == dirs.northwest then
-         result = result .. " on rising diagonal right "
+         result = result .. " on rising diagonal, right half "
       end
    
    elseif ent.name == "curved-rail" and is_end_rail == true then
@@ -81,23 +81,23 @@ function rail_ent_info(pindex, ent, description)
       end
    
    elseif ent.name == "curved-rail" and is_end_rail == false then
-      result = result .. " curved in direction "
-      if ent.direction == dirs.north then 
-         result = result ..  "0 with ends facing south and falling diagonal "
+      result = result .. " curved "
+      if ent.direction == dirs.north then --0
+         result = result ..  " facing south and falling diagonal "
       elseif ent.direction == dirs.northeast then
-         result = result ..  "1 with ends facing south and rising diagonal "
+         result = result ..  " facing south and rising diagonal "
       elseif ent.direction == dirs.east then
-         result = result ..  "2 with ends facing west  and rising diagonal "
+         result = result ..  " facing west  and rising diagonal "
       elseif ent.direction == dirs.southeast then
-         result = result ..  "3 with ends facing west  and falling diagonal "
+         result = result ..  " facing west  and falling diagonal "
       elseif ent.direction == dirs.south then
-         result = result ..  "4 with ends facing north and falling diagonal "
+         result = result ..  " facing north and falling diagonal "
       elseif ent.direction == dirs.southwest then
-         result = result ..  "5 with ends facing north and rising diagonal "
+         result = result ..  " facing north and rising diagonal "
       elseif ent.direction == dirs.west then
-         result = result ..  "6 with ends facing east  and rising diagonal "
-      elseif ent.direction == dirs.northwest then
-         result = result ..  "7 with ends facing east  and falling diagonal "
+         result = result ..  " facing east  and rising diagonal "
+      elseif ent.direction == dirs.northwest then --7
+         result = result ..  " facing east  and falling diagonal "
       end
    end
    

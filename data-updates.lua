@@ -54,18 +54,17 @@ data:extend({
 })
 
 --Modify base prototypes to remove their default descriptions 
-local SP1= data.raw["tool"]["automation-science-pack"]
-SP1.localised_decription = nil
-local SP2= data.raw["tool"]["logistic-science-pack"]
-SP2.localised_decription = nil
-local SP3= data.raw["tool"]["military-science-pack"]
-SP3.localised_decription = nil
-local SP4= data.raw["tool"]["chemical-science-pack"]
-SP4.localised_decription = nil
-local SP5= data.raw["tool"]["production-science-pack"]
-SP5.localised_decription = nil
-local SP6= data.raw["tool"]["utility-science-pack"]
-SP6.localised_decription = nil
-local SP7= data.raw["tool"]["space-science-pack"]
-SP7.localised_decription = nil
+for name, pack in pairs(data.raw.tool) do 
+   if pack.localised_description and pack.localised_description[1] == "item-description.science-pack" then 
+      pack.localised_description = nil 
+   end
+ende
+
+for name, mod in pairs(data.raw.module) do 
+   if mod.localised_description and mod.localised_description[1] == "item-description.effectivity-module" 
+   or mod.localised_description and mod.localised_description[1] == "item-description.productivity-module"
+   or mod.localised_description and mod.localised_description[1] == "item-description.speed-module" then 
+      mod.localised_description = nil 
+   end
+end 
  

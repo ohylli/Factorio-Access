@@ -9358,7 +9358,7 @@ script.on_event("click-menu", function(event)
          local count = game.get_player(pindex).begin_crafting(T)
          if count > 0 then
             local total_count = count_in_crafting_queue(T.recipe.name, pindex)
-            printout("Started crafting " .. count .. " " .. localising.get_alt(T.recipe,pindex) .. ", " .. total_count .. " total in queue", pindex)
+            printout("Started crafting " .. count .. " " .. localising.get_recipe_from_name(recipe.name,pindex) .. ", " .. total_count .. " total in queue", pindex)
          else
             local result = recipe_missing_ingredients_info(pindex)
             printout(result, pindex)
@@ -14546,7 +14546,7 @@ function sync_build_cursor_graphics(pindex)
       --Invalid stack: Hide the objects
       if dir_indicator ~= nil then rendering.set_visible(dir_indicator,false) end
       if player.building_footprint ~= nil then rendering.set_visible(player.building_footprint,false) end
-   elseif stack and stack.valid_for_read and stack.is_blueprint and stack.is_blueprint_setup() then
+   elseif stack and stack.valid_for_read and stack.is_blueprint and stack.is_blueprint_setup() and players[pindex].blueprint_reselecting ~= true then
       --Blueprints have their own data:
       --Redraw the direction indicator arrow
       if dir_indicator ~= nil then rendering.destroy(player.building_dir_arrow) end
@@ -14581,11 +14581,11 @@ function sync_build_cursor_graphics(pindex)
       if player.building_footprint ~= nil then rendering.set_visible(player.building_footprint,false) end
       
       --Tile placement preview
-      if stack.valid and stack.prototype.place_as_tile_result then 
+      if stack.valid and stack.prototype.place_as_tile_result and players[pindex].blueprint_reselecting ~= true then 
          local left_top = {math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size,math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size}
          local right_bottom = {math.floor(players[pindex].cursor_pos.x)+players[pindex].cursor_size+1,math.floor(players[pindex].cursor_pos.y)+players[pindex].cursor_size+1}
          draw_area_as_cursor(left_top,right_bottom,pindex, {r = 0.25, b = 0.25, g = 1.0, a = 0.75})
-      elseif (stack.is_blueprint or stack.is_deconstruction_item or stack.is_upgrade_item) and players[pindex].bp_selecting then
+      elseif (stack.is_blueprint or stack.is_deconstruction_item or stack.is_upgrade_item) and (players[pindex].bp_selecting == true) then
          --Draw planner rectangles
          local top_left, bottom_right = get_top_left_and_bottom_right(players[pindex].bp_select_point_1, players[pindex].cursor_pos)
          local color = {1,1,1}
@@ -15989,9 +15989,9 @@ function snap_place_steam_engine_to_a_boiler(pindex)
    for i,boiler in ipairs(boilers) do
       --Check if there is any entity in front of it
       local output_location = offset_position(boiler.position,boiler.direction,1.5)
-      rendering.draw_circle{color = {1, 1, 0.25},radius = 1,width = 1,target = output_location, surface = p.surface, time_to_live = 60, draw_on_ground = false}
-      local output_ent = p.surface.find_entities_filtered{position = output_location, radius = 1, type = {"resource","boiler"}, invert = true}
-      if output_ent == nil or output_ent.valid == false then
+      rendering.draw_circle{color = {1, 1, 0.25},radius = 0.25,width = 2,target = output_location, surface = p.surface, time_to_live = 60, draw_on_ground = false}
+      local output_ents = p.surface.find_entities_filtered{position = output_location, radius = 0.25, type = {"resource","generator"}, invert = true}
+      if output_ents == nil or #output_ents == 0 then
          --Determine engine position based on boiler direction
          found_empty_spot = true          
          local engine_position = output_location
@@ -15999,23 +15999,23 @@ function snap_place_steam_engine_to_a_boiler(pindex)
          local old_building_dir = players[pindex].building_direction
          players[pindex].building_direction = dir
          if dir == dirs.east then
-            engine_position = offset_position(engine_position, dirs.north,1)--*****may need to adjust to place from the center of the engine instead
+            engine_position = offset_position(engine_position, dirs.east,2) 
          elseif dir == dirs.south then
-            engine_position = offset_position(engine_position, dirs.west,1)
+            engine_position = offset_position(engine_position, dirs.south,2)
          elseif dir == dirs.west then
-            engine_position = offset_position(engine_position, dirs.north,1)
-            engine_position = offset_position(engine_position, dirs.west,5)
+            engine_position = offset_position(engine_position, dirs.west,2)
          elseif dir == dirs.north then
-            engine_position = offset_position(engine_position, dirs.north,5)
-            engine_position = offset_position(engine_position, dirs.west,1)
+            engine_position = offset_position(engine_position, dirs.north,2)
          end
+         rendering.draw_circle{color = {0.25, 1, 0.25},radius = 0.5,width = 2,target = engine_position, surface = p.surface, time_to_live = 60, draw_on_ground = false}
+         clear_obstacles_in_circle(engine_position, 4, pindex)
          --Check if can build from cursor to the relative position
          if p.can_build_from_cursor{position = engine_position, direction = dir} then 
             p.build_from_cursor{position = engine_position, direction = dir}
             found_valid_spot = true
             printout("Placed steam engine near boiler at " .. math.floor(boiler.position.x) .. "," .. math.floor(boiler.position.y),pindex)
             return
-         end 
+         end
       end
    end
    --If all have been skipped and none were found then play error

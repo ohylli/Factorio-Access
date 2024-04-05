@@ -1822,7 +1822,7 @@ end
 
 -------------Blueprints------------
 
-local function get_bp_data_for_edit(stack)
+function get_bp_data_for_edit(stack)
    return game.json_to_table(game.decode_string(string.sub(stack.export_stack(),2)))
 end
 
@@ -1870,7 +1870,11 @@ end
 function create_blueprint(pindex, point_1, point_2, prior_bp_data)
    local top_left, bottom_right = get_top_left_and_bottom_right(point_1, point_2)
    local p = game.get_player(pindex)
-   if not p.cursor_stack.valid_for_read or p.cursor_stack.valid_for_read and not (p.cursor_stack.is_blueprint and p.cursor_stack.is_blueprint_setup() == false) then
+   if prior_bp_data ~= nil then
+      --First clear the bp in hand
+      p.cursor_stack.set_stack({name = "blueprint", count = 1})
+   end
+   if not p.cursor_stack.valid_for_read or p.cursor_stack.valid_for_read and not (p.cursor_stack.is_blueprint and p.cursor_stack.is_blueprint_setup() == false and prior_bp_data == nil) then
       local cleared = p.clear_cursor()
       if not cleared then
          printout("Error: cursor full.", pindex)
@@ -1883,10 +1887,20 @@ function create_blueprint(pindex, point_1, point_2, prior_bp_data)
    --Avoid empty blueprints 
    local ent_count = p.cursor_stack.get_blueprint_entity_count()
    if ent_count == 0 then
-      p.cursor_stack.set_stack({name = "blueprint"})
-      printout("Blueprint selection area was empty.", pindex)
+      if prior_bp_data == nil then
+         p.cursor_stack.set_stack({name = "blueprint"})
+      end
+      local result = "Blueprint selection area was empty, "
+      if prior_bp_data ~= nil then
+         result = result .. " keeping old entities "
+      end
+      printout(result, pindex)
    else
-      printout("Blueprint with " .. ent_count .. " entities created in hand.", pindex)
+      local prior_name = ""
+      if prior_bp_data ~= nil then
+         prior_name = prior_bp_data.blueprint.label
+      end
+      printout("Blueprint ".. prior_name .. " with " .. ent_count .. " entities created in hand.", pindex)
    end
    
    --Copy label and description and icons from previous version
@@ -1896,6 +1910,9 @@ function create_blueprint(pindex, point_1, point_2, prior_bp_data)
       bp_data.blueprint.label_color = prior_bp_data.blueprint.label_color
       bp_data.blueprint.description = prior_bp_data.blueprint.description
       bp_data.blueprint.icons = prior_bp_data.blueprint.icons
+      if ent_count == 0 then
+         bp_data.blueprint.entities = prior_bp_data.blueprint.entities
+      end
       set_stack_bp_from_data(p.cursor_stack,bp_data) 
    end
 end 
@@ -2476,12 +2493,13 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
    elseif index == 12 then
       --Reselect the area for this blueprint
       if not clicked then
-         local result = "Reselect the area for this blueprint"
+         local result = "Re-select the area for this blueprint"
          printout(result, pindex)
       else
          players[pindex].blueprint_reselecting = true
          local result = "Select the first point now."
          printout(result, pindex)
+         blueprint_menu_close(pindex, true)
       end
    end
 end
@@ -2570,7 +2588,7 @@ function blueprint_menu_down(pindex)
    blueprint_menu(players[pindex].blueprint_menu.index, pindex, false)
 end
 
-local function get_bp_book_data_for_edit(stack)
+function get_bp_book_data_for_edit(stack)
    --return game.json_to_table(game.decode_string(string.sub(stack.export_stack(),2)))
    return game.json_to_table(game.decode_string(string.sub(stack.export_stack(),2)))
 end
