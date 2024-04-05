@@ -526,7 +526,7 @@ function extra_info_for_scan_list(ent,pindex,info_comes_after_indexing)
    elseif ent.name == "pipe" or ent.name == "storage-tank" then
       --Pipe ends are labelled to distinguish them
       if ent.name == "pipe" and is_a_pipe_end(ent,pindex) then
-         result = result .. " end "
+         result = result .. " end, "
       end
       --Pipes and storage tanks are separated depending on the fluid they contain 
       local dict = ent.get_fluid_contents()
@@ -913,7 +913,7 @@ function ent_info(pindex, ent, description)
    end 
    --Pipe ends are labelled to distinguish them
    if ent.name == "pipe" and is_a_pipe_end(ent,pindex) then
-      result = result .. " end "
+      result = result .. " end, "
    end 
    --Explain the contents of a pipe or storage tank or etc.
    if ent.type == "pipe" or ent.type == "pipe-to-ground" or ent.type == "storage-tank" or ent.type == "pump" or ent.name == "boiler" or ent.name == "heat-exchanger" or ent.type == "generator" then
@@ -1158,22 +1158,28 @@ function ent_info(pindex, ent, description)
    elseif (ent.name == "pipe-to-ground") and ent.neighbours ~= nil then
       result = result .. " connects "
       local connections = ent.fluidbox.get_pipe_connections(1)
-      local at_least_one = false
+      local aboveground_found = false
+      local underground_found = false
       for i,con in ipairs(connections) do
          if con.target ~= nil then
             local dist = math.ceil(util.distance(ent.position,con.target.get_pipe_connections(1)[1].position))
             result = result .. direction_lookup(get_direction_of_that_from_this(con.target_position,ent.position)) .. " "
             if con.connection_type == "underground" then
                result = result .. " via " .. dist - 1 .. " tiles underground, "
+               underground_found = true
             else
                result = result .. " directly "
+               aboveground_found = true
             end
-            result = result .. ", "
-            at_least_one = true
+            result = result .. ", " 
          end
       end
-      if not at_least_one then
+      if aboveground_found == false and underground_found == false then
          result = result .. " nothing "
+      elseif aboveground_found == true and underground_found == false then
+         result = result .. " nothing underground "
+      elseif aboveground_found == false and underground_found == true then
+         result = result .. " nothing directly "
       end
    elseif next(ent.prototype.fluidbox_prototypes) ~= nil then
       local relative_position = {x = players[pindex].cursor_pos.x - ent.position.x, y = players[pindex].cursor_pos.y - ent.position.y}
@@ -3113,7 +3119,7 @@ function populate_categories(pindex)
             table.insert(players[pindex].nearby.resources, ent)      
          elseif ent.ents[1].type == "resource" or ent.ents[1].type == "tree" or ent.ents[1].name == "sand-rock-big" or ent.ents[1].name == "rock-big" or ent.ents[1].name == "rock-huge" then --Note: There is no rock type, so they are specified by name.
             table.insert(players[pindex].nearby.resources, ent)
-         elseif ent.ents[1].type == "container" or ent.ents[1].type == "logistic-container" then
+         elseif ent.ents[1].type == "container" or ent.ents[1].type == "logistic-container" or ent.ents[1].type == "storage-tank" then
             table.insert(players[pindex].nearby.containers, ent)
          elseif ent.ents[1].prototype.is_building and ent.ents[1].type ~= "unit-spawner" and ent.ents[1].type ~= "turret" and ent.ents[1].name ~= "train-stop" then
             table.insert(players[pindex].nearby.buildings, ent)
@@ -4488,6 +4494,7 @@ function refresh_player_tile(pindex)
    players[pindex].tile.index = #players[pindex].tile.ents == 0 and 0 or 1
    if not(pcall(function()
       players[pindex].tile.tile =  surf.get_tile(players[pindex].cursor_pos.x, players[pindex].cursor_pos.y).name
+      players[pindex].tile.tile_object =  surf.get_tile(players[pindex].cursor_pos.x, players[pindex].cursor_pos.y)
    end)) then
       return false
    end
@@ -4497,7 +4504,7 @@ end
 function read_tile(pindex, start_text)   
    local result = start_text or ""
    if not refresh_player_tile(pindex) then
-      printout(result .. "Tile out of range", pindex)
+      printout(result .. "Tile uncharted and out of range", pindex)
       return
    end
    local ent = get_selected_ent(pindex)
@@ -4505,8 +4512,8 @@ function read_tile(pindex, start_text)
       --If there is no ent, read the tile instead
       players[pindex].tile.previous = nil
       local tile = players[pindex].tile.tile
-      result = result .. localising.get(tile)--**** todo test 
-      if tile.name == "water" or tile.name == "deepwater" or tile.name == "water-green" or tile.name == "deepwater-green" or tile.name == "water-shallow" or tile.name == "water-mud" or tile.name == "water-wube" then
+      result = result .. localising.get(players[pindex].tile.tile_object,pindex)
+      if tile == "water" or tile == "deepwater" or tile == "water-green" or tile == "deepwater-green" or tile == "water-shallow" or tile == "water-mud" or tile == "water-wube" then
          --Identify shores and crevices and so on for water tiles
          result = result .. identify_water_shores(pindex)
       end
@@ -4711,6 +4718,8 @@ function build_preview_checks_info(stack, pindex)
    if stack.name == "pipe-to-ground" then
       local connected = false
       local check_dist = 10
+      local closest_dist = 11
+      local closest_cand = nil
       local candidates = game.get_player(pindex).surface.find_entities_filtered{ name = stack.name, position = pos, radius = check_dist, direction = rotate_180(build_dir) } 
 		if #candidates > 0 then
 		   for i,cand in ipairs(candidates) do
@@ -4720,10 +4729,19 @@ function build_preview_checks_info(stack, pindex)
 			   if cand.direction == rotate_180(build_dir)
 			   and (get_direction_of_that_from_this(pos,cand.position) == build_dir) and (dist_x == 0 or dist_y == 0) then
 			      rendering.draw_circle{color = {0, 1, 0},radius = 1.0,width = 3,target = cand.position,surface = cand.surface,time_to_live = 60}
-               result = result .. " connects " .. direction_lookup(rotate_180(build_dir)) .. " with " .. math.floor(util.distance(cand.position,pos)) - 1 .. " tiles underground, "
                connected = true
+               --Check if closest cand
+               local cand_dist = util.distance(cand.position,pos)
+               if cand_dist <= closest_dist then
+                  closest_dist = cand_dist
+                  closest_cand = cand 
+               end
 			   end
-         end			
+         end
+         --Report the closest candidate (therefore the correct one)
+         if closest_cand ~= nil then
+            result = result .. " connects " .. direction_lookup(rotate_180(build_dir)) .. " with " .. math.floor(util.distance(closest_cand.position,pos)) - 1 .. " tiles underground, "
+         end
 		end
       if not connected then
          result = result .. " not connected underground, "
@@ -4813,7 +4831,32 @@ function build_preview_checks_info(stack, pindex)
             result = result .. " warning: there may be mixing fluids "
          end
       end
+   --Same as pipe preview but for the faced direction only 
+   elseif stack.name == "pipe-to-ground" then
+      local face_dir = players[pindex].building_direction
+      local ent_pos = offset_position(pos,face_dir,1)
+      rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = ent_pos, surface = p.surface, time_to_live = 30}
+
+      local ents_faced = p.surface.find_entities_filtered{position = ent_pos } 
+      local relevant_fluid_faced = nil 
+      local box = nil
+      local dir_from_pos = nil
       
+      local faced_ent = nil
+      for i, ent_cand in ipairs(ents_faced) do
+         if ent_cand.valid and ent_cand.fluidbox ~= nil then
+            faced_ent = ent_cand
+         end
+      end
+       
+      box, relevant_fluid_faced, dir_from_pos = get_relevant_fluidbox_and_fluid_name(faced_ent, pos, face_dir) 
+      --Prepare result string 
+      if relevant_fluid_faced ~= nil then
+         local count = 0
+         result = result .. ", connects ".. direction_lookup(face_dir) .. " to " .. relevant_fluid_faced .. " directly "
+      else
+         result = result .. ", not connected above ground "
+      end
    end
    
    --For heat pipes, preview the connection directions
@@ -5193,7 +5236,7 @@ function read_coords(pindex, start_phrase)
          local localised_name = localising.get(proto,pindex)
          result = result .. ", " .. localised_name .. " times " .. v.amount 
       end
-      result = result .. ", time " .. recipe.energy .. " seconds by default."
+      result = result .. ", craft time " .. recipe.energy .. " seconds by default."
       printout(result, pindex)
 
    elseif players[pindex].menu == "technology" then
@@ -7206,7 +7249,7 @@ script.on_event("read-cursor-distance-vector", function(event)
       if diff_y < 0 then
          dir_y = dirs.north
       end
-      local result = "At " .. diff_x .. " " .. direction_lookup(dir_x) .. " and " .. diff_y .. " " .. direction_lookup(dir_y)
+      local result = "At " .. math.abs(diff_x) .. " " .. direction_lookup(dir_x) .. " and " .. math.abs(diff_y) .. " " .. direction_lookup(dir_y)
       printout(result,pindex)
       game.get_player(pindex).print(result,{volume_modifier=0})
       rendering.draw_circle{color = {1, 0.2, 0}, radius = 0.1, width = 5, target = players[pindex].cursor_pos, surface = game.get_player(pindex).surface, time_to_live = 180}
@@ -8867,23 +8910,32 @@ script.on_event("flush-fluid", function(event)
    if not check_for_player(pindex) then
       return
    end
+   if players[pindex].menu ~= "building" then
+      return
+   end
    if players[pindex].building.ent ~= nil and players[pindex].building.ent.valid and players[pindex].building.ent.type == "fluid-turret" and players[pindex].building.index ~= 1 then
       --Prevent fluid turret crashes
       players[pindex].building.index = 1
    end
    local building_sector = players[pindex].building.sectors[players[pindex].building.sector]
-   local box = building_sector.inventory--= players[pindex].building.fluidbox
-   if #box == 0 then
-      printout("No fluid" , pindex)
+   local box = building_sector.inventory--= players[pindex].building.fluidbox --
+   if building_sector.name ~= "Fluid" then
+      return
+   end
+   if box == nil or #box == 0 then
+      printout("No fluids to flush" , pindex)
       return
    end
    local fluid = box[players[pindex].building.index]
    local len = #box 
    local name  = "Nothing"
    local amount = 0
-   if fluid ~= nil then
+   if fluid ~= nil and fluid.name ~= nil then
       amount = fluid.amount
-      name = fluid.name--does not locallise..?**
+      name = fluid.name--does not localize..?**
+   else
+      printout("No fluids to flush" , pindex)
+      return
    end
    --Read the fluid found, including amount if any
    printout(" Flushed away " .. name, pindex)
@@ -10614,8 +10666,9 @@ function build_item_in_hand(pindex, free_place_straight_rail)
          end
       end
       --Flip pipe-to-ground in hand 
-      if stack and stack.valid_for_read and stack.valid and stack.prototype.place_as_tile_result ~= nil and stack.prototype.place_as_tile_result.name == "pipe-to-ground" then
+      if build_successful and stack and stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and stack.prototype.place_result.name == "pipe-to-ground" then
          players[pindex].building_direction = rotate_180(players[pindex].building_direction)
+         game.get_player(pindex).play_sound{path = "Rotate-Hand-Sound"}
       end
    elseif stack and stack.valid_for_read and stack.valid and stack.prototype.place_as_tile_result ~= nil then
    --Tile placement 
@@ -15994,15 +16047,23 @@ function identify_water_shores(pindex)--****todo test
    
    if (tile_north and #tile_north > 0) then
       tile_north = 1
+   else
+      tile_north = 0
    end
    if (tile_south and #tile_south > 0) then
       tile_south = 1
+   else
+      tile_south = 0
    end
    if (tile_east and #tile_east > 0) then
       tile_east = 1
+   else
+      tile_east = 0
    end
    if (tile_west and #tile_west > 0) then
       tile_west = 1
+   else
+      tile_west = 0
    end
    
    local sum = tile_north + tile_south + tile_east + tile_west
@@ -16011,10 +16072,10 @@ function identify_water_shores(pindex)--****todo test
       result = " crevice pit "
    elseif sum == 1 then
       result = " crevice end "
-   elseif (tile_north and tile_south) or (tile_east and tile_west) then
+   elseif sum == 2 and ((tile_north + tile_south == 2) or (tile_east + tile_west == 2)) then
       result = " crevice "
    elseif sum == 2 then
-      result = " shore diagonal "
+      result = " shore corner"
    elseif sum == 3 then
       result = " shore "
    elseif sum == 4 then
@@ -16047,6 +16108,7 @@ function is_a_pipe_end(ent,pindex)--****todo test, esp pipe to ground neighbor r
          total_ent_count = total_ent_count + 1
          if (ent_cand.type == "pipe" or (ent_cand.type == "pipe-to-ground" and ent_cand.direction == dirs.north)) then
             north_count = 1
+            total_ent_count = total_ent_count - 1
          end
       end
    end
@@ -16058,6 +16120,7 @@ function is_a_pipe_end(ent,pindex)--****todo test, esp pipe to ground neighbor r
          total_ent_count = total_ent_count + 1
          if (ent_cand.type == "pipe" or (ent_cand.type == "pipe-to-ground" and ent_cand.direction == dirs.south)) then
             south_count = 1
+            total_ent_count = total_ent_count - 1
          end
       end
    end
@@ -16069,6 +16132,7 @@ function is_a_pipe_end(ent,pindex)--****todo test, esp pipe to ground neighbor r
          total_ent_count = total_ent_count + 1
          if (ent_cand.type == "pipe" or (ent_cand.type == "pipe-to-ground" and ent_cand.direction == dirs.east)) then
             east_count = 1
+            total_ent_count = total_ent_count - 1
          end
       end
    end
@@ -16080,6 +16144,7 @@ function is_a_pipe_end(ent,pindex)--****todo test, esp pipe to ground neighbor r
          total_ent_count = total_ent_count + 1
          if (ent_cand.type == "pipe" or (ent_cand.type == "pipe-to-ground" and ent_cand.direction == dirs.west)) then
             west_count = 1
+            total_ent_count = total_ent_count - 1
          end
       end
    end
@@ -16098,6 +16163,7 @@ function is_a_pipe_end(ent,pindex)--****todo test, esp pipe to ground neighbor r
       --Choose false to avoid false positives
       return false
    else
+      --More than 1 anything 
       return false
    end
 end--****
@@ -16115,5 +16181,6 @@ function cursor_visibility_info(pindex)
    end
    if cursor_position_is_on_screen_with_player_centered(pindex) == false then
       result = result .. " distant "
+   end
    return result
 end
