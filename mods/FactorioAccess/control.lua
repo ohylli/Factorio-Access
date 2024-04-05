@@ -11877,13 +11877,13 @@ script.on_event(defines.events.on_cutscene_finished, function(event)
    rescan(pindex, nil, true)
    schedule(3, "fix_zoom", pindex)
    schedule(4, "sync_build_cursor_graphics", pindex)
-   printout("Press TAB to continue",pindex)
+   --printout("Press TAB to continue",pindex)
 end)
 
 script.on_event(defines.events.on_cutscene_started, function(event)
    pindex = event.player_index
    check_for_player(pindex)
-   printout("Press TAB to continue",pindex)
+   --printout("Press TAB to continue",pindex)
 end)
 
 script.on_event(defines.events.on_player_created, function(event)
