@@ -58,7 +58,7 @@ for name, pack in pairs(data.raw.tool) do
    if pack.localised_description and pack.localised_description[1] == "item-description.science-pack" then 
       pack.localised_description = nil 
    end
-ende
+end
 
 for name, mod in pairs(data.raw.module) do 
    if mod.localised_description and mod.localised_description[1] == "item-description.effectivity-module" 
