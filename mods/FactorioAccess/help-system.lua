@@ -73,7 +73,7 @@ function load_tutorial(pindex)
    tutorial.step_index = 1
    tutorial.reading_the_header = false
    tutorial.clicked = false
-   tutorial.rocket_fuel_provided = false
+   tutorial.starting_fuel_provided = false
 
    --Done
    players[pindex].tutorial = tutorial
@@ -304,14 +304,14 @@ function tutorial_menu(pindex, reading_the_header, clicked)
       end
       
       --Give rocket fuel
-      if players[pindex].tutorial.rocket_fuel_provided ~= true then
+      if players[pindex].tutorial.starting_fuel_provided ~= true then
          p.insert{name = "coal", count = 50}
       end 
       
       --Reload tutorial
       game.get_player(pindex).play_sound{path = "Open-Inventory-Sound"}  
       load_tutorial(pindex)
-      players[pindex].tutorial.rocket_fuel_provided = true
+      players[pindex].tutorial.starting_fuel_provided = true
       
    elseif chap == 0 and step > 1 then
       --Read out chapter 0 start message
