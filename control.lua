@@ -2891,7 +2891,7 @@ function get_scan_summary(scan_left_top, scan_right_bottom, pindex)
    end
    
    res_count = surf.count_entities_filtered{ type = "tree", area = {scan_left_top,scan_right_bottom} }
-   percent = math.floor((res_count * 8 / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)--trees are bigger than 1 tile
+   percent = math.floor((res_count * 4 / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)--trees are bigger than 1 tile
    if percent > 0 then
       table.insert(percentages, {name = "trees", percent = percent, count = res_count})
    end
@@ -2919,12 +2919,17 @@ function get_scan_summary(scan_left_top, scan_right_bottom, pindex)
       end)
       result = result .. " Area contains "
       local i = 1
-      while i <= # percentages and (i <= 5 or percentages[i].percent > 1) do
-         result = result .. percentages[i].count .. " " .. percentages[i].name .. " " .. percentages[i].percent .. "%, "
+      while i <= #percentages and (i <= 7 or percentages[i].percent > 1) do
+         result = result .. ", " .. percentages[i].count .. " " .. percentages[i].name .. " " 
+         if percentages[i].count == "resource" or percentages[i].count == "flooring" then 
+            result = result .. percentages[i].percent .. "% "
+         end
          i = i + 1
       end
       if percent_total == 0 then--Note there are still some entities in here, but with zero area...
          result = result .. " nothing "
+      elseif  i >= 7 then
+         result = result .. " and other things "
       end
       result = result .. ", total space occupied " .. math.floor(percent_total) .. " percent " 
    else
