@@ -9062,7 +9062,7 @@ script.on_event("mine-area", function(event)
    --Print result 
    local result = " Cleared away " .. cleared_total .. " objects "
    if stacks_collected >= 0 then
-      result = result .. " and collected " .. stacks_collected .. " item stacks."
+      result = result .. " and collected " .. stacks_collected .. " new item stacks."
    end
    printout(result, pindex)
 end)
@@ -10751,7 +10751,7 @@ script.on_event("crafting-all", function(event)
          local count = game.get_player(pindex).begin_crafting(T)
          if count > 0 then
             local total_count = count_in_crafting_queue(T.recipe.name, pindex)
-            printout("Started crafting " .. count .. " " .. localising.get_alt(T.recipe,pindex) .. ", " .. total_count .. " total in queue", pindex)
+            printout("Started crafting " .. count .. " " .. localising.get_recipe_from_name(recipe.name,pindex) .. ", " .. total_count .. " total in queue", pindex)
          else
             printout("Not enough materials", pindex)
          end
@@ -11132,7 +11132,7 @@ script.on_event("crafting-5", function(event)
          local count = game.get_player(pindex).begin_crafting(T)
          if count > 0 then
             local total_count = count_in_crafting_queue(T.recipe.name, pindex)
-            printout("Started crafting " .. count .. " " .. localising.get_alt(T.recipe,pindex) .. ", " .. total_count .. " total in queue", pindex)
+            printout("Started crafting " .. count .. " " .. localising.get_recipe_from_name(recipe.name,pindex) .. ", " .. total_count .. " total in queue", pindex)
          else
             printout("Not enough materials", pindex)
          end
