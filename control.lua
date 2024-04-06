@@ -4002,7 +4002,13 @@ function scan_index(pindex)
             printout("Error: This object is no longer valid. Try rescanning.", pindex)
             return
          end
+         --Select northwest corner unless it is a spaceship wreck
          players[pindex].cursor_pos = get_ent_northwest_corner_position(ent)
+         local check = ent.name
+         local a = string.find(check,"spaceship") 
+         if a ~= nil then 
+            players[pindex].cursor_pos = ent.position 
+         end
          cursor_highlight(pindex, ent, "train-visualization")--focus on scanned item 
          sync_build_cursor_graphics(pindex)
          players[pindex].last_indexed_ent = ent
@@ -4043,14 +4049,19 @@ function scan_index(pindex)
          table.insert(result,extra_info_for_scan_list(ent,pindex,true))
          table.insert(result,{"description.of", players[pindex].nearby.selection , #ents[players[pindex].nearby.index].ents})--"X of Y"
          table.insert(result,dir_dist)
-         table.insert(result,cursor_visibility_info(pindex))
-         printout(result,pindex)
+         local final_result = {""}
+         table.insert(final_result,result)
+         table.insert(final_result,", ")
+         table.insert(final_result,cursor_visibility_info(pindex))
+         printout(final_result,pindex)
       else
          --Read the entity in terms of count, and give the direction and distance of an example
-         local result = {"access.item_and_quantity-example-at-dirdist",
-            {"access.item-quantity",ent_name_locale(ent),ents[players[pindex].nearby.index].count}, dir_dist}
-         table.insert(result,cursor_visibility_info(pindex))
-         printout( result, pindex)
+         local result = {"access.item_and_quantity-example-at-dirdist", {"access.item-quantity",ent_name_locale(ent),ents[players[pindex].nearby.index].count}, dir_dist}
+         local final_result = {""}
+         table.insert(final_result,result)
+         table.insert(final_result,", ")
+         table.insert(final_result,cursor_visibility_info(pindex))
+         printout(final_result,pindex)
       end
    end
    
@@ -4189,6 +4200,9 @@ function rescan(pindex,filter_dir, mute)
    populate_categories(pindex)
    players[pindex].nearby.index = 1
    players[pindex].nearby.selection = 1
+   
+   --Use the waiting period as a chance to recalibrate 
+   fix_zoom(pindex)
    
    if mute ~= true then
       if filter_dir == nil then
@@ -12086,6 +12100,7 @@ script.on_event("recalibrate-zoom",function(event)
    end
    fix_zoom(pindex)
    sync_build_cursor_graphics(pindex)
+   printout("Recalibrated",pindex)
 end)
 
 script.on_event("enable-mouse-update-entity-selection",function(event)
