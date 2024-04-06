@@ -7384,20 +7384,6 @@ function return_cursor_to_character(pindex)
    -- adjust_camera_view(pindex)
 end 
 
---Default is CONTROL + J
-script.on_event("release-cursor", function(event)
-   pindex = event.player_index
-   if not check_for_player(pindex) then
-      return
-   end
-   local p = game.get_player(pindex)
-   if p.vehicle and p.vehicle.train then
-      return
-   end
-   printout("cursor released",pindex)
-   cursor_highlight(pindex, nil, nil)
-end)
-
 script.on_event("cursor-bookmark-save", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then

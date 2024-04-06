@@ -530,13 +530,6 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "release-cursor",
-    key_sequence = "CONTROL + J",
-    consuming = "none"
-},
-
-{
-    type = "custom-input",
     name = "cursor-bookmark-save",
     key_sequence = "SHIFT + B",
     consuming = "none"
