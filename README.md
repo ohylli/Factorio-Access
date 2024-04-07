@@ -42,7 +42,7 @@ The game can be purchased from Factorio.com or from Steam. We recommend installi
 To install a mod release, follow the instructions below:
 
 ## Mod release install for Factorio Windows Zip version
-1. Download the latest release zip file such as "Factorio_Access_Beta_0_X_X.zip" from the releases page here: https://github.com/LevFendi/Factorio-Access/releases. There are other files that you can download there but you need only the one mentioned. You may get a security warning about downloading an unlicensed application, which is true for the mod launcher. For safety reasons, please do not download the mod launcher from anywhere else.
+1. Download the latest release zip file such as "Factorio_Access_Beta_0_X_X.zip" from the releases page here: https://github.com/Factorio-Access/FactorioAccess/releases. There are other files that you can download there but you need only the one mentioned. You may get a security warning about downloading an unlicensed application, which is true for the mod launcher. For safety reasons, please do not download the mod launcher from anywhere else.
 2. Put the zip file in an empty folder and extract its contents. You should find a folder named "Factorio_Access_Beta_content". You need to open it and copy everything inside of it. These contents should include the mod's own launcher called "launcher.exe" as well as a "mods" folder and a "Factorio.jkm" file.
 3. Navigate to your Factorio standalone folder, with a name such as "Factorio_1.1.101". This is your Factorio game data folder.
 4. Make sure you copied all of the contents in Step 2 and paste them into the Factorio game data folder you found in Step 3.
@@ -54,7 +54,7 @@ To install a mod release, follow the instructions below:
 
 
 ## Mod release install for Factorio Steam version or regular Windows version
-1. Download the latest release zip file such as "Factorio_Access_Beta_0_X_X.zip" from the releases page here: https://github.com/LevFendi/Factorio-Access/releases. There are other files that you can download there but you need only the one mentioned. You may get a security warning about downloading an unlicensed application, which is true for the mod launcher. For safety reasons, please do not download the mod launcher from anywhere else.
+1. Download the latest release zip file such as "Factorio_Access_Beta_0_X_X.zip" from the releases page here: https://github.com/Factorio-Access/FactorioAccess/releases. There are other files that you can download there but you need only the one mentioned. You may get a security warning about downloading an unlicensed application, which is true for the mod launcher. For safety reasons, please do not download the mod launcher from anywhere else.
 2. Put the zip file in an empty folder and extract its contents. You should find a folder named "Factorio_Access_Beta_content". You need to open it and copy everything inside of it. These contents should include the mod's own launcher called "launcher.exe" as well as a "mods" folder and a "Factorio.jkm" file.
 3. Navigate to your Factorio game data folder. This is inside a special Windows folder called "AppData". There are two ways to access the AppData folder, you either enter its short name using % signs, or you use the full path name. If you use the short name with the signs, the path is called `%AppData%/Factorio`. If you use the full path, the path depends on your windows user name and it is something like `C/Users/Your_User_Name_Here/AppData/Roaming/Factorio`.
 4. Make sure you copied all of the contents in Step 2 and paste them into the Factorio game data folder you found in Step 3.
@@ -79,12 +79,12 @@ To install a mod release, follow the instructions below:
 
 # More info at the wiki
 
-For information about the mod and the game, please check out our own [Factorio Access Wiki](https://github.com/Factorio-Access/Factorio-Access/wiki) being written by the developers.
+For information about the mod and the game, please check out our own [Factorio Access Wiki](https://github.com/Factorio-Access/FactorioAccess/wiki) being written by the developers.
 
 Factorio also has an [official wiki](https://wiki.factorio.com/).
 
 # Frequently Asked Questions
-Please check the [Factorio Access Wiki main page](https://github.com/Factorio-Access/Factorio-Access/wiki) for frequently asked questions section.
+Please check the [Factorio Access Wiki main page](https://github.com/Factorio-Access/FactorioAccess/wiki) for frequently asked questions section.
 
 # Factorio Access Controls
 
@@ -759,7 +759,7 @@ If your question wasn't answered here or on our wiki, feel free to contact us at
 
 # Changes
 
-An updated changelog for the beta can be found [here](https://github.com/LevFendi/Factorio-Access/blob/main/CHANGES.md).
+An updated changelog for the beta can be found [here](https://github.com/Factorio-Access/FactorioAccess/blob/main/CHANGES.md).
 
 
 
