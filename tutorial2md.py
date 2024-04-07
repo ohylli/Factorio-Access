@@ -9,7 +9,7 @@ import re
 from pathlib import Path
 
 # where to find the required mod files
-mod_path = Path( 'mods/FactorioAccess' )
+mod_path = Path( '.' )
 data_lua_path = mod_path / 'data.lua'
 tutorial_path = mod_path / 'locale' / 'en' / 'fa-tutorial.cfg'
 
