@@ -2004,16 +2004,19 @@ function get_blueprint_corners(pindex, draw_rect)
          ent_width = game.entity_prototypes[ent.name].tile_height
          ent_height = game.entity_prototypes[ent.name].tile_width
       end
+      --Find the edges of this ent
       local ent_north = ent.position.y - math.floor(ent_height/2)
       local ent_east  = ent.position.x + math.floor(ent_width/2)
       local ent_south = ent.position.y + math.floor(ent_height/2)
       local ent_west  = ent.position.x - math.floor(ent_width/2)
+      --Initialize with this entity
       if west_most_x == nil then
          west_most_x = ent_west 
          east_most_x = ent_east
          north_most_y = ent_north
          south_most_y = ent_south
       end
+      --Compare ent edges with the blueprint edges 
       if west_most_x > ent_west then
          west_most_x = ent_west
       end
@@ -2027,6 +2030,7 @@ function get_blueprint_corners(pindex, draw_rect)
          south_most_y = ent_south 
       end
    end
+   --Determine blueprint dimensions from the final edges
    local bp_left_top = {x = math.floor(west_most_x), y = math.floor(north_most_y)}
    local bp_right_bottom = {x = math.ceil(east_most_x), y = math.ceil(south_most_y)}
    local bp_width = bp_right_bottom.x - bp_left_top.x - 1
@@ -2051,7 +2055,7 @@ function get_blueprint_corners(pindex, draw_rect)
    return left_top, right_bottom, mouse_pos
 end 
 
-function get_blueprint_width_and_height(pindex)
+function get_blueprint_width_and_height(pindex)--****bug here: need to add 1 if the top left corner is an empty space or something.
    local p = game.get_player(pindex)
    local bp = p.cursor_stack
    if bp == nil or bp.valid_for_read == false or bp.is_blueprint == false then
@@ -2077,16 +2081,19 @@ function get_blueprint_width_and_height(pindex)
          ent_width = game.entity_prototypes[ent.name].tile_height
          ent_height = game.entity_prototypes[ent.name].tile_width
       end
+      --Find the edges of this ent
       local ent_north = ent.position.y - math.floor(ent_height/2)
       local ent_east  = ent.position.x + math.floor(ent_width/2)
       local ent_south = ent.position.y + math.floor(ent_height/2)
       local ent_west  = ent.position.x - math.floor(ent_width/2)
+      --Initialize with this entity
       if west_most_x == nil then
          west_most_x = ent_west 
          east_most_x = ent_east
          north_most_y = ent_north
          south_most_y = ent_south
       end
+      --Compare ent edges with the blueprint edges 
       if west_most_x > ent_west then
          west_most_x = ent_west
       end
@@ -2100,6 +2107,7 @@ function get_blueprint_width_and_height(pindex)
          south_most_y = ent_south 
       end
    end
+   --Determine blueprint dimensions from the final edges
    local bp_left_top = {x = math.floor(west_most_x), y = math.floor(north_most_y)}
    local bp_right_bottom = {x = math.ceil(east_most_x), y = math.ceil(south_most_y)}
    local bp_width = bp_right_bottom.x - bp_left_top.x - 1
@@ -2471,7 +2479,7 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
          frame.focus()
          local input = frame.add{type="textfield", name = "input", text = bp.export_stack()} 
          input.focus()
-         local result = "Copy the text from this boz using 'CONTROL + A' and then 'CONTROL + C' and then press ENTER to exit"
+         local result = "Copy the text from this box using 'CONTROL + A' and then 'CONTROL + C' and then press ENTER to exit"
          printout(result, pindex)
       end
    elseif index == 11 then
