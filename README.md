@@ -4,16 +4,17 @@ This is the BETA VERSION for an accessibility mod for the popular game Factorio.
 
 This "read me" file covers the basics of the mod, which include the installation guide, the mod controls, and links to other information sources.
 
-# Installing Factorio (Windows)
+# Installing Factorio
 The game can be purchased from Factorio.com or from Steam. We recommend installing it using ONLY one of the three options below.
 
 ## Windows Zip Version / Standalone Version (recommended for easy install and troubleshooting)
 1. Go to https://www.factorio.com/download
 2. If needed, login using your Factorio account or Steam account.
-3. Among the install options, select the Windows zip package, also called the manual install. Note that this is different from the regular Windows version. Selecting the zip version will download a zip file that is about 1.5 gigabytes in size.
-4. Create a folder where you want to keep the game. Extract the zip file into this folder.
-5. If you want, create a desktop shortcut for your Factorio folder.
-6. All done! You need to install the mod next.
+3. Among the install options, find the stable releases at the top half of the page. 
+4. Go to the section with "Other download options" and select "Download full game for Windows (ZIP package)". This will download a zip file that is about 1.5 gigabytes in size. It might also be called the manual install. Note that this is different from the regular Windows version, which downloads an exe file.
+5. Create a folder where you want to keep the game. Extract the zip file into this folder.
+6. If you want, create a desktop shortcut for your Factorio folder.
+7. All done! You need to install the mod next.
 
 ## Steam Version (recommended for easy multiplayer setup)
 1. Install Factorio using Steam settings, like any other game on Steam.
@@ -22,17 +23,26 @@ The game can be purchased from Factorio.com or from Steam. We recommend installi
 ## Regular Windows Version (not recommended)
 1. Go to https://www.factorio.com/download
 2. If needed, login using your Factorio account or Steam account.
-3. Among the install options, select the Windows the normal Windows version. This will download an exe file which is the setup application.
-4. Run the exe file and follow the instructions.
-5. All done! You need to install the mod next.
+3. Among the install options, find the stable releases at the top half of the page.
+4. Select "Download full game for Windows". This will download an exe file which is the setup application.
+5. Run the exe file and follow the instructions.
+6. All done! You need to install the mod next.
 
+## Linux Version
+1. Go to https://www.factorio.com/download
+2. If needed, login using your Factorio account or Steam account.
+3. Among the install options, find the stable releases at the top half of the page.
+4. Go to the section with "Other download options" and select "Download full game for Linux". This will download a tar.xz file.
+5. Move the file to the directory where you want to install the game.
+6. Extract the game from the file using a program such as 7zip.
+7. All done! You need to install the mod next.
 
 # Installing Factorio Access (Windows)
 
 To install a mod release, follow the instructions below:
 
 ## Mod release install for Factorio Windows Zip version
-1. Download the latest release zip file such as "Factorio_Access_Beta_0_X_X.zip" from the releases page here: https://github.com/LevFendi/Factorio-Access/releases. There are other files that you can download there but you need only the one mentioned. You may get a security warning about downloading an unlicensed application, which is true for the mod launcher. For safety reasons, please do not download the mod launcher from anywhere else.
+1. Download the latest release zip file such as "Factorio_Access_Beta_0_X_X.zip" from the releases page here: https://github.com/Factorio-Access/FactorioAccess/releases. There are other files that you can download there but you need only the one mentioned. You may get a security warning about downloading an unlicensed application, which is true for the mod launcher. For safety reasons, please do not download the mod launcher from anywhere else.
 2. Put the zip file in an empty folder and extract its contents. You should find a folder named "Factorio_Access_Beta_content". You need to open it and copy everything inside of it. These contents should include the mod's own launcher called "launcher.exe" as well as a "mods" folder and a "Factorio.jkm" file.
 3. Navigate to your Factorio standalone folder, with a name such as "Factorio_1.1.101". This is your Factorio game data folder.
 4. Make sure you copied all of the contents in Step 2 and paste them into the Factorio game data folder you found in Step 3.
@@ -44,7 +54,7 @@ To install a mod release, follow the instructions below:
 
 
 ## Mod release install for Factorio Steam version or regular Windows version
-1. Download the latest release zip file such as "Factorio_Access_Beta_0_X_X.zip" from the releases page here: https://github.com/LevFendi/Factorio-Access/releases. There are other files that you can download there but you need only the one mentioned. You may get a security warning about downloading an unlicensed application, which is true for the mod launcher. For safety reasons, please do not download the mod launcher from anywhere else.
+1. Download the latest release zip file such as "Factorio_Access_Beta_0_X_X.zip" from the releases page here: https://github.com/Factorio-Access/FactorioAccess/releases. There are other files that you can download there but you need only the one mentioned. You may get a security warning about downloading an unlicensed application, which is true for the mod launcher. For safety reasons, please do not download the mod launcher from anywhere else.
 2. Put the zip file in an empty folder and extract its contents. You should find a folder named "Factorio_Access_Beta_content". You need to open it and copy everything inside of it. These contents should include the mod's own launcher called "launcher.exe" as well as a "mods" folder and a "Factorio.jkm" file.
 3. Navigate to your Factorio game data folder. This is inside a special Windows folder called "AppData". There are two ways to access the AppData folder, you either enter its short name using % signs, or you use the full path name. If you use the short name with the signs, the path is called `%AppData%/Factorio`. If you use the full path, the path depends on your windows user name and it is something like `C/Users/Your_User_Name_Here/AppData/Roaming/Factorio`.
 4. Make sure you copied all of the contents in Step 2 and paste them into the Factorio game data folder you found in Step 3.
@@ -58,6 +68,23 @@ To install a mod release, follow the instructions below:
 12. Try launching the game from Steam. This should now run the mod launcher instead, and say "Hello Factorio". If not setup correctly, the game might launch directly and you will hear music.
 13. Follow the mod launcher instructions while the game is configured. This may involve launching the game itself temporarily.
 14. The game is ready to play from the launcher when the main menu appears.
+
+# Installing Factorio Access (Linux)
+1. Install speechd and python 3 through your distribution. Note that Instructions vary by distribution.
+2. Clone the launcher mod from GitHub.
+3. CD into the folder.
+4. If you want to use a virtual python environment, or an executable, run build_main.py. If not, run pip to install requirements.txt by:  "pip install -r requirements.txt"
+5. Run the executable or main.py
+6. If it complains it can't find your Factorio installation then add the path to the Factorio executable as an argument when launching.
+
+# More info at the wiki
+
+For information about the mod and the game, please check out our own [Factorio Access Wiki](https://github.com/Factorio-Access/FactorioAccess/wiki) being written by the developers.
+
+Factorio also has an [official wiki](https://wiki.factorio.com/).
+
+# Frequently Asked Questions
+Please check the [Factorio Access Wiki main page](https://github.com/Factorio-Access/FactorioAccess/wiki) for frequently asked questions section.
 
 # Factorio Access Controls
 
@@ -76,7 +103,7 @@ Save game: F1
 
 Pause or unpause the game with the visual pause menu: ESC
 
-Time of day and current research: T
+Time of day and current research and total mission time: T
 
 Toggle Vanilla Mode: CONTROL + ALT + V. Note that this will mute the narrator until you toggle back out.
 
@@ -87,6 +114,26 @@ Toggle cursor hiding: CONTROL + ALT + C. This is for Vanilla Mode players who do
 Clear all renders: CONTROL + ALT + R. Note: This is for clearing any mod-drawn objects that fail to disappear on their own.
 
 Recalibrate zoom: CONTROL + END. This is rarely needed for resolving bugs related to zooming.
+
+## Tutorial
+
+Read current step: H
+
+Read current summary: ALT + H
+
+Read next step: CONTROL + H
+
+Read previous step: SHIFT + H
+
+Read next chapter: ALT + CONTROL + H
+
+Read previous chapter: ALT + SHIFT + H
+
+Toggle summary mode: CONTROL + SHIFT + H
+
+Read current step details in summary mode: ALT + H
+
+Refresh the tutorial: ALT + SHIFT + H repeatedly until you reach the top
 
 ## Movement
 
@@ -149,13 +196,15 @@ Read its status: RIGHT BRACKET, for applicable buildings when your hand is empty
 
 Open its menu: LEFT BRACKET
 
+Open its circuit network menu: N, if connected to a network
+
 Mine it or pick it up: X
 
 Shoot at it: C (not recommended)
 
 Rotate it: R. 
 
-Rotation Note: If you have something in your hand, you will rotate that instead, and some buildings cannot be rotated after placing them down while others cannot be rotated at all.
+Rotation Note: If you have something in your hand, you will rotate that instead, and some buildings cannot be rotated after placing them down while others cannot be rotated at all. Rectangular buildings can only be flipped.
 
 Nudge it by one tile: CONTROL + SHIFT + DIRECTION, where the direction is one of W A S D. 
 
@@ -174,30 +223,19 @@ Collect nearby items from the ground or from belts: Hold F
 
 Repair every machine within reach: CONTROL + SHIFT + LEFT BRACKET, while you have at least 2 repair packs in your hand
 
-Clear area: SHIFT + X. This automatically clears trees and rocks and dropped items within a 5 tile radius. If you press this shortcut on rails, it clears rail objects specifically. 
+Area mining obstacles within 5 tiles: SHIFT + X. Affects trees, rocks, dropped items, scorch marks, remnants, all within a 5 tile radius. 
+
+Area mining rail objects within 10 tiles: SHIFT + X, on a rail.
+
+Area mining ghosts within 10 tiles: SHIFT + X, on a ghost.
+
+Area mining everything marked for deconstruction within 5 tiles: SHIFT + X, with a deconstruction planner in hand (via ALT + D).
 
 Start instant mining tool: CONTROL + X. When you are holding this tool, everything the cursor touches is mined instantly.
 
+Area mining everything within 5 tiles: SHIFT + X with the instant mining tool in hand. Note: This does not include ores.
+
 Stop instant mining tool: Q
-
-Mine up all entities within 5 tiles: SHIFT + X with the instant mining tool in hand.
-
-## Blueprints and planner tools
-Grab a new upgrade planner: ALT + U
-
-Grab a new deconstruction planner: ALT + D
-
-Grab a new blueprint planner: ALT + B
-
-Start and end planner area selection: LEFT BRACKET
-
-Cancel selection: Q
-
-Open blueprint hand blueprint menu: RIGHT BRACKET
-
-Open blueprint hand blueprint book menu: RIGHT BRACKET
-
-Open blueprint hand blueprint book contents: LEFT BRACKET
 
 ## Inventory
 
@@ -233,15 +271,19 @@ Select the crafting menu recipe for the item in hand: CONTROL + SHIFT + Q
 
 Read cursor coordinates: K. If the cursor is over an entity, its relative location upon the entity is read out, such as the Southwest corner.
 
-Check building preview dimensions when building in cursor mode: K
+Read character coordinates: CONTROL + K
 
 Read cursor distance and direction from character: SHIFT + K
+
+Read vector for cursor distance and direction from character: ALT + K
 
 Enable or disable cursor mode: I
 
 Move cursor freely in cursor mode, by cursor size distance: W A S D
 
 Move cursor freely in cursor mode, by always one tile distance: ARROW KEYS
+
+Skip the cursor over repeating entities and across underground sections: SHIFT +  W A S D
 
 Return the cursor to the character: J
 
@@ -261,7 +303,7 @@ Load cursor bookmark coordinates: B
 
 Type in cursor coordinates to jump to: ALT + T
 
-## Item in Hand
+## Item in hand
 
 Read item in hand: SHIFT + Q
 
@@ -285,19 +327,78 @@ Switch to a new quickbar page: SHIFT + NUMBER KEY, for keys 1 to 9 and 0.
 
 Add hand item to quickbar: CONTROL + NUMBER KEY, for keys 1 to 9 and 0.
 
-Place building: LEFT BRACKET, for items that support it
-
-Toggle build lock for continuous building: CONTROL + B. It is also turned off while switching cursor modes or emptying the hand.
-
-Rotate hand item: R. 
-
 Drop 1 unit: Z. Drops the item onto the ground or onto a belt or inside an applicable building.
 
 Insert 1 stack of the item in hand where applicable: CONTROL + LEFT BRACKET. Works for chests or for smartly feeding machines and vehicles.
 
 Insert half a stack of the item in hand where applicable: CONTROL + RIGHT BRACKET. Works for chests or for smartly feeding machines and vehicles.
 
-## Floor Pavings and Thrown Items
+## Building from the hand
+
+Items in hand that can be placed will have their previews active
+
+Place it: LEFT BRACKET, for items that support it
+
+Place a ghost of it: SHIFT + LEFT BRACKET, for items that support it
+
+Alternative build command: CONTROL + LEFT BRACKET
+
+Steam engine snapped placement to a nearby boiler: CONTROL + LEFT BRACKET
+
+Rail unit placement to start a new rail line: CONTROL + LEFT BRACKET
+
+Check building in hand preview dimensions when in Cursor Mode: K
+
+Check the selected part of a building on the ground: K
+
+Toggle build lock for continuous building: CONTROL + B. It is also turned off while switching cursor modes or emptying the hand.
+
+Rotate hand item: R. 
+
+## Blueprints and planner tools
+Grab a new upgrade planner: ALT + U
+
+Grab a new deconstruction planner: ALT + D
+
+Grab a new blueprint planner: ALT + B
+
+Start and end planner area selection: LEFT BRACKET
+
+Cancel selection: Q
+
+Rotate blueprint in hand: R
+
+Flip blueprint in hand horizontal: F, if supported by all blueprint members
+
+Flip blueprint in hand vertical: G, if supported by all blueprint members
+
+Place blueprint in hand: LEFT BRACKET
+
+Open menu for blueprint in hand: RIGHT BRACKET
+
+Note: Most blueprint options are found in its menu.
+
+Open menu for blueprint book in hand: RIGHT BRACKET
+
+Open contents for blueprint book in hand: LEFT BRACKET
+
+Copy into hand a blueprint from the book menu: LEFT BRACKET
+
+## Circuit network interactions
+
+Toggle a power switch or constant combinator: LEFT BRACKET
+
+Connect a wire in hand: LEFT BRACKET, if applicable
+
+Open circuit network menu: LEFT BRACKET, if applicable
+
+Signal selector: Open menu search: CONTROL + F
+
+Signal selector: Run menu search forward: SHIFT + ENTER
+
+## Floor pavings and thrown items
+
+Resize cursor: SHIFT + I and CONTROL + I
 
 Pave the floor with bricks or concrete: With the paving item in hand, LEFT BRACKET. The brush size is the cursor size.
   
@@ -307,7 +408,7 @@ Place landfill over water: With landfill in hand, LEFT BRACKET.  The brush size 
   
 Throw a capsule item at the cursor within range: With the item in hand, LEFT BRACKET. Warning: Throwing grenades will hurt you unless the cursor is moved far enough away.
 
-## Guns and Armor Equipment
+## Guns and armor equipment
 
 Swap gun in hand: TAB
   
@@ -337,7 +438,7 @@ Read armor equipment list: SHIFT + G
   
 Return all equipment and armor to inventory: CONTROL + SHIFT + G
 
-## Fast Travel
+## Fast travel
 
 Open Fast Travel Menu: V
 
@@ -345,13 +446,17 @@ Select a fast travel point:  W and S
 
 Select an option: A and D
 
+Check relative distance: SHIFT + K
+
+Check relative distance vector: ALT + K
+
 Confirm an option: LEFT BRACKET
 
 Note:  Options include Teleporting to a saved point, renaming a saved point, deleting a saved point, and creating a new point.
 
 Confirm a new name: ENTER
 
-## Structure Travel
+## Structure travel
 
 Travel freely from building to building as if they were laid out in a grid pattern.
 
@@ -417,7 +522,9 @@ Run menu search forward: SHIFT + ENTER
 
 Run menu search backward: CONTROL + ENTER, only for inventories.
 
-## Crafting Menu
+Flush away a selected fluid: X
+
+## Crafting menu
 
 Navigate recipe groups: W S
 
@@ -425,7 +532,9 @@ Navigate recipes within a group: A D
 
 Check ingredients and products of a recipe: K
 
-Read recipe product description: L
+Check base ingredients of a recipe: SHIFT + K
+
+Read recipe product description: Y
 
 Craft 1 item: LEFT BRACKET
 
@@ -433,7 +542,11 @@ Craft 5 items: RIGHT BRACKET
 
 Craft as many items as possible:  SHIFT + LEFT BRACKET
 
-## Crafting Queue Menu
+Open menu search: CONTROL + F
+
+Run menu search forward: SHIFT + ENTER
+
+## Crafting queue menu
 
 Navigate queue: W A S D
 
@@ -451,7 +564,7 @@ Jump to previous category level: W
 
 Select category from currently selected tier: A and D
 
-## Splitter Interactions
+## Splitter interactions
 
 Set input priority side: SHIFT + LEFT ARROW, or SHIFT + RIGHT ARROW. Press the same side again to reset to equal priority.
   
@@ -467,7 +580,7 @@ Clear the item filter: With an empty hand, CONTROL + LEFT BRACKET
   
 Copy and paste splitter settings: SHIFT + RIGHT BRACKET and then SHIFT + LEFT BRACKET
 
-## Rail Building and Analyzing
+## Rail building and analyzing
 
 Rail unrestricted placement: Press CONTROL + LEFT BRACKET with rails in hand to place down a single straight rail.
 
@@ -477,9 +590,9 @@ Rail structure building menu: Press SHIFT + LEFT BRACKET on any rail, but end ra
 
 Rail intersection finder: RIGHT BRACKET on a rail to find the nearest intersection.
 
-Rail analyzer UP: Press J with empty hand on any rail to check which rail structure is UP along the selected rail. Note: This cannot detect trains!
+Rail analyzer UP: Press SHIFT + J with empty hand on any rail to check which rail structure is UP along the selected rail. Note: This cannot detect trains!
 
-Rail analyzer DOWN: Press SHIFT + J with empty hand on any rail to check which rail structure is DOWN along the selected rail. Note: This cannot detect trains!
+Rail analyzer DOWN: Press CONTROL + J with empty hand on any rail to check which rail structure is DOWN along the selected rail. Note: This cannot detect trains!
 
 Station rail analyzer: Select a rail behind a train stop to hear corresponding the station space. Note: Every rail vehicle is 6 tiles long and there is one tile of extra space between each vehicle on a train.
 
@@ -493,7 +606,7 @@ Shortcut for building rail left turn 45 degrees: CONTROL + LEFT ARROW on an end 
 
 Shortcut for picking up all rails and signals within 7 tiles: SHIFT + X on a rail.
 
-## Train Building and Examining
+## Train building and examining
 
 Place rail vehicles: LEFT BRACKET on an empty rail with the vehicle in hand and facing a rail. Locomotives snap into place at train stops. Nearby vehicles connect automatically to each other upon placing.
 
@@ -513,7 +626,7 @@ Examine cargo wagon or fluid wagon contents: RIGHT BRACKET. Note that items can 
 
 Add fuel to a locomotive: With fuel items in hand, CONTROL + LEFT BRACKET on the locomotive
 
-## Train Menu
+## Train menu
 Move up: UP ARROW KEY
 
 Move down: DOWN ARROW KEY
@@ -528,7 +641,7 @@ Decrease station waiting times by 5 seconds: PAGE DOWN
 
 Decrease station waiting times by 60 seconds: CONTROL + PAGE DOWN
 
-## Driving Ground Vehicles or Locomotives
+## Driving locomotives
 
 Read fuel inventory: RIGHT BRACKET
   
@@ -548,21 +661,73 @@ Steer left or right: A or D. Not needed to make trains go around turns.
   
 Get heading and speed and coordinates: K
   
-Get some vehicle info: L
-  
-Fire selected vehicle weapon: SPACEBAR
-  
-For trains, analyze the first rail structure ahead: J
-  
-For trains, analyze the first rail structure behind: SHIFT + J
+Get some vehicle info: Y
 
-For trains, read precise distance to a nearby train stop for manual alignment: J
+Read what is beeping due to collision threat: J
   
-For trains, open the train menu: LEFT BRACKET. Navigate with ARROW KEYS.
+Read the first rail structure ahead: SHIFT + J
+  
+Read the first rail structure behind: CONTROL + J
+
+Read the precise distance to a nearby train stop for manual alignment: SHIFT + J
+
+Honk the horn: V
+  
+Open the train menu: LEFT BRACKET. Navigate with ARROW KEYS.
+
+## Driving ground vehicles
+
+Read fuel inventory: RIGHT BRACKET
+  
+Insert fuel: With the fuel stack in hand: CONTROL + LEFT BRACKET to insert all, or CONTROL + RIGHT BRACKET to insert half.
+  
+Insert ammo for any vehicle weapons: With the appropriate ammo stack in hand: CONTROL + LEFT BRACKET to insert all, or CONTROL + RIGHT BRACKET to insert half.
+  
+Enter or exit: ENTER
+
+The following controls are for when driving:
+
+Accelerate forward (or break): Hold W
+  
+Accelerate backward (or break): Hold S
+  
+Steer left or right: A or D. Not needed to make trains go around turns.
+  
+Get heading and speed and coordinates: K
+  
+Get some vehicle info: Y
+
+Read what is beeping due to collision threat: J
+  
+Honk the horn: V
+
+Toggle cruise control: O
+
+Change cruise control speed: CONTROL + O
+
+Note: Recommended speeds are between 25 and 70 units
+
+Toggle pavement driving assistant: L
+
+Note: The diriving assistant must have a paved road to follow out of bricks or concrete, with short diagonal sections to soften the 90 degree turns. 
+
+Fire selected vehicle weapon: SPACEBAR
+
+Note: Machine guns and missiles automatically lock onto enemies and can be fired only then
+
+Change selected vehicle weapon: TAB
+
+## Spidertron remotes
+
+Open remote menu: RIGHT BRACKET
+
+Quick-set autopilot target position: LEFT BRACKET
+
+Quick-add position autopilot target list: CONTROL + LEFT BRACKET
 
 ## Logistics requests
 
-Read the logistic requests summary for a player or chest: L
+Read the logistic requests summary for a player or chest or vehicle: L
 
 For the selected item, read the logistic request status: L
 
@@ -574,24 +739,19 @@ For the selected item, increase maximum request value: ALT + SHIFT + L, availabl
 
 For the selected item, decrease maximum request value: ALT + CONTROL + L, available for personal requests only
 
+For the selected item, send it to logistic trash: O
+
+For the selected item in logistic trash, take it back into inventory: LEFT BRACKET and then Q
+
 For personal logistics, pause or unpause all requests: CONTROL + SHIFT + L
 
 For a logistic storage chest, set or unset the filter to the selected item: SHIFT + L
 
 For a logistic requester chest, toggle requesting from buffer chests: CONTROL + SHIFT + L
 
-## Using the Screen Reader
+## Using the screen reader
 
 The screen reader, such as for NVDA, can be used but it is generally not that helpful during gameplay because in-game menus heavily use visual icons and graphs instead of text. We are designing the mod to require the screen reader as little as possible. However, the screen reader is necessary in the following situtaions: When the game crashes, when your character dies, when you win a game, and optionally when you pause the game.
-
-# More info at the wiki
-
-For information about the mod and the game, please check out our own [Factorio Access Wiki](https://github.com/Crimso777/Factorio-Access/wiki) being written by the developers.
-
-Factorio also has an [official wiki](https://wiki.factorio.com/).
-
-# Frequently Asked Questions
-Please check the [Factorio Access Wiki main page](https://github.com/Crimso777/Factorio-Access/wiki) for frequently asked questions section.
 
 # Help and Support
 
@@ -599,7 +759,7 @@ If your question wasn't answered here or on our wiki, feel free to contact us at
 
 # Changes
 
-An updated changelog for the beta can be found [here](https://github.com/LevFendi/Factorio-Access/blob/main/CHANGES.md).
+An updated changelog for the beta can be found [here](https://github.com/Factorio-Access/FactorioAccess/blob/main/CHANGES.md).
 
 
 
