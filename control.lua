@@ -5543,7 +5543,7 @@ spider = nil
    
    faplayer.localisations = faplayer.localisations or {} 
    faplayer.translation_id_lookup = faplayer.translation_id_lookup or {}
-   localising.request_all_the_translations(player.index)
+   localising.check_player(player.index)
    
    faplayer.bump = faplayer.bump or {
       last_bump_tick = 1,     --Updated in bump checker
@@ -6506,6 +6506,7 @@ function on_player_join(pindex)
    players = players or global.players
    schedule(3, "fix_zoom", pindex)
    schedule(4, "sync_build_cursor_graphics", pindex)
+   localising.check_player(pindex)
    local playerList={}
    for _ , p in pairs(game.connected_players) do
       playerList["_" .. p.index]=p.name

@@ -122,19 +122,39 @@ function localising.handler(event)
    end
    player.translation_id_lookup[event.id] = nil
    if not successful then
-      if players[pindex].translation_issue_counter == nil then 
-         players[pindex].translation_issue_counter = 1
+      if player.translation_issue_counter == nil then 
+         player.translation_issue_counter = 1
       else
-         players[pindex].translation_issue_counter = players[pindex].translation_issue_counter + 1
+         player.translation_issue_counter = player.translation_issue_counter + 1
       end
       --print("translation request ".. event.id .. " failed, request: [" .. serpent.line(event.localised_string) ..  "] for:" .. translated_thing[1] .. ":" .. translated_thing[2] .. ", total issues: " .. players[pindex].translation_issue_counter)
       return
    end
-   local localised = players[pindex].localisations
+   if translated_thing=="test_translation" then
+      local last_try = player.localisation_test
+      if last_try == event.result then
+         return
+      end
+      localising.request_all_the_translations(pindex)
+      player.localisation_test = event.result
+      return
+   end
+   player.localisations = player.localisations or {}
+   local localised = player.localisations
+   print(translated_thing)
    localised[translated_thing[1]] = localised[translated_thing[1]] or {}
    local translated_list = localised[translated_thing[1]]
    translated_list[ translated_thing[2] ] = event.result
 end
 
+function localising.check_player(pindex)
+   local player=players[pindex]
+   local id=game.players[pindex].request_translation({"error.crash-to-desktop-message"})
+   if not id then
+      return
+   end
+   player.translation_id_lookup = player.translation_id_lookup or {}
+   player.translation_id_lookup[id] = "test_translation"
+end
 
 return localising
