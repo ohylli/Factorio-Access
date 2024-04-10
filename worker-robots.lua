@@ -1898,7 +1898,7 @@ function create_blueprint(pindex, point_1, point_2, prior_bp_data)
    else
       local prior_name = ""
       if prior_bp_data ~= nil then
-         prior_name = prior_bp_data.blueprint.label
+         prior_name = prior_bp_data.blueprint.label or ""
       end
       printout("Blueprint ".. prior_name .. " with " .. ent_count .. " entities created in hand.", pindex)
    end
@@ -1906,10 +1906,10 @@ function create_blueprint(pindex, point_1, point_2, prior_bp_data)
    --Copy label and description and icons from previous version
    if prior_bp_data ~= nil then
       local bp_data = get_bp_data_for_edit(p.cursor_stack)
-      bp_data.blueprint.label = prior_bp_data.blueprint.label
-      bp_data.blueprint.label_color = prior_bp_data.blueprint.label_color
-      bp_data.blueprint.description = prior_bp_data.blueprint.description
-      bp_data.blueprint.icons = prior_bp_data.blueprint.icons
+      bp_data.blueprint.label = prior_bp_data.blueprint.label or ""
+      bp_data.blueprint.label_color = prior_bp_data.blueprint.label_color or {1,1,1}
+      bp_data.blueprint.description = prior_bp_data.blueprint.description or ""
+      bp_data.blueprint.icons = prior_bp_data.blueprint.icons or {}
       if ent_count == 0 then
          bp_data.blueprint.entities = prior_bp_data.blueprint.entities
       end
@@ -2162,7 +2162,11 @@ function get_blueprint_info(stack, in_hand)
       if signal.index > 1 then
          result = result .. " and "
       end
-      result = result .. signal.signal.name
+      if signal.signal.name ~= nil 
+         result = result .. signal.signal.name
+      else
+         result = result .. "unknown"
+      end
    end
    
    result = result .. ", " .. stack.get_blueprint_entity_count() .. " entities in total "
@@ -2183,7 +2187,11 @@ function get_blueprint_icons_info(bp_table)
       if signal.index > 1 then
          result = result .. " and "
       end
-      result = result .. signal.signal.name
+      if signal.signal.name ~= nil 
+         result = result .. signal.signal.name
+      else
+         result = result .. "unknown"
+      end
    end
    return result
 end

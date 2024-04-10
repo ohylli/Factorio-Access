@@ -173,9 +173,16 @@ function fa_mod_preferences_menu(pindex, menu_index, clicked, pg_up, pg_down)
       else
          --****
       end
+   elseif index == 4 then
+      --...
+      if not clicked then
+         printout("Building row length", pindex)
+      else
+         --****
+      end
    end
 end
-MOD_PREFERENCES_MENU_LENGTH = 2
+MOD_PREFERENCES_MENU_LENGTH = 4
 
 
 --[[

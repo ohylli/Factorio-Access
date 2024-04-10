@@ -13473,6 +13473,7 @@ script.on_event("debug-test-key", function(event)
       --play_selected_speaker_note(ent)
    end 
    --show_sprite_demo(pindex)
+   --Character:move_to(players[pindex].cursor_pos, util.distance(players[pindex].position,players[pindex].cursor_pos), 100)
 end)
 
 function show_sprite_demo(pindex)
