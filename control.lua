@@ -5282,9 +5282,9 @@ function read_coords(pindex, start_phrase)
          for i, preq in pairs(techs[players[pindex].technology.index].prerequisites) do 
             result = result .. preq.name .. " , "
          end
-         result = result .. " and " .. techs[players[pindex].technology.index].research_unit_count .. " x "
+         result = result .. " and " .. techs[players[pindex].technology.index].research_unit_count .. " times "
          for i, ingredient in pairs(techs[players[pindex].technology.index].research_unit_ingredients ) do
-            result = result .. ingredient.name .. " " .. " , "
+            result = result .. localising.get_alt(ingredient,pindex) .. ", "
          end
          
          printout(result, pindex)
@@ -11599,16 +11599,22 @@ script.on_event("item-info", function(event)
          end
    
          if next(techs) ~= nil and players[pindex].technology.index > 0 and players[pindex].technology.index <= #techs then
-            local result = "Unlocks the following:"
+            local result = {""}
+            table.insert(result,"Unlocks the following")
             local rewards = techs[players[pindex].technology.index].effects
             for i, reward in ipairs(rewards) do
                for i1, v in pairs(reward) do
                   if v then
-                     result = result ..  tostring(v) .. " , "
+                     table.insert(result, ", " .. tostring(v))
                   end
                end
             end
-            printout(string.sub(result, 1, -3), pindex)
+            if techs[players[pindex].technology.index].name == "electronics" then
+               table.insert(result, "later technologies")
+            end
+            table.insert(result, ". Description: ")
+            table.insert(result,  techs[players[pindex].technology.index].localised_description or "")
+            printout(result, pindex)
          end
 
       elseif players[pindex].menu == "crafting" then
