@@ -4069,11 +4069,6 @@ function scan_index(pindex)
          printout(final_result,pindex)
       end
    end
-   
-   --Adjust camera if in cursor mode
-   -- if players[pindex].cursor then
-      -- adjust_camera_view(pindex)
-   -- end
 end 
 
 function scan_down(pindex)
@@ -4463,6 +4458,17 @@ function toggle_cursor_mode(pindex)
       draw_area_as_cursor(left_top,right_bottom,pindex)
    end
    p.close_map()
+end
+
+function toggle_remote_view(pindex)
+   if players[pindex].remote_view ~= true then
+      players[pindex].remote_view = true
+      printout("Remote view opened",pindex)
+   else
+      players[pindex].remote_view = false
+      printout("Remote view closed",pindex)
+      game.get_player(pindex).close_map()
+   end
 end
 
 function teleport_to_cursor(pindex, muted, ignore_enemies, return_cursor)
@@ -5898,10 +5904,6 @@ function menu_cursor_up(pindex)
       read_selected_signal_group(pindex, "")
    end
    
-   --Adjust camera if in cursor mode
-   -- if players[pindex].cursor then
-      -- adjust_camera_view(pindex)
-   -- end
 end
 
 
@@ -6153,10 +6155,6 @@ function menu_cursor_down(pindex)
       read_selected_signal_group(pindex, "")
    end
    
-   --Adjust camera if in cursor mode
-   -- if players[pindex].cursor then
-      -- adjust_camera_view(pindex)
-   -- end
 end
 
 --menu_left
@@ -6636,6 +6634,11 @@ function on_tick(event)
             end
          end
       end
+   elseif event.tick % 15 == 3 then
+      --Adjust camera if in remote view
+      if players[pindex].remote_view == true then
+         sync_remote_view(pindex)
+      end
    elseif event.tick % 30 == 6 then
       --Check and play train horns
       for pindex, player in pairs(players) do
@@ -6842,12 +6845,6 @@ function move_characters(event)
             player.player.walking_state = {walking = false}
          end
       end
-      --Adjust camera 
-      -- if player.cursor then
-         -- adjust_camera_view(pindex)
-      -- else
-         -- game.get_player(pindex).close_map()
-      -- end
    end
 end
 
@@ -7089,24 +7086,12 @@ function cursor_mode_move(direction, pindex, single_only)--*****
    --Play Sound
    p.play_sound{path = "Close-Inventory-Sound", volume_modifier = 0.75}
    
-   --Focus the map view onto the position if it is out of reach
-   -- if single_only then--we would want this for WASD but it messes up the camera a lot.
-      -- adjust_camera_view(pindex)
-   -- end
 end
 
-function adjust_camera_view(pindex)
+--Focus camera on the cursor position 
+function sync_remote_view(pindex)
    local p = game.get_player(pindex)
-   local cursor_dist = util.distance(players[pindex].cursor_pos, players[pindex].position)
-   local cut_off = p.reach_distance + 4
-   if cursor_dist <= cut_off then
-      p.close_map()
-      -- if cursor_position_is_on_screen_with_player_centered(pindex) == false then
-         -- fix_zoom(pindex)
-      -- end
-   elseif cursor_dist > cut_off then
-      p.zoom_to_world(players[pindex].cursor_pos)
-   end
+   p.zoom_to_world(players[pindex].cursor_pos)
    sync_build_cursor_graphics(pindex)
 end
 
@@ -7381,8 +7366,6 @@ function return_cursor_to_character(pindex)
          jump_to_player(pindex)
       end
    end
-   -- --Adjust camera
-   -- adjust_camera_view(pindex)
 end 
 
 script.on_event("cursor-bookmark-save", function(event)
@@ -7462,6 +7445,18 @@ script.on_event("toggle-cursor", function(event)
       players[pindex].move_queue = {}
       toggle_cursor_mode(pindex)
    end
+end)
+
+script.on_event("toggle-remote-view", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if not (players[pindex].in_menu) then
+      players[pindex].move_queue = {}
+      toggle_remote_view(pindex)
+   end
+   fix_zoom(pindex)
 end)
 
 --We have cursor sizes 1,3,5,11,21,101,251

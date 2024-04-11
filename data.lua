@@ -593,6 +593,13 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "toggle-remote-view",
+    key_sequence = "ALT + I",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "increase-inventory-bar-by-1",
     key_sequence = "PAGEUP",
     consuming = "none"
