@@ -7549,7 +7549,7 @@ script.on_event("increase-inventory-bar-by-5", function(event)
    if players[pindex].in_menu and (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then 
       --Chest bar setting: Increase
 	  local ent = get_selected_ent(pindex)
-	  local result = increment_inventory_bar(ent, 1)
+	  local result = increment_inventory_bar(ent, 5)
 	  printout(result, pindex)
    end
 end)
@@ -16197,4 +16197,89 @@ function cursor_visibility_info(pindex)
       result = result .. " distant "
    end
    return result
+end
+
+script.on_event("nearest-damaged-ent-info", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return 
+   end
+   read_nearest_damaged_ent_info(players[pindex].cursor_pos,pindex)
+end)
+
+function read_nearest_damaged_ent_info(pos,pindex)--****
+   local p = game.get_player(pindex)
+   --Scan for ents of your force
+   local ents = p.surface.find_entities_filtered{position = players[pindex].cursor_pos, radius = 500, force = p.force}
+   --Check for entities with health
+   if ents == nil or #ents == 0 then
+      printout("No damaged structures within 500 tiles.", pindex)
+      return
+   end 
+   local at_least_one_has_damage = false
+   local damaged_ents = {}
+   for i, ent in ipairs(ents) do 
+      if ent.is_entity_with_health == true and ent.type ~= "character" and ent.get_health_ratio() < 1 then
+         at_least_one_has_damage = true
+         table.insert(damaged_ents,ent)
+      end
+   end
+   if at_least_one_has_damage == false then
+      printout("No damaged structures within 500 tiles.", pindex)
+      return
+   end
+   --Narrow by distance
+   local closest = nil
+   local min_dist = 501
+   for i, ent in ipairs(damaged_ents) do 
+      local dist = util.distance(pos,ent.position)
+      if dist < min_dist then
+         min_dist = dist
+         closest = ent
+         if min_dist < 2 then
+            break
+         end
+      end
+   end
+   if closest == nil then
+      printout("No damaged structures within 500 tiles.", pindex)
+      return
+   else
+      min_dist = math.floor(min_dist)
+      local dir = get_direction_of_that_from_this(closest.position,pos)
+      local result = localising.get(closest) .. "  damaged at " .. min_dist .. " " .. direction_lookup(dir)
+      printout(result, pindex)
+   end
+end
+
+script.on_event("cursor-pollution-info", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return 
+   end
+   read_pollution_level_at_position(players[pindex].cursor_pos,pindex)
+end)
+
+function read_pollution_level_at_position(pos,pindex)--****
+   local p = game.get_player(pindex)
+   local pol = p.surface.get_pollution(pos)
+   local result = " pollution detected"
+   if pol <= 0.1 then
+      result = "No" .. result
+   elseif pol < 10 then
+      result = "Minimal" .. result
+   elseif pol < 30 then
+      result = "Low" .. result
+   elseif pol < 60 then
+      result = "Medium" .. result
+   elseif pol < 100 then
+      result = "High" .. result
+   elseif pol < 150 then
+      result = "Very high" .. result
+   elseif pol < 250 then
+      result = "Extremely high" .. result
+   elseif pol >= 250 then
+      result = "Maximal" .. result
+   end
+   printout(result, pindex)
 end

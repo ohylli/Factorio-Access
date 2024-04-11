@@ -1328,6 +1328,13 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "cursor-pollution-info",
+    key_sequence = "SHIFT + U",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "read-time-and-research-progress",
     key_sequence = "T",
     consuming = "none"
@@ -1485,6 +1492,13 @@ data:extend({
     type = "custom-input",
     name = "open-warnings-menu",
     key_sequence = "P",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "nearest-damaged-ent-info",
+    key_sequence = "SHIFT + P",
     consuming = "none"
 },
 
