@@ -2326,7 +2326,7 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
       else
          local count = bp.get_blueprint_entity_count()
          local width, height = get_blueprint_width_and_height(pindex)
-         local result = "This blueprint is " .. width .. " tiles wide and " .. height .. " tiles high and contains " .. count .. " entities "
+         local result = "This blueprint is " .. (width + 1) .. " tiles wide and " .. (height + 1) .. " tiles high and contains " .. count .. " entities "
          printout(result, pindex)
       end
    elseif index == 4 then
