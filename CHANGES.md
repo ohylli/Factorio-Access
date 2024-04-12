@@ -1,5 +1,5 @@
 # Version 0.10.1 BETA
-Released on April 12th, 2024.
+Released on April 13th, 2024.
 
 ## Summary
     - This update comes after some restructuring of the mod repository and joining the official Factorio Mod Portal. Note that releases still need to be installed from the GitHub page because of the launcher and config changes required to run the mod properly. The update itself includes tweaks, additions, and bugfixes across the board thanks to community feedback. Notably, several blueprint bugs have been fixed and Remote View has been added. 
@@ -44,6 +44,8 @@ Released on April 12th, 2024.
     -Minor revisions were made in some tutorial steps for clarity.
 
     -Checking technology info now also reads the localised description of the technology. Technology required ingredient names have been localised too.
+
+    -Alternate controls for SCAN-UP and SCAN-DOWN have been changed to "ALT + UP" and "ALT + DOWN". The main controls are still "PAGEUP" and "PAGEDOWN".
 
 ## Bugfixes
     -Fixed a mod initialization crash that was preventing it from running on dedicated servers.
