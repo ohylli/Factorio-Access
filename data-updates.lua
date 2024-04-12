@@ -33,7 +33,15 @@ local alt_input =
   key_sequence = "CONTROL + ALT + RIGHTBRACKET",
   consuming = "game-only"
 }
-data:extend{alt_input}
+local cancel_enter =
+{
+  name = "klient-cancel-enter",
+  type = "custom-input",
+  linked_game_control = "toggle-driving",
+  consuming = "none",
+  key_sequence = ""
+}
+data:extend{alt_input, cancel_enter}
 
 --Modifications to Pavement Driving Assist Continued inputs
 data:extend({

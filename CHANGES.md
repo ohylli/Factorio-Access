@@ -22,6 +22,12 @@ Released on April 12th, 2024.
       * Remote view automatically opens and closes Cursor Mode along with itself.
       * For now, most sounds are muffled in remote view, but this will be fixed. 
 
+    - Added basic support for the Kruise Kontrol mod, which allows automatic walking to the cursor location.
+      * Press "CONTROL + ALT + RIGHT BRACKET" twice, to first open the cursor location in remote view, and then to instruct an action.
+      * Usually the action is to walk or drive to that spot. Special cases include selecting a resource to start mining it, selecting a ghost to start building them, selected a descontruction marked building to start removing them, selecting trees to start chopping them, and selecting enemies to start fighting them.
+      * Press "ENTER" to cancel ongoing actions. Some actions may be unclear at times so this is recommended if things are taking to long.
+      * The character cuts trees along their automatic walking paths.
+
     - The pollution level at the cursor position can now be read, by pressing "SHIFT + U". Note that "high" pollution is usually when trees start taking pollution damage. Other than that, the most important thing to track regarding pollution is how heavily polluted enemy spawners are, which can be checked with the scanner tool.
 
     - The scanner can now locate the nearest damaged entity of the player's own team, by pressing "SHIFT + P". This has a range limit of 1000 tiles.
@@ -29,9 +35,9 @@ Released on April 12th, 2024.
 ## Changes
     -Launcher: Changed the description of the Compass Valley preset to make it more beginner friendly.
 
-    -Area scanning now reports coverage percentages only for ground tiles. It also notes whether there are other things in the area after listing the first 4 things.
+    -Cursor area scanning now reports coverage percentages only for ground tiles. It also notes whether there are other things in the area after listing the first 4 things.
 
-    -Area scanning updates the scan result list properly so that the list can now be used to examine in detail what is within the area.
+    -Cursor area scanning now updates the scan result list properly so that the list can be used to examine in detail what is within the area.
 
     -Cursor size options now include 51 by 51.
 

@@ -4465,8 +4465,8 @@ function toggle_cursor_mode(pindex)
    end
 end
 
-function toggle_remote_view(pindex)
-   if players[pindex].remote_view ~= true then
+function toggle_remote_view(pindex, force_true, force_false)
+   if (players[pindex].remote_view ~= true or force_true == true) and force_false ~= true then
       players[pindex].remote_view = true
       players[pindex].cursor = true
       players[pindex].build_lock = false
@@ -6666,6 +6666,8 @@ function on_tick(event)
       for pindex, player in pairs(players) do
          if players[pindex].remote_view == true then
             sync_remote_view(pindex)
+         else
+            game.get_player(pindex).close_map()
          end
       end
    elseif event.tick % 30 == 6 then
@@ -6869,7 +6871,7 @@ function move_characters(event)
                table.remove(player.move_queue,1)
             end
          end
-         if not walk then
+         if not walk and players[pindex].kruise_kontrolling ~= true then
             player.player.walking_state = {walking = true, direction= player.player_direction}
             player.player.walking_state = {walking = false}
          end
@@ -7050,6 +7052,9 @@ function move_key(direction,event, force_single_tile)
    if pex.bp_selecting then
       game.get_player(pindex).play_sound{path = "utility/upgrade_selection_started"}
    end
+   
+   --Stop kruise kontrol related permissions
+   players[pindex].kruise_kontrolling = false
 end
 
 --Move the cursor, and conduct area scans for larger cursors. Does not work while dirving if the vehicle is moving
@@ -16337,3 +16342,38 @@ function read_pollution_level_at_position(pos,pindex)--****
    end
    printout(result, pindex)
 end
+
+script.on_event("klient-alt-move-to", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return 
+   end
+   
+   if players[pindex].remote_view == true then
+      players[pindex].kruise_kontrolling = true
+      local kk_pos = players[pindex].cursor_pos
+      toggle_remote_view(pindex, false, true)
+      close_menu_resets(pindex)
+      printout("Moving to " .. math.floor(kk_pos.x) .. ", " .. math.floor(kk_pos.y), pindex)
+   else
+      players[pindex].kruise_kontrolling = false
+      toggle_remote_view(pindex, true)
+      sync_remote_view(pindex)
+      printout("Opened in remote view, press again to confirm", pindex)
+   end 
+end)
+
+script.on_event("klient-cancel-enter", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return 
+   end
+   if players[pindex].kruise_kontrolling == true then
+      printout("Cancelled action.",pindex)
+   end 
+   players[pindex].kruise_kontrolling = false
+   toggle_remote_view(pindex, false, true)
+end)
+
+
+
