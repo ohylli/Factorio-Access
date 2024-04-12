@@ -2162,7 +2162,7 @@ function get_blueprint_info(stack, in_hand)
       if signal.index > 1 then
          result = result .. " and "
       end
-      if signal.signal.name ~= nil 
+      if signal.signal.name ~= nil then
          result = result .. signal.signal.name
       else
          result = result .. "unknown"
@@ -2187,7 +2187,7 @@ function get_blueprint_icons_info(bp_table)
       if signal.index > 1 then
          result = result .. " and "
       end
-      if signal.signal.name ~= nil 
+      if signal.signal.name ~= nil then
          result = result .. signal.signal.name
       else
          result = result .. "unknown"

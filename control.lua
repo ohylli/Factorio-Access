@@ -4412,25 +4412,15 @@ function toggle_cursor_mode(pindex)
    end
    
    if (not players[pindex].cursor) and (not players[pindex].hide_cursor) then
+      --Enable
       players[pindex].cursor = true
       players[pindex].build_lock = false
             
       --Teleport to the center of the nearest tile to align
-      local can_port = p.surface.can_place_entity{name = "character", position = center_of_tile(p.position)}
-      local ents = p.surface.find_entities_filtered{position = center_of_tile(p.position), radius = 0.1, type = {"character"}, invert = true}
-      if #ents > 0 and ents[1].valid then
-         local ent = ents[1]
-         --Ignore ents you can walk through, laterdo better collision checks**
-         can_port = can_port or all_ents_are_walkable(p.position)
-      end
-      if can_port then
-         p.teleport(center_of_tile(p.position))
-      end      
-      players[pindex].position = p.position
-      players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos)
-      move_mouse_pointer(players[pindex].cursor_pos,pindex)
+      center_player_character(pindex)
       read_tile(pindex, "Cursor mode enabled, ")
    else
+      --Disable
       players[pindex].cursor = false
       players[pindex].cursor_pos = offset_position(players[pindex].position,players[pindex].player_direction,1)
       players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos)
@@ -4443,6 +4433,10 @@ function toggle_cursor_mode(pindex)
          p.vehicle.active = true
       end
       read_tile(pindex, "Cursor mode disabled, ")
+      
+      --Close Remote view 
+      players[pindex].remote_view = false 
+      p.close_map()
    end
    if players[pindex].cursor_size < 2 then 
       --Update cursor highlight
@@ -4457,18 +4451,39 @@ function toggle_cursor_mode(pindex)
       local right_bottom = {math.floor(players[pindex].cursor_pos.x)+players[pindex].cursor_size+1,math.floor(players[pindex].cursor_pos.y)+players[pindex].cursor_size+1}
       draw_area_as_cursor(left_top,right_bottom,pindex)
    end
-   p.close_map()
 end
 
 function toggle_remote_view(pindex)
    if players[pindex].remote_view ~= true then
       players[pindex].remote_view = true
+      players[pindex].cursor = true
+      players[pindex].build_lock = false
+      center_player_character(pindex)
       printout("Remote view opened",pindex)
    else
       players[pindex].remote_view = false
+      players[pindex].cursor = false
+      players[pindex].build_lock = false
       printout("Remote view closed",pindex)
       game.get_player(pindex).close_map()
    end
+end
+
+function center_player_character(pindex)
+   local p = game.get_player(pindex)
+   local can_port = p.surface.can_place_entity{name = "character", position = center_of_tile(p.position)}
+   local ents = p.surface.find_entities_filtered{position = center_of_tile(p.position), radius = 0.1, type = {"character"}, invert = true}
+   if #ents > 0 and ents[1].valid then
+      local ent = ents[1]
+      --Ignore ents you can walk through, laterdo better collision checks**
+      can_port = can_port or all_ents_are_walkable(p.position)
+   end
+   if can_port then
+      p.teleport(center_of_tile(p.position))
+   end      
+   players[pindex].position = p.position
+   players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos)
+   move_mouse_pointer(players[pindex].cursor_pos,pindex)
 end
 
 function teleport_to_cursor(pindex, muted, ignore_enemies, return_cursor)
@@ -6636,8 +6651,10 @@ function on_tick(event)
       end
    elseif event.tick % 15 == 3 then
       --Adjust camera if in remote view
-      if players[pindex].remote_view == true then
-         sync_remote_view(pindex)
+      for pindex, player in pairs(players) do
+         if players[pindex].remote_view == true then
+            sync_remote_view(pindex)
+         end
       end
    elseif event.tick % 30 == 6 then
       --Check and play train horns
@@ -7084,7 +7101,11 @@ function cursor_mode_move(direction, pindex, single_only)--*****
    turn_to_cursor_direction_precise(pindex)
    
    --Play Sound
-   p.play_sound{path = "Close-Inventory-Sound", volume_modifier = 0.75}
+   if players[pindex].remote_view then
+      p.play_sound{path = "Close-Inventory-Sound", position = players[pindex].cursor_pos, volume_modifier = 0.75}
+   else
+      p.play_sound{path = "Close-Inventory-Sound", position = players[pindex].position, volume_modifier = 0.75}
+   end
    
 end
 
@@ -7164,17 +7185,23 @@ end)
 
 --Pause / resume the game. If a menu GUI is open, ESC makes it close the menu instead
 script.on_event("pause-game-fa", function(event)
+   local pindex = event.player_index
+   game.get_player(pindex).close_map()
+   game.get_player(pindex).play_sound{path = "Close-Inventory-Sound"}
+   if players[pindex].remote_view == true then
+      players[pindex].remote_view = false
+      printout("Remote view closed", pindex)
+   end
    if game.tick_paused == true then
       for pindex, player in pairs(players) do
-         printout("Game paused", pindex)--does not call because these handlers appear to require ticks running?**
+         --printout("Game paused", pindex)--does not call because these handlers appear to require ticks running?**
       end
    else
       for pindex, player in pairs(players) do
          if game.get_player(pindex).opened ~= nil then
             printout("Menu closed", pindex)
          else
-            --printout("Game resumed", pindex)--This is always incorrect cos this event fires before the pause happens.
-            game.get_player(pindex).play_sound{path = "Close-Inventory-Sound"}--This kind of works.
+            --printout("Game resumed", pindex)--This is always incorrect cos this event fires before the pause happens. 
          end
       end
    end
@@ -12854,14 +12881,29 @@ function cursor_skip(pindex, direction, iteration_limit)
    local moved_count = cursor_skip_iteration(pindex, direction, limit)
    if moved_count < 0 then
       --No change found within the limit
-      p.play_sound{path = "inventory-wrap-around"}
       result = "Skipped " .. limit .. " tiles without a change, "
+      --Play Sound
+      if players[pindex].remote_view then
+         p.play_sound{path = "inventory-wrap-around", position = players[pindex].cursor_pos, volume_modifier = 1}
+      else
+         p.play_sound{path = "inventory-wrap-around", position = players[pindex].position, volume_modifier = 1}
+      end
    elseif moved_count == 1 then
-      p.play_sound{path = "Close-Inventory-Sound"}
+      --Play Sound
+      if players[pindex].remote_view then
+         p.play_sound{path = "Close-Inventory-Sound", position = players[pindex].cursor_pos, volume_modifier = 1}
+      else
+         p.play_sound{path = "Close-Inventory-Sound", position = players[pindex].position, volume_modifier = 1}
+      end
    elseif moved_count > 1 then
-      --Change found, with more than 1 tile moved
-      p.play_sound{path = "inventory-wrap-around"}
+      --Change found, with more than 1 tile moved 
       result = "Skipped " .. moved_count .. " tiles, "
+      --Play Sound
+      if players[pindex].remote_view then
+         p.play_sound{path = "inventory-wrap-around", position = players[pindex].cursor_pos, volume_modifier = 1}
+      else
+         p.play_sound{path = "inventory-wrap-around", position = players[pindex].position, volume_modifier = 1}
+      end
    end
    
    --Read the tile reached 

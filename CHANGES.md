@@ -2,7 +2,7 @@
 Released on April 12th, 2024.
 
 ## Summary
-    - This update comes after some restructuring of the mod repository and joining the official Factorio Mod Portal. Note that releases still need to be installed from the GitHub page because of the launcher and config changes required to run the mod. The update itself includes tweaks, additions, and bugfixes across the board thanks to community feedback.
+    - This update comes after some restructuring of the mod repository and joining the official Factorio Mod Portal. Note that releases still need to be installed from the GitHub page because of the launcher and config changes required to run the mod properly. The update itself includes tweaks, additions, and bugfixes across the board thanks to community feedback. Notably, several blueprint bugs have been fixed and Remote View has been added. 
 
 ## Info
     - The mod's GitHub repository has been moved to a new address to make contributions easier: https://github.com/Factorio-Access/FactorioAccess. Hyperlinks to it have been automatically updated.
@@ -12,15 +12,17 @@ Released on April 12th, 2024.
     - The mod has now been officially added to the Factorio Mod Portal, but please note that downloading and installing it from the portal does not make it playable. You still need to use the mod launcher for vocalization and also making game configuration changes to accommodate this mod. Therefore please use the GitHub releases page and follow the install instructions.
     
     -Release folder contents now include mod dependency info and a mod portal compatible changelog, which is what prompted formatting changes for the main changelog.
-    
+
     -Settings for configuring other mods are now updated using data stage code, as it should be. Meanwhile, the feature for in-game settings changing is still being worked on.
 
 ## Features
+    - Added Remote View, which is when the camera and microphone focuses on the player's cursor instead of the player's character. Press "ALT + I" to toggle it.
+      * It allows viewing distant locations, although blurred or uncharted areas offer limited info and no sounds. You need to keep them loaded with radars.
+      * Remote view automatically opens and closes Cursor Mode along with itself.
+
     - The pollution level at the cursor position can now be read, by pressing "SHIFT + U". Note that "high" pollution is usually when trees start taking pollution damage. Other than that, the most important thing to track regarding pollution is how heavily polluted enemy spawners are, which can be checked with the scanner tool.
 
     - The scanner can now locate the nearest damaged entity of the player's own team, by pressing "SHIFT + P". This has a range limit of 500 tiles.
-
-    - Added Remote View, which is when the camera and microphone focuses on the player's cursor instead of the player's character. Press "ALT + I" to toggle it. This will now allow viewing distant locations, although blurred or uncharted areas offer limited info and no sounds.
 
 ## Changes
     -Launcher: Changed the description of the Compass Valley preset to make it more beginner friendly.
