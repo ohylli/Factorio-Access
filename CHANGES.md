@@ -11,9 +11,9 @@ Released on April 13th, 2024.
 
     - The mod has now been officially added to the Factorio Mod Portal, but please note that downloading and installing it from the portal does not make it playable. You still need to use the mod launcher for vocalization and also making game configuration changes to accommodate this mod. Therefore please use the GitHub releases page and follow the install instructions.
     
-    -Release folder contents now include mod dependency info and a mod portal compatible changelog, which is what prompted formatting changes for the main changelog.
+    - Release folder contents now include mod dependency info and a mod portal compatible changelog, which is what prompted formatting changes for the main changelog.
 
-    -Settings for configuring other mods are now updated using data stage code, as it should be. Meanwhile, the feature for in-game settings changing is still being worked on.
+    - Settings for configuring other mods are now updated using data stage code, as it should be. Meanwhile, the feature for in-game settings changing is still being worked on.
 
 ## Features
     - Added Remote View, which is when the camera and microphone focuses on the player's cursor instead of the player's character. Press "ALT + I" to toggle it.
@@ -33,36 +33,38 @@ Released on April 13th, 2024.
     - The scanner can now locate the nearest damaged entity of the player's own team, by pressing "SHIFT + P". This has a range limit of 1000 tiles.
 
 ## Changes
-    -Launcher: Changed the description of the Compass Valley preset to make it more beginner friendly.
+    - Launcher: Changed the description of the Compass Valley preset to make it more beginner friendly.
 
-    -Cursor area scanning now reports coverage percentages only for ground tiles. It also notes whether there are other things in the area after listing the first 4 things.
+    - Cursor area scanning now reports coverage percentages only for ground tiles. It also notes whether there are other things in the area after listing the first 4 things.
 
-    -Cursor area scanning now updates the scan result list properly so that the list can be used to examine in detail what is within the area.
+    - Cursor area scanning now updates the scan result list properly so that the list can be used to examine in detail what is within the area.
 
-    -Cursor size options now include 51 by 51.
+    - Cursor size options now include 51 by 51.
 
-    -Minor revisions were made in some tutorial steps for clarity.
+    - Minor revisions were made in some tutorial steps for clarity.
 
-    -Checking technology info now also reads the localised description of the technology. Technology required ingredient names have been localised too.
+    - Checking technology info now also reads the localised description of the technology. Technology required ingredient names have been localised too.
 
-    -Alternate controls for SCAN-UP and SCAN-DOWN have been changed to "ALT + UP" and "ALT + DOWN". The main controls are still "PAGEUP" and "PAGEDOWN".
+    - You can now teleport from the structure travel menu as well.
+
+    - Alternate controls for SCAN-UP and SCAN-DOWN have been changed to "ALT + UP" and "ALT + DOWN". The main controls are still "PAGEUP" and "PAGEDOWN".
 
 ## Bugfixes
-    -Fixed a mod initialization crash that was preventing it from running on dedicated servers.
+    - Fixed a mod initialization crash that was preventing it from running on dedicated servers.
 
-    -Removed deprecated cursor release keybind, which was interfering with rail analysis.
+    - Removed deprecated cursor release keybind, which was interfering with rail analysis.
 
-    -Fixed the incorrect reporting of blueprint dimensions from inside the blueprint menu.
+    - Fixed the incorrect reporting of blueprint dimensions from inside the blueprint menu.
 
-    -Fixed a crash during the re-selection of blueprints with no names or descriptions.
+    - Fixed a crash during the re-selection of blueprints with no names or descriptions.
 
-    -Fixed a crash during the reading of blueprints with invalid items or icons in them, such as old science pack versions.
+    - Fixed a crash during the reading of blueprints with invalid items or icons in them, such as old science pack versions.
 
-    -Fixed the ambiguity about the "electronics" technology having no direct unlocks.
+    - Fixed the ambiguity about the "electronics" technology having no direct unlocks.
 
-    -Fixed the input for locking 5 inventory slots of chests.
+    - Fixed the input for locking 5 inventory slots of chests.
 
-    -Fixed some mod menu typos.
+    - Fixed some mod menu typos.
 
 
 # Version 0.10.0 BETA
