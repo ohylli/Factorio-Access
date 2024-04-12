@@ -2803,7 +2803,7 @@ function confirm_ent_is_in_area(ent_name, area_left_top, area_right_bottom, pind
    return #ents > 0
 end
 
-function get_scan_summary(scan_left_top, scan_right_bottom, pindex)      
+function get_area_scan_summary(scan_left_top, scan_right_bottom, pindex)      
    local result = ""
    local explored_left_top = {x = math.floor((players[pindex].cursor_pos.x - 1 - players[pindex].cursor_size) / 32), y = math.floor((players[pindex].cursor_pos.y - 1 - players[pindex].cursor_size)/32)}
    local explored_right_bottom = {x = math.floor((players[pindex].cursor_pos.x + 1 + players[pindex].cursor_size)/32), y = math.floor((players[pindex].cursor_pos.y + 1 + players[pindex].cursor_size)/32)}
@@ -2919,7 +2919,7 @@ function get_scan_summary(scan_left_top, scan_right_bottom, pindex)
       end)
       result = result .. " Area contains "
       local i = 1
-      while i <= #percentages and (i <= 7 or percentages[i].percent > 1) do
+      while i <= #percentages and (i <= 4 or percentages[i].percent > 1) do
          result = result .. ", " .. percentages[i].count .. " " .. percentages[i].name .. " " 
          if percentages[i].count == "resource" or percentages[i].count == "flooring" then 
             result = result .. percentages[i].percent .. "% "
@@ -2928,14 +2928,14 @@ function get_scan_summary(scan_left_top, scan_right_bottom, pindex)
       end
       if percent_total == 0 then--Note there are still some entities in here, but with zero area...
          result = result .. " nothing "
-      elseif  i >= 7 then
-         result = result .. " and other things "
+      elseif  i >= 4 then
+         result = result .. ", and other things "
       end
       result = result .. ", total space occupied " .. math.floor(percent_total) .. " percent " 
    else
       result = result .. " Empty Area  "
    end
-   
+   players[pindex].cursor_scanned = true
    return result
 end
 
@@ -3098,7 +3098,7 @@ function read_technology_slot(pindex, start_phrase)
          printout(start_phrase .. "Error loading technology", pindex)
       end
    else
-      printout(start_phrase .. "No technologies in this category yet", pindex)
+      printout(start_phrase .. "No technologies in this category", pindex)
    end
 end
 
@@ -3973,7 +3973,8 @@ function scan_index(pindex)
          --Remove invalid or unwanted instances of the entity
          while i <= #ents[players[pindex].nearby.index].ents do
             local ents_i = ents[players[pindex].nearby.index].ents[i]
-            if ents_i.valid and ents_i.name ~= "highlight-box" and ents_i.type ~= "flying-text" and ents_i.name ~= "rocket-silo-rocket" and ents_i.name ~= "rocket-silo-rocket-shadow" and ents_i.type ~= "spider-leg" then
+            if ents_i.valid and ents_i.name ~= "highlight-box" and ents_i.type ~= "flying-text" and ents_i.name ~= "rocket-silo-rocket" and ents_i.name ~= "rocket-silo-rocket-shadow" and ents_i.type ~= "spider-leg" 
+            and (players[pindex].cursor_scanned ~= true or (players[pindex].cursor_scanned == true and util.distance(ents_i.position,players[pindex].cursor_scan_center) < players[pindex].cursor_size + 1 )) then
                i = i + 1
             else
                table.remove(ents[players[pindex].nearby.index].ents, i)
@@ -4025,23 +4026,33 @@ function scan_index(pindex)
          local name = ents[players[pindex].nearby.index].name
          local entry = ents[players[pindex].nearby.index].ents[players[pindex].nearby.selection]
          --If there is none left of the entry or it is an unwanted type (does this ever happen?), remove it
-         if table_size(entry) == 0 or name == "highlight-box" then
-            table.remove(ents[players[pindex].nearby.index].ents, players[pindex].nearby.selection)
-            players[pindex].nearby.selection = players[pindex].nearby.selection - 1
-            scan_index(pindex)
-            return
+         if entry ~= nil then 
+            if table_size(entry) == 0 or name == "highlight-box" then
+               table.remove(ents[players[pindex].nearby.index].ents, players[pindex].nearby.selection)
+               players[pindex].nearby.selection = players[pindex].nearby.selection - 1
+               scan_index(pindex)
+               return
+            end
+            --The scan target is an aggregate, select it now
+            ent = {name = name, position = table.deepcopy(entry.position), group = entry.group} --maybe use "aggregate = true" ?
+            players[pindex].cursor_pos = ent.position
+            cursor_highlight(pindex, nil, "train-visualization")
+            sync_build_cursor_graphics(pindex)
+            players[pindex].last_indexed_ent = ent
+            game.get_player(pindex).selected = nil
          end
-         --The scan target is an aggregate, select it now
-         ent = {name = name, position = table.deepcopy(entry.position), group = entry.group} --maybe use "aggregate = true" ?
-         players[pindex].cursor_pos = ent.position
-         cursor_highlight(pindex, nil, "train-visualization")
-         sync_build_cursor_graphics(pindex)
-         players[pindex].last_indexed_ent = ent
-         game.get_player(pindex).selected = nil
       end
       
-      if not ents[players[pindex].nearby.index].aggregate and not ent.valid then
+      if ent == nil or (ents[players[pindex].nearby.index].aggregate == false and (ent == nil or ent.valid ~= true)) then
          printout("Error: Invalid object, maybe try rescanning.", pindex)
+         return
+      end
+      
+      if (players[pindex].cursor_scanned == true and util.distance(ent.position,players[pindex].cursor_scan_center) > players[pindex].cursor_size + 1 ) then 
+         local final_result = {""}
+         table.insert(final_result,ent_name_locale(ent))
+         table.insert(final_result," reference point outside of scan area")
+         printout(final_result, pindex)
          return
       end
       
@@ -4069,11 +4080,6 @@ function scan_index(pindex)
          printout(final_result,pindex)
       end
    end
-   
-   --Adjust camera if in cursor mode
-   -- if players[pindex].cursor then
-      -- adjust_camera_view(pindex)
-   -- end
 end 
 
 function scan_down(pindex)
@@ -4205,6 +4211,7 @@ function rescan(pindex,filter_dir, mute)
    populate_categories(pindex)
    players[pindex].nearby.index = 1
    players[pindex].nearby.selection = 1
+   players[pindex].cursor_scanned = false
    
    --Use the waiting period as a chance to recalibrate 
    fix_zoom(pindex)
@@ -4417,25 +4424,15 @@ function toggle_cursor_mode(pindex)
    end
    
    if (not players[pindex].cursor) and (not players[pindex].hide_cursor) then
+      --Enable
       players[pindex].cursor = true
       players[pindex].build_lock = false
             
       --Teleport to the center of the nearest tile to align
-      local can_port = p.surface.can_place_entity{name = "character", position = center_of_tile(p.position)}
-      local ents = p.surface.find_entities_filtered{position = center_of_tile(p.position), radius = 0.1, type = {"character"}, invert = true}
-      if #ents > 0 and ents[1].valid then
-         local ent = ents[1]
-         --Ignore ents you can walk through, laterdo better collision checks**
-         can_port = can_port or all_ents_are_walkable(p.position)
-      end
-      if can_port then
-         p.teleport(center_of_tile(p.position))
-      end      
-      players[pindex].position = p.position
-      players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos)
-      move_mouse_pointer(players[pindex].cursor_pos,pindex)
+      center_player_character(pindex)
       read_tile(pindex, "Cursor mode enabled, ")
    else
+      --Disable
       players[pindex].cursor = false
       players[pindex].cursor_pos = offset_position(players[pindex].position,players[pindex].player_direction,1)
       players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos)
@@ -4448,6 +4445,10 @@ function toggle_cursor_mode(pindex)
          p.vehicle.active = true
       end
       read_tile(pindex, "Cursor mode disabled, ")
+      
+      --Close Remote view 
+      players[pindex].remote_view = false 
+      p.close_map()
    end
    if players[pindex].cursor_size < 2 then 
       --Update cursor highlight
@@ -4462,7 +4463,39 @@ function toggle_cursor_mode(pindex)
       local right_bottom = {math.floor(players[pindex].cursor_pos.x)+players[pindex].cursor_size+1,math.floor(players[pindex].cursor_pos.y)+players[pindex].cursor_size+1}
       draw_area_as_cursor(left_top,right_bottom,pindex)
    end
-   p.close_map()
+end
+
+function toggle_remote_view(pindex, force_true, force_false)
+   if (players[pindex].remote_view ~= true or force_true == true) and force_false ~= true then
+      players[pindex].remote_view = true
+      players[pindex].cursor = true
+      players[pindex].build_lock = false
+      center_player_character(pindex)
+      printout("Remote view opened",pindex)
+   else
+      players[pindex].remote_view = false
+      players[pindex].cursor = false
+      players[pindex].build_lock = false
+      printout("Remote view closed",pindex)
+      game.get_player(pindex).close_map()
+   end
+end
+
+function center_player_character(pindex)
+   local p = game.get_player(pindex)
+   local can_port = p.surface.can_place_entity{name = "character", position = center_of_tile(p.position)}
+   local ents = p.surface.find_entities_filtered{position = center_of_tile(p.position), radius = 0.1, type = {"character"}, invert = true}
+   if #ents > 0 and ents[1].valid then
+      local ent = ents[1]
+      --Ignore ents you can walk through, laterdo better collision checks**
+      can_port = can_port or all_ents_are_walkable(p.position)
+   end
+   if can_port then
+      p.teleport(center_of_tile(p.position))
+   end      
+   players[pindex].position = p.position
+   players[pindex].cursor_pos = center_of_tile(players[pindex].cursor_pos)
+   move_mouse_pointer(players[pindex].cursor_pos,pindex)
 end
 
 function teleport_to_cursor(pindex, muted, ignore_enemies, return_cursor)
@@ -5270,21 +5303,21 @@ function read_coords(pindex, start_phrase)
       end
    
       if next(techs) ~= nil and players[pindex].technology.index > 0 and players[pindex].technology.index <= #techs then
-         result = result .. "Requires "
+         result = result .. "Requires prior research "
          local dict = techs[players[pindex].technology.index].prerequisites 
          local pre_count = 0
          for a, b in pairs(dict) do
             pre_count = pre_count + 1
          end
          if pre_count == 0 then
-            result = result .. " No prior research "
+            result = result .. " None "
          end
          for i, preq in pairs(techs[players[pindex].technology.index].prerequisites) do 
-            result = result .. preq.name .. " , "
+            result = result .. localising.get(preq,pindex) .. " , "
          end
-         result = result .. " and " .. techs[players[pindex].technology.index].research_unit_count .. " x "
+         result = result .. ", and equipment " .. techs[players[pindex].technology.index].research_unit_count .. " times "
          for i, ingredient in pairs(techs[players[pindex].technology.index].research_unit_ingredients ) do
-            result = result .. ingredient.name .. " " .. " , "
+            result = result .. localising.get_item_from_name(ingredient.name,pindex) .. ", "
          end
          
          printout(result, pindex)
@@ -5898,10 +5931,6 @@ function menu_cursor_up(pindex)
       read_selected_signal_group(pindex, "")
    end
    
-   --Adjust camera if in cursor mode
-   -- if players[pindex].cursor then
-      -- adjust_camera_view(pindex)
-   -- end
 end
 
 
@@ -6153,10 +6182,6 @@ function menu_cursor_down(pindex)
       read_selected_signal_group(pindex, "")
    end
    
-   --Adjust camera if in cursor mode
-   -- if players[pindex].cursor then
-      -- adjust_camera_view(pindex)
-   -- end
 end
 
 --menu_left
@@ -6636,6 +6661,15 @@ function on_tick(event)
             end
          end
       end
+   elseif event.tick % 15 == 3 then
+      --Adjust camera if in remote view
+      for pindex, player in pairs(players) do
+         if players[pindex].remote_view == true then
+            sync_remote_view(pindex)
+         else
+            game.get_player(pindex).close_map()
+         end
+      end
    elseif event.tick % 30 == 6 then
       --Check and play train horns
       for pindex, player in pairs(players) do
@@ -6837,17 +6871,11 @@ function move_characters(event)
                table.remove(player.move_queue,1)
             end
          end
-         if not walk then
+         if not walk and players[pindex].kruise_kontrolling ~= true then
             player.player.walking_state = {walking = true, direction= player.player_direction}
             player.player.walking_state = {walking = false}
          end
       end
-      --Adjust camera 
-      -- if player.cursor then
-         -- adjust_camera_view(pindex)
-      -- else
-         -- game.get_player(pindex).close_map()
-      -- end
    end
 end
 
@@ -7024,6 +7052,9 @@ function move_key(direction,event, force_single_tile)
    if pex.bp_selecting then
       game.get_player(pindex).play_sound{path = "utility/upgrade_selection_started"}
    end
+   
+   --Stop kruise kontrol related permissions
+   players[pindex].kruise_kontrolling = false
 end
 
 --Move the cursor, and conduct area scans for larger cursors. Does not work while dirving if the vehicle is moving
@@ -7078,7 +7109,8 @@ function cursor_mode_move(direction, pindex, single_only)--*****
       players[pindex].nearby.index = 1
       players[pindex].nearby.ents = scan_area(math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size, math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size, players[pindex].cursor_size * 2 + 1, players[pindex].cursor_size * 2 + 1, pindex)
       populate_categories(pindex)
-      local scan_summary = get_scan_summary(scan_left_top, scan_right_bottom, pindex)
+      players[pindex].cursor_scan_center = players[pindex].cursor_pos
+      local scan_summary = get_area_scan_summary(scan_left_top, scan_right_bottom, pindex)
       draw_area_as_cursor(scan_left_top,scan_right_bottom,pindex)
       printout(scan_summary,pindex)
    end
@@ -7087,26 +7119,18 @@ function cursor_mode_move(direction, pindex, single_only)--*****
    turn_to_cursor_direction_precise(pindex)
    
    --Play Sound
-   p.play_sound{path = "Close-Inventory-Sound", volume_modifier = 0.75}
+   if players[pindex].remote_view then
+      p.play_sound{path = "Close-Inventory-Sound", position = players[pindex].cursor_pos, volume_modifier = 0.75}
+   else
+      p.play_sound{path = "Close-Inventory-Sound", position = players[pindex].position, volume_modifier = 0.75}
+   end
    
-   --Focus the map view onto the position if it is out of reach
-   -- if single_only then--we would want this for WASD but it messes up the camera a lot.
-      -- adjust_camera_view(pindex)
-   -- end
 end
 
-function adjust_camera_view(pindex)
+--Focus camera on the cursor position 
+function sync_remote_view(pindex)
    local p = game.get_player(pindex)
-   local cursor_dist = util.distance(players[pindex].cursor_pos, players[pindex].position)
-   local cut_off = p.reach_distance + 4
-   if cursor_dist <= cut_off then
-      p.close_map()
-      -- if cursor_position_is_on_screen_with_player_centered(pindex) == false then
-         -- fix_zoom(pindex)
-      -- end
-   elseif cursor_dist > cut_off then
-      p.zoom_to_world(players[pindex].cursor_pos)
-   end
+   p.zoom_to_world(players[pindex].cursor_pos)
    sync_build_cursor_graphics(pindex)
 end
 
@@ -7179,17 +7203,23 @@ end)
 
 --Pause / resume the game. If a menu GUI is open, ESC makes it close the menu instead
 script.on_event("pause-game-fa", function(event)
+   local pindex = event.player_index
+   game.get_player(pindex).close_map()
+   game.get_player(pindex).play_sound{path = "Close-Inventory-Sound"}
+   if players[pindex].remote_view == true then
+      players[pindex].remote_view = false
+      printout("Remote view closed", pindex)
+   end
    if game.tick_paused == true then
       for pindex, player in pairs(players) do
-         printout("Game paused", pindex)--does not call because these handlers appear to require ticks running?**
+         --printout("Game paused", pindex)--does not call because these handlers appear to require ticks running?**
       end
    else
       for pindex, player in pairs(players) do
          if game.get_player(pindex).opened ~= nil then
             printout("Menu closed", pindex)
          else
-            --printout("Game resumed", pindex)--This is always incorrect cos this event fires before the pause happens.
-            game.get_player(pindex).play_sound{path = "Close-Inventory-Sound"}--This kind of works.
+            --printout("Game resumed", pindex)--This is always incorrect cos this event fires before the pause happens. 
          end
       end
    end
@@ -7381,8 +7411,6 @@ function return_cursor_to_character(pindex)
          jump_to_player(pindex)
       end
    end
-   -- --Adjust camera
-   -- adjust_camera_view(pindex)
 end 
 
 script.on_event("cursor-bookmark-save", function(event)
@@ -7464,7 +7492,19 @@ script.on_event("toggle-cursor", function(event)
    end
 end)
 
---We have cursor sizes 1,3,5,11,21,101,251
+script.on_event("toggle-remote-view", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if not (players[pindex].in_menu) then
+      players[pindex].move_queue = {}
+      toggle_remote_view(pindex)
+   end
+   fix_zoom(pindex)
+end)
+
+--We have cursor sizes 1,3,5,11,21,51,101,251
 script.on_event("cursor-size-increment", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -7480,6 +7520,8 @@ script.on_event("cursor-size-increment", function(event)
       elseif players[pindex].cursor_size == 5 then
          players[pindex].cursor_size = 10
       elseif players[pindex].cursor_size == 10 then
+         players[pindex].cursor_size = 25
+      elseif players[pindex].cursor_size == 25 then
          players[pindex].cursor_size = 50
       elseif players[pindex].cursor_size == 50 then
          players[pindex].cursor_size = 125
@@ -7496,7 +7538,7 @@ script.on_event("cursor-size-increment", function(event)
    game.get_player(pindex).play_sound{path = "Close-Inventory-Sound", volume_modifier = 0.75}
 end)
 
---We have cursor sizes 1,3,5,11,21,101,251
+--We have cursor sizes 1,3,5,11,21,51,101,251
 script.on_event("cursor-size-decrement", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -7511,8 +7553,10 @@ script.on_event("cursor-size-decrement", function(event)
          players[pindex].cursor_size = 2
       elseif players[pindex].cursor_size == 10 then
          players[pindex].cursor_size = 5
-      elseif players[pindex].cursor_size == 50 then
+      elseif players[pindex].cursor_size == 25 then
          players[pindex].cursor_size = 10
+      elseif players[pindex].cursor_size == 50 then
+         players[pindex].cursor_size = 25
       elseif players[pindex].cursor_size == 125 then
          players[pindex].cursor_size = 50
       end
@@ -7549,7 +7593,7 @@ script.on_event("increase-inventory-bar-by-5", function(event)
    if players[pindex].in_menu and (players[pindex].menu == "building" or players[pindex].menu == "vehicle") then 
       --Chest bar setting: Increase
 	  local ent = get_selected_ent(pindex)
-	  local result = increment_inventory_bar(ent, 1)
+	  local result = increment_inventory_bar(ent, 5)
 	  printout(result, pindex)
    end
 end)
@@ -11599,16 +11643,22 @@ script.on_event("item-info", function(event)
          end
    
          if next(techs) ~= nil and players[pindex].technology.index > 0 and players[pindex].technology.index <= #techs then
-            local result = "Unlocks the following:"
+            local result = {""}
+            table.insert(result, "Description: ")
+            table.insert(result,  techs[players[pindex].technology.index].localised_description or "No description")
+            table.insert(result,", Rewards: ")
             local rewards = techs[players[pindex].technology.index].effects
             for i, reward in ipairs(rewards) do
                for i1, v in pairs(reward) do
                   if v then
-                     result = result ..  tostring(v) .. " , "
+                     table.insert(result, ", " .. tostring(v))
                   end
                end
             end
-            printout(string.sub(result, 1, -3), pindex)
+            if techs[players[pindex].technology.index].name == "electronics" then
+               table.insert(result, ", later technologies")
+            end
+            printout(result, pindex)
          end
 
       elseif players[pindex].menu == "crafting" then
@@ -12853,14 +12903,29 @@ function cursor_skip(pindex, direction, iteration_limit)
    local moved_count = cursor_skip_iteration(pindex, direction, limit)
    if moved_count < 0 then
       --No change found within the limit
-      p.play_sound{path = "inventory-wrap-around"}
       result = "Skipped " .. limit .. " tiles without a change, "
+      --Play Sound
+      if players[pindex].remote_view then
+         p.play_sound{path = "inventory-wrap-around", position = players[pindex].cursor_pos, volume_modifier = 1}
+      else
+         p.play_sound{path = "inventory-wrap-around", position = players[pindex].position, volume_modifier = 1}
+      end
    elseif moved_count == 1 then
-      p.play_sound{path = "Close-Inventory-Sound"}
+      --Play Sound
+      if players[pindex].remote_view then
+         p.play_sound{path = "Close-Inventory-Sound", position = players[pindex].cursor_pos, volume_modifier = 1}
+      else
+         p.play_sound{path = "Close-Inventory-Sound", position = players[pindex].position, volume_modifier = 1}
+      end
    elseif moved_count > 1 then
-      --Change found, with more than 1 tile moved
-      p.play_sound{path = "inventory-wrap-around"}
+      --Change found, with more than 1 tile moved 
       result = "Skipped " .. moved_count .. " tiles, "
+      --Play Sound
+      if players[pindex].remote_view then
+         p.play_sound{path = "inventory-wrap-around", position = players[pindex].cursor_pos, volume_modifier = 1}
+      else
+         p.play_sound{path = "inventory-wrap-around", position = players[pindex].position, volume_modifier = 1}
+      end
    end
    
    --Read the tile reached 
@@ -13467,6 +13532,7 @@ script.on_event("debug-test-key", function(event)
       --play_selected_speaker_note(ent)
    end 
    --show_sprite_demo(pindex)
+   --Character:move_to(players[pindex].cursor_pos, util.distance(players[pindex].position,players[pindex].cursor_pos), 100)
 end)
 
 function show_sprite_demo(pindex)
@@ -16191,3 +16257,123 @@ function cursor_visibility_info(pindex)
    end
    return result
 end
+
+script.on_event("nearest-damaged-ent-info", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return 
+   end
+   read_nearest_damaged_ent_info(players[pindex].cursor_pos,pindex)
+end)
+
+function read_nearest_damaged_ent_info(pos,pindex)--****
+   local p = game.get_player(pindex)
+   --Scan for ents of your force
+   local ents = p.surface.find_entities_filtered{position = players[pindex].cursor_pos, radius = 1000, force = p.force}
+   --Check for entities with health
+   if ents == nil or #ents == 0 then
+      printout("No damaged structures within 1000 tiles.", pindex)
+      return
+   end 
+   local at_least_one_has_damage = false
+   local damaged_ents = {}
+   for i, ent in ipairs(ents) do 
+      if ent.is_entity_with_health == true and ent.type ~= "character" and ent.get_health_ratio() < 1 then
+         at_least_one_has_damage = true
+         table.insert(damaged_ents,ent)
+      end
+   end
+   if at_least_one_has_damage == false then
+      printout("No damaged structures within 1000 tiles.", pindex)
+      return
+   end
+   --Narrow by distance
+   local closest = nil
+   local min_dist = 1001
+   for i, ent in ipairs(damaged_ents) do 
+      local dist = util.distance(pos,ent.position)
+      if dist < min_dist then
+         min_dist = dist
+         closest = ent
+         if min_dist < 2 then
+            break
+         end
+      end
+   end
+   if closest == nil then
+      printout("No damaged structures within 1000 tiles.", pindex)
+      return
+   else
+      min_dist = math.floor(min_dist)
+      local dir = get_direction_of_that_from_this(closest.position,pos)
+      local result = localising.get(closest, pindex) .. "  damaged at " .. min_dist .. " " .. direction_lookup(dir)
+      printout(result, pindex)
+   end
+end
+
+script.on_event("cursor-pollution-info", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return 
+   end
+   read_pollution_level_at_position(players[pindex].cursor_pos,pindex)
+end)
+
+function read_pollution_level_at_position(pos,pindex)--****
+   local p = game.get_player(pindex)
+   local pol = p.surface.get_pollution(pos)
+   local result = " pollution detected"
+   if pol <= 0.1 then
+      result = "No" .. result
+   elseif pol < 10 then
+      result = "Minimal" .. result
+   elseif pol < 30 then
+      result = "Low" .. result
+   elseif pol < 60 then
+      result = "Medium" .. result
+   elseif pol < 100 then
+      result = "High" .. result
+   elseif pol < 150 then
+      result = "Very high" .. result
+   elseif pol < 250 then
+      result = "Extremely high" .. result
+   elseif pol >= 250 then
+      result = "Maximal" .. result
+   end
+   printout(result, pindex)
+end
+
+script.on_event("klient-alt-move-to", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return 
+   end
+   
+   if players[pindex].remote_view == true then
+      players[pindex].kruise_kontrolling = true
+      local kk_pos = players[pindex].cursor_pos
+      toggle_remote_view(pindex, false, true)
+      close_menu_resets(pindex)
+      printout("Moving to " .. math.floor(kk_pos.x) .. ", " .. math.floor(kk_pos.y), pindex)
+   else
+      players[pindex].kruise_kontrolling = false
+      toggle_remote_view(pindex, true)
+      sync_remote_view(pindex)
+      printout("Opened in remote view, press again to confirm", pindex)
+   end 
+end)
+
+script.on_event("klient-cancel-enter", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return 
+   end
+   if players[pindex].kruise_kontrolling == true then
+      printout("Cancelled action.",pindex)
+   end 
+   players[pindex].kruise_kontrolling = false
+   toggle_remote_view(pindex, false, true)
+end)
+
+
+

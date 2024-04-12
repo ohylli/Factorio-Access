@@ -1898,7 +1898,7 @@ function create_blueprint(pindex, point_1, point_2, prior_bp_data)
    else
       local prior_name = ""
       if prior_bp_data ~= nil then
-         prior_name = prior_bp_data.blueprint.label
+         prior_name = prior_bp_data.blueprint.label or ""
       end
       printout("Blueprint ".. prior_name .. " with " .. ent_count .. " entities created in hand.", pindex)
    end
@@ -1906,10 +1906,10 @@ function create_blueprint(pindex, point_1, point_2, prior_bp_data)
    --Copy label and description and icons from previous version
    if prior_bp_data ~= nil then
       local bp_data = get_bp_data_for_edit(p.cursor_stack)
-      bp_data.blueprint.label = prior_bp_data.blueprint.label
-      bp_data.blueprint.label_color = prior_bp_data.blueprint.label_color
-      bp_data.blueprint.description = prior_bp_data.blueprint.description
-      bp_data.blueprint.icons = prior_bp_data.blueprint.icons
+      bp_data.blueprint.label = prior_bp_data.blueprint.label or ""
+      bp_data.blueprint.label_color = prior_bp_data.blueprint.label_color or {1,1,1}
+      bp_data.blueprint.description = prior_bp_data.blueprint.description or ""
+      bp_data.blueprint.icons = prior_bp_data.blueprint.icons or {}
       if ent_count == 0 then
          bp_data.blueprint.entities = prior_bp_data.blueprint.entities
       end
@@ -2004,16 +2004,19 @@ function get_blueprint_corners(pindex, draw_rect)
          ent_width = game.entity_prototypes[ent.name].tile_height
          ent_height = game.entity_prototypes[ent.name].tile_width
       end
+      --Find the edges of this ent
       local ent_north = ent.position.y - math.floor(ent_height/2)
       local ent_east  = ent.position.x + math.floor(ent_width/2)
       local ent_south = ent.position.y + math.floor(ent_height/2)
       local ent_west  = ent.position.x - math.floor(ent_width/2)
+      --Initialize with this entity
       if west_most_x == nil then
          west_most_x = ent_west 
          east_most_x = ent_east
          north_most_y = ent_north
          south_most_y = ent_south
       end
+      --Compare ent edges with the blueprint edges 
       if west_most_x > ent_west then
          west_most_x = ent_west
       end
@@ -2027,6 +2030,7 @@ function get_blueprint_corners(pindex, draw_rect)
          south_most_y = ent_south 
       end
    end
+   --Determine blueprint dimensions from the final edges
    local bp_left_top = {x = math.floor(west_most_x), y = math.floor(north_most_y)}
    local bp_right_bottom = {x = math.ceil(east_most_x), y = math.ceil(south_most_y)}
    local bp_width = bp_right_bottom.x - bp_left_top.x - 1
@@ -2051,7 +2055,7 @@ function get_blueprint_corners(pindex, draw_rect)
    return left_top, right_bottom, mouse_pos
 end 
 
-function get_blueprint_width_and_height(pindex)
+function get_blueprint_width_and_height(pindex)--****bug here: need to add 1 if the top left corner is an empty space or something.
    local p = game.get_player(pindex)
    local bp = p.cursor_stack
    if bp == nil or bp.valid_for_read == false or bp.is_blueprint == false then
@@ -2077,16 +2081,19 @@ function get_blueprint_width_and_height(pindex)
          ent_width = game.entity_prototypes[ent.name].tile_height
          ent_height = game.entity_prototypes[ent.name].tile_width
       end
+      --Find the edges of this ent
       local ent_north = ent.position.y - math.floor(ent_height/2)
       local ent_east  = ent.position.x + math.floor(ent_width/2)
       local ent_south = ent.position.y + math.floor(ent_height/2)
       local ent_west  = ent.position.x - math.floor(ent_width/2)
+      --Initialize with this entity
       if west_most_x == nil then
          west_most_x = ent_west 
          east_most_x = ent_east
          north_most_y = ent_north
          south_most_y = ent_south
       end
+      --Compare ent edges with the blueprint edges 
       if west_most_x > ent_west then
          west_most_x = ent_west
       end
@@ -2100,6 +2107,7 @@ function get_blueprint_width_and_height(pindex)
          south_most_y = ent_south 
       end
    end
+   --Determine blueprint dimensions from the final edges
    local bp_left_top = {x = math.floor(west_most_x), y = math.floor(north_most_y)}
    local bp_right_bottom = {x = math.ceil(east_most_x), y = math.ceil(south_most_y)}
    local bp_width = bp_right_bottom.x - bp_left_top.x - 1
@@ -2154,7 +2162,11 @@ function get_blueprint_info(stack, in_hand)
       if signal.index > 1 then
          result = result .. " and "
       end
-      result = result .. signal.signal.name
+      if signal.signal.name ~= nil then
+         result = result .. signal.signal.name --***todo localise 
+      else
+         result = result .. "unknown icon"
+      end
    end
    
    result = result .. ", " .. stack.get_blueprint_entity_count() .. " entities in total "
@@ -2175,7 +2187,11 @@ function get_blueprint_icons_info(bp_table)
       if signal.index > 1 then
          result = result .. " and "
       end
-      result = result .. signal.signal.name
+      if signal.signal.name ~= nil then
+         result = result .. signal.signal.name
+      else
+         result = result .. "unknown icon"
+      end
    end
    return result
 end
@@ -2310,7 +2326,7 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
       else
          local count = bp.get_blueprint_entity_count()
          local width, height = get_blueprint_width_and_height(pindex)
-         local result = "This blueprint is " .. width .. " tiles wide and " .. height .. " tiles high and contains " .. count .. " entities "
+         local result = "This blueprint is " .. (width + 1) .. " tiles wide and " .. (height + 1) .. " tiles high and contains " .. count .. " entities "
          printout(result, pindex)
       end
    elseif index == 4 then
@@ -2471,7 +2487,7 @@ function blueprint_menu(menu_index, pindex, clicked, other_input)
          frame.focus()
          local input = frame.add{type="textfield", name = "input", text = bp.export_stack()} 
          input.focus()
-         local result = "Copy the text from this boz using 'CONTROL + A' and then 'CONTROL + C' and then press ENTER to exit"
+         local result = "Copy the text from this box using 'CONTROL + A' and then 'CONTROL + C' and then press ENTER to exit"
          printout(result, pindex)
       end
    elseif index == 11 then

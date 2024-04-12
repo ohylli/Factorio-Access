@@ -593,6 +593,13 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "toggle-remote-view",
+    key_sequence = "ALT + I",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "increase-inventory-bar-by-1",
     key_sequence = "PAGEUP",
     consuming = "none"
@@ -716,7 +723,7 @@ data:extend({
     type = "custom-input",
     name = "scan-list-up",
     key_sequence = "PAGEUP",
-    alternative_key_sequence = "UP",
+    alternative_key_sequence = "ALT + UP",
     consuming = "none"
 },
 
@@ -724,7 +731,7 @@ data:extend({
     type = "custom-input",
     name = "scan-list-down",
     key_sequence = "PAGEDOWN",
-    alternative_key_sequence = "DOWN",
+    alternative_key_sequence = "ALT + DOWN",
     consuming = "none"
 },
 
@@ -1328,6 +1335,13 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "cursor-pollution-info",
+    key_sequence = "SHIFT + U",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "read-time-and-research-progress",
     key_sequence = "T",
     consuming = "none"
@@ -1485,6 +1499,13 @@ data:extend({
     type = "custom-input",
     name = "open-warnings-menu",
     key_sequence = "P",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "nearest-damaged-ent-info",
+    key_sequence = "SHIFT + P",
     consuming = "none"
 },
 

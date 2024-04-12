@@ -25,7 +25,25 @@ for _,item in pairs(vanilla_tip_and_tricks_item_table) do
    remove_tip_and_tricks_item(item);
 end
 
---Modifications to Pavement Driving Assist Continued controls
+--Modifications to Kruise Kontrol inputs 
+local alt_input =
+{
+  name = "klient-alt-move-to",
+  type = "custom-input",
+  key_sequence = "CONTROL + ALT + RIGHTBRACKET",
+  consuming = "game-only"
+}
+local cancel_enter =
+{
+  name = "klient-cancel-enter",
+  type = "custom-input",
+  linked_game_control = "toggle-driving",
+  consuming = "none",
+  key_sequence = ""
+}
+data:extend{alt_input, cancel_enter}
+
+--Modifications to Pavement Driving Assist Continued inputs
 data:extend({
     {
         type = "custom-input",

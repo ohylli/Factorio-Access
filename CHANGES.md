@@ -1,3 +1,70 @@
+# Version 0.10.1 BETA
+Released on April 13th, 2024.
+
+## Summary
+    - This update comes after some restructuring of the mod repository and joining the official Factorio Mod Portal. Note that releases still need to be installed from the GitHub page because of the launcher and config changes required to run the mod properly. The update itself includes tweaks, additions, and bugfixes across the board thanks to community feedback. Notably, several blueprint bugs have been fixed and Remote View has been added. 
+
+## Info
+    - The mod's GitHub repository has been moved to a new address to make contributions easier: https://github.com/Factorio-Access/FactorioAccess. Hyperlinks to it have been automatically updated.
+
+    - The mod's wiki has been moved to this address as well, and hyperlinks to it have been updated manually. You may need to update your own wiki related browser bookmarks.
+
+    - The mod has now been officially added to the Factorio Mod Portal, but please note that downloading and installing it from the portal does not make it playable. You still need to use the mod launcher for vocalization and also making game configuration changes to accommodate this mod. Therefore please use the GitHub releases page and follow the install instructions.
+    
+    -Release folder contents now include mod dependency info and a mod portal compatible changelog, which is what prompted formatting changes for the main changelog.
+
+    -Settings for configuring other mods are now updated using data stage code, as it should be. Meanwhile, the feature for in-game settings changing is still being worked on.
+
+## Features
+    - Added Remote View, which is when the camera and microphone focuses on the player's cursor instead of the player's character. Press "ALT + I" to toggle it.
+      * Press arrow keys to move the cursor in remote view. Do not use the "W" "A" "S" "D" keys because this makes the camera pan too fast in a way we cannot control.
+      * This view allows focusing on distant locations, although blurred or uncharted areas offer limited info and no sounds. You need to keep them fully loaded using radars.
+      * Remote view automatically opens and closes Cursor Mode along with itself.
+      * For now, most sounds are muffled in remote view, but this will be fixed. 
+
+    - Added basic support for the Kruise Kontrol mod, which allows automatic walking to the cursor location.
+      * Press "CONTROL + ALT + RIGHT BRACKET" twice, to first open the cursor location in remote view, and then to instruct an action.
+      * Usually the action is to walk or drive to that spot. Special cases include selecting a resource to start mining it, selecting a ghost to start building them, selected a descontruction marked building to start removing them, selecting trees to start chopping them, and selecting enemies to start fighting them.
+      * Press "ENTER" to cancel ongoing actions. Some actions may be unclear at times so this is recommended if things are taking to long.
+      * The character cuts trees along their automatic walking paths.
+
+    - The pollution level at the cursor position can now be read, by pressing "SHIFT + U". Note that "high" pollution is usually when trees start taking pollution damage. Other than that, the most important thing to track regarding pollution is how heavily polluted enemy spawners are, which can be checked with the scanner tool.
+
+    - The scanner can now locate the nearest damaged entity of the player's own team, by pressing "SHIFT + P". This has a range limit of 1000 tiles.
+
+## Changes
+    -Launcher: Changed the description of the Compass Valley preset to make it more beginner friendly.
+
+    -Cursor area scanning now reports coverage percentages only for ground tiles. It also notes whether there are other things in the area after listing the first 4 things.
+
+    -Cursor area scanning now updates the scan result list properly so that the list can be used to examine in detail what is within the area.
+
+    -Cursor size options now include 51 by 51.
+
+    -Minor revisions were made in some tutorial steps for clarity.
+
+    -Checking technology info now also reads the localised description of the technology. Technology required ingredient names have been localised too.
+
+    -Alternate controls for SCAN-UP and SCAN-DOWN have been changed to "ALT + UP" and "ALT + DOWN". The main controls are still "PAGEUP" and "PAGEDOWN".
+
+## Bugfixes
+    -Fixed a mod initialization crash that was preventing it from running on dedicated servers.
+
+    -Removed deprecated cursor release keybind, which was interfering with rail analysis.
+
+    -Fixed the incorrect reporting of blueprint dimensions from inside the blueprint menu.
+
+    -Fixed a crash during the re-selection of blueprints with no names or descriptions.
+
+    -Fixed a crash during the reading of blueprints with invalid items or icons in them, such as old science pack versions.
+
+    -Fixed the ambiguity about the "electronics" technology having no direct unlocks.
+
+    -Fixed the input for locking 5 inventory slots of chests.
+
+    -Fixed some mod menu typos.
+
+
 # Version 0.10.0 BETA
 Released on April 6th, 2024.
 
@@ -67,7 +134,7 @@ This update features a full rewrite of the mod tutorial to include new chapters 
 
 - Removed the default descriptions from science packs and modules so that the mod's custom descriptions would apply.
 
-## Bug fixes
+## Bugfixes
 
 - Fixed incorrect reporting of player weapons when you switch a vehicle weapon. 
   * Note: Reading out the correct vehicle weapon has not been added yet.
@@ -94,7 +161,7 @@ This is a quick update based on feedback for 0.9.0.
 
 - None.
 
-## Bug fixes
+## Bugfixes
 
 - Fixed the signal selector crashing when the end of a group is reached.
 
@@ -191,7 +258,7 @@ This major update introduces support for circuit networks, and several improveme
 
 - The roboport menu's info options are now simply introduced when selected, and are activated when clicked using 'LEFT BRACKET'.
 
-## Bug fixes
+## Bugfixes
 
 - Fixed a crash while reading fluid descriptions.
 
@@ -262,7 +329,7 @@ In this medium-sized quality-of-life update there are several tweaks and additio
 
 - Area mining now also reports a count of how many item stacks are collected from it.
 
-## Bug fixes
+## Bugfixes
 
 - Fixed pumpjack yield reporting
 
@@ -366,7 +433,7 @@ In this intermediate update some requested features are added and several bugs a
   * Fluids previewed in selected buildings and pipes.
   * Note: There is still much localisation work to do, such as opening up full mod sentences for translating.
 
-## Bug fixes
+## Bugfixes
 
 - Removed unnecessary message of a building not being equipped after you place it as a ghost.
 
@@ -411,7 +478,7 @@ This minor update is all about blueprints and ghosts. It fixes recently reported
   * New menu line: Read this blueprint's dimensions and total component count
   * Rotating the blueprint in hand while the menu is open will update this info and the visual previews correctly.
 
-## Bug fixes
+## Bugfixes
 
 - Fixed a crash that prevented handling blueprints with circuit signal icons added to their icon lists.
 
@@ -452,7 +519,7 @@ This update fixes some new and old bugs, and brings some minor tweaks and additi
 
 - Clarified build preview dimension info.
 
-## Bug fixes
+## Bugfixes
 
 - Fixed a crash when renaming a fast travel point.
 
@@ -576,7 +643,7 @@ This update includes full support for blueprints, and also for the spidertron th
   * The crafting queue menu now has a pair of icons to distinguish it from the crafting menu.
   * For blueprint menus all four blueprint icons can be displayed too.
 
-## Bug fixes
+## Bugfixes
 
 - Fixed a recent bug that was preventing diagonal rail appending when running diagonally in smooth walk mode.
 
@@ -633,7 +700,7 @@ In this intermediate update the launcher has been improved so that it reads punc
 
 - Ghost names are now localised and read more quickly.
 
-## Bug fixes
+## Bugfixes
 
 - Fixed a launcher crash due to incorrect keybind naming.
 
@@ -674,7 +741,7 @@ This is a minor update mainly to fix bugs and improve building tools, but it als
 
 - Visual building previews now account for build lock mode, when the buildings are set to be placed behind you as you walk.
 
-## Bug fixes 
+## Bugfixes 
 
 - Fixed the automatic aiming function crashing the game due to a mistake with changing function names.
 
@@ -707,7 +774,7 @@ This is a minor update to extend the tutorial, tweaks some basic behavior, and f
 
 - Toggling vanilla mode or cursor hiding now reads this out too.
 
-## Bug fixes 
+## Bugfixes 
 
 - Fixed a crash that occured when adding to an existing stack of an item.
 
@@ -793,7 +860,7 @@ This update brings many interface tweaks and additions. Most importantly, we are
   * Crafting menu info and some other menu info is better phrased now.
   * Entity part reading has been made more accurate.
 
-## Bug fixes
+## Bugfixes
 
 - Launcher bugs fixed, such as removing a circular dependency about setting up config files for the first time loading the game.
 
@@ -896,7 +963,7 @@ This update brings several new features and changes to increase overall accessib
 
 - The maximum limit value for a personal logistic request can now be set to zero as well, which will trash an item as soon as you put it in your inventory. If you want to edit the request after that, you must pick the item into your hand from a chest and set the request from your hand.
 
-## Bug fixes 
+## Bugfixes 
 
 - Fixed: Nudging a building now correctly applies a check for whether the new location is clear. This should prevent ending up with incorrectly overlapping buildings.
 
@@ -973,7 +1040,7 @@ In this update we have added all the basics and some of the extras for logistic 
 
 - Tweaked high enemy presence alert to sound also when there are fewer than 5 enemies but any of them is a strong enemy, such as a big biter.
 
-## Bug fixes
+## Bugfixes
 
 - Fixed missing teleporter sound effects. Fun fact: It was a design choice related to the fog of war effect.
 
@@ -1034,7 +1101,7 @@ This is a pre-release of the logistics robots update before I need to go on a de
   
 - Adjusted the volumes of most new sound effects. More tweaking may be needed.
 
-## Bug fixes
+## Bugfixes
 
 - Fixed crash: If you have no available weapons and try to switch weapons, you get a warning now.
 
@@ -1179,7 +1246,7 @@ Released on 31 December, 2023. Happy new year!
 
 - When no menus are open, you can now directly equip an item in hand by pressing SHIFT + LEFT BRACKET, without needing to open the inventory.
 
-## Bug fixes
+## Bugfixes
 
 - Fixed the long-persisting rail appending bug! Rail appending after train stops or forks should function as intended in all cases now.
 
@@ -1276,7 +1343,7 @@ Note that this update uses new Factorio API features and so you need to be runni
 
 - Rail alerts for trains within the same block are now less dramatic if the train is more than 200 tiles away.
   
-## Bug fixes
+## Bugfixes
 
 - Intersections including curved rails are now checked as well when querying the nearest intersection.
 
@@ -1338,7 +1405,7 @@ Before the full release, early feedback is needed for improving the features and
 
 - In some cases, the rail appender is unable to build a rail somewhere even though you can manually place it. Such cases are now identified and stated.
 
-## Bug fixes
+## Bugfixes
 
 - Fixed a group of crashes that happened when examining fluid-containing buildings that are currently empty.
 
@@ -1382,7 +1449,7 @@ In this update we have transport belts report more information about items movin
 
 - None.
 
-## Bug fixes
+## Bugfixes
 
 - Fixed a new crash that occurs when you control-click with an empty hand.
 
@@ -1441,7 +1508,7 @@ We have also improved the launcher and added a new demo map. We also explored if
 
 - Tweaked rail crossing alarm system to extend its range and improve its visuals.
   
-## Bug fixes
+## Bugfixes
 
 - Reduced the reading of flying text after removing objects. This should minimize lag and crashes due to too much flying text.
 
@@ -1496,7 +1563,7 @@ This is a fairly small update about fixing recent major bugs and requested featu
 
 - Many changes under the hood for code cleanup. More is on the way so that we can allow better user settings such as choosing your own keybinds.
 
-## Bug fixes
+## Bugfixes
 
 - Hopefully actually fixed the multiplayer bug of only the host player being able to scan for most resources (the aggregated ones).
 
@@ -1579,7 +1646,7 @@ Released on October 29th, 2023.
 
 - Flying text in connection to mining entities is no longer read unless you are moving.
 
-## Bug fixes
+## Bugfixes
 
 - The cursor now more effectively centers on entities so that they can be read during smooth walking.
 
@@ -1651,7 +1718,7 @@ Released on October 26th, 2023.
 
 - Smooth walking mode now detects every entity including ores on the ground.
 
-## Bug fixes
+## Bugfixes
 
 - Fixed some crashes related to fast travel.
 
@@ -1734,7 +1801,7 @@ Released on October 21st, 2023.
 
 - Your hand is now cleared when you enter or exit a vehicle.
 
-## Bug fixes
+## Bugfixes
 
 - Fixed issues with some entities such as transport belts not being detected during smooth walking.
 
@@ -1778,7 +1845,7 @@ Released on October 9th, 2023.
 
 - The currently selected scanner entity is visually marked with a white circle.
 
-## Bug fixes
+## Bugfixes
 
 - Fixed a fatal crash that occured when a ore tile is depleted.
 
@@ -1936,7 +2003,7 @@ Note, as a beta release, there may be more bugs and compatibility issues than us
 
 - Extending a rail after building a train stop sometimes causes problems. For now, you should remove the train stop anyway because they need to be near the ends of rail tracks.  
 
-## Bug fixes
+## Bugfixes
 
 - Fixed a bug where the inventory is opened directly when a Factorio Access menu is closed.
 
@@ -1992,7 +2059,7 @@ Updated 10/26/2022
 
 -Transport belt parts such as corners, junctions, and ends will now be specified when read by the cursor.
 
-## Bug fixes
+## Bugfixes
 
 -Fixed a crash when setting filter inserter filters due to being able to select unsupported fluid recipes.
 
@@ -2028,7 +2095,7 @@ Updated 9/30/2022
 
 -Entity information will no longer state the type of an entity, which usually was a repeat of the entity’s name.
 
-## Bug fixes
+## Bugfixes
 
 -When you open a menu or an inventory, the item in the first slot was not being read. This should be fixed now for all menus.
 
