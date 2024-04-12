@@ -17,17 +17,23 @@ Released on April 12th, 2024.
 
 ## Features
     - Added Remote View, which is when the camera and microphone focuses on the player's cursor instead of the player's character. Press "ALT + I" to toggle it.
-      * It allows viewing distant locations, although blurred or uncharted areas offer limited info and no sounds. You need to keep them loaded with radars.
+      * Press arrow keys to move the cursor in remote view. Do not use the "W" "A" "S" "D" keys because this makes the camera pan too fast in a way we cannot control.
+      * This view allows focusing on distant locations, although blurred or uncharted areas offer limited info and no sounds. You need to keep them fully loaded using radars.
       * Remote view automatically opens and closes Cursor Mode along with itself.
+      * For now, most sounds are muffled in remote view, but this will be fixed. 
 
     - The pollution level at the cursor position can now be read, by pressing "SHIFT + U". Note that "high" pollution is usually when trees start taking pollution damage. Other than that, the most important thing to track regarding pollution is how heavily polluted enemy spawners are, which can be checked with the scanner tool.
 
-    - The scanner can now locate the nearest damaged entity of the player's own team, by pressing "SHIFT + P". This has a range limit of 500 tiles.
+    - The scanner can now locate the nearest damaged entity of the player's own team, by pressing "SHIFT + P". This has a range limit of 1000 tiles.
 
 ## Changes
     -Launcher: Changed the description of the Compass Valley preset to make it more beginner friendly.
 
-    -Area scanning now reports coverage percentages only for ground tiles. It also notes whether there are other things in the area after listing the first 7 most covered.
+    -Area scanning now reports coverage percentages only for ground tiles. It also notes whether there are other things in the area after listing the first 4 things.
+
+    -Area scanning updates the scan result list properly so that the list can now be used to examine in detail what is within the area.
+
+    -Cursor size options now include 51 by 51.
 
     -Minor revisions were made in some tutorial steps for clarity.
 

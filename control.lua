@@ -2803,7 +2803,7 @@ function confirm_ent_is_in_area(ent_name, area_left_top, area_right_bottom, pind
    return #ents > 0
 end
 
-function get_scan_summary(scan_left_top, scan_right_bottom, pindex)      
+function get_area_scan_summary(scan_left_top, scan_right_bottom, pindex)      
    local result = ""
    local explored_left_top = {x = math.floor((players[pindex].cursor_pos.x - 1 - players[pindex].cursor_size) / 32), y = math.floor((players[pindex].cursor_pos.y - 1 - players[pindex].cursor_size)/32)}
    local explored_right_bottom = {x = math.floor((players[pindex].cursor_pos.x + 1 + players[pindex].cursor_size)/32), y = math.floor((players[pindex].cursor_pos.y + 1 + players[pindex].cursor_size)/32)}
@@ -2919,7 +2919,7 @@ function get_scan_summary(scan_left_top, scan_right_bottom, pindex)
       end)
       result = result .. " Area contains "
       local i = 1
-      while i <= #percentages and (i <= 7 or percentages[i].percent > 1) do
+      while i <= #percentages and (i <= 4 or percentages[i].percent > 1) do
          result = result .. ", " .. percentages[i].count .. " " .. percentages[i].name .. " " 
          if percentages[i].count == "resource" or percentages[i].count == "flooring" then 
             result = result .. percentages[i].percent .. "% "
@@ -2928,14 +2928,14 @@ function get_scan_summary(scan_left_top, scan_right_bottom, pindex)
       end
       if percent_total == 0 then--Note there are still some entities in here, but with zero area...
          result = result .. " nothing "
-      elseif  i >= 7 then
-         result = result .. " and other things "
+      elseif  i >= 4 then
+         result = result .. ", and other things "
       end
       result = result .. ", total space occupied " .. math.floor(percent_total) .. " percent " 
    else
       result = result .. " Empty Area  "
    end
-   
+   players[pindex].cursor_scanned = true
    return result
 end
 
@@ -3098,7 +3098,7 @@ function read_technology_slot(pindex, start_phrase)
          printout(start_phrase .. "Error loading technology", pindex)
       end
    else
-      printout(start_phrase .. "No technologies in this category yet", pindex)
+      printout(start_phrase .. "No technologies in this category", pindex)
    end
 end
 
@@ -3973,7 +3973,8 @@ function scan_index(pindex)
          --Remove invalid or unwanted instances of the entity
          while i <= #ents[players[pindex].nearby.index].ents do
             local ents_i = ents[players[pindex].nearby.index].ents[i]
-            if ents_i.valid and ents_i.name ~= "highlight-box" and ents_i.type ~= "flying-text" and ents_i.name ~= "rocket-silo-rocket" and ents_i.name ~= "rocket-silo-rocket-shadow" and ents_i.type ~= "spider-leg" then
+            if ents_i.valid and ents_i.name ~= "highlight-box" and ents_i.type ~= "flying-text" and ents_i.name ~= "rocket-silo-rocket" and ents_i.name ~= "rocket-silo-rocket-shadow" and ents_i.type ~= "spider-leg" 
+            and (players[pindex].cursor_scanned ~= true or (players[pindex].cursor_scanned == true and util.distance(ents_i.position,players[pindex].cursor_scan_center) < players[pindex].cursor_size + 1 )) then
                i = i + 1
             else
                table.remove(ents[players[pindex].nearby.index].ents, i)
@@ -4025,23 +4026,33 @@ function scan_index(pindex)
          local name = ents[players[pindex].nearby.index].name
          local entry = ents[players[pindex].nearby.index].ents[players[pindex].nearby.selection]
          --If there is none left of the entry or it is an unwanted type (does this ever happen?), remove it
-         if table_size(entry) == 0 or name == "highlight-box" then
-            table.remove(ents[players[pindex].nearby.index].ents, players[pindex].nearby.selection)
-            players[pindex].nearby.selection = players[pindex].nearby.selection - 1
-            scan_index(pindex)
-            return
+         if entry ~= nil then 
+            if table_size(entry) == 0 or name == "highlight-box" then
+               table.remove(ents[players[pindex].nearby.index].ents, players[pindex].nearby.selection)
+               players[pindex].nearby.selection = players[pindex].nearby.selection - 1
+               scan_index(pindex)
+               return
+            end
+            --The scan target is an aggregate, select it now
+            ent = {name = name, position = table.deepcopy(entry.position), group = entry.group} --maybe use "aggregate = true" ?
+            players[pindex].cursor_pos = ent.position
+            cursor_highlight(pindex, nil, "train-visualization")
+            sync_build_cursor_graphics(pindex)
+            players[pindex].last_indexed_ent = ent
+            game.get_player(pindex).selected = nil
          end
-         --The scan target is an aggregate, select it now
-         ent = {name = name, position = table.deepcopy(entry.position), group = entry.group} --maybe use "aggregate = true" ?
-         players[pindex].cursor_pos = ent.position
-         cursor_highlight(pindex, nil, "train-visualization")
-         sync_build_cursor_graphics(pindex)
-         players[pindex].last_indexed_ent = ent
-         game.get_player(pindex).selected = nil
       end
       
-      if not ents[players[pindex].nearby.index].aggregate and not ent.valid then
+      if ent == nil or (ents[players[pindex].nearby.index].aggregate == false and (ent == nil or ent.valid ~= true)) then
          printout("Error: Invalid object, maybe try rescanning.", pindex)
+         return
+      end
+      
+      if (players[pindex].cursor_scanned == true and util.distance(ent.position,players[pindex].cursor_scan_center) > players[pindex].cursor_size + 1 ) then 
+         local final_result = {""}
+         table.insert(final_result,ent_name_locale(ent))
+         table.insert(final_result," reference point outside of scan area")
+         printout(final_result, pindex)
          return
       end
       
@@ -4200,6 +4211,7 @@ function rescan(pindex,filter_dir, mute)
    populate_categories(pindex)
    players[pindex].nearby.index = 1
    players[pindex].nearby.selection = 1
+   players[pindex].cursor_scanned = false
    
    --Use the waiting period as a chance to recalibrate 
    fix_zoom(pindex)
@@ -5291,21 +5303,21 @@ function read_coords(pindex, start_phrase)
       end
    
       if next(techs) ~= nil and players[pindex].technology.index > 0 and players[pindex].technology.index <= #techs then
-         result = result .. "Requires "
+         result = result .. "Requires prior research "
          local dict = techs[players[pindex].technology.index].prerequisites 
          local pre_count = 0
          for a, b in pairs(dict) do
             pre_count = pre_count + 1
          end
          if pre_count == 0 then
-            result = result .. " No prior research "
+            result = result .. " None "
          end
          for i, preq in pairs(techs[players[pindex].technology.index].prerequisites) do 
-            result = result .. preq.name .. " , "
+            result = result .. localising.get(preq,pindex) .. " , "
          end
-         result = result .. " and " .. techs[players[pindex].technology.index].research_unit_count .. " times "
+         result = result .. ", and equipment " .. techs[players[pindex].technology.index].research_unit_count .. " times "
          for i, ingredient in pairs(techs[players[pindex].technology.index].research_unit_ingredients ) do
-            result = result .. localising.get_alt(ingredient,pindex) .. ", "
+            result = result .. localising.get_item_from_name(ingredient.name,pindex) .. ", "
          end
          
          printout(result, pindex)
@@ -7092,7 +7104,8 @@ function cursor_mode_move(direction, pindex, single_only)--*****
       players[pindex].nearby.index = 1
       players[pindex].nearby.ents = scan_area(math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size, math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size, players[pindex].cursor_size * 2 + 1, players[pindex].cursor_size * 2 + 1, pindex)
       populate_categories(pindex)
-      local scan_summary = get_scan_summary(scan_left_top, scan_right_bottom, pindex)
+      players[pindex].cursor_scan_center = players[pindex].cursor_pos
+      local scan_summary = get_area_scan_summary(scan_left_top, scan_right_bottom, pindex)
       draw_area_as_cursor(scan_left_top,scan_right_bottom,pindex)
       printout(scan_summary,pindex)
    end
@@ -7486,7 +7499,7 @@ script.on_event("toggle-remote-view", function(event)
    fix_zoom(pindex)
 end)
 
---We have cursor sizes 1,3,5,11,21,101,251
+--We have cursor sizes 1,3,5,11,21,51,101,251
 script.on_event("cursor-size-increment", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -7502,6 +7515,8 @@ script.on_event("cursor-size-increment", function(event)
       elseif players[pindex].cursor_size == 5 then
          players[pindex].cursor_size = 10
       elseif players[pindex].cursor_size == 10 then
+         players[pindex].cursor_size = 25
+      elseif players[pindex].cursor_size == 25 then
          players[pindex].cursor_size = 50
       elseif players[pindex].cursor_size == 50 then
          players[pindex].cursor_size = 125
@@ -7518,7 +7533,7 @@ script.on_event("cursor-size-increment", function(event)
    game.get_player(pindex).play_sound{path = "Close-Inventory-Sound", volume_modifier = 0.75}
 end)
 
---We have cursor sizes 1,3,5,11,21,101,251
+--We have cursor sizes 1,3,5,11,21,51,101,251
 script.on_event("cursor-size-decrement", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -7533,8 +7548,10 @@ script.on_event("cursor-size-decrement", function(event)
          players[pindex].cursor_size = 2
       elseif players[pindex].cursor_size == 10 then
          players[pindex].cursor_size = 5
-      elseif players[pindex].cursor_size == 50 then
+      elseif players[pindex].cursor_size == 25 then
          players[pindex].cursor_size = 10
+      elseif players[pindex].cursor_size == 50 then
+         players[pindex].cursor_size = 25
       elseif players[pindex].cursor_size == 125 then
          players[pindex].cursor_size = 50
       end
@@ -11622,7 +11639,9 @@ script.on_event("item-info", function(event)
    
          if next(techs) ~= nil and players[pindex].technology.index > 0 and players[pindex].technology.index <= #techs then
             local result = {""}
-            table.insert(result,"Unlocks the following")
+            table.insert(result, "Description: ")
+            table.insert(result,  techs[players[pindex].technology.index].localised_description or "No description")
+            table.insert(result,", Rewards: ")
             local rewards = techs[players[pindex].technology.index].effects
             for i, reward in ipairs(rewards) do
                for i1, v in pairs(reward) do
@@ -11632,10 +11651,8 @@ script.on_event("item-info", function(event)
                end
             end
             if techs[players[pindex].technology.index].name == "electronics" then
-               table.insert(result, "later technologies")
+               table.insert(result, ", later technologies")
             end
-            table.insert(result, ". Description: ")
-            table.insert(result,  techs[players[pindex].technology.index].localised_description or "")
             printout(result, pindex)
          end
 
@@ -16247,10 +16264,10 @@ end)
 function read_nearest_damaged_ent_info(pos,pindex)--****
    local p = game.get_player(pindex)
    --Scan for ents of your force
-   local ents = p.surface.find_entities_filtered{position = players[pindex].cursor_pos, radius = 500, force = p.force}
+   local ents = p.surface.find_entities_filtered{position = players[pindex].cursor_pos, radius = 1000, force = p.force}
    --Check for entities with health
    if ents == nil or #ents == 0 then
-      printout("No damaged structures within 500 tiles.", pindex)
+      printout("No damaged structures within 1000 tiles.", pindex)
       return
    end 
    local at_least_one_has_damage = false
@@ -16262,12 +16279,12 @@ function read_nearest_damaged_ent_info(pos,pindex)--****
       end
    end
    if at_least_one_has_damage == false then
-      printout("No damaged structures within 500 tiles.", pindex)
+      printout("No damaged structures within 1000 tiles.", pindex)
       return
    end
    --Narrow by distance
    local closest = nil
-   local min_dist = 501
+   local min_dist = 1001
    for i, ent in ipairs(damaged_ents) do 
       local dist = util.distance(pos,ent.position)
       if dist < min_dist then
@@ -16279,12 +16296,12 @@ function read_nearest_damaged_ent_info(pos,pindex)--****
       end
    end
    if closest == nil then
-      printout("No damaged structures within 500 tiles.", pindex)
+      printout("No damaged structures within 1000 tiles.", pindex)
       return
    else
       min_dist = math.floor(min_dist)
       local dir = get_direction_of_that_from_this(closest.position,pos)
-      local result = localising.get(closest) .. "  damaged at " .. min_dist .. " " .. direction_lookup(dir)
+      local result = localising.get(closest, pindex) .. "  damaged at " .. min_dist .. " " .. direction_lookup(dir)
       printout(result, pindex)
    end
 end

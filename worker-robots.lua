@@ -2163,9 +2163,9 @@ function get_blueprint_info(stack, in_hand)
          result = result .. " and "
       end
       if signal.signal.name ~= nil then
-         result = result .. signal.signal.name
+         result = result .. signal.signal.name --***todo localise 
       else
-         result = result .. "unknown"
+         result = result .. "unknown icon"
       end
    end
    
@@ -2190,7 +2190,7 @@ function get_blueprint_icons_info(bp_table)
       if signal.signal.name ~= nil then
          result = result .. signal.signal.name
       else
-         result = result .. "unknown"
+         result = result .. "unknown icon"
       end
    end
    return result

@@ -723,7 +723,7 @@ data:extend({
     type = "custom-input",
     name = "scan-list-up",
     key_sequence = "PAGEUP",
-    alternative_key_sequence = "UP",
+    alternative_key_sequence = "ALT + UP",
     consuming = "none"
 },
 
@@ -731,7 +731,7 @@ data:extend({
     type = "custom-input",
     name = "scan-list-down",
     key_sequence = "PAGEDOWN",
-    alternative_key_sequence = "DOWN",
+    alternative_key_sequence = "ALT + DOWN",
     consuming = "none"
 },
 
